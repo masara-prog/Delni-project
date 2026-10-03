@@ -21,6 +21,7 @@ import destUbariGaberoun from "@/assets/dest-ubari-gaberoun.jpg";
 import destUbariUmmAlMaa from "@/assets/dest-ubari-ummalmaa.jpg";
 import destAcacusArch from "@/assets/dest-acacus-arch.jpg";
 import destSaharaDunes from "@/assets/dest-sahara-dunes.jpg";
+import privateTripImg from "@/assets/private-trip.jpg";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getNearbyServices } from "@/lib/homeData";
 
