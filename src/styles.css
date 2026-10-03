@@ -1,0 +1,261 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 1rem;
+
+  /* Professional Eye-Soothing Warm & Ocean Blue Palette */
+  --background: #FAF8F5;              /* Soft warm cream-white background (soothing on eyes) */
+  --foreground: #0F172A;              /* Deep Navy text for crisp legibility */
+
+  --card: #FFFFFF;                   /* Crisp white card background */
+  --card-foreground: #0F172A;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+
+  /* Royal Ocean Blue Primary Accent (#003580 / #0D5C96) */
+  --primary: #003580;                 /* Premium Royal Blue */
+  --primary-foreground: #FFFFFF;
+  --primary-glow: #2563EB;            /* Soft royal blue glow */
+
+  /* Deep Navy (#0F172A) */
+  --secondary: #0F172A;              /* Deep Navy Blue */
+  --secondary-foreground: #FFFFFF;
+
+  /* Soft Warm Sand Beige Tint (#F4E1C1 / #F5EFE6) */
+  --muted: #F3ECE1;                  /* Soft warm beige background */
+  --muted-foreground: #5A6A85;
+
+  /* Fresh Emerald Green (#10B981) */
+  --accent: #10B981;                 /* Emerald Green Accent */
+  --accent-foreground: #FFFFFF;
+
+  /* Amber Gold (#F59E0B) */
+  --gold: #F59E0B;                   /* Star Ratings & Highlights */
+  --gold-foreground: #0F172A;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E8E2D6;                 /* Soft warm border */
+  --input: #F3ECE1;
+  --ring: #003580;
+
+  /* Signature Gradients */
+  --gradient-hero: linear-gradient(180deg, rgba(0, 53, 128, 0.20) 0%, rgba(15, 23, 42, 0.55) 60%, rgba(15, 23, 42, 0.90) 100%);
+  --gradient-sun: linear-gradient(135deg, #003580 0%, #0D5C96 100%);
+  --gradient-sea: linear-gradient(135deg, #003580 0%, #10B981 100%);
+  --gradient-sand: linear-gradient(180deg, #FFFDF9 0%, #F5EFE6 100%);
+
+  /* Eye-soothing Soft Shadows */
+  --shadow-soft: 0 4px 20px -4px rgba(0, 53, 128, 0.12);
+  --shadow-card: 0 10px 30px -10px rgba(15, 23, 42, 0.06);
+  --shadow-glow: 0 15px 40px -10px rgba(0, 53, 128, 0.25);
+  --shadow-gold: 0 10px 25px -8px rgba(0, 53, 128, 0.30);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+@utility text-gradient-sea {
+  background: var(--gradient-sea);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-sun {
+  background: var(--gradient-sun);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-hero {
+  background: var(--gradient-hero);
+}
+
+@utility bg-gradient-sun {
+  background: var(--gradient-sun);
+}
+
+@utility bg-gradient-sea {
+  background: var(--gradient-sea);
+}
+
+@utility bg-gradient-sand {
+  background: var(--gradient-sand);
+}
+
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+@utility shadow-gold {
+  box-shadow: var(--shadow-gold);
+}
+
+/* Animations */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) }
+  50% { transform: translateY(-12px) }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0 }
+  100% { background-position: -200% 0 }
+}
+@keyframes zoom-slow {
+  from { transform: scale(1) }
+  to { transform: scale(1.08) }
+}
+@keyframes marquee {
+  from { transform: translateX(0) }
+  to { transform: translateX(-50%) }
+}
+@keyframes marquee-right {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(33.333%); }
+}
+
+/* ── Professional Ken Burns Hero Slideshow Animations ── */
+/* Variant A: zoom-in from center */
+@keyframes ken-burns-a {
+  0%   { transform: scale(1.0) translate(0%, 0%); }
+  100% { transform: scale(1.12) translate(-2%, -1%); }
+}
+/* Variant B: zoom-in from bottom-left, pan up-right */
+@keyframes ken-burns-b {
+  0%   { transform: scale(1.08) translate(2%, 2%); }
+  100% { transform: scale(1.0) translate(-1%, -2%); }
+}
+/* Variant C: gentle right pan with zoom */
+@keyframes ken-burns-c {
+  0%   { transform: scale(1.05) translate(-3%, 0%); }
+  100% { transform: scale(1.12) translate(2%, -1%); }
+}
+/* Variant D: zoom out from center */
+@keyframes ken-burns-d {
+  0%   { transform: scale(1.14) translate(1%, -1%); }
+  100% { transform: scale(1.04) translate(-1%, 1%); }
+}
+/* Crossfade: slide in & hold & slide out */
+@keyframes hero-slide-in {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Simple fade-in for active hero slide */
+@keyframes hero-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@utility animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+@utility animate-fade-up {
+  animation: fade-up 0.8s ease-out both;
+}
+@utility animate-zoom-slow {
+  animation: zoom-slow 12s ease-in-out infinite alternate;
+}
+@utility animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+@utility animate-marquee-right {
+  animation: marquee-right 35s linear infinite;
+}
+@utility animate-ken-burns-a {
+  animation: ken-burns-a 9s ease-in-out infinite alternate;
+}
+@utility animate-ken-burns-b {
+  animation: ken-burns-b 11s ease-in-out infinite alternate;
+}
+@utility animate-ken-burns-c {
+  animation: ken-burns-c 10s ease-in-out infinite alternate;
+}
+@utility animate-ken-burns-d {
+  animation: ken-burns-d 8s ease-in-out infinite alternate;
+}
+@utility animate-hero-fade-in {
+  animation: hero-fade-in 1.2s ease-out both;
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

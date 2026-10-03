@@ -1,0 +1,1597 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
+import { useLanguage } from "@/lib/i18n";
+
+export const Route = createFileRoute("/dashboard/admin")({
+  head: () => ({
+    meta: [
+      { title: "لوحة الإدارة الشاملة | منصة دلّني" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: AdminDashboard,
+});
+
+/* ============ TYPES ============ */
+type Company = { id: string; contract_number: string; name: string; phone: string; address: string; email: string; pass: string; total_vehicles: number; available_cars: number; contract_date: string; contract_end_date?: string; status: "موثق" | "بانتظار" | "مرفوض" };
+type Driver = { driver_license_number: string; full_name: string; phone_number: string; national_id_or_passport: string; license_date_valid: string; contract_number: string; assigned_vehicle_plate: string; email: string; account_status: "نشط" | "معلق" | "موقوف" };
+type Guide = { license_number: string; full_name: string; phone_number: string; years_of_experience: number; certificate: string; digital_certificate_file?: string; bio: string; speaks_english: boolean; speaks_french: boolean; speaks_italian: boolean; verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; email: string };
+type Vehicle = { plate_number: string; company_id: string; company_name: string; vehicle_type: string; capacity: number; status: "جاهزة" | "في رحلة" | "صيانة" };
+type DailyTrip = { id: string; title: string; description: string; price_per_seat: number; max_capacity: number; available_seats: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string };
+type WeeklyTrip = { id: string; title: string; start_date: string; end_date: string; seat_per_price: number; max_capacity: number; available_seats?: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string };
+type PrivateTripRequest = { private_trip_id: string; customer_name: string; customer_phone: string; customer_description: string; preferred_start_date: string; duration_days: number; number_of_companions: number; quoted_price?: number; admin_itinerary_plan?: string; assigned_guide?: string; assigned_vehicle?: string; status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" };
+type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string };
+type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string };
+type Attraction = { id: string; name: string; city: string; category: string; description: string; place_image: string; visitors_count: number; latitude?: number; longitude?: number; google_maps_url?: string };
+type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
+type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
+type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
+type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر"; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
+type DailyOffer = { id: string; title_offer: string; description: string; percent_discount: number; url_image_offer?: string; daily_trip_id: string; date_start: string; date_end: string };
+type WeeklyOffer = { id: string; offer_title: string; description: string; percent_discount: number; offer_image_url?: string; weekly_trip_id: string; date_start: string; date_end: string };
+type FacilityOffer = { id: string; title_offer: string; description: string; percent_discount: number; offer_image_url?: string; facility_id: string; date_start: string; date_end: string };
+
+/* ============ MAIN COMPONENT ============ */
+function AdminDashboard() {
+  const [active, setActive] = useState("overview");
+
+  /* ---- STATE DATA ---- */
+  const [companies, setCompanies] = useState<Company[]>([
+    { id: "COM-001", contract_number: "CN-2026-01", name: "شركة الصحراء للنقل", phone: "0911234567", address: "طرابلس - طريق الشط", email: "sahara@dalni.ly", pass: "123456", total_vehicles: 12, available_cars: 8, contract_date: "2025-01-10", status: "موثق" },
+    { id: "COM-002", contract_number: "CN-2026-02", name: "شركة ليبيا تور للنقل", phone: "0929876543", address: "بنغازي - شارع دبي", email: "lytour@dalni.ly", pass: "abcdef", total_vehicles: 8, available_cars: 5, contract_date: "2025-03-15", status: "موثق" },
+    { id: "COM-003", contract_number: "CN-2026-03", name: "شركة الوديان للنقل", phone: "0914448888", address: "طرابلس - قرقارش", email: "wedan@dalni.ly", pass: "wedan2026", total_vehicles: 5, available_cars: 3, contract_date: "2026-06-01", status: "بانتظار" },
+  ]);
+
+  const [drivers, setDrivers] = useState<Driver[]>([
+    { driver_license_number: "LB-88291", full_name: "علي التارقي", phone_number: "0912223344", national_id_or_passport: "119900223344", license_date_valid: "2029-12-10", contract_number: "CN-2026-01 (شركة الصحراء)", assigned_vehicle_plate: "طرابلس 4517", email: "ali@dalni.ly", account_status: "نشط" },
+    { driver_license_number: "LB-77452", full_name: "مفتاح الفزاني", phone_number: "0923334455", national_id_or_passport: "119850334455", license_date_valid: "2028-05-14", contract_number: "CN-2026-01 (شركة الصحراء)", assigned_vehicle_plate: "طرابلس 8291", email: "miftah@dalni.ly", account_status: "نشط" },
+    { driver_license_number: "LB-99381", full_name: "أنور الترهوني", phone_number: "0915556677", national_id_or_passport: "119920112233", license_date_valid: "2030-08-22", contract_number: "CN-2026-02 (شركة ليبيا تور)", assigned_vehicle_plate: "بنغازي 3382", email: "anwar@dalni.ly", account_status: "نشط" },
+  ]);
+
+  const [guides, setGuides] = useState<Guide[]>([
+    { license_number: "G-9901", full_name: "سالم القذافي", phone_number: "0917778888", years_of_experience: 7, certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات هلال أحمر", digital_certificate_file: "https://example.com/certificates/salem_license.pdf", bio: "متخصص في الجولات الأثرية بالمنطقة الغربية والصحراء.", speaks_english: true, speaks_french: false, speaks_italian: true, verification_status: "موثق", email: "salem@dalni.ly" },
+    { license_number: "G-9902", full_name: "خالد بن يونس", phone_number: "0921112233", years_of_experience: 4, certificate: "شهادة بكالوريوس تاريخ وآثار - جامعة بنغازي، رخصة إرشاد محلي", digital_certificate_file: "https://example.com/certificates/khaled_license.pdf", bio: "خبير معالم شحات وسوسة والجبل الأخضر.", speaks_english: true, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "khaled@dalni.ly" },
+    { license_number: "G-9903", full_name: "سعاد الفيتوري", phone_number: "0915554433", years_of_experience: 2, certificate: "شهادة دورات إرشاد سياحي غدامس", digital_certificate_file: "https://example.com/certificates/suad_license.pdf", bio: "مرشدة متخصصة في التراث الشعبي والواحات.", speaks_english: false, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "suad@dalni.ly" },
+  ]);
+
+  /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES */
+  const [vehicles] = useState<Vehicle[]>([
+    { plate_number: "طرابلس 4517", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "حافلة سياحية Mercedes Benz 30 مقعد", capacity: 30, status: "جاهزة" },
+    { plate_number: "طرابلس 8291", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "ميني باص Toyota 15 مقعد", capacity: 15, status: "في رحلة" },
+    { plate_number: "بنغازي 3382", company_id: "CN-2026-02", company_name: "شركة ليبيا تور", vehicle_type: "حافلة فاخرة Scania 45 مقعد", capacity: 45, status: "جاهزة" },
+    { plate_number: "طرابلس 1122", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "سيارة جيب 4×4 Land Cruiser", capacity: 7, status: "جاهزة" },
+    { plate_number: "سبها 9944", company_id: "CN-2026-03", company_name: "شركة الوديان للنقل", vehicle_type: "حافلة صغيرة Hyundai 20 مقعد", capacity: 20, status: "جاهزة" },
+  ]);
+
+  const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([
+    { id: "DT-101", title: "جولة لبدة الكبرى اليومية", description: "زيارة الآثار الرومانية والمتحف في الخمس", price_per_seat: 120, max_capacity: 20, available_seats: 12, bookings_count: 148, rating_avg: 4.9, guide_license: "G-9901", vehicle_plates: ["طرابلس 4517", "طرابلس 8291"], is_active: true, photo: "/assets/ai_ruins.jpg" },
+    { id: "DT-102", title: "رحلة صبراتة الأثرية", description: "استكشاف المسرح الروماني والشاطئ", price_per_seat: 100, max_capacity: 15, available_seats: 8, bookings_count: 96, rating_avg: 4.7, vehicle_plates: ["بنغازي 3382"], is_active: true, photo: "" },
+  ]);
+
+  const [weeklyTrips, setWeeklyTrips] = useState<WeeklyTrip[]>([
+    { id: "WT-201", title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)", start_date: "2026-08-01", end_date: "2026-08-07", seat_per_price: 1850, max_capacity: 12, available_seats: 4, bookings_count: 210, rating_avg: 4.95, guide_license: "G-9901", vehicle_plates: ["طرابلس 8291", "طرابلس 1122"], is_active: true, photo: "/assets/ai_ghadames.jpg" },
+    { id: "WT-202", title: "جولة الواحات وغدامس التراثية (4 أيام)", start_date: "2026-08-10", end_date: "2026-08-14", seat_per_price: 1400, max_capacity: 10, available_seats: 6, bookings_count: 134, rating_avg: 4.8, vehicle_plates: ["سبها 9944"], is_active: true, photo: "/assets/ai_ghadames.jpg" },
+  ]);
+
+  const [privateTrips, setPrivateTrips] = useState<PrivateTripRequest[]>([
+    { private_trip_id: "PT-501", customer_name: "عائلة طارق بن عيسى", customer_phone: "0918887766", customer_description: "طلب رحلة خاصة لكبار الشخصيات إلى شحات ورأس الهلال مع إقامة في فنادق 5 نجوم", preferred_start_date: "2026-08-05", duration_days: 5, number_of_companions: 6, status_order: "قيد الدراسة" },
+    { private_trip_id: "PT-502", customer_name: "مجموعة سياح إيطاليين", customer_phone: "+39 320 112233", customer_description: "جولة تصوير صحراوي خاصة ببحيرات أوباري والجبال", preferred_start_date: "2026-08-12", duration_days: 7, number_of_companions: 4, status_order: "مؤكدة", quoted_price: 6500, admin_itinerary_plan: "اليوم 1: طرابلس-سبها، اليوم 2-5: البحيرات والسفاري، اليوم 6-7: العودة", assigned_guide: "G-9901", assigned_vehicle: "طرابلس 8291" },
+  ]);
+
+  const [hotels, setHotels] = useState<Hotel[]>([
+    { id: "H-01", name: "فندق الفندق الكبير طرابلس", city: "طرابلس", address: "شارع الفتح - وسط المدينة", phone: "0213334455", stars: 5, bookings_count: 312, rating_avg: 4.85, partnership_status: "نشط", hotel_photo_1: "/assets/ai_city.jpg", hotel_photo_2: "/assets/ai_city.jpg", hotel_photo_3: "/assets/ai_city.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg" },
+    { id: "H-02", name: "فندق عين الفرس غدامس", city: "غدامس", address: "وسط غدامس القديمة", phone: "0472221100", stars: 4, bookings_count: 184, rating_avg: 4.75, partnership_status: "نشط", hotel_photo_1: "/assets/ai_ghadames.jpg", hotel_photo_2: "/assets/ai_ghadames.jpg", hotel_photo_3: "/assets/ai_ghadames.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg" },
+  ]);
+
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([
+    { id: "R-01", name: "مطعم السراياء التراثي", type: "مأكولات شعبية ليبية", city: "طرابلس", address: "المدينة القديمة - زنقة المفتي", phone: "0919991122", rating_avg: 4.9, facility_image_1: "/assets/ai_ruins.jpg", facility_image_2: "/assets/ai_ruins.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg" },
+    { id: "R-02", name: "مقهى ومطعم النخيل الصحراوي", type: "مشويات ومشروبات", city: "سبها", address: "طريق المطار", phone: "0928883344", rating_avg: 4.65, facility_image_1: "/assets/ai_food.jpg", facility_image_2: "/assets/ai_city.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg" },
+  ]);
+
+  const [attractions, setAttractions] = useState<Attraction[]>([
+    { id: "A-01", name: "لبدة الكبرى (Leptis Magna)", city: "الخمس", category: "آثار رومانية عالمية", description: "واحدة من أروع وأكمل المدن الرومانية في حوض المتوسط.", place_image: "/assets/ai_ruins.jpg", visitors_count: 850, latitude: 32.6381, longitude: 14.2936, google_maps_url: "https://maps.google.com/?q=32.6381,14.2936" },
+    { id: "A-02", name: "بحيرة أم الماء - أوباري", city: "أوباري", category: "طبيعة وصحراء", description: "بحيرة مالحة ساحرة محاطة بالكثبان الرملية العالية والنخيل.", place_image: "/assets/ai_desert.jpg", visitors_count: 620, latitude: 26.5677, longitude: 12.8791, google_maps_url: "https://maps.google.com/?q=26.5677,12.8791" },
+  ]);
+
+  const [reviews, setReviews] = useState<ItemReview[]>([
+    { id: "REV-1", target_type: "رحلة أسبوعية", target_name: "مغامرة أوباري وبحيرات الصحراء", tourist_name: "مها العزابي", stars_rating: 5, comment_text: "تنظيم مالي ممتاز جداً والمرشد سالم كان خلوقاً وعلى دراية بالصحراء.", created_at: "أمس" },
+    { id: "REV-2", target_type: "فندق", target_name: "فندق الفندق الكبير طرابلس", tourist_name: "طارق بن عيسى", stars_rating: 5, comment_text: "إقامة فاخرة ونظافة عالية وإطلالة رائعة على طريق الشط.", created_at: "قبل يومين" },
+    { id: "REV-3", target_type: "مطعم/مقهى", target_name: "مطعم السراياء التراثي", tourist_name: "Giovanni Rossi", stars_rating: 5, comment_text: "أفضل مأكولات شعبية ليبية في المدينة القديمة طرابلس!", created_at: "قبل 3 أيام" },
+  ]);
+
+  const [tickets, setTickets] = useState<SupportTicket[]>([
+    { id: "TK-101", user_name: "أحمد المصراتي", user_role: "سائح", subject: "استفسار عن تأكيد رحلة أوباري", message: "هل تشمل الرحلة وجبات الطعام اليومية والمبيت في الخيام؟", status: "جديد", created_at: "قبل 15 دقيقة" },
+    { id: "TK-102", user_name: "مفتاح الفزاني", user_role: "سائق", subject: "تغيير خط سير رحلة غدامس", message: "يرجى تعديل استراحة الطريق إلى منطقة جادو بدلاً من رقدالين.", status: "تم الرد", reply: "تمت الموافقة وتحديث خط السير بالتنسيق مع شركة النقل.", created_at: "قبل ساعتين" },
+  ]);
+
+  /* ---- CHATBOT STATE ---- */
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
+    {
+      id: "CS-1", user_name: "أحمد محمد", user_type: "سائح", last_message: "ما هي أفضل رحلة للصحراء؟", time: "منذ 5 دق", unread: true,
+      messages: [
+        { id: "m1", from: "user", text: "السلام عليكم، ما هي أفضل رحلة للصحراء؟", time: "10:30" },
+        { id: "m2", from: "bot", text: "وعليكم السلام! 🌟 أنصحك برحلة مغامرة أوباري وبحيرات الصحراء (6 أيام) - السعر 1850 د.ل للشخص وتشمل مرشد متخصص وإقامة في المخيمات الصحراوية الفاخرة. هل تريد معرفة المزيد؟", time: "10:30" },
+        { id: "m3", from: "user", text: "نعم! ما هي المواعيد المتاحة؟", time: "10:32" },
+        { id: "m4", from: "bot", text: "الرحلة القادمة تنطلق في 2026-08-10 وتنتهي 2026-08-16. تبقى 4 مقاعد فقط! يمكنك الحجز من صفحة الرحلات مباشرة. 🎒", time: "10:32" },
+      ]
+    },
+    {
+      id: "CS-2", user_name: "Laura Martinez", user_type: "زائر", last_message: "What trips do you offer?", time: "منذ 12 دق", unread: true,
+      messages: [
+        { id: "m1", from: "user", text: "Hello! What trips do you offer?", time: "10:18" },
+        { id: "m2", from: "bot", text: "Hello! 👋 Welcome to Dalni - Libya's premier tourism platform! We offer daily trips to historical sites like Leptis Magna, weekly desert adventures to Ubari lakes, and private VIP tours. Which interests you?", time: "10:18" },
+      ]
+    },
+  ]);
+  const [activeChatId, setActiveChatId] = useState<string | null>("CS-1");
+  const [botInput, setBotInput] = useState("");
+
+  /* ---- OFFERS STATE ---- */
+  const [dailyOffers, setDailyOffers] = useState<DailyOffer[]>([
+    { id: "DO-001", title_offer: "خصم بداية الموسم السياحي", description: "احتفالاً ببداية الموسم، استمتع بخصم 25% على رحلة لبدة الكبرى", percent_discount: 25, url_image_offer: "/assets/ai_ruins.jpg", daily_trip_id: "DT-101", date_start: "2026-08-01", date_end: "2026-08-31" },
+  ]);
+  const [weeklyOffers, setWeeklyOffers] = useState<WeeklyOffer[]>([
+    { id: "WO-001", offer_title: "عرض الصيف الساحر", description: "خصم 15% على رحلة أوباري الصحراوية لأول 10 حاجزين", percent_discount: 15, offer_image_url: "/assets/ai_desert.jpg", weekly_trip_id: "WT-201", date_start: "2026-08-01", date_end: "2026-09-15" },
+  ]);
+  const [facilityOffers, setFacilityOffers] = useState<FacilityOffer[]>([
+    { id: "FO-001", title_offer: "عشاء ترحيبي مجاني", description: "احصل على وجبة عشاء مجانية عند حجزك وجبة رئيسية من مطعم السراياء", percent_discount: 30, offer_image_url: "/assets/ai_city.jpg", facility_id: "R-01", date_start: "2026-08-01", date_end: "2026-08-31" },
+  ]);
+
+  /* ---- MODAL STATES ---- */
+  const [showAddCompany, setShowAddCompany] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [viewingGuide, setViewingGuide] = useState<Guide | null>(null);
+  const [showAddTrip, setShowAddTrip] = useState<"daily" | "weekly" | null>(null);
+  const [editingDailyTrip, setEditingDailyTrip] = useState<DailyTrip | null>(null);
+  const [editingWeeklyTrip, setEditingWeeklyTrip] = useState<WeeklyTrip | null>(null);
+  const [evaluatingPrivateTrip, setEvaluatingPrivateTrip] = useState<PrivateTripRequest | null>(null);
+  const [showAddPrivateTrip, setShowAddPrivateTrip] = useState(false);
+  const [showAddHotel, setShowAddHotel] = useState(false);
+  const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
+  const [showAddRestaurant, setShowAddRestaurant] = useState(false);
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [showAddAttraction, setShowAddAttraction] = useState(false);
+  const [editingAttraction, setEditingAttraction] = useState<Attraction | null>(null);
+  const [showAddDailyOffer, setShowAddDailyOffer] = useState(false);
+  const [editingDailyOffer, setEditingDailyOffer] = useState<DailyOffer | null>(null);
+  const [showAddWeeklyOffer, setShowAddWeeklyOffer] = useState(false);
+  const [editingWeeklyOffer, setEditingWeeklyOffer] = useState<WeeklyOffer | null>(null);
+  const [showAddFacilityOffer, setShowAddFacilityOffer] = useState(false);
+  const [editingFacilityOffer, setEditingFacilityOffer] = useState<FacilityOffer | null>(null);
+
+  /* ---- HANDLERS ---- */
+  const handleAddCompany = (c: any) => {
+    setCompanies([...companies, { id: `COM-00${companies.length + 1}`, status: c.status || "موثق", contract_end_date: c.contract_end_date || "", available_cars: c.available_cars || 0, ...c }]);
+    setShowAddCompany(false);
+  };
+  const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.id === updated.id ? updated : c)); setEditingCompany(null); };
+  const handleDeleteCompany = (id: string) => { if (confirm("هل أنت متأكد من حذف شركة النقل هذه؟")) setCompanies(companies.filter(c => c.id !== id)); };
+  const handleVerifyGuide = (lic: string, status: "موثق" | "مرفوض") => { setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g)); setViewingGuide(null); };
+  const handleDeleteGuide = (lic: string) => { if (confirm("هل تريد حذف حساب هذا المرشد؟")) setGuides(guides.filter(g => g.license_number !== lic)); };
+  const handleCreateTrip = (type: "daily" | "weekly", data: any) => {
+    if (type === "daily") setDailyTrips([...dailyTrips, { id: `DT-${100 + dailyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
+    else setWeeklyTrips([...weeklyTrips, { id: `WT-${200 + weeklyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
+    setShowAddTrip(null);
+  };
+  const handleUpdateDailyTrip = (updated: DailyTrip) => { setDailyTrips(dailyTrips.map(d => d.id === updated.id ? updated : d)); setEditingDailyTrip(null); };
+  const handleDeleteDailyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة اليومية؟")) setDailyTrips(dailyTrips.filter(d => d.id !== id)); };
+  const handleUpdateWeeklyTrip = (updated: WeeklyTrip) => { setWeeklyTrips(weeklyTrips.map(w => w.id === updated.id ? updated : w)); setEditingWeeklyTrip(null); };
+  const handleDeleteWeeklyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة الأسبوعية؟")) setWeeklyTrips(weeklyTrips.filter(w => w.id !== id)); };
+  const handleSavePrivate = (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => {
+    setPrivateTrips(privateTrips.map(p => p.private_trip_id === id ? { ...p, status_order: status, quoted_price: price, admin_itinerary_plan: plan, assigned_guide: guide, assigned_vehicle: vehicle } : p));
+    setEvaluatingPrivateTrip(null);
+  };
+  const handleAddPrivateTrip = (p: any) => { setPrivateTrips([...privateTrips, p]); setShowAddPrivateTrip(false); };
+  const handleDeletePrivate = (id: string) => { if (confirm("هل تريد حذف طلب الرحلة الخاصة؟")) setPrivateTrips(privateTrips.filter(p => p.private_trip_id !== id)); };
+  const handleAddHotel = (h: any) => { setHotels([...hotels, { id: `H-0${hotels.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...h }]); setShowAddHotel(false); };
+  const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => x.id === h.id ? h : x)); setEditingHotel(null); };
+  const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => h.id !== id)); };
+  const handleAddRestaurant = (r: any) => { setRestaurants([...restaurants, { id: `R-0${restaurants.length + 1}`, rating_avg: 5.0, ...r }]); setShowAddRestaurant(false); };
+  const handleUpdateRestaurant = (r: Restaurant) => { setRestaurants(restaurants.map(x => x.id === r.id ? r : x)); setEditingRestaurant(null); };
+  const handleDeleteRestaurant = (id: string) => { if (confirm("هل تريد حذف المطعم؟")) setRestaurants(restaurants.filter(r => r.id !== id)); };
+  const handleAddAttraction = (a: any) => { setAttractions([...attractions, { id: `A-0${attractions.length + 1}`, visitors_count: 0, ...a }]); setShowAddAttraction(false); };
+  const handleUpdateAttraction = (a: Attraction) => { setAttractions(attractions.map(x => x.id === a.id ? a : x)); setEditingAttraction(null); };
+  const handleDeleteAttraction = (id: string) => { if (confirm("هل تريد حذف المعلم السياحي؟")) setAttractions(attractions.filter(a => a.id !== id)); };
+  const handleReplyTicket = (ticketId: string, reply: string) => { setTickets(tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" } : t)); };
+  // Offers
+  const handleAddDailyOffer = (o: any) => { setDailyOffers([...dailyOffers, { ...o, id: `DO-${String(dailyOffers.length + 1).padStart(3, "0")}` }]); setShowAddDailyOffer(false); };
+  const handleUpdateDailyOffer = (o: DailyOffer) => { setDailyOffers(dailyOffers.map(x => x.id === o.id ? o : x)); setEditingDailyOffer(null); };
+  const handleDeleteDailyOffer = (id: string) => { if (confirm("حذف العرض؟")) setDailyOffers(dailyOffers.filter(o => o.id !== id)); };
+  const handleAddWeeklyOffer = (o: any) => { setWeeklyOffers([...weeklyOffers, { ...o, id: `WO-${String(weeklyOffers.length + 1).padStart(3, "0")}` }]); setShowAddWeeklyOffer(false); };
+  const handleUpdateWeeklyOffer = (o: WeeklyOffer) => { setWeeklyOffers(weeklyOffers.map(x => x.id === o.id ? o : x)); setEditingWeeklyOffer(null); };
+  const handleDeleteWeeklyOffer = (id: string) => { if (confirm("حذف العرض؟")) setWeeklyOffers(weeklyOffers.filter(o => o.id !== id)); };
+  const handleAddFacilityOffer = (o: any) => { setFacilityOffers([...facilityOffers, { ...o, id: `FO-${String(facilityOffers.length + 1).padStart(3, "0")}` }]); setShowAddFacilityOffer(false); };
+  const handleUpdateFacilityOffer = (o: FacilityOffer) => { setFacilityOffers(facilityOffers.map(x => x.id === o.id ? o : x)); setEditingFacilityOffer(null); };
+  const handleDeleteFacilityOffer = (id: string) => { if (confirm("حذف العرض؟")) setFacilityOffers(facilityOffers.filter(o => o.id !== id)); };
+  // Bot
+  const handleBotSend = () => {
+    if (!botInput.trim() || !activeChatId) return;
+    const now = new Date().toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
+    setChatSessions(prev => prev.map(s => {
+      if (s.id !== activeChatId) return s;
+      const msg: ChatMessage = { id: `m${s.messages.length + 1}`, from: "admin", text: botInput, time: now };
+      return { ...s, messages: [...s.messages, msg], last_message: botInput };
+    }));
+    setBotInput("");
+  };
+
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+
+  const nav: NavItem[] = [
+    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "📊" },
+    { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌", badge: 3 },
+    { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
+    { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: 2 },
+    { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭" },
+    { id: "offers", label: isAr ? "العروض الترويجية" : "Promotions & Offers", icon: "🎯" },
+    { id: "private_trips", label: isAr ? "الرحلات الخاصة" : "Private Custom Trips", icon: "👑", badge: 2 },
+    { id: "entities", label: isAr ? "المرافق والوجهات" : "Entities & Stays", icon: "🏛️" },
+    { id: "reviews", label: isAr ? "التقييمات والمراجعات" : "Reviews & Ratings", icon: "⭐" },
+    { id: "analytics", label: isAr ? "إحصائيات الأكثر حجزاً وتقييماً" : "Analytics & Stats", icon: "📈" },
+    { id: "inquiries_chat", label: isAr ? "الاستفسارات والشات بوت" : "Inquiries & AI Chat", icon: "💬", badge: 2 },
+  ];
+
+  /* ============ RENDER ============ */
+  return (
+    <DashboardShell role="admin" roleLabel={isAr ? "مدير النظام الرئيسي" : "Super Admin"} userName={isAr ? "فريق إدارة دلّني" : "Libya Journeys Admin"} nav={nav} active={active} onNavigate={setActive}>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-black text-foreground">
+          {isAr ? "لوحة الإدارة الشاملة والإحصائيات" : "Comprehensive Admin Dashboard & Analytics"}
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          {isAr
+            ? "الرقابة الكلية ومتابعة السيارات المتاحة بالمنصة من مختلف الشركات وتعيينها على الرحلات."
+            : "Complete oversight, fleet tracking, guide approvals, and trip assignment management."}
+        </p>
+      </div>
+
+      {/* KPI Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard label={isAr ? "شركات النقل" : "Transport Cos."} value={companies.length} hint={isAr ? `${companies.filter(c => c.status === "موثق").length} موثقة` : `${companies.filter(c => c.status === "موثق").length} Verified`} icon="🚌" tone="clay" />
+        <StatCard label={isAr ? "السائقون المسجلون" : "Registered Drivers"} value={drivers.length} hint={isAr ? "مسجلون عبر شركات النقل" : "Registered via Transport Cos"} icon="🧑‍✈️" tone="sea" />
+        <StatCard label={isAr ? "طلبات اعتماد المرشدين" : "Guide Verification Requests"} value={guides.filter(g => g.verification_status === "بانتظار التوثيق").length} hint={isAr ? "وثائق بانتظار المراجعة" : "Pending documents review"} icon="🗺️" tone="sun" />
+        <StatCard label={isAr ? "الرحلات الخاصة VIP" : "VIP Custom Trips"} value={privateTrips.length} hint={isAr ? `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} طلبات جديدة` : `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} New Requests`} icon="👑" tone="green" />
+      </div>
+
+      {/* OVERVIEW TAB */}
+      {active === "overview" && (
+        <div className="grid lg:grid-cols-3 gap-6 text-right">
+          <div className="lg:col-span-2 space-y-6">
+            <SectionCard title="أحدث طلبات توثيق المرشدين السياحيين الواردة" action={<button onClick={() => setActive("guides")} className="text-primary text-sm font-black hover:underline">عرض الكل</button>}>
+              <div className="space-y-3">
+                {guides.filter(g => g.verification_status === "بانتظار التوثيق").map((g) => (
+                  <div key={g.license_number} className="p-4 rounded-xl border border-border bg-white flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                      <div className="font-black text-foreground text-sm">{g.full_name} ({g.license_number})</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">📜 {g.certificate}</div>
+                    </div>
+                    <button onClick={() => setViewingGuide(g)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">معاينة الوثائق والاعتماد 📄</button>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+            <SectionCard title="أحدث التقييمات الواردة من السياح">
+              <div className="space-y-3">
+                {reviews.slice(0, 3).map((r) => (
+                  <div key={r.id} className="p-3.5 rounded-xl border border-border bg-white space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-foreground text-xs">{r.tourist_name} عن {r.target_type}: <span className="text-primary">{r.target_name}</span></span>
+                      <span className="text-gold-foreground text-xs font-bold">{"⭐".repeat(r.stars_rating)} ({r.stars_rating}/5)</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">" {r.comment_text} "</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+          <div className="space-y-6">
+            <SectionCard title="إجراءات سريعة للأدمن">
+              <div className="grid grid-cols-2 gap-2">
+                <QuickAction icon="🚌" label="إضافة شركة نقل" onClick={() => setShowAddCompany(true)} />
+                <QuickAction icon="🧭" label="رحلة يومية" onClick={() => setShowAddTrip("daily")} />
+                <QuickAction icon="🗓️" label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
+                <QuickAction icon="🏨" label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
+                <QuickAction icon="🍽️" label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
+                          <QuickAction icon="👑" label={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClick={() => setShowAddPrivateTrip(true)} />
+                <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
+                <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
+                <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
+                <QuickAction icon="🍕" label="عرض مطعم" onClick={() => setShowAddFacilityOffer(true)} />
+              </div>
+            </SectionCard>
+          </div>
+        </div>
+      )}
+
+      {/* COMPANIES TAB */}
+      {active === "companies" && (
+        <SectionCard title="إدارة شركات النقل السياحي المتعاقد معها بالمنصة" action={<button onClick={() => setShowAddCompany(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة شركة جديدة</button>}>
+          <div className="overflow-x-auto text-right">
+            <table className="w-full text-sm">
+              <thead><tr className="text-right text-xs text-muted-foreground border-b border-border">
+                <th className="pb-3 font-bold">رقم العقد</th><th className="pb-3 font-bold">اسم الشركة</th><th className="pb-3 font-bold">الهاتف</th><th className="pb-3 font-bold">الأسطول</th><th className="pb-3 font-bold">الحالة</th><th className="pb-3 font-bold">إجراءات</th>
+              </tr></thead>
+              <tbody className="divide-y divide-border">
+                {companies.map((c) => (
+                  <tr key={c.id}>
+                    <td className="py-3 font-mono text-xs font-bold">{c.contract_number}</td>
+                    <td className="py-3 font-bold text-foreground">{c.name}</td>
+                    <td className="py-3 text-muted-foreground">{c.phone}</td>
+                    <td className="py-3 font-bold">{c.total_vehicles} مركبة</td>
+                    <td className="py-3"><Badge tone={c.status === "موثق" ? "green" : "sun"}>{c.status}</Badge></td>
+                    <td className="py-3 flex gap-2">
+                      <button onClick={() => setEditingCompany(c)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                      <button onClick={() => handleDeleteCompany(c.id)} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* DRIVERS TAB */}
+      {active === "drivers" && (
+        <SectionCard title="السائقون المسجلون في المنصة عبر الشركات">
+          <div className="mb-4 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground font-semibold text-right">📌 إضافة السائق وتعيين المركبات من صلاحيات شركات النقل. هنا يطلع الأدمن على الجميع.</div>
+          <div className="overflow-x-auto text-right">
+            <table className="w-full text-sm">
+              <thead><tr className="text-right text-xs text-muted-foreground border-b border-border">
+                <th className="pb-3 font-bold">اسم السائق</th><th className="pb-3 font-bold">رقم الرخصة</th><th className="pb-3 font-bold">الهاتف</th><th className="pb-3 font-bold">شركة النقل</th><th className="pb-3 font-bold">المركبة</th><th className="pb-3 font-bold">الحالة</th>
+              </tr></thead>
+              <tbody className="divide-y divide-border">
+                {drivers.map((d) => (
+                  <tr key={d.driver_license_number}>
+                    <td className="py-3 font-bold text-foreground">{d.full_name}</td>
+                    <td className="py-3 font-mono text-xs font-bold">{d.driver_license_number}</td>
+                    <td className="py-3 text-muted-foreground">{d.phone_number}</td>
+                    <td className="py-3 font-bold text-primary text-xs">{d.contract_number}</td>
+                    <td className="py-3 text-muted-foreground font-bold">{d.assigned_vehicle_plate}</td>
+                    <td className="py-3"><Badge tone={d.account_status === "نشط" ? "green" : "red"}>{d.account_status}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* GUIDES TAB */}
+      {active === "guides" && (
+        <SectionCard title="معاينة وثائق المرشدين واعتمادهم">
+          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right">📌 المرشد يرفع وثائقه من حسابه، وتصل للأدمن هنا للمراجعة والاعتماد.</div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
+            {guides.map((g) => (
+              <div key={g.license_number} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-black text-foreground text-base">{g.full_name}</h3>
+                    <div className="text-xs text-muted-foreground">رقم الرخصة: {g.license_number}</div>
+                  </div>
+                  <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>{g.verification_status}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-2">{g.bio}</p>
+                <div className="text-xs space-y-1">
+                  <div className="font-bold text-foreground">📜 {g.certificate}</div>
+                  <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
+                </div>
+                <div className="pt-2 flex gap-2">
+                  <button onClick={() => setViewingGuide(g)} className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow">معاينة الوثائق والاعتماد 📄</button>
+                  <button onClick={() => handleDeleteGuide(g.license_number)} className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* TRIPS TAB */}
+      {active === "trips" && (
+        <div className="space-y-6 text-right">
+          {/* Daily Trips */}
+          <SectionCard title="إدارة الرحلات اليومية + تعيين السيارات المتاحة بالمنصة" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ رحلة يومية جديدة</button>}>
+            <div className="space-y-4">
+              {dailyTrips.map((d) => (
+                <div key={d.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
+                  {d.photo && <img src={d.photo} alt={d.title} className="w-24 h-20 rounded-xl object-cover border flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-black text-foreground text-sm">{d.title}</h4>
+                      <Badge tone={d.is_active ? "green" : "muted"}>{d.is_active ? "نشطة" : "موقوفة"}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{d.description}</p>
+                    <div className="flex flex-wrap gap-3 text-xs font-bold text-foreground mt-2">
+                      <span>💰 د.ل {d.price_per_seat}</span>
+                      <span>👥 {d.bookings_count} حجز</span>
+                      <span>⭐ {d.rating_avg}</span>
+                      <span>🪑 {d.available_seats} مقعد متاح</span>
+                      {d.guide_license && <span>👨‍✈️ {d.guide_license}</span>}
+                    </div>
+                    {d.vehicle_plates && d.vehicle_plates.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] font-black text-muted-foreground">🚌 السيارات المعينة:</span>
+                        {d.vehicle_plates.map(plate => (
+                          <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-black border border-blue-100">{plate}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => setEditingDailyTrip(d)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين السيارات</button>
+                    <button onClick={() => handleDeleteDailyTrip(d.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* Weekly Trips */}
+          <SectionCard title="إدارة الرحلات الأسبوعية + الصورة + السيارات المتاحة بالمنصة" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ رحلة أسبوعية جديدة</button>}>
+            <div className="space-y-4">
+              {weeklyTrips.map((w) => (
+                <div key={w.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
+                  {w.photo && <img src={w.photo} alt={w.title} className="w-28 h-20 rounded-xl object-cover border flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-black text-foreground text-sm">{w.title}</h4>
+                      <Badge tone={w.is_active ? "green" : "muted"}>{w.is_active ? "نشطة" : "موقوفة"}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs font-bold text-foreground mt-2">
+                      <span>🗓️ {w.start_date} ← {w.end_date}</span>
+                      <span>💰 د.ل {w.seat_per_price}</span>
+                      <span>👥 {w.bookings_count} حجز</span>
+                      <span>⭐ {w.rating_avg}</span>
+                      {w.guide_license && <span>👨‍✈️ {w.guide_license}</span>}
+                    </div>
+                    {w.vehicle_plates && w.vehicle_plates.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] font-black text-muted-foreground">🚌 السيارات المعينة:</span>
+                        {w.vehicle_plates.map(plate => (
+                          <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black border border-amber-100">{plate}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => setEditingWeeklyTrip(w)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين السيارات</button>
+                    <button onClick={() => handleDeleteWeeklyTrip(w.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* All Platform Vehicles Overview */}
+          <SectionCard title="🚌 أسطول المركبات المتاحة بالمنصة (من كل الشركات المشتركة)">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-right">
+              {vehicles.map((v) => (
+                <div key={v.plate_number} className="p-3.5 rounded-xl border border-border bg-muted/20 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-black text-foreground text-sm">{v.plate_number}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{v.vehicle_type}</div>
+                    </div>
+                    <Badge tone={v.status === "جاهزة" ? "green" : v.status === "في رحلة" ? "sun" : "red"}>{v.status}</Badge>
+                  </div>
+                  <div className="text-xs font-bold text-primary">🏢 {v.company_name} · 👥 {v.capacity} مقعد</div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* OFFERS TAB */}
+      {active === "offers" && (
+        <div className="space-y-6 text-right">
+          <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 text-xs font-semibold text-muted-foreground">
+            🎯 إدارة العروض الترويجية لجذب السياح — يمكنك إضافة عروض للرحلات اليومية والأسبوعية والمطاعم والكافيهات مع صورة وتاريخ الصلاحية ونسبة الخصم.
+          </div>
+
+          {/* Daily Offers */}
+          <SectionCard title="🎯 عروض الرحلات اليومية (trips_daily_offers)" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة عرض يومي</button>}>
+            {dailyOffers.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground text-sm">لا توجد عروض يومية حالياً.</div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {dailyOffers.map(o => {
+                  const trip = dailyTrips.find(t => t.id === o.daily_trip_id);
+                  return (
+                    <div key={o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft">
+                      {o.url_image_offer && <img src={o.url_image_offer} alt="" className="w-full h-36 object-cover" />}
+                      <div className="p-4 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-black text-foreground text-sm flex-1">{o.title_offer}</h4>
+                          <span className="text-xl font-black text-emerald-600 flex-shrink-0 mr-2">-{o.percent_discount}%</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{o.description}</p>
+                        <div className="text-xs font-bold text-primary">🧭 {trip?.title || o.daily_trip_id}</div>
+                        <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={() => setEditingDailyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                          <button onClick={() => handleDeleteDailyOffer(o.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Weekly Offers */}
+          <SectionCard title="🎁 عروض الرحلات الأسبوعية (trips_weekly_offers)" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة عرض أسبوعي</button>}>
+            {weeklyOffers.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground text-sm">لا توجد عروض أسبوعية حالياً.</div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {weeklyOffers.map(o => {
+                  const trip = weeklyTrips.find(t => t.id === o.weekly_trip_id);
+                  return (
+                    <div key={o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft">
+                      {o.offer_image_url && <img src={o.offer_image_url} alt="" className="w-full h-36 object-cover" />}
+                      <div className="p-4 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-black text-foreground text-sm flex-1">{o.offer_title}</h4>
+                          <span className="text-xl font-black text-amber-600 flex-shrink-0 mr-2">-{o.percent_discount}%</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{o.description}</p>
+                        <div className="text-xs font-bold text-primary">🗓️ {trip?.title || o.weekly_trip_id}</div>
+                        <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={() => setEditingWeeklyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                          <button onClick={() => handleDeleteWeeklyOffer(o.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Facility Offers */}
+          <SectionCard title="🍕 عروض المطاعم والكافيهات (facilities_offers)" action={<button onClick={() => setShowAddFacilityOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة عرض مطعم/كافيه</button>}>
+            {facilityOffers.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground text-sm">لا توجد عروض منشآت حالياً.</div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {facilityOffers.map(o => {
+                  const fac = restaurants.find(r => r.id === o.facility_id);
+                  return (
+                    <div key={o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft">
+                      {o.offer_image_url && <img src={o.offer_image_url} alt="" className="w-full h-36 object-cover" />}
+                      <div className="p-4 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-black text-foreground text-sm flex-1">{o.title_offer}</h4>
+                          <span className="text-xl font-black text-rose-600 flex-shrink-0 mr-2">-{o.percent_discount}%</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{o.description}</p>
+                        <div className="text-xs font-bold text-primary">🍽️ {fac?.name || o.facility_id}</div>
+                        <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={() => setEditingFacilityOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                          <button onClick={() => handleDeleteFacilityOffer(o.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      )}
+
+      {/* PRIVATE TRIPS */}
+      {active === "private_trips" && (
+        <SectionCard title="إدارة الرحلات الخاصة VIP">
+          <div className="space-y-4 text-right">
+            {privateTrips.map((pt) => (
+              <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-black text-foreground text-base">{pt.customer_name} ({pt.customer_phone})</h3>
+                  <Badge tone={pt.status_order === "مؤكدة" ? "green" : "sun"}>{pt.status_order}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl">" {pt.customer_description} "</p>
+                <div className="flex gap-4 text-xs font-bold text-muted-foreground">
+                  <span>📅 {pt.preferred_start_date}</span>
+                  <span>⏱️ {pt.duration_days} أيام</span>
+                  <span>👥 {pt.number_of_companions} رفيق</span>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => handleDeletePrivate(pt.private_trip_id)} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                  <button onClick={() => setEvaluatingPrivateTrip(pt)} className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow">تقييم وتحديد السعر والحافلة والمرشد</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ENTITIES */}
+      {active === "entities" && (
+        <div className="space-y-6 text-right">
+          <SectionCard title="🏨 الفنادق (5 صور)" action={<button onClick={() => setShowAddHotel(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة فندق</button>}>
+            <div className="grid md:grid-cols-2 gap-4">
+              {hotels.map((h) => (
+                <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
+                  <div className="flex justify-between">
+                    <div>
+                      <h4 className="font-black text-foreground text-sm">{h.name}</h4>
+                      <div className="text-xs font-bold text-gold-foreground">{"⭐".repeat(h.stars)} · 👥 {h.bookings_count} حجز · ⭐ {h.rating_avg}</div>
+                    </div>
+                    <Badge tone="green">{h.partnership_status}</Badge>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[h.hotel_photo_1, h.hotel_photo_2, h.hotel_photo_3, h.hotel_photo_4, h.hotel_photo_5].map((img, idx) => (
+                      <img key={idx} src={img} alt="" className="w-full h-12 rounded-lg object-cover border" />
+                    ))}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingHotel(h)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                    <button onClick={() => handleDeleteHotel(h.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="🍽️ المطاعم والمقاهي (5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة مطعم</button>}>
+            <div className="grid md:grid-cols-2 gap-4">
+              {restaurants.map((r) => (
+                <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-black text-foreground text-sm">{r.name}</h4>
+                      <div className="text-xs text-muted-foreground">{r.type} · {r.city} · ⭐ {r.rating_avg}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[r.facility_image_1, r.facility_image_2, r.facility_image_3, r.facility_image_4, r.facility_image_5].map((img, idx) => (
+                      <img key={idx} src={img} alt="" className="w-full h-12 rounded-lg object-cover border" />
+                    ))}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingRestaurant(r)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                    <button onClick={() => handleDeleteRestaurant(r.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="🏛️ المعالم السياحية (صورة + موقع جغرافي Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة معلم</button>}>
+            <div className="grid md:grid-cols-2 gap-4">
+              {attractions.map((a) => (
+                <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
+                  <div className="flex gap-3">
+                    <img src={a.place_image} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-black text-foreground text-sm">{a.name}</h4>
+                      <div className="text-xs text-muted-foreground mt-0.5">📍 {a.city} · 👥 {a.visitors_count} زائر</div>
+                      <Badge tone="sea">{a.category}</Badge>
+                    </div>
+                  </div>
+                  {(a.latitude || a.google_maps_url) && (
+                    <div className="p-2.5 rounded-xl flex items-center justify-between gap-2" style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.15)" }}>
+                      <div className="text-xs font-bold text-blue-700">
+                        📍 {a.latitude && a.longitude ? `${a.latitude}°N, ${a.longitude}°E` : "موقع مضاف"}
+                      </div>
+                      {a.google_maps_url && (
+                        <a href={a.google_maps_url} target="_blank" rel="noreferrer" className="flex-shrink-0 px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition">
+                          🗺️ فتح الخريطة
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingAttraction(a)} className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                    <button onClick={() => handleDeleteAttraction(a.id)} className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* REVIEWS */}
+      {active === "reviews" && (
+        <SectionCard title="إدارة تقييمات السياح (الرحلات، الفنادق، المطاعم، المرشدون، الشركات)">
+          <div className="space-y-4 text-right">
+            {reviews.map((rev) => (
+              <div key={rev.id} className="p-4 rounded-2xl border border-border bg-white space-y-2">
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge tone="sea">{rev.target_type}</Badge>
+                    <span className="font-black text-foreground text-sm">{rev.target_name}</span>
+                  </div>
+                  <div className="text-gold-foreground font-black text-sm">{"⭐".repeat(rev.stars_rating)} ({rev.stars_rating}/5)</div>
+                </div>
+                <div className="text-xs text-muted-foreground">👤 {rev.tourist_name} · 🗓️ {rev.created_at}</div>
+                <p className="p-3 rounded-xl bg-muted/30 text-xs font-semibold text-foreground">" {rev.comment_text} "</p>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ANALYTICS */}
+      {active === "analytics" && (
+        <div className="space-y-6 text-right">
+          <div className="grid md:grid-cols-2 gap-6">
+            <SectionCard title="🔥 الرحلات الأكثر حجزاً">
+              <div className="space-y-3">
+                {[...dailyTrips, ...weeklyTrips].sort((a, b) => b.bookings_count - a.bookings_count).map((t, idx) => (
+                  <div key={t.id} className="flex justify-between items-center p-3 rounded-xl bg-muted/40">
+                    <div>
+                      <div className="font-black text-sm text-foreground">#{idx + 1} - {t.title}</div>
+                      <div className="text-xs text-muted-foreground">💰 د.ل {('price_per_seat' in t) ? t.price_per_seat : t.seat_per_price}</div>
+                    </div>
+                    <Badge tone="green">{t.bookings_count} حجز</Badge>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+            <SectionCard title="⭐ الأعلى تقييماً">
+              <div className="space-y-3">
+                {[
+                  { name: "مغامرة أوباري وبحيرات الصحراء", rate: 4.95, type: "رحلة أسبوعية" },
+                  { name: "جولة لبدة الكبرى اليومية", rate: 4.90, type: "رحلة يومية" },
+                  { name: "مطعم السراياء التراثي", rate: 4.90, type: "مطعم" },
+                  { name: "فندق الفندق الكبير طرابلس", rate: 4.85, type: "فندق 5 نجوم" },
+                  { name: "المرشد سالم القذافي", rate: 4.90, type: "مرشد معتمد" },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 rounded-xl bg-muted/40">
+                    <div>
+                      <div className="font-black text-sm text-foreground">{item.name}</div>
+                      <div className="text-xs text-muted-foreground">{item.type}</div>
+                    </div>
+                    <div className="text-gold-foreground font-black text-xs">⭐ {item.rate}/5</div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+          <SectionCard title="🏨 الفنادق الأكثر حجزاً">
+            <div className="grid md:grid-cols-2 gap-4">
+              {hotels.map(h => (
+                <div key={h.id} className="p-4 rounded-xl border border-border flex justify-between items-center">
+                  <div>
+                    <h4 className="font-black text-foreground text-sm">{h.name}</h4>
+                    <div className="text-xs text-muted-foreground">📍 {h.city} · ⭐ {h.rating_avg}</div>
+                  </div>
+                  <Badge tone="sea">{h.bookings_count} ليلة</Badge>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* CHATBOT TAB */}
+      {active === "inquiries_chat" && (
+        <div className="grid lg:grid-cols-5 gap-6 text-right">
+          {/* Left panel */}
+          <div className="lg:col-span-2 space-y-4">
+            <SectionCard title="محادثات الشات بوت 🤖">
+              <div className="space-y-2">
+                {chatSessions.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => { setActiveChatId(s.id); setChatSessions(prev => prev.map(x => x.id === s.id ? { ...x, unread: false } : x)); }}
+                    className={`w-full text-right p-3 rounded-xl border transition-all ${activeChatId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-foreground text-xs">{s.user_name}</span>
+                      <div className="flex items-center gap-1.5">
+                        {s.unread && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                        <span className="text-[10px] text-muted-foreground">{s.time}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 truncate">{s.last_message}</div>
+                    <Badge tone={s.user_type === "سائح" ? "sea" : "sun"}>{s.user_type}</Badge>
+                  </button>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard title="الاستفسارات الواردة">
+              <div className="space-y-3">
+                {tickets.map((tk) => (
+                  <div key={tk.id} className="p-3 rounded-xl border border-border bg-white space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-foreground text-xs">{tk.user_name} ({tk.user_role})</span>
+                      <Badge tone={tk.status === "جديد" ? "sun" : "green"}>{tk.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg">{tk.message}</p>
+                    {tk.reply ? (
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary text-xs font-bold">💬 {tk.reply}</div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input id={`reply-${tk.id}`} type="text" placeholder="اكتب رداً..." className="flex-1 h-8 px-2 text-xs rounded-lg border outline-none text-right" />
+                        <button onClick={() => { const el = document.getElementById(`reply-${tk.id}`) as HTMLInputElement; if (el?.value) handleReplyTicket(tk.id, el.value); }} className="px-3 h-8 bg-primary text-white rounded-lg text-xs font-black">إرسال</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* Chat window */}
+          <div className="lg:col-span-3">
+            {activeChatId ? (() => {
+              const session = chatSessions.find(s => s.id === activeChatId);
+              if (!session) return null;
+              return (
+                <div className="bg-white border border-border rounded-2xl flex flex-col shadow-card overflow-hidden" style={{ height: "640px" }}>
+                  {/* Header */}
+                  <div className="p-4 bg-gradient-sea text-white flex items-center gap-3 flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-white/20 grid place-items-center font-black text-sm">{session.user_name.charAt(0)}</div>
+                    <div>
+                      <div className="font-black text-sm">{session.user_name}</div>
+                      <div className="text-xs text-white/70">{session.user_type}</div>
+                    </div>
+                    <div className="mr-auto flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs text-white/80">متصل</span>
+                    </div>
+                  </div>
+
+                  {/* Bot status bar */}
+                  <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs font-black text-emerald-700">🤖 الشات بوت نشط</span>
+                    <span className="text-[10px] text-emerald-600">— يرد تلقائياً ويحول المعقد للمشرف</span>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 p-4 space-y-3 overflow-y-auto" style={{ background: "rgba(250,248,245,0.5)" }}>
+                    {session.messages.map(msg => (
+                      <div key={msg.id} className={`flex ${msg.from === "user" ? "justify-start" : "justify-end"}`}>
+                        <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs font-semibold ${
+                          msg.from === "user"
+                            ? "bg-white border border-border text-foreground rounded-br-sm"
+                            : msg.from === "admin"
+                            ? "bg-emerald-600 text-white rounded-bl-sm"
+                            : "bg-gradient-sea text-white rounded-bl-sm"
+                        }`}>
+                          {msg.from !== "user" && (
+                            <div className="text-[10px] opacity-70 mb-0.5">
+                              {msg.from === "admin" ? "👤 مشرف" : "🤖 دلّني بوت"}
+                            </div>
+                          )}
+                          <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
+                          <div className="text-[10px] opacity-60 mt-1">{msg.time}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Input */}
+                  <div className="p-4 border-t border-border flex-shrink-0">
+                    <div className="text-[10px] font-black text-muted-foreground mb-1.5">رد المشرف (يظهر كـ Admin Override):</div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={botInput}
+                        onChange={e => setBotInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") handleBotSend(); }}
+                        placeholder="اكتب رداً..."
+                        className="flex-1 h-10 px-3 rounded-xl border border-border text-xs font-semibold outline-none focus:border-primary text-right"
+                      />
+                      <button onClick={handleBotSend} className="px-4 h-10 bg-gradient-sea text-white rounded-xl text-xs font-black">إرسال 📤</button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {["أهلاً وسهلاً! كيف يمكنني مساعدتك؟", "سيتواصل معك أحد المشرفين قريباً", "يمكنك الحجز من صفحة الرحلات"].map(q => (
+                        <button key={q} onClick={() => setBotInput(q)} className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black hover:bg-primary/20 transition">{q}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
+              <div className="bg-white border border-border rounded-2xl h-full min-h-80 grid place-items-center text-muted-foreground text-sm">
+                اختر محادثة لعرضها
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODALS ===== */}
+      {showAddCompany && <AddCompanyModal onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
+      {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
+      {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
+      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
+      {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
+      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
+      {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
+      {showAddHotel && <HotelModal title="إضافة فندق جديد" onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
+      {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
+      {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
+      {editingRestaurant && <RestaurantModal title={`تعديل: ${editingRestaurant.name}`} restaurant={editingRestaurant} onClose={() => setEditingRestaurant(null)} onSave={handleUpdateRestaurant} />}
+      {showAddAttraction && <AttractionModal title="إضافة معلم سياحي جديد" onClose={() => setShowAddAttraction(false)} onSave={handleAddAttraction} />}
+      {editingAttraction && <AttractionModal title={`تعديل: ${editingAttraction.name}`} attraction={editingAttraction} onClose={() => setEditingAttraction(null)} onSave={handleUpdateAttraction} />}
+      {showAddDailyOffer && <DailyOfferModal title="إضافة عرض رحلة يومية" dailyTrips={dailyTrips} onClose={() => setShowAddDailyOffer(false)} onSave={handleAddDailyOffer} />}
+      {editingDailyOffer && <DailyOfferModal title="تعديل العرض اليومي" offer={editingDailyOffer} dailyTrips={dailyTrips} onClose={() => setEditingDailyOffer(null)} onSave={handleUpdateDailyOffer} />}
+      {showAddWeeklyOffer && <WeeklyOfferModal title="إضافة عرض رحلة أسبوعية" weeklyTrips={weeklyTrips} onClose={() => setShowAddWeeklyOffer(false)} onSave={handleAddWeeklyOffer} />}
+      {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
+      {showAddFacilityOffer && <FacilityOfferModal title="إضافة عرض مطعم/كافيه" restaurants={restaurants} onClose={() => setShowAddFacilityOffer(false)} onSave={handleAddFacilityOffer} />}
+      {editingFacilityOffer && <FacilityOfferModal title="تعديل عرض المطعم" offer={editingFacilityOffer} restaurants={restaurants} onClose={() => setEditingFacilityOffer(null)} onSave={handleUpdateFacilityOffer} />}
+      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
+    </DashboardShell>
+  );
+}
+
+/* ============ QUICK ACTION ============ */
+function QuickAction({ icon, label, onClick }: { icon: string; label: string; onClick?: () => void }) {
+  return (
+    <button onClick={onClick} className="p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all text-right w-full group">
+      <div className="text-xl group-hover:scale-110 transition-transform">{icon}</div>
+      <div className="text-[11px] font-black text-foreground mt-1 leading-tight">{label}</div>
+    </button>
+  );
+}
+
+/* ============ VEHICLE MULTI-SELECT FOR ALL PLATFORM COMPANIES ============ */
+function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehicle[]; selected: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (plate: string) =>
+    selected.includes(plate) ? onChange(selected.filter(p => p !== plate)) : onChange([...selected, plate]);
+
+  return (
+    <div className="text-right">
+      <label className="text-xs font-black text-foreground mb-1 block">🚌 تعيين السيارات للرحلة (اختر واحدة أو أكثر من شركات المنصة)</label>
+      <p className="text-[11px] text-muted-foreground mb-2">تظهر هنا جميع السيارات والحافلات المسجلة بالمنصة من مختلف الشركات المتعاقدة:</p>
+      <div className="space-y-1.5 max-h-52 overflow-y-auto p-1">
+        {vehicles.map(v => (
+          <button
+            key={v.plate_number}
+            type="button"
+            onClick={() => toggle(v.plate_number)}
+            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition-all ${
+              selected.includes(v.plate_number) ? "border-primary bg-primary/5 shadow-xs" : "border-border hover:bg-muted/30"
+            }`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition-all ${
+                selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
+              }`}>
+                {selected.includes(v.plate_number) && "✓"}
+              </div>
+              <div className="min-w-0">
+                <div className="font-black text-foreground text-xs flex items-center gap-1.5">
+                  <span>{v.plate_number}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold">🏢 {v.company_name}</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground truncate mt-0.5">{v.vehicle_type} · 👥 سعة {v.capacity} مقعد</div>
+              </div>
+            </div>
+            <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${
+              v.status === "جاهزة" ? "bg-emerald-100 text-emerald-700" : v.status === "في رحلة" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+            }`}>{v.status}</span>
+          </button>
+        ))}
+      </div>
+      {selected.length > 0 && (
+        <div className="mt-2 p-2 bg-primary/8 rounded-xl text-xs font-bold text-primary">
+          ✅ السيارات المختارة: {selected.join(" · ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ MODALS ============ */
+
+function AddPrivateTripModal({ onClose, onAdd, guides }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[] }) {
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [duration, setDuration] = useState("1");
+  const [companions, setCompanions] = useState("1");
+  const [guideLicense, setGuideLicense] = useState("");
+  const [price, setPrice] = useState("");
+  const [plan, setPlan] = useState("");
+  const [status, setStatus] = useState("قيد الدراسة");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerName || !customerPhone) return alert(isAr ? "يرجى إدخال الاسم ورقم الهاتف" : "Please enter name and phone");
+    const newTrip = {
+      private_trip_id: `PT-${Math.floor(Math.random() * 900) + 100}`,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_description: description,
+      preferred_start_date: startDate,
+      duration_days: Number(duration),
+      number_of_companions: Number(companions),
+      assigned_guide: guideLicense || undefined,
+      quoted_price: price ? Number(price) : undefined,
+      admin_itinerary_plan: plan || undefined,
+      status_order: status,
+    };
+    onAdd(newTrip);
+    onClose();
+  };
+  return (
+    <ModalShell title={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <Field label={isAr ? "اسم العميل" : "Customer Name"} value={customerName} onChange={setCustomerName} />
+        <LibyanPhoneField label={isAr ? "هاتف العميل" : "Customer Phone"} value={customerPhone} onChange={setCustomerPhone} />
+        <Field label={isAr ? "وصف الطلب" : "Description"} value={description} onChange={setDescription} />
+        <Field label={isAr ? "تاريخ البدء" : "Start Date"} type="date" value={startDate} onChange={setStartDate} />
+        <Field label={isAr ? "عدد أيام الرحلة" : "Duration (days)"} type="number" value={duration} onChange={v => setDuration(v)} />
+        <Field label={isAr ? "عدد المصاحبين" : "Companions"} type="number" value={companions} onChange={v => setCompanions(v)} />
+        {/* Guide selection */}
+        <select
+          value={guideLicense}
+          onChange={e => setGuideLicense(e.target.value)}
+          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+        >
+          <option value="">{isAr ? "اختر مرشدًا" : "Select Guide"}</option>
+          {guides.map(g => (
+            <option key={g.license_number} value={g.license_number}>
+              {g.full_name} ({g.license_number})
+            </option>
+          ))}
+        </select>
+        <Field label={isAr ? "السعر المقترح" : "Proposed Price"} type="number" value={price} onChange={v => setPrice(v)} />
+        <Field label={isAr ? "خطة الترتيب" : "Itinerary Plan"} value={plan} onChange={setPlan} />
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value as any)}
+          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+        >
+          <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
+          <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
+          <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
+          <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
+        </select>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+            {isAr ? "حفظ الرحلة" : "Save Trip"}
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function AddCompanyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: any) => void }) {
+  const [contractNo] = useState(`CN-2026-${Math.floor(10 + Math.random() * 90)}`);
+  const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [address, setAddress] = useState("");
+  const [email, setEmail] = useState(""); const [pass, setPass] = useState(""); const [vehiclesCount, setVehiclesCount] = useState(5);
+  const [availableCars, setAvailableCars] = useState(0);
+  const [contractEndDate, setContractEndDate] = useState("");
+  const [companyStatus, setCompanyStatus] = useState("موثق");
+  return (
+    <ModalShell title="إضافة شركة نقل سياحي جديدة" onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onAdd({ contract_number: contractNo, name, phone, address, email, pass, total_vehicles: vehiclesCount, available_cars: availableCars, contract_date: new Date().toISOString().split("T")[0], contract_end_date: contractEndDate, status: companyStatus }); }}>
+        <Field label="رقم العقد (تلقائي)" value={contractNo} onChange={() => {}} />
+        <Field label="اسم شركة النقل" value={name} onChange={setName} />
+        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
+        <Field label="العنوان" value={address} onChange={setAddress} />
+        <Field label="البريد الإلكتروني" type="email" value={email} onChange={setEmail} />
+        <Field label="كلمة المرور" type="password" value={pass} onChange={setPass} />
+        <Field label="عدد مركبات الأسطول" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(Number(v))} />
+        <Field label="عدد السيارات المتاحة" type="number" value={String(availableCars)} onChange={v => setAvailableCars(Number(v))} />
+        <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
+        <div className="mb-2">
+          <label className="text-xs font-bold block mb-1">حالة اعتماد الشركة</label>
+          <select value={companyStatus} onChange={e => setCompanyStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="موثق">موثق</option>
+            <option value="بانتظار">بانتظار</option>
+            <option value="مرفوض">مرفوض</option>
+          </select>
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الشركة</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; onClose: () => void; onUpdate: (c: Company) => void }) {
+  const [name, setName] = useState(company.name); const [phone, setPhone] = useState(company.phone);
+  const [address, setAddress] = useState(company.address); const [status, setStatus] = useState(company.status);
+  return (
+    <ModalShell title={`تعديل شركة: ${company.name}`} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onUpdate({ ...company, name, phone, address, status }); }}>
+        <Field label="اسم الشركة" value={name} onChange={setName} />
+        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
+        <Field label="العنوان" value={address} onChange={setAddress} />
+        <div><label className="text-xs font-bold mb-1 block">الحالة</label>
+          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="موثق">موثق</option><option value="بانتظار">بانتظار</option><option value="مرفوض">مرفوض</option>
+          </select>
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ التعديلات</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function GuideVerificationModal({ guide, onClose, onVerify }: { guide: Guide; onClose: () => void; onVerify: (lic: string, status: "موثق" | "مرفوض") => void }) {
+  return (
+    <ModalShell title={`معاينة وثائق: ${guide.full_name}`} onClose={onClose}>
+      <div className="space-y-3 text-right">
+        <div className="p-3 rounded-xl bg-muted/30 text-xs space-y-1">
+          <div><b>رقم الترخيص:</b> {guide.license_number}</div>
+          <div><b>الهاتف:</b> {guide.phone_number}</div>
+          <div><b>الخبرة:</b> {guide.years_of_experience} سنوات</div>
+        </div>
+        <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs space-y-1">
+          <div className="font-black text-primary">📄 الوثائق الرقمية:</div>
+          <p>{guide.certificate}</p>
+          {guide.digital_certificate_file && <a href={guide.digital_certificate_file} target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">🔗 فتح الملف الرقمي ↗</a>}
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button onClick={() => onVerify(guide.license_number, "مرفوض")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs">❌ رفض</button>
+          <button onClick={() => onVerify(guide.license_number, "موثق")} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow">✅ اعتماد وتوثيق</button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function CreateTripModal({ type, guides, vehicles, onClose, onCreate }: { type: "daily" | "weekly"; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onCreate: (t: "daily" | "weekly", d: any) => void }) {
+  const [title, setTitle] = useState(""); const [desc, setDesc] = useState(""); const [price, setPrice] = useState("120");
+  const [capacity, setCapacity] = useState("20"); const [seats, setSeats] = useState("20");
+  const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "");
+  const [selVehicles, setSelVehicles] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState("2026-09-01"); const [endDate, setEndDate] = useState("2026-09-05");
+  const [photo, setPhoto] = useState(""); const [isActive, setIsActive] = useState(true);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const base = { title, description: desc, max_capacity: +capacity, available_seats: +seats, guide_license: guideLic, vehicle_plates: selVehicles, is_active: isActive, photo };
+    if (type === "daily") onCreate("daily", { ...base, price_per_seat: +price });
+    else onCreate("weekly", { ...base, start_date: startDate, end_date: endDate, seat_per_price: +price });
+  };
+
+  return (
+    <ModalShell title={type === "daily" ? "إضافة رحلة يومية جديدة" : "إضافة رحلة أسبوعية جديدة"} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <Field label="عنوان الرحلة" value={title} onChange={setTitle} />
+        <Field label="الوصف" value={desc} onChange={setDesc} />
+        {type === "weekly" && (
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="تاريخ البداية" type="date" value={startDate} onChange={setStartDate} />
+            <Field label="تاريخ النهاية" type="date" value={endDate} onChange={setEndDate} />
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="سعر المقعد (د.ل)" type="number" value={price} onChange={setPrice} />
+          <Field label="السعة القصوى" type="number" value={capacity} onChange={setCapacity} />
+        </div>
+        <Field label="المقاعد المتاحة" type="number" value={seats} onChange={setSeats} />
+        <div><label className="text-xs font-bold mb-1 block">حالة الرحلة</label>
+          <select value={isActive ? "true" : "false"} onChange={e => setIsActive(e.target.value === "true")} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="true">نشطة (معروضة)</option><option value="false">غير نشطة (مخفية)</option>
+          </select>
+        </div>
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="صورة الرحلة (للعرض)" value={photo} onChange={setPhoto} />
+        </div>
+        <div><label className="text-xs font-bold mb-1 block">تعيين المرشد السياحي</label>
+          <select value={guideLic} onChange={e => setGuideLic(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="">بدون مرشد</option>
+            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name} ({g.license_number})</option>)}
+          </select>
+        </div>
+        <div className="pt-2 border-t border-border">
+          <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">إنشاء الرحلة</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function DailyTripEditModal({ trip, guides, vehicles, onClose, onSave }: { trip: DailyTrip; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (t: DailyTrip) => void }) {
+  const [title, setTitle] = useState(trip.title); const [desc, setDesc] = useState(trip.description);
+  const [price, setPrice] = useState(String(trip.price_per_seat)); const [guide, setGuide] = useState(trip.guide_license || "");
+  const [photo, setPhoto] = useState(trip.photo || ""); const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+  return (
+    <ModalShell title={`تعديل: ${trip.title}`} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onSave({ ...trip, title, description: desc, price_per_seat: +price, guide_license: guide, photo, vehicle_plates: selVehicles }); }}>
+        <Field label="عنوان الرحلة" value={title} onChange={setTitle} />
+        <Field label="الوصف" value={desc} onChange={setDesc} />
+        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+        <div><label className="text-xs font-bold mb-1 block">المرشد السياحي</label>
+          <select value={guide} onChange={e => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="">بدون مرشد</option>
+            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name}</option>)}
+          </select>
+        </div>
+        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة الرحلة اليومية" value={photo} onChange={setPhoto} /></div>
+        <div className="pt-2 border-t border-border"><VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} /></div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ التعديلات</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function WeeklyTripEditModal({ trip, guides, vehicles, onClose, onSave }: { trip: WeeklyTrip; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (w: WeeklyTrip) => void }) {
+  const [title, setTitle] = useState(trip.title); const [price, setPrice] = useState(String(trip.seat_per_price));
+  const [guide, setGuide] = useState(trip.guide_license || ""); const [photo, setPhoto] = useState(trip.photo || "");
+  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+  return (
+    <ModalShell title={`تعديل: ${trip.title}`} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onSave({ ...trip, title, seat_per_price: +price, guide_license: guide, photo, vehicle_plates: selVehicles }); }}>
+        <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
+        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+        <div><label className="text-xs font-bold mb-1 block">المرشد السياحي</label>
+          <select value={guide} onChange={e => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="">بدون مرشد</option>
+            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name}</option>)}
+          </select>
+        </div>
+        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة الرحلة الأسبوعية (للعرض)" value={photo} onChange={setPhoto} /></div>
+        <div className="pt-2 border-t border-border"><VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} /></div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ التغييرات</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function EvaluatePrivateTripModal({ trip, guides, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; onClose: () => void; onSave: (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
+  const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : "3500");
+  const [plan, setPlan] = useState(trip.admin_itinerary_plan || "");
+  const [guide, setGuide] = useState(trip.assigned_guide || guides[0]?.license_number || "");
+  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || "");
+  return (
+    <ModalShell title={`تقييم الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
+      <div className="space-y-3 text-right">
+        <div className="p-3 rounded-xl bg-muted/40 text-xs">
+          <div><b>العميل:</b> {trip.customer_name} ({trip.customer_phone})</div>
+          <div><b>الانطلاق والمدة:</b> {trip.preferred_start_date} ({trip.duration_days} أيام)</div>
+          <div className="mt-1 font-semibold">" {trip.customer_description} "</div>
+        </div>
+        <Field label="السعر الإجمالي (د.ل)" type="number" value={price} onChange={setPrice} />
+        <div><label className="text-xs font-bold mb-1 block">خطة مسار الرحلة</label>
+          <textarea value={plan} onChange={e => setPlan(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" />
+        </div>
+        <div><label className="text-xs font-bold mb-1 block">تعيين المرشد المكلف</label>
+          <select value={guide} onChange={e => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name}</option>)}
+          </select>
+        </div>
+        <Field label="رقم لوحة المركبة" value={vehicle} onChange={setVehicle} />
+        <div className="flex gap-2 justify-end pt-2">
+          <button onClick={() => onSave(trip.private_trip_id, "مرفوضة من الأدمن")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs">رفض الطلب</button>
+          <button onClick={() => onSave(trip.private_trip_id, "مؤكدة", +price, plan, guide, vehicle)} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow">تأكيد الموارد والسعر</button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: Hotel; onClose: () => void; onSave: (h: any) => void }) {
+  const [name, setName] = useState(hotel?.name || ""); const [city, setCity] = useState(hotel?.city || "طرابلس");
+  const [address, setAddress] = useState(hotel?.address || ""); const [phone, setPhone] = useState(hotel?.phone || "");
+  const [stars, setStars] = useState(hotel?.stars ? String(hotel.stars) : "4");
+  const [status, setStatus] = useState(hotel?.partnership_status || "نشط");
+  const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_city.jpg");
+  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/ai_city.jpg");
+  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/ai_city.jpg");
+  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/ai_city.jpg");
+  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/ai_city.jpg");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !city || !address) return alert("يرجى إدخال البيانات الأساسية");
+    onSave({ ...(hotel ? { id: hotel.id } : {}), name, city, address, phone, stars: +stars, partnership_status: status, hotel_photo_1: p1, hotel_photo_2: p2, hotel_photo_3: p3, hotel_photo_4: p4, hotel_photo_5: p5 });
+  };
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <Field label="اسم الفندق" value={name} onChange={setName} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="المدينة" value={city} onChange={setCity} />
+          <Field label="النجوم (1-5)" type="number" value={stars} onChange={setStars} />
+        </div>
+        <div className="mb-2">
+          <label className="text-xs font-bold block mb-1">حالة التعاقد</label>
+          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+            <option value="نشط">نشط</option>
+            <option value="ملغي">ملغي</option>
+          </select>
+        </div>
+        <Field label="العنوان" value={address} onChange={setAddress} />
+        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
+        <div className="space-y-2 pt-2 border-t border-border">
+          <label className="text-xs font-black text-foreground block">🖼️ الصور الـ 5 للفندق:</label>
+          <ImageFilePicker label="الصورة 1 (الواجهة)" value={p1} onChange={setP1} />
+          <ImageFilePicker label="الصورة 2 (الغرف)" value={p2} onChange={setP2} />
+          <ImageFilePicker label="الصورة 3 (الاستقبال)" value={p3} onChange={setP3} />
+          <ImageFilePicker label="الصورة 4 (المطعم)" value={p4} onChange={setP4} />
+          <ImageFilePicker label="الصورة 5 (الإطلالة)" value={p5} onChange={setP5} />
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الفندق</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
+  const [name, setName] = useState(restaurant?.name || ""); const [type, setType] = useState(restaurant?.type || "مأكولات شعبية");
+  const [city, setCity] = useState(restaurant?.city || "طرابلس"); const [address, setAddress] = useState(restaurant?.address || "");
+  const [phone, setPhone] = useState(restaurant?.phone || "");
+  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_city.jpg");
+  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_city.jpg");
+  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_city.jpg");
+  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/ai_food.jpg");
+  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/ai_food.jpg");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة");
+    onSave({ ...(restaurant ? { id: restaurant.id } : {}), name, type, city, address, phone, facility_image_1: i1, facility_image_2: i2, facility_image_3: i3, facility_image_4: i4, facility_image_5: i5 });
+  };
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <Field label="اسم المطعم/المقهى" value={name} onChange={setName} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="النوع" value={type} onChange={setType} />
+          <Field label="المدينة" value={city} onChange={setCity} />
+        </div>
+        <Field label="العنوان" value={address} onChange={setAddress} />
+        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
+        <div className="space-y-2 pt-2 border-t border-border">
+          <label className="text-xs font-black text-foreground block">🖼️ الصور الـ 5:</label>
+          <ImageFilePicker label="الصورة 1 (المدخل)" value={i1} onChange={setI1} />
+          <ImageFilePicker label="الصورة 2 (القاعة)" value={i2} onChange={setI2} />
+          <ImageFilePicker label="الصورة 3 (الأطباق)" value={i3} onChange={setI3} />
+          <ImageFilePicker label="الصورة 4 (الجلسات)" value={i4} onChange={setI4} />
+          <ImageFilePicker label="الصورة 5 (المشروبات)" value={i5} onChange={setI5} />
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function AttractionModal({ title, attraction, onClose, onSave }: { title: string; attraction?: Attraction; onClose: () => void; onSave: (a: any) => void }) {
+  const [name, setName] = useState(attraction?.name || ""); const [city, setCity] = useState(attraction?.city || "الخمس");
+  const [category, setCategory] = useState(attraction?.category || "آثار تاريخية"); const [desc, setDesc] = useState(attraction?.description || "");
+  const [img, setImg] = useState(attraction?.place_image || "/assets/ai_ruins.jpg");
+  const [lat, setLat] = useState(attraction?.latitude ? String(attraction.latitude) : "");
+  const [lng, setLng] = useState(attraction?.longitude ? String(attraction.longitude) : "");
+  const [mapsUrl, setMapsUrl] = useState(attraction?.google_maps_url || "");
+
+  const genMapUrl = () => { if (lat && lng) setMapsUrl(`https://maps.google.com/?q=${lat},${lng}`); };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة");
+    onSave({ ...(attraction ? { id: attraction.id } : {}), name, city, category, description: desc, place_image: img, latitude: lat ? +lat : undefined, longitude: lng ? +lng : undefined, google_maps_url: mapsUrl || undefined });
+  };
+
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <Field label="اسم المعلم السياحي" value={name} onChange={setName} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="المدينة" value={city} onChange={setCity} />
+          <Field label="التصنيف" value={category} onChange={setCategory} />
+        </div>
+        <div><label className="text-xs font-bold mb-1 block">الوصف التفصيلي</label>
+          <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" />
+        </div>
+
+        {/* Google Maps Section */}
+        <div className="pt-2 border-t border-border space-y-2">
+          <label className="text-xs font-black text-foreground block">📍 الموقع الجغرافي (Google Maps)</label>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="خط العرض (Latitude)" value={lat} onChange={setLat} placeholder="مثال: 32.6381" />
+            <Field label="خط الطول (Longitude)" value={lng} onChange={setLng} placeholder="مثال: 14.2936" />
+          </div>
+          <div className="flex gap-2">
+            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="رابط Google Maps أو اضغط توليد تلقائي..." className="flex-1 h-9 px-3 rounded-xl border border-border text-[11px] outline-none focus:border-primary text-right" />
+            <button type="button" onClick={genMapUrl} className="px-3 h-9 bg-blue-600 text-white rounded-xl text-xs font-black whitespace-nowrap">🗺️ توليد</button>
+          </div>
+          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 font-bold hover:underline">🔗 معاينة في خرائط جوجل ↗</a>}
+        </div>
+
+        <div className="pt-2 border-t border-border"><ImageFilePicker label="الصورة الرئيسية للمعلم" value={img} onChange={setImg} /></div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المعلم السياحي</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+/* ---- OFFER MODALS ---- */
+
+function DailyOfferModal({ title, offer, dailyTrips, onClose, onSave }: { title: string; offer?: DailyOffer; dailyTrips: DailyTrip[]; onClose: () => void; onSave: (o: any) => void }) {
+  const [ot, setOt] = useState(offer?.title_offer || ""); const [desc, setDesc] = useState(offer?.description || "");
+  const [disc, setDisc] = useState(String(offer?.percent_discount || 10)); const [img, setImg] = useState(offer?.url_image_offer || "");
+  const [tripId, setTripId] = useState(offer?.daily_trip_id || dailyTrips[0]?.id || "");
+  const [ds, setDs] = useState(offer?.date_start || "2026-08-01"); const [de, setDe] = useState(offer?.date_end || "2026-08-31");
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={e => { e.preventDefault(); onSave({ ...(offer ? { id: offer.id } : {}), title_offer: ot, description: desc, percent_discount: +disc, url_image_offer: img, daily_trip_id: tripId, date_start: ds, date_end: de }); }}>
+        <Field label="عنوان العرض" value={ot} onChange={setOt} />
+        <div><label className="text-xs font-bold mb-1 block">الوصف</label><textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="نسبة الخصم % (1-100)" type="number" value={disc} onChange={setDisc} />
+          <div><label className="text-xs font-bold mb-1 block">الرحلة اليومية</label>
+            <select value={tripId} onChange={e => setTripId(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+              {dailyTrips.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="تاريخ البداية" type="date" value={ds} onChange={setDs} />
+          <Field label="تاريخ الانتهاء" type="date" value={de} onChange={setDe} />
+        </div>
+        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة العرض" value={img} onChange={setImg} /></div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ العرض</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function WeeklyOfferModal({ title, offer, weeklyTrips, onClose, onSave }: { title: string; offer?: WeeklyOffer; weeklyTrips: WeeklyTrip[]; onClose: () => void; onSave: (o: any) => void }) {
+  const [ot, setOt] = useState(offer?.offer_title || ""); const [desc, setDesc] = useState(offer?.description || "");
+  const [disc, setDisc] = useState(String(offer?.percent_discount || 10)); const [img, setImg] = useState(offer?.offer_image_url || "");
+  const [tripId, setTripId] = useState(offer?.weekly_trip_id || weeklyTrips[0]?.id || "");
+  const [ds, setDs] = useState(offer?.date_start || "2026-08-01"); const [de, setDe] = useState(offer?.date_end || "2026-09-30");
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={e => { e.preventDefault(); onSave({ ...(offer ? { id: offer.id } : {}), offer_title: ot, description: desc, percent_discount: +disc, offer_image_url: img, weekly_trip_id: tripId, date_start: ds, date_end: de }); }}>
+        <Field label="عنوان العرض الأسبوعي" value={ot} onChange={setOt} />
+        <div><label className="text-xs font-bold mb-1 block">الوصف</label><textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="نسبة الخصم %" type="number" value={disc} onChange={setDisc} />
+          <div><label className="text-xs font-bold mb-1 block">الرحلة الأسبوعية</label>
+            <select value={tripId} onChange={e => setTripId(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+              {weeklyTrips.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="تاريخ البداية" type="date" value={ds} onChange={setDs} />
+          <Field label="تاريخ الانتهاء" type="date" value={de} onChange={setDe} />
+        </div>
+        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة العرض الأسبوعي" value={img} onChange={setImg} /></div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-glow">حفظ العرض الأسبوعي</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function FacilityOfferModal({ title, offer, restaurants, onClose, onSave }: { title: string; offer?: FacilityOffer; restaurants: Restaurant[]; onClose: () => void; onSave: (o: any) => void }) {
+  const [ot, setOt] = useState(offer?.title_offer || ""); const [desc, setDesc] = useState(offer?.description || "");
+  const [disc, setDisc] = useState(String(offer?.percent_discount || 10)); const [img, setImg] = useState(offer?.offer_image_url || "");
+  const [facId, setFacId] = useState(offer?.facility_id || restaurants[0]?.id || "");
+  const [ds, setDs] = useState(offer?.date_start || "2026-08-01"); const [de, setDe] = useState(offer?.date_end || "2026-08-31");
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={e => { e.preventDefault(); onSave({ ...(offer ? { id: offer.id } : {}), title_offer: ot, description: desc, percent_discount: +disc, offer_image_url: img, facility_id: facId, date_start: ds, date_end: de }); }}>
+        <Field label="عنوان عرض المطعم/الكافيه" value={ot} onChange={setOt} />
+        <div><label className="text-xs font-bold mb-1 block">الوصف</label><textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="نسبة الخصم %" type="number" value={disc} onChange={setDisc} />
+          <div><label className="text-xs font-bold mb-1 block">المطعم/الكافيه</label>
+            <select value={facId} onChange={e => setFacId(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+              {restaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="تاريخ البداية" type="date" value={ds} onChange={setDs} />
+          <Field label="تاريخ الانتهاء" type="date" value={de} onChange={setDe} />
+        </div>
+        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة عرض المطعم" value={img} onChange={setImg} /></div>
+        <div className="flex gap-2 justify-end pt-2">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ عرض المطعم</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+/* ---- SHARED UI COMPONENTS ---- */
+
+function ImageFilePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) { const r = new FileReader(); r.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); }; r.readAsDataURL(file); }
+  };
+  return (
+    <div className="p-2.5 rounded-xl border border-border bg-muted/20 space-y-1.5 text-right">
+      <div className="flex justify-between items-center">
+        <label className="text-xs font-bold text-foreground">{label}</label>
+        {value && <span className="text-[10px] text-emerald-600 font-bold">✓ تم التحميل</span>}
+      </div>
+      <div className="flex items-center gap-2">
+        {value ? <img src={value} alt="" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-xs flex-shrink-0" /> : <div className="w-12 h-12 rounded-lg bg-muted border border-dashed border-border grid place-items-center text-xs text-muted-foreground flex-shrink-0">📷</div>}
+        <div className="flex-1 space-y-1">
+          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-sea text-white text-xs font-black cursor-pointer hover:opacity-90 transition shadow-soft">
+            📁 اختيار من الجهاز
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          </label>
+          <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder="أو ضع رابط الصورة..." className="w-full h-8 px-2 text-[10px] rounded-lg border border-border bg-white outline-none font-mono text-right" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-3xl shadow-glow overflow-hidden my-6">
+        <div className="p-4 bg-gradient-sea text-white flex justify-between items-center">
+          <h3 className="text-base font-black">{title}</h3>
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 grid place-items-center text-xs transition">✕</button>
+        </div>
+        <div className="p-5 max-h-[80vh] overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function LibyanPhoneField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [error, setError] = useState("");
+  const handleChange = (val: string) => {
+    onChange(val);
+    setError(val && !/^09\d{8}$/.test(val) ? "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)" : "");
+  };
+  return (
+    <div>
+      <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
+      <input type="tel" value={value} onChange={e => handleChange(e.target.value)} placeholder="09..." className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
+      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+    </div>
+  );
+}
+
+function Field({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div>
+      <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold" />
+    </div>
+  );
+}
