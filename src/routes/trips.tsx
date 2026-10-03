@@ -50,6 +50,7 @@ import destSaharaDunes from "@/assets/dest-sahara-dunes.jpg";
 
 import offerDesert from "@/assets/offer-desert.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
+import videoPromoDallani from "@/assets/video-promo-dallani.mp4";
 import {
   BookingModal,
   DetailsModal,
@@ -59,6 +60,7 @@ import {
   DetailsItem,
 } from "@/components/Modals";
 import { Header } from "@/components/Header";
+import { TRIP_VIDEO_DATABASE, TripVideoTrailerModal } from "@/components/TripVideoShowcase";
 import { useLanguage } from "@/lib/i18n";
 import { GuideCVModal, GuideCVData } from "@/components/GuideCVModal";
 import { VehicleDetailsModal, VehicleData } from "@/components/VehicleDetailsModal";
