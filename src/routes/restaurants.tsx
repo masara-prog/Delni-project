@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
+import { RestaurantDetailsModal } from "@/components/RestaurantDetailsModal";
 
 export const Route = createFileRoute("/restaurants")({
   head: () => ({
@@ -1315,18 +1316,6 @@ function RestaurantsPage() {
     setLikedMap((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // If a restaurant is selected, render the Dedicated Full View
-  if (selectedRest) {
-    return (
-      <RestaurantDetailsView
-        restaurant={selectedRest}
-        onBack={() => {
-          setSelectedRest(null);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#F7F8FA]" dir={dir}>
@@ -1700,7 +1689,7 @@ function RestaurantsPage() {
                             }}
                             className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
                           >
-                            <span>{isAr ? "اعرف أكثر" : "Learn More"}</span>
+                            <span>{isAr ? "معرفة المزيد" : "Learn More"}</span>
                             <span>➔</span>
                           </button>
                         </div>
@@ -1727,6 +1716,13 @@ function RestaurantsPage() {
         </section>
 
       </div>
+
+      {/* Dynamic Animated Restaurant Details Popup Modal */}
+      <RestaurantDetailsModal
+        restaurant={selectedRest}
+        open={Boolean(selectedRest)}
+        onClose={() => setSelectedRest(null)}
+      />
 
       <Footer />
     </div>

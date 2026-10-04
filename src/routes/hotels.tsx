@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { useLanguage } from "@/lib/i18n";
 import { Icon } from "@/components/Icons";
 import { Footer } from "@/components/Footer";
-import { type HotelData } from "@/components/HotelDetailsModal";
+import { HotelDetailsModal, type HotelData } from "@/components/HotelDetailsModal";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 
 export const Route = createFileRoute("/hotels")({
@@ -1223,18 +1223,6 @@ function HotelsPage() {
     setLikedHotels((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // If a hotel is clicked, render the Dedicated Full View (no modal, no rooms, no booking)
-  if (selectedHotel) {
-    return (
-      <HotelDetailsView
-        hotel={selectedHotel}
-        onBack={() => {
-          setSelectedHotel(null);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#F7F8FA]" dir={dir}>
@@ -1716,7 +1704,7 @@ function HotelsPage() {
                         }}
                         className="w-full py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                       >
-                        <span>{isAr ? "اعرف أكثر" : "Learn More"}</span>
+                        <span>{isAr ? "معرفة المزيد" : "Learn More"}</span>
                         <span>➔</span>
                       </button>
 
@@ -1754,6 +1742,13 @@ function HotelsPage() {
         )}
       </section>
     </div>
+
+      {/* Dynamic Animated Hotel Details Popup Modal */}
+      <HotelDetailsModal
+        hotel={selectedHotel}
+        open={Boolean(selectedHotel)}
+        onClose={() => setSelectedHotel(null)}
+      />
 
       <Footer />
     </div>

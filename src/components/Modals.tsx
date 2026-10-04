@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { useLanguage } from "@/lib/i18n";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destCyrene from "@/assets/dest-cyrene.jpg";
@@ -24,6 +24,7 @@ import destSaharaDunes from "@/assets/dest-sahara-dunes.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getNearbyServices } from "@/lib/homeData";
+import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays } from "@/lib/guidesData";
 
 function resolveTripImage(title?: string, kind?: string | null, customImage?: string): string {
   if (customImage) return customImage;
@@ -109,6 +110,10 @@ export type BookableItem = {
   details?: string;
   price?: number | string;
   currency?: string;
+  availableSeats?: number;
+  totalSeats?: number;
+  busCapacity?: number;
+  driverName?: string;
 };
 
 export function BookingModal({ open, onClose, item }: { open: boolean; onClose: () => void; item: BookableItem | null }) {
@@ -142,10 +147,43 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
 
   if (!item) return null;
 
+  // Determine bus capacity: strictly 25 or 50 passengers as requested
+  const busCapacity = item.busCapacity
+    ? (item.busCapacity >= 35 ? 50 : 25)
+    : (item.totalSeats && item.totalSeats >= 35 ? 50 : (item.subtitle && (item.subtitle.includes("أسبوعية") || item.subtitle.includes("سفاري")) ? 50 : 25));
+
+  // Determine available seats
+  const maxAvailable = typeof item.availableSeats === "number" && item.availableSeats > 0
+    ? Math.min(item.availableSeats, busCapacity)
+    : (busCapacity === 50 ? 32 : 18);
+
+  const numSeats = parseInt(seats, 10);
+  const isSeatExceeded = !isNaN(numSeats) && numSeats > maxAvailable;
+  const isSeatTooLow = isNaN(numSeats) || numSeats < 1;
+  const hasSeatError = isSeatExceeded || isSeatTooLow;
+
   const unit = typeof item.price === "number" ? item.price : Number(String(item.price ?? "0").replace(/[^\d]/g, ""));
-  const total = unit * (parseInt(seats) || 1);
+  const total = unit * (hasSeatError ? 0 : numSeats);
   const tripImage = item.image || item.img || resolveTripImage(item.title, item.subtitle);
   const slideshowImages = item.images || item.gallery || [tripImage];
+
+  const handleSeatsChange = (val: string) => {
+    setSeats(val);
+  };
+
+  const handleIncrement = () => {
+    const current = parseInt(seats, 10) || 0;
+    if (current < maxAvailable) {
+      setSeats(String(current + 1));
+    }
+  };
+
+  const handleDecrement = () => {
+    const current = parseInt(seats, 10) || 1;
+    if (current > 1) {
+      setSeats(String(current - 1));
+    }
+  };
 
   return (
     <Modal open={open} onClose={onClose} size="lg">
@@ -167,7 +205,11 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
           </div>
           <form
             className="p-6 space-y-4"
-            onSubmit={(e) => { e.preventDefault(); setStep("success"); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (hasSeatError) return;
+              setStep("success");
+            }}
           >
             <div className="text-xs font-black text-primary">{isAr ? "إكمال الحجز · حساب مسجّل" : "Complete Booking · Registered Account"}</div>
             <h3 className="text-xl font-black text-foreground">{item.title}</h3>
@@ -177,10 +219,93 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               <div className="text-[#526078]">{isAr ? "بياناتك ورقم هاتفك المسجلين مسبقاً مرتبطان تلقائياً بهذا الحجز." : "Your registered account details and phone are automatically linked to this booking."}</div>
             </div>
 
-            <Field label={isAr ? "عدد المقاعد المراد حجزها" : "Number of Seats"} value={seats} onChange={setSeats} type="number" required />
-            <Field label={isAr ? "تاريخ الرحلة" : "Trip Date"} value={date} onChange={setDate} type="date" required />
+            {/* Capacity & Driver Badge */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-black text-[#003580] flex items-center gap-1.5 text-xs">
+                  <span>🚌</span>
+                  <span>{isAr ? `سعة الحافلة: ${busCapacity} راكب` : `Coach Capacity: ${busCapacity} Passengers`}</span>
+                </span>
+                <span className="font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] border border-emerald-200">
+                  {isAr ? `المتاح للحجز: ${maxAvailable} مقعد` : `${maxAvailable} seats available`}
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-600 font-medium">
+                {isAr
+                  ? `مركبة سياحية معتمدة (${busCapacity === 50 ? "حافلة كبرى 50 راكب" : "ميني باص سياحي 25 راكب"}) بإشراف سائق مرخص.`
+                  : `Certified tourist bus (${busCapacity} seats) with licensed driver.`}
+              </div>
+            </div>
 
-            {unit > 0 && (
+            {/* Seats Input with Stepper and Validation */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <label className="font-black text-[#0F172A]">
+                  {isAr ? "عدد المقاعد المراد حجزها *" : "Number of Seats *"}
+                </label>
+                <span className="text-[11px] text-slate-500 font-bold">
+                  {isAr ? `الحد الأقصى: ${maxAvailable} مقاعد` : `Max: ${maxAvailable} seats`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDecrement}
+                  disabled={numSeats <= 1}
+                  className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-800 font-black text-lg transition flex items-center justify-center cursor-pointer border border-slate-200 shrink-0"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={maxAvailable}
+                  value={seats}
+                  onChange={(e) => handleSeatsChange(e.target.value)}
+                  className={`w-full h-11 px-4 text-center rounded-xl border-2 font-black text-base outline-none transition ${
+                    hasSeatError
+                      ? "border-red-400 bg-red-50/50 text-red-700 focus:border-red-500"
+                      : "border-[#E8E2D6] bg-white text-[#0F172A] focus:border-[#D96B27]"
+                  }`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleIncrement}
+                  disabled={numSeats >= maxAvailable}
+                  className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-800 font-black text-lg transition flex items-center justify-center cursor-pointer border border-slate-200 shrink-0"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Real-time Error Alert */}
+              {isSeatExceeded && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-300 text-red-700 text-xs font-bold flex items-start gap-2 animate-in fade-in duration-200">
+                  <span className="text-base leading-none">⚠️</span>
+                  <div>
+                    <span className="font-black block">{isAr ? "تجاوزت المقاعد المتاحة!" : "Seats limit exceeded!"}</span>
+                    <span>
+                      {isAr
+                        ? `عذراً، المقاعد المتبقية المتاحة لهذه الرحلة هي (${maxAvailable}) مقاعد فقط من إجمالي سعة الحافلة (${busCapacity} راكب). يرجى تقليل العدد.`
+                        : `Only ${maxAvailable} seats are available out of ${busCapacity} coach capacity.`}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {isSeatTooLow && (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{isAr ? "يرجى تحديد مقعد واحد (1) على الأقل لإكمال الحجز." : "Please select at least 1 seat."}</span>
+                </div>
+              )}
+            </div>
+
+            <Field label={isAr ? "تاريخ الرحلة *" : "Trip Date *"} value={date} onChange={setDate} type="date" required />
+
+            {unit > 0 && !hasSeatError && (
               <div className="rounded-2xl bg-[#FAFAF8] p-4 border border-[#E6E1D6]">
                 <div className="flex justify-between text-sm text-[#526078]">
                   <span>{isAr ? "سعر المقعد" : "Seat Price"}</span>
@@ -188,7 +313,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 </div>
                 <div className="flex justify-between text-sm text-[#526078] mt-1">
                   <span>{isAr ? "عدد المقاعد" : "Seats"}</span>
-                  <span className="font-bold text-[#0B132B]">× {seats}</span>
+                  <span className="font-bold text-[#0B132B]">× {numSeats}</span>
                 </div>
                 <div className="mt-3 pt-3 border-t border-[#E6E1D6] flex justify-between items-center">
                   <span className="font-black text-[#0B132B]">{isAr ? "السعر الإجمالي" : "Total Price"}</span>
@@ -197,8 +322,13 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               </div>
             )}
 
-            <button className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition">
-              {isAr ? "تأكيد واستكمال الحجز" : "Confirm & Complete Booking"}
+            <button
+              disabled={hasSeatError}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
+            >
+              {hasSeatError
+                ? (isAr ? "حدد عدد مقاعد متاح للاستمرار" : "Select valid seats to continue")
+                : (isAr ? "تأكيد واستكمال الحجز" : "Confirm & Complete Booking")}
             </button>
           </form>
         </div>
@@ -207,7 +337,9 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
           <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 grid place-items-center text-3xl">✅</div>
           <h3 className="mt-4 text-2xl font-black text-[#0B132B]">{isAr ? "تم إرسال وتأكيد الحجز!" : "Booking Confirmed!"}</h3>
           <p className="mt-2 text-[#526078] text-sm">
-            {isAr ? `رقم الحجز #BK-${Math.floor(Math.random() * 90000 + 10000)}. تم ربط الحجز بحسابك المسجل بنجاح وسيتواصل معك المرشد أو السائق في الموعد.` : `Booking ID #BK-${Math.floor(Math.random() * 90000 + 10000)}. Confirmed and linked to your registered account.`}
+            {isAr
+              ? `رقم الحجز #BK-${Math.floor(Math.random() * 90000 + 10000)}. تم حجز (${numSeats}) مقاعد على الحافلة سعة (${busCapacity} راكب). تم ربط الحجز بحسابك المسجل بنجاح وسيتواصل معك السائق أو المرشد في الموعد.`
+              : `Booking ID #BK-${Math.floor(Math.random() * 90000 + 10000)}. (${numSeats}) seats booked on ${busCapacity}-passenger coach. Linked to your account.`}
           </p>
           <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft">
             {isAr ? "إغلاق" : "Close"}
@@ -889,23 +1021,132 @@ export function TripScheduleModal({
               </div>
             </div>
           </div>
-          <form className="p-6 space-y-4" onSubmit={(e) => { e.preventDefault(); setStep("done"); }}>
-            <Field label={isAr ? "عدد المقاعد *" : "Number of Seats *"} value={seats} onChange={setSeats} type="number" required />
+          <form
+            className="p-6 space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const avail = selectedTrip ? (selectedTrip.seats - selectedTrip.taken) : 0;
+              const n = parseInt(seats, 10);
+              if (isNaN(n) || n < 1 || n > avail) return;
+              setStep("done");
+            }}
+          >
+            {/* Bus Capacity and Schedule Info */}
+            {(() => {
+              const avail = selectedTrip ? (selectedTrip.seats - selectedTrip.taken) : 0;
+              const busCap = selectedTrip && selectedTrip.seats >= 35 ? 50 : 25;
+              const n = parseInt(seats, 10);
+              const isExceeded = !isNaN(n) && n > avail;
+              const isLow = isNaN(n) || n < 1;
+              const hasErr = isExceeded || isLow;
 
-            <div className="rounded-2xl bg-[#FAFAF8] p-4 border border-[#E6E1D6]">
-              <div className="flex justify-between text-sm text-[#526078]">
-                <span>{isAr ? "سعر المقعد" : "Seat Price"}</span>
-                <span className="font-bold text-[#0B132B]">{selectedTrip.price.toLocaleString()} {isAr ? "د.ل" : "LYD"}</span>
-              </div>
-              <div className="mt-3 pt-3 border-t border-[#E6E1D6] flex justify-between items-center">
-                <span className="font-black text-[#0B132B]">{isAr ? "الإجمالي" : "Total"}</span>
-                <span className="text-2xl font-black text-[#D96B27]">{total.toLocaleString()} <span className="text-sm text-[#526078] font-bold">{isAr ? "د.ل" : "LYD"}</span></span>
-              </div>
-            </div>
+              return (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-[#003580] flex items-center gap-1.5 text-xs">
+                        <span>🚌</span>
+                        <span>{isAr ? `سعة الحافلة: ${busCap} راكب` : `Coach: ${busCap} Seats`}</span>
+                      </span>
+                      <span className="font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] border border-emerald-200">
+                        {isAr ? `المتاح للحجز: ${avail} مقعد` : `${avail} seats available`}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 font-medium">
+                      {isAr
+                        ? `المرشد المرافق: ${selectedTrip.guide} · حافلة ${busCap === 50 ? "سياحية كبرى 50 راكب" : "ميني باص 25 راكب"}.`
+                        : `Guide: ${selectedTrip.guide} · ${busCap}-passenger certified coach.`}
+                    </div>
+                  </div>
 
-            <button className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition">
-              {isAr ? "تأكيد الحجز والدفع" : "Confirm Booking"}
-            </button>
+                  {/* Seat Stepper and Real-Time Error */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-black text-[#0F172A]">
+                        {isAr ? "عدد المقاعد المراد حجزها *" : "Number of Seats *"}
+                      </label>
+                      <span className="text-[11px] text-slate-500 font-bold">
+                        {isAr ? `المتاح: ${avail} مقاعد` : `Available: ${avail} seats`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cur = parseInt(seats, 10) || 1;
+                          if (cur > 1) setSeats(String(cur - 1));
+                        }}
+                        disabled={n <= 1}
+                        className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-800 font-black text-lg transition flex items-center justify-center cursor-pointer border border-slate-200 shrink-0"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max={avail}
+                        value={seats}
+                        onChange={(e) => setSeats(e.target.value)}
+                        className={`w-full h-11 px-4 text-center rounded-xl border-2 font-black text-base outline-none transition ${
+                          hasErr
+                            ? "border-red-400 bg-red-50/50 text-red-700 focus:border-red-500"
+                            : "border-[#E8E2D6] bg-white text-[#0F172A] focus:border-[#D96B27]"
+                        }`}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cur = parseInt(seats, 10) || 0;
+                          if (cur < avail) setSeats(String(cur + 1));
+                        }}
+                        disabled={n >= avail}
+                        className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-800 font-black text-lg transition flex items-center justify-center cursor-pointer border border-slate-200 shrink-0"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {isExceeded && (
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-300 text-red-700 text-xs font-bold flex items-start gap-2">
+                        <span className="text-base leading-none">⚠️</span>
+                        <div>
+                          <span className="font-black block">{isAr ? "تجاوزت المقاعد المتاحة!" : "Limit exceeded!"}</span>
+                          <span>
+                            {isAr
+                              ? `عذراً، المقاعد المتبقية في هذا الموعد هي (${avail}) مقاعد فقط من أصل سعة الحافلة (${busCap} راكب).`
+                              : `Only ${avail} seats left in this schedule out of ${busCap}.`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {!hasErr && (
+                    <div className="rounded-2xl bg-[#FAFAF8] p-4 border border-[#E6E1D6]">
+                      <div className="flex justify-between text-sm text-[#526078]">
+                        <span>{isAr ? "سعر المقعد" : "Seat Price"}</span>
+                        <span className="font-bold text-[#0B132B]">{selectedTrip.price.toLocaleString()} {isAr ? "د.ل" : "LYD"}</span>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-[#E6E1D6] flex justify-between items-center">
+                        <span className="font-black text-[#0B132B]">{isAr ? "الإجمالي" : "Total"}</span>
+                        <span className="text-2xl font-black text-[#D96B27]">{(selectedTrip.price * n).toLocaleString()} <span className="text-sm text-[#526078] font-bold">{isAr ? "د.ل" : "LYD"}</span></span>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    disabled={hasErr}
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
+                  >
+                    {hasErr
+                      ? (isAr ? "يرجى تحديد مقاعد متاحة" : "Select valid seats")
+                      : (isAr ? "تأكيد الحجز والدفع" : "Confirm Booking")}
+                  </button>
+                </div>
+              );
+            })()}
           </form>
         </div>
       )}
@@ -915,9 +1156,9 @@ export function TripScheduleModal({
           <div className="w-20 h-20 mx-auto rounded-full bg-emerald-100 text-emerald-600 grid place-items-center text-4xl">✅</div>
           <h3 className="mt-5 text-2xl font-black text-[#0B132B]">{isAr ? "تم تأكيد حجزك!" : "Booking Confirmed!"}</h3>
           <p className="mt-2 text-[#526078] text-sm">
-            {isAr ? `رقم الحجز #DL-${Math.floor(Math.random() * 90000 + 10000)}. تم تأكيد حجزك بنجاح وربطه بحسابك المسجل في المنصة.` : `Booking #DL-${Math.floor(Math.random() * 90000 + 10000)}. Your booking has been confirmed and linked to your registered account.`}
+            {isAr ? `رقم الحجز #DL-${Math.floor(Math.random() * 90000 + 10000)}. تم حجز (${seats}) مقاعد بنجاح مع المرشد (${selectedTrip.guide}) وربطه بحسابك المسجل في المنصة.` : `Booking #DL-${Math.floor(Math.random() * 90000 + 10000)}. Your booking has been confirmed.`}
           </p>
-          <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft">{isAr ? "تم" : "Done"}</button>
+          <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft cursor-pointer">{isAr ? "تم" : "Done"}</button>
         </div>
       )}
     </Modal>
@@ -940,9 +1181,33 @@ export function PrivateTripModal({
   const [days, setDays] = useState("3");
   const [persons, setPersons] = useState("2");
   const [startDate, setStartDate] = useState("");
+  const [selectedGuide, setSelectedGuide] = useState<TourGuide | null>(null);
   const [guideName, setGuideName] = useState(initialGuide || "");
   const [vehicleType, setVehicleType] = useState("luxury-coach");
-  const [phone, setPhone] = useState("");
+  const [showAllGuides, setShowAllGuides] = useState(false);
+
+  // Popular Libyan destinations quick tags
+  const POPULAR_DESTINATIONS = [
+    { label: isAr ? "لبدة الكبرى (الخمس)" : "Leptis Magna", key: "لبدة" },
+    { label: isAr ? "بحيرات أوباري وفزان" : "Ubari Lakes", key: "أوباري" },
+    { label: isAr ? "غدامس القديمة (لؤلؤة الصحراء)" : "Ghadames", key: "غدامس" },
+    { label: isAr ? "صبراتة والمسرح الروماني" : "Sabratha", key: "صبراتة" },
+    { label: isAr ? "شحات وقورينا (الجبل الأخضر)" : "Cyrene", key: "شحات" },
+    { label: isAr ? "جبال تدرارت أكاكوس وغات" : "Acacus", key: "أكاكوس" },
+    { label: isAr ? "طرابلس والمدينة القديمة" : "Tripoli", key: "طرابلس" },
+    { label: isAr ? "بنغازي والمنطقة الشرقية" : "Benghazi", key: "بنغازي" },
+  ];
+
+  // Calculate day of the week from startDate
+  const getDayName = (dateStr: string) => {
+    if (!dateStr) return "";
+    const dateObj = new Date(dateStr);
+    const daysAr = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+    const daysEn = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return isAr ? daysAr[dateObj.getDay()] : daysEn[dateObj.getDay()];
+  };
+
+  const selectedDayName = getDayName(startDate);
 
   useEffect(() => {
     if (open) {
@@ -951,124 +1216,346 @@ export function PrivateTripModal({
       setDays("3");
       setPersons("2");
       setStartDate("");
-      setGuideName(initialGuide || "");
       setVehicleType("luxury-coach");
-      let initialPhone = "0912345678";
-      try {
-        const storedUser = localStorage.getItem("dalni_user");
-        if (storedUser) {
-          const parsed = JSON.parse(storedUser);
-          if (parsed.phone) initialPhone = parsed.phone;
-        }
-      } catch (e) {}
-      setPhone(initialPhone);
+      setShowAllGuides(false);
+      if (initialGuide) {
+        setGuideName(initialGuide);
+        const match = TOUR_GUIDES_DATA.find(g => g.name === initialGuide || initialGuide.includes(g.name));
+        setSelectedGuide(match || null);
+      } else {
+        setGuideName("");
+        setSelectedGuide(null);
+      }
     }
   }, [open, initialGuide]);
 
+  // Dynamic Guides Filtering by Destination and Working Days
+  const filteredGuides = useMemo(() => {
+    const destTerm = destination.trim().toLowerCase();
+    const dayTerm = selectedDayName;
+
+    return TOUR_GUIDES_DATA.filter((g) => {
+      // 1. Destination match
+      let destMatch = true;
+      if (destTerm) {
+        const destKeyMap: Record<string, string> = {
+          "لبدة": "leptis",
+          "خمس": "leptis",
+          "leptis": "leptis",
+          "طرابلس": "tripoli",
+          "tripoli": "tripoli",
+          "صبراتة": "sabratha",
+          "sabratha": "sabratha",
+          "غدامس": "ghadames",
+          "ghadames": "ghadames",
+          "أوباري": "ubari",
+          "اوباري": "ubari",
+          "ubari": "ubari",
+          "أكاكوس": "acacus",
+          "اكاكوس": "acacus",
+          "acacus": "acacus",
+          "شحات": "cyrene",
+          "قورينا": "cyrene",
+          "الجبل": "cyrene",
+          "cyrene": "cyrene",
+          "بنغازي": "benghazi",
+          "benghazi": "benghazi",
+        };
+
+        const targetRegion = Object.keys(destKeyMap).find(k => destTerm.includes(k)) 
+          ? destKeyMap[Object.keys(destKeyMap).find(k => destTerm.includes(k))!] 
+          : "";
+
+        destMatch = 
+          (targetRegion ? (g.primaryRegion === targetRegion || g.operatingRegions.includes(targetRegion)) : false) ||
+          g.primaryRegion.toLowerCase().includes(destTerm) ||
+          g.operatingRegions.some(r => r.toLowerCase().includes(destTerm)) ||
+          g.specialties.some(s => s.toLowerCase().includes(destTerm)) ||
+          g.bio.toLowerCase().includes(destTerm) ||
+          g.title.toLowerCase().includes(destTerm);
+      }
+
+      // 2. Day of week match
+      let dayMatch = true;
+      if (dayTerm) {
+        dayMatch =
+          g.workingDays.includes("طوال أيام الأسبوع") ||
+          g.workingDays.some(wd => wd.includes(dayTerm));
+      }
+
+      return destMatch && dayMatch;
+    });
+  }, [destination, selectedDayName]);
+
+  const guidesToDisplay = showAllGuides ? TOUR_GUIDES_DATA : (filteredGuides.length > 0 ? filteredGuides : TOUR_GUIDES_DATA);
+
   return (
-    <Modal open={open} onClose={onClose} size="lg">
+    <Modal open={open} onClose={onClose} size="xl">
       {step === "form" ? (
-        <div dir={dir}>
-          <div className="relative h-48 overflow-hidden bg-[#0B132B]">
+        <div dir={dir} className="max-h-[85vh] overflow-y-auto">
+          {/* Header Banner */}
+          <div className="relative h-44 sm:h-52 overflow-hidden bg-[#0B132B]">
             <img src={privateTripImg} alt="Private Trip VIP" className="absolute inset-0 w-full h-full object-cover brightness-105 animate-zoom-slow" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B132B]/85 via-[#0B132B]/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B132B]/95 via-[#0B132B]/40 to-transparent" />
             <div className="absolute bottom-4 right-4 left-4 text-white">
               <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-200 text-xs font-black mb-1.5 backdrop-blur-sm">
                 👑 {isAr ? "باقة VIP المخصصة لك تماماً" : "Tailored VIP Custom Package"}
               </div>
-              <h3 className="text-2xl font-black">{isAr ? "طلب رحلة خاصة VIP" : "Request VIP Private Tour"}</h3>
+              <h3 className="text-2xl sm:text-3xl font-black drop-shadow-md">
+                {isAr ? "طلب رحلة خاصة VIP مع اختيار وتصفية المرشد" : "Request VIP Private Tour"}
+              </h3>
+              <p className="text-xs text-slate-200 mt-1 max-w-xl">
+                {isAr ? "اختر وجهاتك وتاريخ رحلتك وسنقوم بعرض نخبة المرشدين السياحيين المتاحين في تلك الأيام والمختصين في معالمها." : "Choose your destination & dates to see available guides matching your itinerary."}
+              </p>
             </div>
           </div>
 
-          <form className="p-6 space-y-4" onSubmit={(e) => { e.preventDefault(); setStep("done"); }}>
-            {guideName && (
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🧭</span>
-                  <div>
-                    <span className="font-bold text-[#5A6A85] block text-[11px]">{isAr ? "المرشد السياحي المفضل المختَار:" : "Selected Guide:"}</span>
-                    <span className="font-black text-[#0F172A] text-sm">{guideName}</span>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full bg-[#1B5A78] text-white text-[10px] font-bold">
-                  {isAr ? "مرشد معتمد" : "Verified Guide"}
-                </span>
-              </div>
-            )}
-
-            <Field label={isAr ? "الوجهة / المعالم المطلوبة *" : "Destination / Heritage Sites *"} value={destination} onChange={setDestination} placeholder={isAr ? "غدامس، أوباري، أكاكوس..." : "Ghadames, Ubari, Acacus..."} required />
-
-            {/* Select Tour Guide Option */}
-            <div className="space-y-1">
-              <label className="text-xs font-black text-[#5A6A85] block">
-                {isAr ? "اختيار المرشد السياحي المفضل (اختياري):" : "Select Preferred Tour Guide (Optional):"}
+          <form className="p-6 sm:p-8 space-y-6" onSubmit={(e) => { e.preventDefault(); setStep("done"); }}>
+            
+            {/* 1. Destination Field + Quick Suggestions */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-[#0F172A] block">
+                {isAr ? "الوجهة / المعالم السياحية المطلوبة: *" : "Destination / Tourist Attractions: *"}
               </label>
-              <select
-                value={guideName}
-                onChange={(e) => setGuideName(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none cursor-pointer focus:border-[#1B5A78]"
-              >
-                <option value="">{isAr ? "أي مرشد معتمد متاح (نخبة المرشدين)" : "Any available certified guide"}</option>
-                <option value="د. عبد السلام المجدوب (خبير آثار لبدة وطابلس)">د. عبد السلام المجدوب (خبير آثار لبدة وطرابلس)</option>
-                <option value="أ. مريم الفيتوري (دليلة الجبل الأخضر وشحات)">أ. مريم الفيتوري (دليلة الجبل الأخضر وشحات)</option>
-                <option value="أ. طارق التواتي (خبير سفاري غدامس وأوباري)">أ. طارق التواتي (خبير سفاري غدامس وأوباري)</option>
-                <option value="أ. يوسف الطوارقي (دليل صحراء أكاكوس وغات)">أ. يوسف الطوارقي (دليل صحراء أكاكوس وغات)</option>
-                <option value="أ. هند الدرسي (مرافقة جولات التراث والمدينة القديمة)">أ. هند الدرسي (مرافقة جولات التراث والمدينة القديمة)</option>
-              </select>
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder={isAr ? "اكتب اسم المعلم أو المدينة (مثلاً: لبدة، غدامس، أوباري، شحات...)" : "Enter city or attraction (e.g. Leptis, Ghadames, Ubari)..."}
+                className="w-full h-11 px-4 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none focus:border-[#D96B27]"
+                required
+              />
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[10px] font-black text-slate-400">
+                  {isAr ? "اقتراحات شائعة:" : "Popular:"}
+                </span>
+                {POPULAR_DESTINATIONS.map((d) => (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => setDestination(d.key)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer border ${
+                      destination.includes(d.key)
+                        ? "bg-[#003580] text-white border-[#003580]"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Select Vehicle Type Option (باصات عادية، حافلات فاخرة، سيارات دفع رباعي) */}
+            {/* 2. Departure Date & Days */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-black text-[#0F172A] block">
+                  {isAr ? "تاريخ الانطلاق: *" : "Departure Date: *"}
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full h-11 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none focus:border-[#D96B27]"
+                  required
+                />
+                {selectedDayName && (
+                  <div className="text-[11px] font-black text-[#003580] pt-0.5">
+                    🗓️ {isAr ? `يوم الانطلاق: ${selectedDayName}` : `Day: ${selectedDayName}`}
+                  </div>
+                )}
+              </div>
+
+              <Field label={isAr ? "عدد الأيام" : "Duration (Days)"} value={days} onChange={setDays} type="number" required />
+              <Field label={isAr ? "عدد المسافرين" : "Travelers"} value={persons} onChange={setPersons} type="number" required />
+            </div>
+
+            {/* 3. Vehicle Type Selection */}
             <div className="space-y-1">
-              <label className="text-xs font-black text-[#5A6A85] block">
-                {isAr ? "نوعية المركبة والسيارة المطلوبة للرحلة: *" : "Preferred Vehicle Type for the Trip: *"}
+              <label className="text-xs font-black text-[#0F172A] block">
+                {isAr ? "نوعية المركبة والحافلة المطلوبة للرحلة: *" : "Vehicle / Transport Preference: *"}
               </label>
               <select
                 value={vehicleType}
                 onChange={(e) => setVehicleType(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none cursor-pointer focus:border-[#1B5A78]"
+                className="w-full h-11 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none cursor-pointer focus:border-[#003580]"
               >
                 <option value="luxury-coach">
-                  {isAr ? "🚌 مركبات وحافلات سياحية كبرى فاخرة VIP" : "Luxury VIP Large Coaches"}
+                  {isAr ? "🚌 حافلة سياحية كبرى فاخرة VIP (سعة 50 راكب)" : "Luxury VIP Large Coach (50 seats)"}
                 </option>
-                <option value="standard-bus">
-                  {isAr ? "🚐 باصات عادية مريحة ومكيفة" : "Standard Air-Conditioned Tourist Buses"}
+                <option value="minibus-25">
+                  {isAr ? "🚐 ميني باص سياحي مكيف حديث (سعة 25 راكب)" : "Modern Tourist Minibus (25 seats)"}
                 </option>
                 <option value="4x4-suv">
-                  {isAr ? "🚙 مجموعة من سيارات الدفع الرباعي 4x4 وسائقيها" : "Group of 4x4 Desert SUVs & Drivers"}
+                  {isAr ? "🚙 أسطول سيارات دفع رباعي 4x4 وسائقيها المحترفين" : "Group of 4x4 Desert SUVs & Professional Drivers"}
                 </option>
                 <option value="vip-sprinter">
-                  {isAr ? "🚐 ميني باص VIP (مرسيدس سبرينتر فاخر)" : "VIP Sprinter Luxury Mini-Bus"}
+                  {isAr ? "🚐 مرسيدس سبرينتر VIP بمقاعد طيارة فارهة" : "VIP Mercedes Sprinter with Executive Captain Chairs"}
                 </option>
                 <option value="vip-sedan">
-                  {isAr ? "🚗 سيارات سيدان عائلية فاخرة خاصة VIP" : "Private Luxury Family Sedan"}
+                  {isAr ? "🚗 سيارة سيدان عائلية فاخرة خاصة VIP" : "Private Luxury Family Sedan"}
                 </option>
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={isAr ? "عدد الأيام" : "Duration (Days)"} value={days} onChange={setDays} type="number" required />
-              <Field label={isAr ? "عدد الأشخاص" : "Number of Travelers"} value={persons} onChange={setPersons} type="number" required />
-            </div>
-            <Field label={isAr ? "تاريخ الانطلاق *" : "Departure Date *"} value={startDate} onChange={setStartDate} type="date" required />
+            {/* 4. SMART GUIDE FILTERING & INTERACTIVE SELECTION */}
+            <div className="space-y-3 pt-2 border-t border-[#E8E2D6]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🧭</span>
+                    <h4 className="text-sm font-black text-[#0F172A]">
+                      {isAr ? "المرشدون السياحيون المتاحون حسب الوجهة والأيام:" : "Available Guides by Location & Days:"}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                    {destination || startDate
+                      ? (isAr ? `تصفية تلقائية مطابقة لوجهة "${destination || "الكل"}" ${selectedDayName ? `ويوم "${selectedDayName}"` : ""}` : "Filtered by destination & departure day")
+                      : (isAr ? "عرض نخبة المرشدين المعتمدين بالمنصة" : "Showing all verified tour guides")}
+                  </p>
+                </div>
 
-            <div className="p-3 rounded-xl bg-[#FAFAF8] border border-[#E6E1D6] text-xs text-[#526078]">
-              👑 <b className="text-[#0B132B]">{isAr ? "ربط فوري بالحساب:" : "Linked to account:"}</b> {isAr ? "سيتم التواصل معك عبر رقم الهاتف والبريد المسجلين في حسابك." : "We will contact you via your registered account details."}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                    {guidesToDisplay.length} {isAr ? "مرشد متاح" : "guides"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllGuides(!showAllGuides)}
+                    className="text-xs text-[#003580] hover:underline font-bold"
+                  >
+                    {showAllGuides ? (isAr ? "عرض المطابقين فقط" : "Show Matches") : (isAr ? "عرض الكل" : "Show All")}
+                  </button>
+                </div>
+              </div>
+
+              {/* Selected Guide Banner */}
+              {selectedGuide && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-between gap-3 text-xs animate-in fade-in duration-200">
+                  <div className="flex items-center gap-3">
+                    <img src={selectedGuide.avatar} alt={selectedGuide.name} className="w-12 h-12 rounded-xl object-cover border border-amber-500/30" />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-[#0F172A] text-sm">{selectedGuide.name}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                          ✓ {isAr ? "تم اختياره لرحلتك" : "Selected Guide"}
+                        </span>
+                      </div>
+                      <div className="text-slate-600 text-[11px] font-bold mt-0.5">{selectedGuide.title}</div>
+                      <div className="text-[10px] text-slate-500 font-medium">
+                        ⭐ {selectedGuide.rating} · ⏳ {selectedGuide.experienceYears} {isAr ? "سنوات خبرة" : "yrs exp"} · 💰 {selectedGuide.pricePerDay} {isAr ? "د.ل/يوم" : "LYD/day"}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedGuide(null); setGuideName(""); }}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs cursor-pointer"
+                  >
+                    {isAr ? "إلغاء التحديد" : "Deselect"}
+                  </button>
+                </div>
+              )}
+
+              {/* Guide Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto p-1">
+                {guidesToDisplay.map((guide: TourGuide) => {
+                  const isSelected = selectedGuide?.id === guide.id || guideName.includes(guide.name);
+                  return (
+                    <div
+                      key={guide.id}
+                      onClick={() => {
+                        setSelectedGuide(guide);
+                        setGuideName(`${guide.name} (${guide.title})`);
+                      }}
+                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2.5 ${
+                        isSelected
+                          ? "border-[#D96B27] bg-[#D96B27]/5 shadow-sm ring-2 ring-[#D96B27]/20"
+                          : "border-slate-200 bg-white hover:border-[#003580]/40 hover:shadow-xs"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={guide.avatar}
+                          alt={guide.name}
+                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="font-black text-xs text-[#0F172A] truncate">{guide.name}</span>
+                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              ✓ {guide.licenseNumber}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 font-bold line-clamp-1 mt-0.5">{guide.title}</div>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold mt-1">
+                            <span>⭐ {guide.rating} ({guide.reviewsCount})</span>
+                            <span>·</span>
+                            <span>⏳ {guide.experienceYears} {isAr ? "سنوات خبرة" : "yrs"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Specialties & Working Days */}
+                      <div className="text-[10px] text-slate-600 space-y-1 pt-1 border-t border-slate-100">
+                        <div className="flex items-center gap-1 font-bold">
+                          <span>📍</span>
+                          <span className="truncate">{guide.specialties.slice(0, 3).join("، ")}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-slate-500">
+                            📅 {formatWorkingDays(guide.workingDays)}
+                          </span>
+                          <span className="font-black text-[#D96B27]">
+                            {guide.pricePerDay} {isAr ? "د.ل/يوم" : "LYD/day"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Select Action Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedGuide(guide);
+                          setGuideName(`${guide.name} (${guide.title})`);
+                        }}
+                        className={`w-full py-1.5 px-3 rounded-xl font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? "bg-emerald-600 text-white"
+                            : "bg-slate-100 hover:bg-[#003580] hover:text-white text-slate-800"
+                        }`}
+                      >
+                        <span>{isSelected ? "✓ " + (isAr ? "تم اختيار هذا المرشد" : "Selected") : (isAr ? "اختيار هذا المرشد" : "Select Guide")}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <button className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer">
-              {isAr ? "إرسال طلب رحلة VIP للإدارة ✨" : "Submit VIP Private Tour Request ✨"}
+            <div className="p-3.5 rounded-2xl bg-[#FAFAF8] border border-[#E6E1D6] text-xs text-[#526078] flex items-center gap-2">
+              <span className="text-xl">👑</span>
+              <div>
+                <b className="text-[#0B132B] block">{isAr ? "ربط فوري ومباشر بحسابك المسجل:" : "Linked to account:"}</b>
+                <span>{isAr ? "سيتم التواصل معك عبر رقم هاتفك وبياناتك المسجلة فور اعتماد الترتيبات مع المرشد وشركة النقل." : "Our travel specialist will contact you with the finalized custom itinerary."}</span>
+              </div>
+            </div>
+
+            <button className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer text-sm">
+              {isAr ? "إرسال وتأكيد طلب رحلة VIP للإدارة ✨" : "Submit VIP Private Tour Request ✨"}
             </button>
           </form>
         </div>
       ) : (
         <div className="p-10 text-center" dir={dir}>
           <div className="w-20 h-20 mx-auto rounded-full bg-amber-100 text-amber-600 grid place-items-center text-4xl">👑</div>
-          <h3 className="mt-5 text-2xl font-black text-[#0B132B]">{isAr ? "تم استلام طلبك بنجاح!" : "Request Received Successfully!"}</h3>
-          <p className="mt-2 text-[#526078] text-sm">
+          <h3 className="mt-5 text-2xl font-black text-[#0B132B]">{isAr ? "تم استلام طلب الرحلة الخاصة VIP بنجاح!" : "Request Received Successfully!"}</h3>
+          <p className="mt-2 text-[#526078] text-sm max-w-lg mx-auto leading-relaxed">
             {isAr
               ? `رقم طلب الرحلة الخاصة #PR-${Math.floor(Math.random() * 90000 + 10000)}.` +
-                (guideName ? ` تم تخصيص الطلب برفقة المرشد: (${guideName}).` : "") +
-                ` ونوع المركبة: (${vehicleType === 'luxury-coach' ? 'حافلات فاخرة VIP' : vehicleType === 'standard-bus' ? 'باصات عادية' : vehicleType === '4x4-suv' ? 'مجموعة من سيارات الدفع الرباعي وسائقيها' : 'ميني باص VIP'}). سيتواصل معك مستشار السفر الخاص بنا خلال أقل من 24 ساعة لتجهيز المسار.`
+                (guideName ? ` تم تخصيص المرشد السياحي: (${guideName}).` : "") +
+                ` ونوع المركبة: (${vehicleType === 'luxury-coach' ? 'حافلة فاخرة VIP 50 راكب' : vehicleType === 'minibus-25' ? 'ميني باص سياحي 25 راكب' : 'مركبة دفع رباعي 4x4'}). سيقوم منسق الرحلات بالتواصل معك لتأكيد المسار الزمني.`
               : `Private Tour Request #PR-${Math.floor(Math.random() * 90000 + 10000)}. Our dedicated travel consultant will contact you within 24h.`}
           </p>
           <button onClick={onClose} className="mt-6 px-8 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft cursor-pointer">
