@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
+import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 
 export const Route = createFileRoute("/dashboard/admin")({
   head: () => ({
@@ -18,8 +19,8 @@ type Company = { id: string; contract_number: string; name: string; phone: strin
 type Driver = { driver_license_number: string; full_name: string; phone_number: string; national_id_or_passport: string; license_date_valid: string; contract_number: string; assigned_vehicle_plate: string; email: string; account_status: "نشط" | "معلق" | "موقوف" };
 type Guide = { license_number: string; full_name: string; phone_number: string; years_of_experience: number; certificate: string; digital_certificate_file?: string; bio: string; speaks_english: boolean; speaks_french: boolean; speaks_italian: boolean; verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; email: string };
 type Vehicle = { plate_number: string; company_id: string; company_name: string; vehicle_type: string; capacity: number; status: "جاهزة" | "في رحلة" | "صيانة" };
-type DailyTrip = { id: string; title: string; description: string; price_per_seat: number; max_capacity: number; available_seats: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string };
-type WeeklyTrip = { id: string; title: string; start_date: string; end_date: string; seat_per_price: number; max_capacity: number; available_seats?: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string };
+type DailyTrip = { id: string; title: string; description: string; price_per_seat: number; max_capacity: number; available_seats: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; recurring_days?: string[]; bus_capacity?: 25 | 50; destination?: string };
+type WeeklyTrip = { id: string; title: string; start_date: string; end_date: string; seat_per_price: number; max_capacity: number; available_seats?: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; weekly_day?: string; bus_capacity?: 25 | 50; destination?: string };
 type PrivateTripRequest = { private_trip_id: string; customer_name: string; customer_phone: string; customer_description: string; preferred_start_date: string; duration_days: number; number_of_companions: number; quoted_price?: number; admin_itinerary_plan?: string; assigned_guide?: string; assigned_vehicle?: string; status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" };
 type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string };
 type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string };
@@ -65,13 +66,13 @@ function AdminDashboard() {
   ]);
 
   const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([
-    { id: "DT-101", title: "جولة لبدة الكبرى اليومية", description: "زيارة الآثار الرومانية والمتحف في الخمس", price_per_seat: 120, max_capacity: 20, available_seats: 12, bookings_count: 148, rating_avg: 4.9, guide_license: "G-9901", vehicle_plates: ["طرابلس 4517", "طرابلس 8291"], is_active: true, photo: "/assets/ai_ruins.jpg" },
-    { id: "DT-102", title: "رحلة صبراتة الأثرية", description: "استكشاف المسرح الروماني والشاطئ", price_per_seat: 100, max_capacity: 15, available_seats: 8, bookings_count: 96, rating_avg: 4.7, vehicle_plates: ["بنغازي 3382"], is_active: true, photo: "" },
+    { id: "DT-101", title: "جولة لبدة الكبرى اليومية", description: "زيارة الآثار الرومانية والمتحف في الخمس", price_per_seat: 120, max_capacity: 50, available_seats: 38, bookings_count: 148, rating_avg: 4.9, guide_license: "G-9901", vehicle_plates: ["طرابلس 4517"], is_active: true, photo: "/assets/ai_ruins.jpg", recurring_days: ["الأحد", "الأربعاء"], bus_capacity: 50, destination: "لبدة الكبرى" },
+    { id: "DT-102", title: "رحلة صبراتة الأثرية", description: "استكشاف المسرح الروماني والشاطئ", price_per_seat: 100, max_capacity: 25, available_seats: 17, bookings_count: 96, rating_avg: 4.7, vehicle_plates: ["طرابلس 8291"], is_active: true, photo: "", recurring_days: ["السبت", "الثلاثاء"], bus_capacity: 25, destination: "صبراتة" },
   ]);
 
   const [weeklyTrips, setWeeklyTrips] = useState<WeeklyTrip[]>([
-    { id: "WT-201", title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)", start_date: "2026-08-01", end_date: "2026-08-07", seat_per_price: 1850, max_capacity: 12, available_seats: 4, bookings_count: 210, rating_avg: 4.95, guide_license: "G-9901", vehicle_plates: ["طرابلس 8291", "طرابلس 1122"], is_active: true, photo: "/assets/ai_ghadames.jpg" },
-    { id: "WT-202", title: "جولة الواحات وغدامس التراثية (4 أيام)", start_date: "2026-08-10", end_date: "2026-08-14", seat_per_price: 1400, max_capacity: 10, available_seats: 6, bookings_count: 134, rating_avg: 4.8, vehicle_plates: ["سبها 9944"], is_active: true, photo: "/assets/ai_ghadames.jpg" },
+    { id: "WT-201", title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)", start_date: "2026-08-01", end_date: "2026-08-07", seat_per_price: 1850, max_capacity: 25, available_seats: 12, bookings_count: 210, rating_avg: 4.95, guide_license: "G-9901", vehicle_plates: ["طرابلس 8291"], is_active: true, photo: "/assets/ai_ghadames.jpg", weekly_day: "الجمعة", bus_capacity: 25, destination: "أوباري" },
+    { id: "WT-202", title: "جولة الواحات وغدامس التراثية (4 أيام)", start_date: "2026-08-10", end_date: "2026-08-14", seat_per_price: 1400, max_capacity: 50, available_seats: 26, bookings_count: 134, rating_avg: 4.8, vehicle_plates: ["بنغازي 3382"], is_active: true, photo: "/assets/ai_ghadames.jpg", weekly_day: "الخميس", bus_capacity: 50, destination: "غدامس" },
   ]);
 
   const [privateTrips, setPrivateTrips] = useState<PrivateTripRequest[]>([
@@ -392,7 +393,7 @@ function AdminDashboard() {
       {active === "trips" && (
         <div className="space-y-6 text-right">
           {/* Daily Trips */}
-          <SectionCard title="إدارة الرحلات اليومية + تعيين السيارات المتاحة بالمنصة" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ رحلة يومية جديدة</button>}>
+          <SectionCard title="إدارة الرحلات اليومية (يومان في الأسبوع + حافلة 25 أو 50 راكب)" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ رحلة يومية جديدة (يومان/أسبوع)</button>}>
             <div className="space-y-4">
               {dailyTrips.map((d) => (
                 <div key={d.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
@@ -401,18 +402,29 @@ function AdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-black text-foreground text-sm">{d.title}</h4>
                       <Badge tone={d.is_active ? "green" : "muted"}>{d.is_active ? "نشطة" : "موقوفة"}</Badge>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-black">
+                        📅 يومان أسبوعياً: {d.recurring_days ? d.recurring_days.join(" و ") : "الأحد والأربعاء"}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
+                        🚌 حافلة {d.bus_capacity || 50} راكب
+                      </span>
+                      {d.destination && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-black">
+                          📍 {d.destination}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{d.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{d.description}</p>
                     <div className="flex flex-wrap gap-3 text-xs font-bold text-foreground mt-2">
                       <span>💰 د.ل {d.price_per_seat}</span>
                       <span>👥 {d.bookings_count} حجز</span>
                       <span>⭐ {d.rating_avg}</span>
-                      <span>🪑 {d.available_seats} مقعد متاح</span>
-                      {d.guide_license && <span>👨‍✈️ {d.guide_license}</span>}
+                      <span>🪑 {d.available_seats} مقعد متاح من أصل {d.max_capacity}</span>
+                      {d.guide_license && <span>👨‍✈️ مرشد: {d.guide_license}</span>}
                     </div>
                     {d.vehicle_plates && d.vehicle_plates.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] font-black text-muted-foreground">🚌 السيارات المعينة:</span>
+                        <span className="text-[10px] font-black text-muted-foreground">🚌 الحافلة المعينة:</span>
                         {d.vehicle_plates.map(plate => (
                           <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-black border border-blue-100">{plate}</span>
                         ))}
@@ -420,7 +432,7 @@ function AdminDashboard() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => setEditingDailyTrip(d)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين السيارات</button>
+                    <button onClick={() => setEditingDailyTrip(d)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين الحافلة</button>
                     <button onClick={() => handleDeleteDailyTrip(d.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
                   </div>
                 </div>
@@ -429,7 +441,7 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Trips */}
-          <SectionCard title="إدارة الرحلات الأسبوعية + الصورة + السيارات المتاحة بالمنصة" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ رحلة أسبوعية جديدة</button>}>
+          <SectionCard title="إدارة الرحلات الأسبوعية (يوم في الأسبوع + حافلة 25 أو 50 راكب)" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ رحلة أسبوعية جديدة (يوم/أسبوع)</button>}>
             <div className="space-y-4">
               {weeklyTrips.map((w) => (
                 <div key={w.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
@@ -438,17 +450,29 @@ function AdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-black text-foreground text-sm">{w.title}</h4>
                       <Badge tone={w.is_active ? "green" : "muted"}>{w.is_active ? "نشطة" : "موقوفة"}</Badge>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black">
+                        🗓️ كل {w.weekly_day || "جمعة"} (يوم في الأسبوع)
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
+                        🚍 حافلة {w.bus_capacity || 25} راكب
+                      </span>
+                      {w.destination && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-black">
+                          📍 {w.destination}
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs font-bold text-foreground mt-2">
                       <span>🗓️ {w.start_date} ← {w.end_date}</span>
                       <span>💰 د.ل {w.seat_per_price}</span>
                       <span>👥 {w.bookings_count} حجز</span>
                       <span>⭐ {w.rating_avg}</span>
-                      {w.guide_license && <span>👨‍✈️ {w.guide_license}</span>}
+                      <span>🪑 {w.available_seats || w.max_capacity} مقعد متاح من أصل {w.max_capacity}</span>
+                      {w.guide_license && <span>👨‍✈️ مرشد: {w.guide_license}</span>}
                     </div>
                     {w.vehicle_plates && w.vehicle_plates.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] font-black text-muted-foreground">🚌 السيارات المعينة:</span>
+                        <span className="text-[10px] font-black text-muted-foreground">🚌 الحافلة المعينة:</span>
                         {w.vehicle_plates.map(plate => (
                           <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black border border-amber-100">{plate}</span>
                         ))}
@@ -456,7 +480,7 @@ function AdminDashboard() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => setEditingWeeklyTrip(w)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين السيارات</button>
+                    <button onClick={() => setEditingWeeklyTrip(w)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين الحافلة</button>
                     <button onClick={() => handleDeleteWeeklyTrip(w.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
                   </div>
                 </div>
@@ -1149,110 +1173,771 @@ function GuideVerificationModal({ guide, onClose, onVerify }: { guide: Guide; on
   );
 }
 
-function CreateTripModal({ type, guides, vehicles, onClose, onCreate }: { type: "daily" | "weekly"; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onCreate: (t: "daily" | "weekly", d: any) => void }) {
-  const [title, setTitle] = useState(""); const [desc, setDesc] = useState(""); const [price, setPrice] = useState("120");
-  const [capacity, setCapacity] = useState("20"); const [seats, setSeats] = useState("20");
-  const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "");
-  const [selVehicles, setSelVehicles] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState("2026-09-01"); const [endDate, setEndDate] = useState("2026-09-05");
-  const [photo, setPhoto] = useState(""); const [isActive, setIsActive] = useState(true);
+function CreateTripModal({
+  type,
+  guides,
+  vehicles,
+  onClose,
+  onCreate,
+}: {
+  type: "daily" | "weekly";
+  guides: Guide[];
+  vehicles: Vehicle[];
+  onClose: () => void;
+  onCreate: (t: "daily" | "weekly", d: any) => void;
+}) {
+  const isDaily = type === "daily";
+  const [title, setTitle] = useState(isDaily ? "جولة لبدة الكبرى والآثار الرومانية" : "مغامرة الصحراء وبحيرات أوباري الكبرى");
+  const [desc, setDesc] = useState(isDaily ? "رحلة سياحية يومية متكاملة تشمل جولة أثرية مرشدة والنقل السياحي الفاخر" : "رحلة استكشاف أسبوعية متكاملة تشمل الإقامة والمخيمات ومرشد سياحي متخصص");
+  const [destination, setDestination] = useState(isDaily ? "لبدة الكبرى" : "أوباري");
+  const [price, setPrice] = useState(isDaily ? "120" : "1650");
+  const [busCapacity, setBusCapacity] = useState<25 | 50>(isDaily ? 50 : 25);
+  const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "G-9901");
+  const [selVehicles, setSelVehicles] = useState<string[]>(isDaily ? ["طرابلس 4517"] : ["طرابلس 8291"]);
+  const [startDate, setStartDate] = useState("2026-09-01");
+  const [endDate, setEndDate] = useState("2026-09-06");
+  const [photo, setPhoto] = useState(isDaily ? "/assets/ai_ruins.jpg" : "/assets/ai_ghadames.jpg");
+  const [isActive, setIsActive] = useState(true);
+
+  // Daily Trips schedule: MUST be exactly 2 days in a week
+  const [recurringDays, setRecurringDays] = useState<string[]>(["الأحد", "الأربعاء"]);
+
+  // Weekly Trips schedule: MUST be exactly 1 day in a week
+  const [weeklyDay, setWeeklyDay] = useState<string>("الجمعة");
+
+  // Admin Smart Guide Filtering
+  const [guideFilterDest, setGuideFilterDest] = useState(destination);
+  const [guideFilterMinExp, setGuideFilterMinExp] = useState(0);
+  const [guideFilterDaysMatch, setGuideFilterDaysMatch] = useState(true);
+
+  // Sync guide filter destination when trip destination changes
+  const handleDestinationChange = (dest: string) => {
+    setDestination(dest);
+    setGuideFilterDest(dest);
+  };
+
+  const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+
+  const toggleDailyDay = (day: string) => {
+    if (recurringDays.includes(day)) {
+      if (recurringDays.length === 1) return; // Keep at least 1
+      setRecurringDays(recurringDays.filter((d) => d !== day));
+    } else {
+      if (recurringDays.length >= 2) {
+        // Replace oldest or keep max 2
+        setRecurringDays([recurringDays[1], day]);
+      } else {
+        setRecurringDays([...recurringDays, day]);
+      }
+    }
+  };
+
+  // Smart Guide Filtered Results from TOUR_GUIDES_DATA
+  const filteredSmartGuides = useMemo(() => {
+    return TOUR_GUIDES_DATA.filter((g) => {
+      // 1. Destination match
+      const q = guideFilterDest.trim().toLowerCase();
+      const matchDest = !q || g.operatingRegions.some((r: string) => (REGIONS_MAP[r] || r).toLowerCase().includes(q) || q.includes((REGIONS_MAP[r] || r).toLowerCase())) ||
+        g.specialties.some((s) => s.toLowerCase().includes(q) || q.includes(s.toLowerCase()));
+
+      // 2. Experience match
+      const matchExp = g.experienceYears >= guideFilterMinExp;
+
+      // 3. Days match
+      let matchDays = true;
+      if (guideFilterDaysMatch) {
+        if (isDaily) {
+          // Guide must be available on both daily days if possible, or at least one
+          matchDays = recurringDays.some((d) => g.workingDays.includes(d));
+        } else {
+          matchDays = g.workingDays.includes(weeklyDay);
+        }
+      }
+
+      return matchDest && matchExp && matchDays;
+    });
+  }, [guideFilterDest, guideFilterMinExp, guideFilterDaysMatch, isDaily, recurringDays, weeklyDay]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const base = { title, description: desc, max_capacity: +capacity, available_seats: +seats, guide_license: guideLic, vehicle_plates: selVehicles, is_active: isActive, photo };
-    if (type === "daily") onCreate("daily", { ...base, price_per_seat: +price });
-    else onCreate("weekly", { ...base, start_date: startDate, end_date: endDate, seat_per_price: +price });
+    if (isDaily && recurringDays.length !== 2) {
+      alert("تنبيه: الرحلات اليومية يجب أن تكون يومين بالضبط في الأسبوع (مثلاً: الأحد والأربعاء)!");
+      return;
+    }
+    if (!isDaily && !weeklyDay) {
+      alert("تنبيه: الرحلات الأسبوعية يجب تحديد يوم انطلاق أسبوعي واحد لها!");
+      return;
+    }
+
+    const base = {
+      title,
+      description: desc,
+      destination,
+      max_capacity: busCapacity,
+      available_seats: busCapacity,
+      bus_capacity: busCapacity,
+      guide_license: guideLic,
+      vehicle_plates: selVehicles,
+      is_active: isActive,
+      photo,
+    };
+
+    if (isDaily) {
+      onCreate("daily", {
+        ...base,
+        price_per_seat: +price,
+        recurring_days: recurringDays,
+      });
+    } else {
+      onCreate("weekly", {
+        ...base,
+        seat_per_price: +price,
+        start_date: startDate,
+        end_date: endDate,
+        weekly_day: weeklyDay,
+      });
+    }
+  };
+
+  const selectedGuideObj = TOUR_GUIDES_DATA.find((g) => g.licenseNumber === guideLic);
+
+  return (
+    <ModalShell
+      title={
+        isDaily
+          ? "إنشاء رحلة يومية جديدة (يومان في الأسبوع — حافلة 25 أو 50 راكب)"
+          : "إنشاء رحلة أسبوعية جديدة (يوم واحد في الأسبوع — حافلة 25 أو 50 راكب)"
+      }
+      onClose={onClose}
+    >
+      <form className="space-y-5 text-right text-xs" onSubmit={handleSubmit}>
+        
+        {/* 1. Basic Info */}
+        <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+          <div className="font-black text-slate-800 text-sm flex items-center gap-1.5">
+            <span>🏷️</span>
+            <span>البيانات الأساسية للرحلة</span>
+          </div>
+
+          <Field label="عنوان الرحلة السياحية" value={title} onChange={setTitle} />
+
+          <div>
+            <label className="text-xs font-bold mb-1 block">المكان / الوجهة السياحية</label>
+            <input
+              type="text"
+              value={destination}
+              onChange={(e) => handleDestinationChange(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
+              placeholder="مثال: لبدة الكبرى، غدامس، أوباري..."
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => handleDestinationChange(city)}
+                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
+                    destination === city ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                  }`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} />
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="سعر المقعد الواحد (د.ل)" type="number" value={price} onChange={setPrice} />
+            <div>
+              <label className="text-xs font-bold mb-1 block">حالة تفعيل الرحلة</label>
+              <select
+                value={isActive ? "true" : "false"}
+                onChange={(e) => setIsActive(e.target.value === "true")}
+                className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+              >
+                <option value="true">نشطة ومعروضة للحجز</option>
+                <option value="false">موقوفة ومخفية مؤقتاً</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Days Schedule: Daily = 2 Days / Weekly = 1 Day */}
+        <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200 space-y-3">
+          {isDaily ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="font-black text-blue-900 text-sm flex items-center gap-1.5">
+                  <span>📅</span>
+                  <span>جدول الرحلة اليومية: يومان في الأسبوع (مطلوب اختيار يومين)</span>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                  recurringDays.length === 2 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                }`}>
+                  {recurringDays.length === 2 ? "✓ تم اختيار يومين" : `يرجى اختيار يومين (${recurringDays.length}/2)`}
+                </span>
+              </div>
+
+              {/* Quick Preset Pairs */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-[11px] font-bold text-slate-600">نماذج شائعة:</span>
+                {[
+                  ["الأحد", "الأربعاء"],
+                  ["السبت", "الثلاثاء"],
+                  ["الإثنين", "الخميس"],
+                  ["الجمعة", "السبت"],
+                ].map((pair, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setRecurringDays(pair)}
+                    className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer border ${
+                      recurringDays.includes(pair[0]) && recurringDays.includes(pair[1])
+                        ? "bg-[#003580] text-white border-[#003580]"
+                        : "bg-white text-blue-900 border-blue-200 hover:bg-blue-100"
+                    }`}
+                  >
+                    {pair[0]} و {pair[1]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Individual Days Toggles */}
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 pt-1">
+                {allWeekDays.map((d) => {
+                  const isSel = recurringDays.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => toggleDailyDay(d)}
+                      className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${
+                        isSel
+                          ? "bg-blue-600 text-white border-blue-700 shadow-sm"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{isSel ? "✓" : "○"}</span>
+                      <span>{d}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="font-black text-amber-900 text-sm flex items-center gap-1.5">
+                  <span>🗓️</span>
+                  <span>جدول الرحلة الأسبوعية: يوم واحد في الأسبوع</span>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black">
+                  يوم الانطلاق: {weeklyDay}
+                </span>
+              </div>
+
+              {/* 1 Day Selector Chips */}
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                {allWeekDays.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setWeeklyDay(d)}
+                    className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${
+                      weeklyDay === d
+                        ? "bg-amber-600 text-white border-amber-700 shadow-sm"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{weeklyDay === d ? "✓" : "○"}</span>
+                    <span>{d}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100">
+                <Field label="تاريخ الانطلاق المعتمد" type="date" value={startDate} onChange={setStartDate} />
+                <Field label="تاريخ العودة والانتهاء" type="date" value={endDate} onChange={setEndDate} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 3. Bus Capacity & Driver Fleet: 25 or 50 Passengers */}
+        <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="font-black text-emerald-900 text-sm flex items-center gap-1.5">
+              <span>🚌</span>
+              <span>سعة الحافلة المتاحة (25 أو 50 راكب حسب السائق والمركبة)</span>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[11px] font-black">
+              السعة: {busCapacity} راكب
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div
+              onClick={() => {
+                setBusCapacity(25);
+                setSelVehicles(["طرابلس 8291"]);
+              }}
+              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${
+                busCapacity === 25
+                  ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
+                  : "bg-white/60 border-slate-200 hover:border-emerald-300"
+              }`}
+            >
+              <div className="text-3xl">🚐</div>
+              <div>
+                <div className="font-black text-sm text-slate-900">25 راكب</div>
+                <div className="text-[11px] text-slate-500 font-bold">ميني باص سياحي مريح</div>
+                <div className="text-[10px] text-emerald-700 font-black">سائق: مفتاح الفزاني</div>
+              </div>
+            </div>
+
+            <div
+              onClick={() => {
+                setBusCapacity(50);
+                setSelVehicles(["طرابلس 4517"]);
+              }}
+              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${
+                busCapacity === 50
+                  ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
+                  : "bg-white/60 border-slate-200 hover:border-emerald-300"
+              }`}
+            >
+              <div className="text-3xl">🚍</div>
+              <div>
+                <div className="font-black text-sm text-slate-900">50 راكب</div>
+                <div className="text-[11px] text-slate-500 font-bold">حافلة سياحية كبرى VIP</div>
+                <div className="text-[10px] text-emerald-700 font-black">سائق: علي التارقي</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-emerald-100">
+            <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
+          </div>
+        </div>
+
+        {/* 4. Smart Guide Filter for Admin */}
+        <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="font-black text-amber-900 text-sm flex items-center gap-1.5">
+              <span>🧭</span>
+              <span>فلترة وتعيين المرشد السياحي الأنسب (حسب الخبرة بالمكان وأيام العمل)</span>
+            </div>
+            {selectedGuideObj && (
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black">
+                ✓ المعين: {selectedGuideObj.name}
+              </span>
+            )}
+          </div>
+
+          {/* Guide Filters Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-white p-2.5 rounded-xl border border-amber-200">
+            <div>
+              <label className="text-[10px] font-black text-slate-500 block mb-0.5">المكان السياحي المطلوب للخبرة:</label>
+              <input
+                type="text"
+                value={guideFilterDest}
+                onChange={(e) => setGuideFilterDest(e.target.value)}
+                placeholder="ابحث بالمنطقة..."
+                className="w-full h-8 px-2 rounded-lg border text-xs font-bold text-right"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-slate-500 block mb-0.5">الحد الأدنى لسنوات الخبرة:</label>
+              <select
+                value={guideFilterMinExp}
+                onChange={(e) => setGuideFilterMinExp(+e.target.value)}
+                className="w-full h-8 px-2 rounded-lg border text-xs font-bold text-right"
+              >
+                <option value={0}>جميع مستويات الخبرة</option>
+                <option value={3}>3+ سنوات خبرة</option>
+                <option value={5}>5+ سنوات خبرة</option>
+                <option value={7}>7+ سنوات خبرة معتمدة</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 pt-3">
+              <input
+                type="checkbox"
+                id="matchDays"
+                checked={guideFilterDaysMatch}
+                onChange={(e) => setGuideFilterDaysMatch(e.target.checked)}
+                className="w-4 h-4 rounded text-blue-600"
+              />
+              <label htmlFor="matchDays" className="text-[11px] font-black text-slate-700 cursor-pointer">
+                مطابقة أيام عمل المرشد مع موعد الرحلة
+              </label>
+            </div>
+          </div>
+
+          {/* Filtered Guide Cards */}
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {filteredSmartGuides.length === 0 ? (
+              <div className="p-4 bg-white rounded-xl text-center text-slate-500 text-xs">
+                لم يتم العثور على مرشدين يطابقون هذه الفلترة بالكامل. يمكنك تخفيف شروط البحث أعلاه.
+              </div>
+            ) : (
+              filteredSmartGuides.map((g) => {
+                const isAssigned = guideLic === g.licenseNumber;
+                return (
+                  <div
+                    key={g.id}
+                    className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 ${
+                      isAssigned
+                        ? "bg-emerald-50 border-emerald-500 shadow-sm"
+                        : "bg-white border-slate-200 hover:border-amber-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={g.avatar}
+                        alt={g.name}
+                        className="w-11 h-11 rounded-full object-cover border border-amber-300 shrink-0"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-xs text-slate-900">{g.name}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">({g.licenseNumber})</span>
+                          <span className="text-amber-500 font-bold text-[10px]">⭐ {g.rating}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 font-semibold flex items-center gap-2 mt-0.5">
+                          <span>⏳ {g.experienceYears} سنوات خبرة</span>
+                          <span>·</span>
+                          <span>📍 {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}</span>
+                        </div>
+                        <div className="text-[10px] text-blue-700 font-bold mt-0.5">
+                          📅 متاح: {formatWorkingDays(g.workingDays)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setGuideLic(g.licenseNumber)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shrink-0 ${
+                        isAssigned
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-slate-100 hover:bg-[#003580] text-slate-800 hover:text-white"
+                      }`}
+                    >
+                      {isAssigned ? "✓ معيّن للرحلة" : "تعيين هذا المرشد"}
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* 5. Photo Picker */}
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="صورة الرحلة (للعرض والترويج)" value={photo} onChange={setPhoto} />
+        </div>
+
+        {/* 6. Form Actions */}
+        <div className="flex gap-2 justify-end pt-3 border-t border-slate-200">
+          <button type="button" onClick={onClose} className="px-5 h-10 rounded-xl border border-slate-300 font-black text-xs hover:bg-slate-50 cursor-pointer">
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 cursor-pointer flex items-center gap-2"
+          >
+            <span>✓</span>
+            <span>إنشاء وحفظ الرحلة</span>
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function DailyTripEditModal({
+  trip,
+  guides,
+  vehicles,
+  onClose,
+  onSave,
+}: {
+  trip: DailyTrip;
+  guides: Guide[];
+  vehicles: Vehicle[];
+  onClose: () => void;
+  onSave: (t: DailyTrip) => void;
+}) {
+  const [title, setTitle] = useState(trip.title);
+  const [desc, setDesc] = useState(trip.description);
+  const [destination, setDestination] = useState(trip.destination || "لبدة الكبرى");
+  const [price, setPrice] = useState(String(trip.price_per_seat));
+  const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
+  const [guide, setGuide] = useState(trip.guide_license || "");
+  const [recurringDays, setRecurringDays] = useState<string[]>(trip.recurring_days || ["الأحد", "الأربعاء"]);
+  const [photo, setPhoto] = useState(trip.photo || "");
+  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+
+  const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+
+  const toggleDailyDay = (day: string) => {
+    if (recurringDays.includes(day)) {
+      if (recurringDays.length === 1) return;
+      setRecurringDays(recurringDays.filter((d) => d !== day));
+    } else {
+      if (recurringDays.length >= 2) {
+        setRecurringDays([recurringDays[1], day]);
+      } else {
+        setRecurringDays([...recurringDays, day]);
+      }
+    }
   };
 
   return (
-    <ModalShell title={type === "daily" ? "إضافة رحلة يومية جديدة" : "إضافة رحلة أسبوعية جديدة"} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+    <ModalShell title={`تعديل الرحلة اليومية: ${trip.title}`} onClose={onClose}>
+      <form
+        className="space-y-4 text-right text-xs"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (recurringDays.length !== 2) {
+            alert("يرجى اختيار يومين أسبوعياً للرحلة اليومية.");
+            return;
+          }
+          onSave({
+            ...trip,
+            title,
+            description: desc,
+            destination,
+            price_per_seat: +price,
+            bus_capacity: busCapacity,
+            max_capacity: busCapacity,
+            available_seats: busCapacity,
+            recurring_days: recurringDays,
+            guide_license: guide,
+            photo,
+            vehicle_plates: selVehicles,
+          });
+        }}
+      >
         <Field label="عنوان الرحلة" value={title} onChange={setTitle} />
+        <Field label="الوجهة / المكان السياحي" value={destination} onChange={setDestination} />
         <Field label="الوصف" value={desc} onChange={setDesc} />
-        {type === "weekly" && (
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="تاريخ البداية" type="date" value={startDate} onChange={setStartDate} />
-            <Field label="تاريخ النهاية" type="date" value={endDate} onChange={setEndDate} />
+        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+
+        {/* 2 Days Selector */}
+        <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
+          <div className="font-black text-blue-900 text-xs flex justify-between">
+            <span>📅 جدول الأيام (يومان أسبوعياً):</span>
+            <span className="text-emerald-700">المختار: {recurringDays.join(" و ")}</span>
           </div>
-        )}
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="سعر المقعد (د.ل)" type="number" value={price} onChange={setPrice} />
-          <Field label="السعة القصوى" type="number" value={capacity} onChange={setCapacity} />
+          <div className="grid grid-cols-7 gap-1">
+            {allWeekDays.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => toggleDailyDay(d)}
+                className={`py-1.5 rounded-lg text-xs font-black border transition ${
+                  recurringDays.includes(d) ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
         </div>
-        <Field label="المقاعد المتاحة" type="number" value={seats} onChange={setSeats} />
-        <div><label className="text-xs font-bold mb-1 block">حالة الرحلة</label>
-          <select value={isActive ? "true" : "false"} onChange={e => setIsActive(e.target.value === "true")} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="true">نشطة (معروضة)</option><option value="false">غير نشطة (مخفية)</option>
-          </select>
+
+        {/* Bus Capacity */}
+        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
+          <div className="font-black text-emerald-900 text-xs">🚌 سعة الحافلة (25 أو 50 راكب):</div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setBusCapacity(25)}
+              className={`py-2 rounded-xl border font-black text-xs ${
+                busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+              }`}
+            >
+              🚐 25 راكب (ميني باص)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBusCapacity(50)}
+              className={`py-2 rounded-xl border font-black text-xs ${
+                busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+              }`}
+            >
+              🚍 50 راكب (حافلة كبرى)
+            </button>
+          </div>
         </div>
-        <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة الرحلة (للعرض)" value={photo} onChange={setPhoto} />
-        </div>
-        <div><label className="text-xs font-bold mb-1 block">تعيين المرشد السياحي</label>
-          <select value={guideLic} onChange={e => setGuideLic(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">المرشد السياحي المعين</label>
+          <select value={guide} onChange={(e) => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
             <option value="">بدون مرشد</option>
-            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name} ({g.license_number})</option>)}
+            {TOUR_GUIDES_DATA.map((g) => (
+              <option key={g.licenseNumber} value={g.licenseNumber}>
+                {g.name} ({g.licenseNumber}) — خبرة {g.experienceYears} سنوات — {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
+              </option>
+            ))}
           </select>
+        </div>
+
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="صورة الرحلة اليومية" value={photo} onChange={setPhoto} />
         </div>
         <div className="pt-2 border-t border-border">
           <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
         </div>
+
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">إنشاء الرحلة</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+            إلغاء
+          </button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+            حفظ التعديلات
+          </button>
         </div>
       </form>
     </ModalShell>
   );
 }
 
-function DailyTripEditModal({ trip, guides, vehicles, onClose, onSave }: { trip: DailyTrip; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (t: DailyTrip) => void }) {
-  const [title, setTitle] = useState(trip.title); const [desc, setDesc] = useState(trip.description);
-  const [price, setPrice] = useState(String(trip.price_per_seat)); const [guide, setGuide] = useState(trip.guide_license || "");
-  const [photo, setPhoto] = useState(trip.photo || ""); const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
-  return (
-    <ModalShell title={`تعديل: ${trip.title}`} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onSave({ ...trip, title, description: desc, price_per_seat: +price, guide_license: guide, photo, vehicle_plates: selVehicles }); }}>
-        <Field label="عنوان الرحلة" value={title} onChange={setTitle} />
-        <Field label="الوصف" value={desc} onChange={setDesc} />
-        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
-        <div><label className="text-xs font-bold mb-1 block">المرشد السياحي</label>
-          <select value={guide} onChange={e => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="">بدون مرشد</option>
-            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name}</option>)}
-          </select>
-        </div>
-        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة الرحلة اليومية" value={photo} onChange={setPhoto} /></div>
-        <div className="pt-2 border-t border-border"><VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} /></div>
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ التعديلات</button>
-        </div>
-      </form>
-    </ModalShell>
-  );
-}
-
-function WeeklyTripEditModal({ trip, guides, vehicles, onClose, onSave }: { trip: WeeklyTrip; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (w: WeeklyTrip) => void }) {
-  const [title, setTitle] = useState(trip.title); const [price, setPrice] = useState(String(trip.seat_per_price));
-  const [guide, setGuide] = useState(trip.guide_license || ""); const [photo, setPhoto] = useState(trip.photo || "");
+function WeeklyTripEditModal({
+  trip,
+  guides,
+  vehicles,
+  onClose,
+  onSave,
+}: {
+  trip: WeeklyTrip;
+  guides: Guide[];
+  vehicles: Vehicle[];
+  onClose: () => void;
+  onSave: (w: WeeklyTrip) => void;
+}) {
+  const [title, setTitle] = useState(trip.title);
+  const [destination, setDestination] = useState(trip.destination || "أوباري");
+  const [price, setPrice] = useState(String(trip.seat_per_price));
+  const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
+  const [weeklyDay, setWeeklyDay] = useState(trip.weekly_day || "الجمعة");
+  const [startDate, setStartDate] = useState(trip.start_date || "2026-09-01");
+  const [endDate, setEndDate] = useState(trip.end_date || "2026-09-06");
+  const [guide, setGuide] = useState(trip.guide_license || "");
+  const [photo, setPhoto] = useState(trip.photo || "");
   const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+
+  const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+
   return (
-    <ModalShell title={`تعديل: ${trip.title}`} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onSave({ ...trip, title, seat_per_price: +price, guide_license: guide, photo, vehicle_plates: selVehicles }); }}>
+    <ModalShell title={`تعديل الرحلة الأسبوعية: ${trip.title}`} onClose={onClose}>
+      <form
+        className="space-y-4 text-right text-xs"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({
+            ...trip,
+            title,
+            destination,
+            seat_per_price: +price,
+            bus_capacity: busCapacity,
+            max_capacity: busCapacity,
+            available_seats: busCapacity,
+            weekly_day: weeklyDay,
+            start_date: startDate,
+            end_date: endDate,
+            guide_license: guide,
+            photo,
+            vehicle_plates: selVehicles,
+          });
+        }}
+      >
         <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
+        <Field label="الوجهة السياحية" value={destination} onChange={setDestination} />
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
-        <div><label className="text-xs font-bold mb-1 block">المرشد السياحي</label>
-          <select value={guide} onChange={e => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+
+        {/* 1 Day Selector */}
+        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+          <div className="font-black text-amber-900 text-xs flex justify-between">
+            <span>🗓️ موعد الانطلاق (يوم واحد أسبوعياً):</span>
+            <span className="text-amber-800 font-black">كل {weeklyDay}</span>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {allWeekDays.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setWeeklyDay(d)}
+                className={`py-1.5 rounded-lg text-xs font-black border transition ${
+                  weeklyDay === d ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="تاريخ الانطلاق" type="date" value={startDate} onChange={setStartDate} />
+          <Field label="تاريخ العودة" type="date" value={endDate} onChange={setEndDate} />
+        </div>
+
+        {/* Bus Capacity */}
+        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
+          <div className="font-black text-emerald-900 text-xs">🚍 سعة الحافلة (25 أو 50 راكب):</div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setBusCapacity(25)}
+              className={`py-2 rounded-xl border font-black text-xs ${
+                busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+              }`}
+            >
+              🚐 25 راكب (ميني باص)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBusCapacity(50)}
+              className={`py-2 rounded-xl border font-black text-xs ${
+                busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+              }`}
+            >
+              🚍 50 راكب (حافلة كبرى)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">المرشد السياحي</label>
+          <select value={guide} onChange={(e) => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
             <option value="">بدون مرشد</option>
-            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name}</option>)}
+            {TOUR_GUIDES_DATA.map((g) => (
+              <option key={g.licenseNumber} value={g.licenseNumber}>
+                {g.name} ({g.licenseNumber}) — خبرة {g.experienceYears} سنوات — {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
+              </option>
+            ))}
           </select>
         </div>
-        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة الرحلة الأسبوعية (للعرض)" value={photo} onChange={setPhoto} /></div>
-        <div className="pt-2 border-t border-border"><VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} /></div>
+
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="صورة الرحلة الأسبوعية (للعرض)" value={photo} onChange={setPhoto} />
+        </div>
+        <div className="pt-2 border-t border-border">
+          <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ التغييرات</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+            إلغاء
+          </button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+            حفظ التغييرات
+          </button>
         </div>
       </form>
     </ModalShell>
