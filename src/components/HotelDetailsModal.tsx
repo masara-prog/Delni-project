@@ -190,8 +190,8 @@ export function HotelDetailsModal({
           {/* Top Decorative Perk Strip */}
           <div className="bg-gradient-to-r from-[#003580] via-[#0284C7] to-amber-600 text-white px-4 py-2 text-xs font-black flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>👑 {isAr ? "منشأة سياحية معتمدة رسميّاً لدى منصة دلّني" : "Verified Official Partner Stay on Dallani"}</span>
+              <span className={`w-2 h-2 rounded-full ${hotel.partnership_status === "غير نشط" ? "bg-slate-400" : "bg-emerald-400 animate-ping"}`} />
+              <span>{isAr ? `حالة الشراكة: ${hotel.partnership_status === "غير نشط" ? "غير نشط" : "نشط"}` : `Partnership: ${hotel.partnership_status === "غير نشط" ? "Inactive" : "Active"}`}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold">
               <span>🏷️ {isAr ? `خصم حصري ${discountPct}% لرواد دلّني` : `Exclusive ${discountPct}% Perk`}</span>
@@ -369,8 +369,8 @@ export function HotelDetailsModal({
                   {/* Rating Card */}
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700 flex items-center justify-between">
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-bold">{isAr ? "تقييم النزلاء العام" : "Guest Rating"}</div>
-                      <div className="text-xl font-black text-[#003580] dark:text-blue-400">{ratingWord}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-bold">{isAr ? "معدل التقييم الرقمي" : "Numeric Rating"}</div>
+                      <div className="text-xl font-black text-[#003580] dark:text-blue-400">{ratingScore} <span className="text-xs text-slate-500 font-semibold">{isAr ? "من 10" : "/ 10"}</span></div>
                       <div className="text-xs text-slate-500 font-semibold">{reviewsCount} {isAr ? "نزيل موثق" : "verified reviews"}</div>
                     </div>
                     <div className="w-14 h-14 rounded-2xl bg-[#003580] text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-900/30">
@@ -410,7 +410,7 @@ export function HotelDetailsModal({
                 <div className="space-y-3 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
                   <h4 className="text-base font-black text-[#003580] dark:text-blue-300 flex items-center gap-2">
                     <span>🏨</span>
-                    <span>{isAr ? "حول مكان الإقامة وتجربة الضيافة" : "About Property & Hospitality Experience"}</span>
+                    <span>{isAr ? "حول مكان الإقامة" : "About Property"}</span>
                   </h4>
                   <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
                     {hotel.description || (isAr
@@ -487,7 +487,9 @@ export function HotelDetailsModal({
                       {ratingScore}
                     </div>
                     <div>
-                      <div className="text-lg font-black text-[#003580] dark:text-blue-300">{ratingWord}</div>
+                      <div className="text-lg font-black text-[#003580] dark:text-blue-300">
+                        {isAr ? `معدل التقييم: ${ratingScore} من 10` : `Rating Score: ${ratingScore} / 10`}
+                      </div>
                       <div className="text-xs text-slate-500">
                         {isAr ? `بناءً على تقييمات ${reviewsCount} ضيفاً موثقاً عبر دلّني` : `Based on ${reviewsCount} verified reviews`}
                       </div>
