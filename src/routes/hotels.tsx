@@ -673,17 +673,27 @@ function HotelDetailsView({
           {/* Main Photo Gallery Bento Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             
-            {/* Featured Hero Photo (8 cols) */}
-            <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[500px] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-2xl group cursor-pointer"
+            {/* Featured Hero Photo (8 cols) - Fixed stable height & crisp presentation */}
+            <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[500px] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-2xl group cursor-pointer shrink-0"
               onClick={() => setLightboxOpen(true)}
             >
+              {/* Ambient Blurred Background for perfect clarity & lighting */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img
+                  src={photos[activePhoto]}
+                  alt=""
+                  className="w-full h-full object-cover blur-2xl opacity-40 scale-110"
+                  aria-hidden="true"
+                />
+              </div>
+
               <img
                 src={photos[activePhoto]}
                 alt={hotel.name}
                 key={activePhoto}
-                className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
+                className="relative z-10 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 pointer-events-none z-10" />
 
               {/* Top Bar Badges */}
               <div className="absolute top-4 right-4 left-4 z-20 flex items-center justify-between pointer-events-none">

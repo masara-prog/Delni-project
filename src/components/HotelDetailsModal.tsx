@@ -226,42 +226,52 @@ export function HotelDetailsModal({
             </button>
           </div>
 
-          {/* ── 1. CINEMATIC SLIDESHOW STAGE ── */}
+          {/* ── 1. CINEMATIC SLIDESHOW STAGE WITH FIXED STABLE SIZE & CRISP CLARITY ── */}
           <div
-            className="relative h-64 sm:h-80 md:h-96 w-full bg-slate-950 overflow-hidden group select-none"
+            className="relative h-80 sm:h-96 md:h-[420px] w-full bg-slate-950 overflow-hidden group select-none shrink-0"
             onMouseEnter={() => setAutoPlay(false)}
             onMouseLeave={() => setAutoPlay(true)}
           >
-            {/* Background Image with Dynamic Fade */}
+            {/* Ambient Blurred Background for perfect lighting and zero distortion */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <img
+                src={photos[activePhoto]}
+                alt=""
+                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition-all duration-700"
+                aria-hidden="true"
+              />
+            </div>
+
+            {/* Main Stage Image (Fixed, perfectly proportioned, crisp object-cover) */}
             <img
               src={photos[activePhoto]}
               alt={hotel.name}
-              className="w-full h-full object-cover transition-all duration-700 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
+              className="relative z-10 w-full h-full object-cover object-center transition-all duration-500 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
               onClick={() => setLightboxOpen(true)}
             />
 
             {/* Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-black/40 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-black/40 pointer-events-none z-10" />
 
             {/* Slideshow Arrows */}
             <button
               type="button"
               onClick={() => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md flex items-center justify-center font-black text-xl transition hover:scale-110 opacity-80 group-hover:opacity-100 shadow-xl border border-white/20 cursor-pointer"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md flex items-center justify-center font-black text-xl transition hover:scale-110 opacity-80 group-hover:opacity-100 shadow-xl border border-white/20 cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={() => setActivePhoto((prev) => (prev + 1) % photos.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md flex items-center justify-center font-black text-xl transition hover:scale-110 opacity-80 group-hover:opacity-100 shadow-xl border border-white/20 cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md flex items-center justify-center font-black text-xl transition hover:scale-110 opacity-80 group-hover:opacity-100 shadow-xl border border-white/20 cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
 
-            {/* Photo Caption & Expand Button */}
-            <div className="absolute bottom-4 right-4 left-4 flex flex-wrap items-end justify-between gap-3 text-white">
-              <div className="space-y-1">
+            {/* Photo Caption & Identity */}
+            <div className="absolute bottom-14 sm:bottom-16 right-4 left-4 z-20 flex flex-wrap items-end justify-between gap-3 text-white pointer-events-none">
+              <div className="space-y-1 pointer-events-auto">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-xs font-bold text-amber-300">
                   <span>{photoCaptions[activePhoto % photoCaptions.length]?.icon}</span>
                   <span>{photoCaptions[activePhoto % photoCaptions.length]?.title}</span>
@@ -278,12 +288,12 @@ export function HotelDetailsModal({
                 </div>
               </div>
 
-              {/* Photo Indicator Pills + Lightbox Trigger */}
-              <div className="flex items-center gap-2">
+              {/* Lightbox Zoom Button */}
+              <div className="flex items-center gap-2 pointer-events-auto">
                 <button
                   type="button"
                   onClick={() => setLightboxOpen(true)}
-                  className="px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-xs font-black text-white flex items-center gap-1.5 transition hover:scale-105 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-xs font-black text-white flex items-center gap-1.5 transition hover:scale-105 cursor-pointer shadow-lg"
                 >
                   <span>🔍 {isAr ? "تكبير الصور" : "Zoom"}</span>
                   <span className="bg-[#003580] px-2 py-0.5 rounded-full text-[10px]">
@@ -293,18 +303,20 @@ export function HotelDetailsModal({
               </div>
             </div>
 
-            {/* Thumbnail Navigation Strip */}
-            <div className="absolute bottom-1 right-0 left-0 flex justify-center gap-1.5 pb-2 pointer-events-auto">
-              {photos.map((_, idx) => (
+            {/* Visual Thumbnail Navigation Strip (Fixed Stable Thumbnails) */}
+            <div className="absolute bottom-2 right-0 left-0 z-20 flex justify-center gap-2 px-4 overflow-x-auto py-1 pointer-events-auto">
+              {photos.map((p, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => setActivePhoto(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    activePhoto === idx ? "w-8 bg-amber-400" : "w-2 bg-white/50 hover:bg-white"
+                  className={`w-14 h-9 sm:w-16 sm:h-10 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer shadow-md shrink-0 ${
+                    activePhoto === idx ? "border-amber-400 scale-105 ring-2 ring-amber-400/50" : "border-white/30 opacity-60 hover:opacity-100"
                   }`}
                   aria-label={`Photo ${idx + 1}`}
-                />
+                >
+                  <img src={p} alt="" className="w-full h-full object-cover" />
+                </button>
               ))}
             </div>
           </div>

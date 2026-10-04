@@ -405,48 +405,60 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
   return (
     <Modal open={open} onClose={onClose} size="xl">
       <div dir={dir}>
-        {/* 1. ANIMATED HIGH QUALITY PHOTO SHOWCASE & SLIDESHOW */}
-        <div className="relative w-full h-72 sm:h-80 overflow-hidden bg-[#0B132B]">
+        {/* 1. ANIMATED HIGH QUALITY PHOTO SHOWCASE & SLIDESHOW (FIXED STABLE SIZE) */}
+        <div className="relative w-full h-80 sm:h-96 md:h-[420px] overflow-hidden bg-slate-950 shrink-0">
+          {/* Ambient Blurred Background for perfect clarity & zero distortion */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <img
+              src={currentImg}
+              alt=""
+              className="w-full h-full object-cover blur-2xl opacity-40 scale-110"
+              aria-hidden="true"
+            />
+          </div>
+
           {gallery.length > 1 ? (
             <HeroSlideshow
               images={gallery}
               alt={item.title}
-              intervalMs={3000}
+              intervalMs={3500}
               brightness="brightness-95"
             />
           ) : (
             <img
               src={currentImg}
               alt={item.title}
-              className="w-full h-full object-cover animate-ken-burns-a brightness-95"
+              className="relative z-10 w-full h-full object-cover object-center animate-ken-burns-a brightness-95"
             />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B132B]/80 via-transparent to-black/20 pointer-events-none z-10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30 pointer-events-none z-10" />
 
           {/* Quick Info & Photos Badge Overlay */}
-          <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between text-white">
-            <span className="px-3 py-1 rounded-full bg-black/50 backdrop-blur-md text-amber-300 font-black text-xs border border-white/20 shadow-md">
+          <div className="absolute bottom-14 sm:bottom-16 left-4 right-4 z-20 flex items-center justify-between text-white pointer-events-none">
+            <span className="px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-amber-300 font-black text-xs border border-white/20 shadow-md">
               📸 {gallery.length > 1 ? (isAr ? `${gallery.length} صور متحركة` : `${gallery.length} Animated Photos`) : (isAr ? "معرض الصور" : "Photo Gallery")}
             </span>
-
-            {/* Thumbnail dots if multiple images */}
-            {gallery.length > 1 && (
-              <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md">
-                {gallery.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveImg(idx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${
-                      activeImg === idx ? "bg-amber-400 w-5" : "bg-white/60 hover:bg-white w-2"
-                    }`}
-                    aria-label={`Photo ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            )}
           </div>
+
+          {/* Visual Thumbnail Navigation Strip if multiple images */}
+          {gallery.length > 1 && (
+            <div className="absolute bottom-2 right-0 left-0 z-20 flex justify-center gap-2 px-4 overflow-x-auto py-1 pointer-events-auto">
+              {gallery.map((p, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImg(idx)}
+                  className={`w-14 h-9 sm:w-16 sm:h-10 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer shadow-md shrink-0 ${
+                    activeImg === idx ? "border-amber-400 scale-105 ring-2 ring-amber-400/50" : "border-white/30 opacity-60 hover:opacity-100"
+                  }`}
+                  aria-label={`Photo ${idx + 1}`}
+                >
+                  <img src={p} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
