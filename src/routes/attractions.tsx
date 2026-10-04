@@ -967,6 +967,7 @@ export function AttractionsPage() {
 
   const modals = useModalPair();
   const [privateTripModalOpen, setPrivateTripModalOpen] = useState(false);
+  const [privateTripDest, setPrivateTripDest] = useState("");
   const [bookingTripModalOpen, setBookingTripModalOpen] = useState(false);
   const [selectedAttraction, setSelectedAttraction] = useState<AttractionItem | null>(null);
 
@@ -1593,9 +1594,10 @@ export function AttractionsPage() {
       <PrivateTripModal
         open={privateTripModalOpen}
         onClose={() => setPrivateTripModalOpen(false)}
+        initialDestination={privateTripDest}
       />
 
-      {/* ── Enlarged Landmark Modal with 4-Photo Dynamic Slideshow ── */}
+      {/* ── Landmark Details Modal (Single Photo Only) ── */}
       <LandmarkDetailsModal
         city={selectedCityForModal}
         onClose={() => setSelectedCityForModal(null)}
@@ -1604,7 +1606,9 @@ export function AttractionsPage() {
           setBookingTripModalOpen(true);
         }}
         onBookPrivate={() => {
+          const destName = selectedCityForModal ? selectedCityForModal.name : "";
           setSelectedCityForModal(null);
+          setPrivateTripDest(destName);
           setPrivateTripModalOpen(true);
         }}
       />
@@ -1628,64 +1632,32 @@ function LandmarkDetailsModal({
 }) {
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
-  const [activePhoto, setActivePhoto] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
   const [activeModalTab, setActiveModalTab] = useState<"history" | "highlights" | "trips">("history");
   const [showPromo, setShowPromo] = useState(true);
 
-  const photos = city?.photos && city.photos.length > 0 ? city.photos : [city?.img || heroImg];
-
-  // Auto-slide every 3.5 seconds
-  useEffect(() => {
-    if (!city || !isPlaying || photos.length <= 1) return;
-    const interval = setInterval(() => {
-      setActivePhoto((prev) => (prev + 1) % photos.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [city, isPlaying, photos.length]);
-
-  // Reset to photo 0 whenever city changes
-  useEffect(() => {
-    setActivePhoto(0);
-    setIsPlaying(true);
-  }, [city?.id]);
-
   if (!city) return null;
 
-  const nextPhoto = () => setActivePhoto((prev) => (prev + 1) % photos.length);
-  const prevPhoto = () => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length);
+  const photo = city.img || heroImg;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-xl animate-fade-in" dir={dir}>
       <div className="bg-slate-950/95 rounded-3xl max-w-5xl w-full overflow-hidden shadow-2xl border border-white/20 max-h-[92vh] flex flex-col relative text-slate-100 backdrop-blur-2xl">
         
-        {/* 1. Dynamic Animated Photo Slideshow Showcase (4 Real Landmark Photos with Transition) */}
+        {/* 1. Single Elegant Hero Photo Showcase */}
         <div className="relative h-72 sm:h-96 md:h-[430px] w-full overflow-hidden bg-slate-950 shrink-0 group">
           <img
-            src={photos[activePhoto]}
+            src={photo}
             alt={city.name}
-            key={activePhoto}
-            className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105 animate-in fade-in"
+            className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-black/60 pointer-events-none" />
 
           {/* Floating Top Controls */}
           <div className="absolute top-4 right-4 left-4 z-30 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="bg-black/70 backdrop-blur-md text-white text-xs font-black px-3.5 py-1.5 rounded-full border border-white/20 shadow-xl flex items-center gap-1.5">
-                <span>📷</span>
-                <span>{isAr ? `صورة ${activePhoto + 1} من ${photos.length} (معالم حقيقية 4K)` : `Photo ${activePhoto + 1} of ${photos.length} (4K Real)`}</span>
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsPlaying((p) => !p)}
-                className="w-9 h-9 rounded-full bg-black/70 backdrop-blur-md text-white hover:bg-black/90 border border-white/20 flex items-center justify-center text-xs transition cursor-pointer shadow-xl"
-                title={isPlaying ? (isAr ? "إيقاف مؤقت للتبديل التلقائي" : "Pause auto-slide") : (isAr ? "تشغيل التبديل التلقائي" : "Play auto-slide")}
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
-              </button>
-            </div>
+            <span className="bg-black/70 backdrop-blur-md text-white text-xs font-black px-3.5 py-1.5 rounded-full border border-white/20 shadow-xl flex items-center gap-1.5">
+              <span>🏛️</span>
+              <span>{isAr ? "معلم سياحي موثق" : "Verified Landmark"}</span>
+            </span>
 
             <button
               type="button"
@@ -1697,29 +1669,7 @@ function LandmarkDetailsModal({
             </button>
           </div>
 
-          {/* Left / Right Chevron Controls */}
-          {photos.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={prevPhoto}
-                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md border border-white/20 shadow-xl flex items-center justify-center font-black text-xl transition-all hover:scale-110 active:scale-95 cursor-pointer"
-                title={isAr ? "الصورة السابقة" : "Previous photo"}
-              >
-                {dir === "rtl" ? "→" : "←"}
-              </button>
-              <button
-                type="button"
-                onClick={nextPhoto}
-                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md border border-white/20 shadow-xl flex items-center justify-center font-black text-xl transition-all hover:scale-110 active:scale-95 cursor-pointer"
-                title={isAr ? "الصورة التالية" : "Next photo"}
-              >
-                {dir === "rtl" ? "←" : "→"}
-              </button>
-            </>
-          )}
-
-          {/* Bottom Overlay with Interactive 4-Thumbnail Strip */}
+          {/* Bottom Title Overlay */}
           <div className="absolute bottom-4 right-4 left-4 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-white">
             <div className="drop-shadow-lg space-y-1">
               <div className="text-xl sm:text-3xl font-black text-white">{isAr ? city.name : city.nameEn}</div>
@@ -1728,26 +1678,8 @@ function LandmarkDetailsModal({
                 <span>{isAr ? city.subtitle : city.subtitleEn}</span>
               </div>
             </div>
-
-            {/* 4 Interactive Clickable Thumbnails */}
-            <div className="flex items-center gap-2">
-              {photos.map((p, idx) => {
-                const isSelected = activePhoto === idx;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActivePhoto(idx)}
-                    className={`relative w-14 sm:w-18 h-10 sm:h-12 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 bg-slate-900 shadow-md ${
-                      isSelected
-                        ? "ring-2 ring-amber-400 scale-105 opacity-100 shadow-amber-400/20"
-                        : "opacity-60 hover:opacity-100 border border-white/30"
-                    }`}
-                  >
-                    <img src={p} alt="" className="w-full h-full object-cover" />
-                  </button>
-                );
-              })}
+            <div className="px-3.5 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-xs font-bold text-slate-200">
+              📍 {city.region}
             </div>
           </div>
         </div>
@@ -1899,7 +1831,7 @@ function LandmarkDetailsModal({
                 <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-900 border border-amber-400/30 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md">
-                      ☀️ {isAr ? "رحلة يومية منتظمة متوفرة" : "Daily Tour Available"}
+                      ☀️ {isAr ? "رحلة يومية منتظمة (يومان في الأسبوع)" : "Scheduled Daily Tour (2 Days a Week)"}
                     </span>
                     <span className="text-xs font-bold text-amber-200">{isAr ? "انطلاق الساعة 09:00 صباحاً" : "Departs 09:00 AM"}</span>
                   </div>
@@ -1932,11 +1864,11 @@ function LandmarkDetailsModal({
                 className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-[#003580] to-blue-600 hover:from-blue-700 hover:to-blue-800 text-white font-black text-xs sm:text-sm shadow-xl transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
               >
                 <span>☀️</span>
-                <span>{isAr ? "الاطلاع على الرحلة اليومية لهذه الوجهة" : "View Daily Tour for this City"}</span>
+                <span>{isAr ? "الاطلاع على الرحلات اليومية المتوفرة لهذه الوجهة" : "View Daily Tours for this Landmark"}</span>
               </button>
             ) : (
               <span className="text-xs font-bold text-slate-400">
-                {isAr ? "رحلات خاصة وسفاري حصرية فقط لهذا المعلم" : "Exclusive Private Expedition Only"}
+                {isAr ? "رحلات خاصة وسفاري حصرية لهذا المعلم" : "Exclusive Private Expedition Only"}
               </span>
             )}
           </div>
@@ -1948,7 +1880,7 @@ function LandmarkDetailsModal({
             className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-[#D96B27] hover:from-amber-400 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/20 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
           >
             <span>🧭</span>
-            <span>{isAr ? "طلب رحلة خاصة مع مرشد معتمد" : "Book Private Expedition"}</span>
+            <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>
           </button>
         </div>
       </div>

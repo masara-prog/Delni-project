@@ -17,8 +17,8 @@ export const Route = createFileRoute("/dashboard/admin")({
 /* ============ TYPES ============ */
 type Company = { id: string; contract_number: string; name: string; phone: string; address: string; email: string; pass: string; total_vehicles: number; available_cars: number; contract_date: string; contract_end_date?: string; status: "موثق" | "بانتظار" | "مرفوض" };
 type Driver = { driver_license_number: string; full_name: string; phone_number: string; national_id_or_passport: string; license_date_valid: string; contract_number: string; assigned_vehicle_plate: string; email: string; account_status: "نشط" | "معلق" | "موقوف" };
-type Guide = { license_number: string; full_name: string; phone_number: string; years_of_experience: number; certificate: string; digital_certificate_file?: string; bio: string; speaks_english: boolean; speaks_french: boolean; speaks_italian: boolean; verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; email: string };
-type Vehicle = { plate_number: string; company_id: string; company_name: string; vehicle_type: string; capacity: number; status: "جاهزة" | "في رحلة" | "صيانة" };
+type Guide = { license_number: string; full_name: string; phone_number: string; years_of_experience: number; certificate: string; digital_certificate_file?: string; bio: string; speaks_english: boolean; speaks_french: boolean; speaks_italian: boolean; verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; email: string; daily_rate: number };
+type Vehicle = { plate_number: string; company_id: string; company_name: string; vehicle_type: string; capacity: number; daily_rate: number; status: "جاهزة" | "في رحلة" | "صيانة" };
 type DailyTrip = { id: string; title: string; description: string; price_per_seat: number; max_capacity: number; available_seats: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; recurring_days?: string[]; bus_capacity?: 25 | 50; destination?: string };
 type WeeklyTrip = { id: string; title: string; start_date: string; end_date: string; seat_per_price: number; max_capacity: number; available_seats?: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; weekly_day?: string; bus_capacity?: 25 | 50; destination?: string };
 type PrivateTripRequest = { private_trip_id: string; customer_name: string; customer_phone: string; customer_description: string; preferred_start_date: string; duration_days: number; number_of_companions: number; quoted_price?: number; admin_itinerary_plan?: string; assigned_guide?: string; assigned_vehicle?: string; status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" };
@@ -51,18 +51,18 @@ function AdminDashboard() {
   ]);
 
   const [guides, setGuides] = useState<Guide[]>([
-    { license_number: "G-9901", full_name: "سالم القذافي", phone_number: "0917778888", years_of_experience: 7, certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات هلال أحمر", digital_certificate_file: "https://example.com/certificates/salem_license.pdf", bio: "متخصص في الجولات الأثرية بالمنطقة الغربية والصحراء.", speaks_english: true, speaks_french: false, speaks_italian: true, verification_status: "موثق", email: "salem@dalni.ly" },
-    { license_number: "G-9902", full_name: "خالد بن يونس", phone_number: "0921112233", years_of_experience: 4, certificate: "شهادة بكالوريوس تاريخ وآثار - جامعة بنغازي، رخصة إرشاد محلي", digital_certificate_file: "https://example.com/certificates/khaled_license.pdf", bio: "خبير معالم شحات وسوسة والجبل الأخضر.", speaks_english: true, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "khaled@dalni.ly" },
-    { license_number: "G-9903", full_name: "سعاد الفيتوري", phone_number: "0915554433", years_of_experience: 2, certificate: "شهادة دورات إرشاد سياحي غدامس", digital_certificate_file: "https://example.com/certificates/suad_license.pdf", bio: "مرشدة متخصصة في التراث الشعبي والواحات.", speaks_english: false, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "suad@dalni.ly" },
+    { license_number: "G-9901", full_name: "سالم القذافي", phone_number: "0917778888", years_of_experience: 7, certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات هلال أحمر", digital_certificate_file: "https://example.com/certificates/salem_license.pdf", bio: "متخصص في الجولات الأثرية بالمنطقة الغربية والصحراء.", speaks_english: true, speaks_french: false, speaks_italian: true, verification_status: "موثق", email: "salem@dalni.ly", daily_rate: 150 },
+    { license_number: "G-9902", full_name: "خالد بن يونس", phone_number: "0921112233", years_of_experience: 4, certificate: "شهادة بكالوريوس تاريخ وآثار - جامعة بنغازي، رخصة إرشاد محلي", digital_certificate_file: "https://example.com/certificates/khaled_license.pdf", bio: "خبير معالم شحات وسوسة والجبل الأخضر.", speaks_english: true, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "khaled@dalni.ly", daily_rate: 140 },
+    { license_number: "G-9903", full_name: "سعاد الفيتوري", phone_number: "0915554433", years_of_experience: 2, certificate: "شهادة دورات إرشاد سياحي غدامس", digital_certificate_file: "https://example.com/certificates/suad_license.pdf", bio: "مرشدة متخصصة في التراث الشعبي والواحات.", speaks_english: false, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "suad@dalni.ly", daily_rate: 120 },
   ]);
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES */
   const [vehicles] = useState<Vehicle[]>([
-    { plate_number: "طرابلس 4517", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "حافلة سياحية Mercedes Benz 30 مقعد", capacity: 30, status: "جاهزة" },
-    { plate_number: "طرابلس 8291", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "ميني باص Toyota 15 مقعد", capacity: 15, status: "في رحلة" },
-    { plate_number: "بنغازي 3382", company_id: "CN-2026-02", company_name: "شركة ليبيا تور", vehicle_type: "حافلة فاخرة Scania 45 مقعد", capacity: 45, status: "جاهزة" },
-    { plate_number: "طرابلس 1122", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "سيارة جيب 4×4 Land Cruiser", capacity: 7, status: "جاهزة" },
-    { plate_number: "سبها 9944", company_id: "CN-2026-03", company_name: "شركة الوديان للنقل", vehicle_type: "حافلة صغيرة Hyundai 20 مقعد", capacity: 20, status: "جاهزة" },
+    { plate_number: "طرابلس 4517", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "حافلة سياحية Mercedes Benz 30 مقعد", capacity: 30, daily_rate: 650, status: "جاهزة" },
+    { plate_number: "طرابلس 8291", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "ميني باص Toyota 15 مقعد", capacity: 15, daily_rate: 450, status: "في رحلة" },
+    { plate_number: "بنغازي 3382", company_id: "CN-2026-02", company_name: "شركة ليبيا تور", vehicle_type: "حافلة فاخرة Scania 45 مقعد", capacity: 45, daily_rate: 750, status: "جاهزة" },
+    { plate_number: "طرابلس 1122", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "سيارة جيب 4×4 Land Cruiser", capacity: 7, daily_rate: 350, status: "جاهزة" },
+    { plate_number: "سبها 9944", company_id: "CN-2026-03", company_name: "شركة الوديان للنقل", vehicle_type: "حافلة صغيرة Hyundai 20 مقعد", capacity: 20, daily_rate: 400, status: "جاهزة" },
   ]);
 
   const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([
@@ -378,6 +378,9 @@ function AdminDashboard() {
                 <div className="text-xs space-y-1">
                   <div className="font-bold text-foreground">📜 {g.certificate}</div>
                   <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
+                  <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 mt-1 inline-block">
+                    💰 أجر المرشد اليومي: {g.daily_rate} د.ل / اليوم
+                  </div>
                 </div>
                 <div className="pt-2 flex gap-2">
                   <button onClick={() => setViewingGuide(g)} className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow">معاينة الوثائق والاعتماد 📄</button>
@@ -501,6 +504,10 @@ function AdminDashboard() {
                     <Badge tone={v.status === "جاهزة" ? "green" : v.status === "في رحلة" ? "sun" : "red"}>{v.status}</Badge>
                   </div>
                   <div className="text-xs font-bold text-primary">🏢 {v.company_name} · 👥 {v.capacity} مقعد</div>
+                  <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 flex items-center justify-between">
+                    <span>💰 سعر التأجير اليومي:</span>
+                    <span>{v.daily_rate} د.ل / اليوم</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -639,65 +646,92 @@ function AdminDashboard() {
       {/* ENTITIES */}
       {active === "entities" && (
         <div className="space-y-6 text-right">
-          <SectionCard title="🏨 الفنادق (5 صور)" action={<button onClick={() => setShowAddHotel(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة فندق</button>}>
+          {/* Information Notice */}
+          <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/70 text-xs font-semibold text-amber-900 flex items-center gap-3">
+            <span className="text-2xl flex-shrink-0">🏛️</span>
+            <div>
+              <span className="font-black block text-sm mb-0.5">تنويه هام بشأن الفنادق والمطاعم والمعالم:</span>
+              الفنادق والمطاعم في منصة دلّني هي أدلة استكشافية وتعريفية فقط (عرض المنشأة ونوع الطعام والتواصل المباشر مع المنشأة)، وهي غير قابلة للحجز المباشر للغرف أو الطاولات عبر المنصة. المعالم السياحية تظهر بصورة رئيسية واحدة مع خرائط Google Maps.
+            </div>
+          </div>
+
+          <SectionCard title="🏨 دليل الفنادق وأماكن الإقامة (دليل تعريفي — عرض فقط بدون حجز غرف)" action={<button onClick={() => setShowAddHotel(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة فندق بالدليل</button>}>
             <div className="grid md:grid-cols-2 gap-4">
               {hotels.map((h) => (
                 <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-black text-foreground text-sm">{h.name}</h4>
-                      <div className="text-xs font-bold text-gold-foreground">{"⭐".repeat(h.stars)} · 👥 {h.bookings_count} حجز · ⭐ {h.rating_avg}</div>
+                      <div className="text-xs font-bold text-gold-foreground">{"⭐".repeat(h.stars)} · 👁️ {h.bookings_count} زيارة تعريفية · ⭐ {h.rating_avg}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">📍 {h.city} — {h.address}</div>
                     </div>
-                    <Badge tone="green">{h.partnership_status}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge tone="green">{h.partnership_status}</Badge>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
+                        عرض تعريفي فقط
+                      </span>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {[h.hotel_photo_1, h.hotel_photo_2, h.hotel_photo_3, h.hotel_photo_4, h.hotel_photo_5].map((img, idx) => (
-                      <img key={idx} src={img} alt="" className="w-full h-12 rounded-lg object-cover border" />
-                    ))}
+                  <div>
+                    <img src={h.hotel_photo_1} alt={h.name} className="w-full h-36 rounded-xl object-cover border" />
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setEditingHotel(h)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                    <button onClick={() => handleDeleteHotel(h.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                  <div className="flex justify-between items-center pt-1 border-t border-border/50 text-xs text-muted-foreground">
+                    <span>📞 {h.phone}</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingHotel(h)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                      <button onClick={() => handleDeleteHotel(h.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </SectionCard>
 
-          <SectionCard title="🍽️ المطاعم والمقاهي (5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة مطعم</button>}>
+          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نوع الطعام وعرض فقط)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة مطعم بالدليل</button>}>
             <div className="grid md:grid-cols-2 gap-4">
               {restaurants.map((r) => (
                 <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-black text-foreground text-sm">{r.name}</h4>
-                      <div className="text-xs text-muted-foreground">{r.type} · {r.city} · ⭐ {r.rating_avg}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">📍 {r.city} — {r.address} · ⭐ {r.rating_avg}</div>
                     </div>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
+                      دليل تعريفي
+                    </span>
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {[r.facility_image_1, r.facility_image_2, r.facility_image_3, r.facility_image_4, r.facility_image_5].map((img, idx) => (
-                      <img key={idx} src={img} alt="" className="w-full h-12 rounded-lg object-cover border" />
-                    ))}
+                  <div>
+                    <img src={r.facility_image_1} alt={r.name} className="w-full h-36 rounded-xl object-cover border" />
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setEditingRestaurant(r)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                    <button onClick={() => handleDeleteRestaurant(r.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs">
+                    <span className="font-bold text-foreground">🍲 نوع وتصنيف الطعام المقدم: </span>
+                    <span className="font-black text-primary">{r.type}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1 border-t border-border/50 text-xs text-muted-foreground">
+                    <span>📞 {r.phone}</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingRestaurant(r)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
+                      <button onClick={() => handleDeleteRestaurant(r.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </SectionCard>
 
-          <SectionCard title="🏛️ المعالم السياحية (صورة + موقع جغرافي Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة معلم</button>}>
+          <SectionCard title="🏛️ المعالم والوجهات السياحية (صورة رئيسية واحدة + Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة معلم</button>}>
             <div className="grid md:grid-cols-2 gap-4">
               {attractions.map((a) => (
                 <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
                   <div className="flex gap-3">
-                    <img src={a.place_image} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                    <img src={a.place_image} alt="" className="w-24 h-24 rounded-xl object-cover flex-shrink-0 border" />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-foreground text-sm">{a.name}</h4>
-                      <div className="text-xs text-muted-foreground mt-0.5">📍 {a.city} · 👥 {a.visitors_count} زائر</div>
-                      <Badge tone="sea">{a.category}</Badge>
+                      <div className="text-xs text-muted-foreground mt-0.5">📍 {a.city} · 👥 {a.visitors_count} استعلام وزيارة</div>
+                      <div className="mt-1">
+                        <Badge tone="sea">{a.category}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{a.description}</p>
                     </div>
                   </div>
                   {(a.latitude || a.google_maps_url) && (
@@ -934,7 +968,7 @@ function AdminDashboard() {
       {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
       {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
       {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
-      {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
+      {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
       {showAddHotel && <HotelModal title="إضافة فندق جديد" onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
       {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
       {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
@@ -1944,32 +1978,116 @@ function WeeklyTripEditModal({
   );
 }
 
-function EvaluatePrivateTripModal({ trip, guides, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; onClose: () => void; onSave: (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
-  const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : "3500");
-  const [plan, setPlan] = useState(trip.admin_itinerary_plan || "");
+function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
   const [guide, setGuide] = useState(trip.assigned_guide || guides[0]?.license_number || "");
-  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || "");
+  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || vehicles[0]?.plate_number || "");
+  
+  const selectedGuide = guides.find(g => g.license_number === guide) || guides[0];
+  const selectedVehicle = vehicles.find(v => v.plate_number === vehicle) || vehicles[0];
+  const guideDailyRate = selectedGuide?.daily_rate || 150;
+  const vehicleDailyRate = selectedVehicle?.daily_rate || 450;
+  const durationDays = trip.duration_days || 1;
+  const autoCalculatedTotal = (guideDailyRate + vehicleDailyRate) * durationDays;
+
+  const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : String(autoCalculatedTotal));
+  const [plan, setPlan] = useState(trip.admin_itinerary_plan || `برنامج رحلة سياحية خاصة لمدة ${durationDays} أيام يشمل التنقلات والمرشد الخاص.`);
+
+  const applyAutoPrice = () => {
+    setPrice(String(autoCalculatedTotal));
+  };
+
   return (
-    <ModalShell title={`تقييم الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
-      <div className="space-y-3 text-right">
-        <div className="p-3 rounded-xl bg-muted/40 text-xs">
-          <div><b>العميل:</b> {trip.customer_name} ({trip.customer_phone})</div>
-          <div><b>الانطلاق والمدة:</b> {trip.preferred_start_date} ({trip.duration_days} أيام)</div>
-          <div className="mt-1 font-semibold">" {trip.customer_description} "</div>
+    <ModalShell title={`تقييم واحتساب تسعيرة الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
+      <div className="space-y-4 text-right">
+        {/* Tourist Request Details */}
+        <div className="p-3.5 rounded-xl bg-muted/40 text-xs space-y-1.5 border border-border/70">
+          <div className="flex justify-between items-center">
+            <div><b>العميل:</b> {trip.customer_name} ({trip.customer_phone})</div>
+            <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-black">⏱️ المدة: {durationDays} أيام</span>
+          </div>
+          <div className="flex gap-4 text-muted-foreground font-bold">
+            <span>📅 تاريخ الانطلاق المفضل: {trip.preferred_start_date}</span>
+            <span>👥 عدد المرافقين: {trip.number_of_companions}</span>
+          </div>
+          <div className="mt-1 font-semibold text-muted-foreground p-2 rounded-lg bg-white border border-border/40">
+            "{trip.customer_description}"
+          </div>
         </div>
-        <Field label="السعر الإجمالي (د.ل)" type="number" value={price} onChange={setPrice} />
-        <div><label className="text-xs font-bold mb-1 block">خطة مسار الرحلة</label>
-          <textarea value={plan} onChange={e => setPlan(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" />
-        </div>
-        <div><label className="text-xs font-bold mb-1 block">تعيين المرشد المكلف</label>
-          <select value={guide} onChange={e => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            {guides.map(g => <option key={g.license_number} value={g.license_number}>{g.full_name}</option>)}
+
+        {/* Guide Selection with Daily Rate */}
+        <div>
+          <label className="text-xs font-black text-foreground mb-1 block">👨‍✈️ اختيار وتعيين المرشد المكلف (مع السعر اليومي):</label>
+          <select
+            value={guide}
+            onChange={e => setGuide(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+          >
+            {guides.map(g => (
+              <option key={g.license_number} value={g.license_number}>
+                {g.full_name} ({g.license_number}) — {g.daily_rate} د.ل / اليوم
+              </option>
+            ))}
           </select>
         </div>
-        <Field label="رقم لوحة المركبة" value={vehicle} onChange={setVehicle} />
+
+        {/* Vehicle Selection with Daily Rate */}
+        <div>
+          <label className="text-xs font-black text-foreground mb-1 block">🚌 اختيار وتعيين المركبة أو الحافلة (مع السعر اليومي):</label>
+          <select
+            value={vehicle}
+            onChange={e => setVehicle(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+          >
+            {vehicles.map(v => (
+              <option key={v.plate_number} value={v.plate_number}>
+                {v.vehicle_type} ({v.plate_number}) — {v.company_name} — {v.daily_rate} د.ل / اليوم
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Breakdown Calculation Box */}
+        <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/60 text-xs space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="font-black text-emerald-900">🧾 الحسبة التلقائية حسب أسعار اليوم الواحد:</span>
+            <button
+              type="button"
+              onClick={applyAutoPrice}
+              className="text-[11px] font-black text-emerald-700 underline hover:text-emerald-900"
+            >
+              🔄 تطبيق السعر المحسوب في الحقل
+            </button>
+          </div>
+          <div className="text-muted-foreground space-y-1">
+            <div className="flex justify-between">
+              <span>أجر المرشد اليومي:</span>
+              <span className="font-bold text-foreground">{guideDailyRate} د.ل / يوم</span>
+            </div>
+            <div className="flex justify-between">
+              <span>أجر المركبة اليومي:</span>
+              <span className="font-bold text-foreground">{vehicleDailyRate} د.ل / يوم</span>
+            </div>
+            <div className="flex justify-between">
+              <span>إجمالي اليوم الواحد (مرشد + مركبة):</span>
+              <span className="font-bold text-foreground">{guideDailyRate + vehicleDailyRate} د.ل / يوم</span>
+            </div>
+            <div className="flex justify-between border-t border-emerald-200/80 pt-1.5 font-black text-emerald-900">
+              <span>الإجمالي التقديري لـ {durationDays} أيام:</span>
+              <span className="text-sm font-black">{autoCalculatedTotal} د.ل</span>
+            </div>
+          </div>
+        </div>
+
+        <Field label="السعر الإجمالي النهائي المعتمد للرحلة (د.ل)" type="number" value={price} onChange={setPrice} />
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">خطة مسار الرحلة الخاصة</label>
+          <textarea value={plan} onChange={e => setPlan(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right" />
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
           <button onClick={() => onSave(trip.private_trip_id, "مرفوضة من الأدمن")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs">رفض الطلب</button>
-          <button onClick={() => onSave(trip.private_trip_id, "مؤكدة", +price, plan, guide, vehicle)} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow">تأكيد الموارد والسعر</button>
+          <button onClick={() => onSave(trip.private_trip_id, "مؤكدة", +price, plan, guide, vehicle)} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow">تأكيد الموارد والسعر ({price} د.ل)</button>
         </div>
       </div>
     </ModalShell>
@@ -1977,48 +2095,59 @@ function EvaluatePrivateTripModal({ trip, guides, onClose, onSave }: { trip: Pri
 }
 
 function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: Hotel; onClose: () => void; onSave: (h: any) => void }) {
-  const [name, setName] = useState(hotel?.name || ""); const [city, setCity] = useState(hotel?.city || "طرابلس");
-  const [address, setAddress] = useState(hotel?.address || ""); const [phone, setPhone] = useState(hotel?.phone || "");
+  const [name, setName] = useState(hotel?.name || "");
+  const [city, setCity] = useState(hotel?.city || "طرابلس");
+  const [address, setAddress] = useState(hotel?.address || "");
+  const [phone, setPhone] = useState(hotel?.phone || "");
   const [stars, setStars] = useState(hotel?.stars ? String(hotel.stars) : "4");
   const [status, setStatus] = useState(hotel?.partnership_status || "نشط");
   const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_city.jpg");
-  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/ai_city.jpg");
-  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/ai_city.jpg");
-  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/ai_city.jpg");
-  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/ai_city.jpg");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !city || !address) return alert("يرجى إدخال البيانات الأساسية");
-    onSave({ ...(hotel ? { id: hotel.id } : {}), name, city, address, phone, stars: +stars, partnership_status: status, hotel_photo_1: p1, hotel_photo_2: p2, hotel_photo_3: p3, hotel_photo_4: p4, hotel_photo_5: p5 });
+    onSave({
+      ...(hotel ? { id: hotel.id } : {}),
+      name,
+      city,
+      address,
+      phone,
+      stars: +stars,
+      partnership_status: status,
+      hotel_photo_1: p1,
+      hotel_photo_2: p1,
+      hotel_photo_3: p1,
+      hotel_photo_4: p1,
+      hotel_photo_5: p1,
+    });
   };
+
   return (
     <ModalShell title={title} onClose={onClose}>
       <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-[11px] text-blue-900 font-semibold">
+          ℹ️ <b>دليل تعريفي استكشافي:</b> الفنادق للعرض والتعريف بالمنشأة فقط وليست للحجز المباشر للغرف عبر المنصة.
+        </div>
         <Field label="اسم الفندق" value={name} onChange={setName} />
         <div className="grid grid-cols-2 gap-2">
           <Field label="المدينة" value={city} onChange={setCity} />
           <Field label="النجوم (1-5)" type="number" value={stars} onChange={setStars} />
         </div>
         <div className="mb-2">
-          <label className="text-xs font-bold block mb-1">حالة التعاقد</label>
+          <label className="text-xs font-bold block mb-1">حالة العرض بالدليل</label>
           <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="نشط">نشط</option>
-            <option value="ملغي">ملغي</option>
+            <option value="نشط">نشط (ظاهر بالدليل)</option>
+            <option value="ملغي">ملغي / معلق</option>
           </select>
         </div>
         <Field label="العنوان" value={address} onChange={setAddress} />
-        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
-        <div className="space-y-2 pt-2 border-t border-border">
-          <label className="text-xs font-black text-foreground block">🖼️ الصور الـ 5 للفندق:</label>
-          <ImageFilePicker label="الصورة 1 (الواجهة)" value={p1} onChange={setP1} />
-          <ImageFilePicker label="الصورة 2 (الغرف)" value={p2} onChange={setP2} />
-          <ImageFilePicker label="الصورة 3 (الاستقبال)" value={p3} onChange={setP3} />
-          <ImageFilePicker label="الصورة 4 (المطعم)" value={p4} onChange={setP4} />
-          <ImageFilePicker label="الصورة 5 (الإطلالة)" value={p5} onChange={setP5} />
+        <LibyanPhoneField label="هاتف الاستعلام والتواصل المباشر" value={phone} onChange={setPhone} />
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="الصورة الرئيسية للفندق (صورة واحدة للواجهة)" value={p1} onChange={setP1} />
         </div>
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الفندق</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الفندق بالدليل</button>
         </div>
       </form>
     </ModalShell>
@@ -2026,40 +2155,50 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 }
 
 function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
-  const [name, setName] = useState(restaurant?.name || ""); const [type, setType] = useState(restaurant?.type || "مأكولات شعبية");
-  const [city, setCity] = useState(restaurant?.city || "طرابلس"); const [address, setAddress] = useState(restaurant?.address || "");
+  const [name, setName] = useState(restaurant?.name || "");
+  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية وتراثية");
+  const [city, setCity] = useState(restaurant?.city || "طرابلس");
+  const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
-  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_city.jpg");
-  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_city.jpg");
-  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_city.jpg");
-  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/ai_food.jpg");
-  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/ai_food.jpg");
+  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_food.jpg");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !city) return alert("يرجى كتابة الاسم والمدينة");
-    onSave({ ...(restaurant ? { id: restaurant.id } : {}), name, type, city, address, phone, facility_image_1: i1, facility_image_2: i2, facility_image_3: i3, facility_image_4: i4, facility_image_5: i5 });
+    onSave({
+      ...(restaurant ? { id: restaurant.id } : {}),
+      name,
+      type,
+      city,
+      address,
+      phone,
+      facility_image_1: i1,
+      facility_image_2: i1,
+      facility_image_3: i1,
+      facility_image_4: i1,
+      facility_image_5: i1,
+    });
   };
+
   return (
     <ModalShell title={title} onClose={onClose}>
       <form className="space-y-3 text-right" onSubmit={handleSubmit}>
-        <Field label="اسم المطعم/المقهى" value={name} onChange={setName} />
+        <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-900 font-semibold">
+          ℹ️ <b>دليل تعريفي:</b> المطاعم للعرض والتعريف بنوع الطعام المقدم والتواصل المباشر مع المنشأة دون حجز مسبق.
+        </div>
+        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} />
         <div className="grid grid-cols-2 gap-2">
-          <Field label="النوع" value={type} onChange={setType} />
+          <Field label="نوع وتصنيف الطعام المقدم (مأكولات شعبية، بحرية...)" value={type} onChange={setType} />
           <Field label="المدينة" value={city} onChange={setCity} />
         </div>
-        <Field label="العنوان" value={address} onChange={setAddress} />
-        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
-        <div className="space-y-2 pt-2 border-t border-border">
-          <label className="text-xs font-black text-foreground block">🖼️ الصور الـ 5:</label>
-          <ImageFilePicker label="الصورة 1 (المدخل)" value={i1} onChange={setI1} />
-          <ImageFilePicker label="الصورة 2 (القاعة)" value={i2} onChange={setI2} />
-          <ImageFilePicker label="الصورة 3 (الأطباق)" value={i3} onChange={setI3} />
-          <ImageFilePicker label="الصورة 4 (الجلسات)" value={i4} onChange={setI4} />
-          <ImageFilePicker label="الصورة 5 (المشروبات)" value={i5} onChange={setI5} />
+        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} />
+        <LibyanPhoneField label="هاتف التواصل والاستعلام" value={phone} onChange={setPhone} />
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="الصورة الرئيسية للمطعم (صورة واحدة)" value={i1} onChange={setI1} />
         </div>
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم بالدليل</button>
         </div>
       </form>
     </ModalShell>

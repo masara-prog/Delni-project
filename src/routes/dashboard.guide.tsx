@@ -79,6 +79,7 @@ const WEEKDAYS = [
     gender: "male" as "male" | "female",
     phone_number: "0917778888",
     years_of_experience: 7,
+    daily_rate: 150,
     operating_regions: ["tripoli", "leptis", "sabratha"] as string[],
     working_days: ["sat", "sun", "mon", "tue", "wed", "thu"] as string[],
     certificate_description: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات أولية من الهلال الأحمر",
@@ -163,7 +164,7 @@ const WEEKDAYS = [
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="الرحلة النشطة الحالية" value={activeTrip ? activeTrip.trip_name : "لا يوجد رحلة حالياً"} icon="🧭" tone="sea" />
             <StatCard label="الرحلات بانتظار القبول" value={assignedTrips.filter(t => t.status === "بانتظار القبول").length} icon="📥" tone="sun" />
-            <StatCard label="السياح الحاضرون بالرحلة" value={`${attendedCount} / ${activeTrip ? activeTrip.seats_booked : 0}`} icon="☑️" tone="green" />
+            <StatCard label="أجر اليوم الواحد للرحلات الخاصة" value={`${guideInfo.daily_rate || 150} د.ل / يوم`} icon="💰" tone="green" />
             <StatCard label="متوسط تقييم المرشد" value="4.9 ⭐" icon="⭐" tone="clay" />
           </div>
 
@@ -415,7 +416,10 @@ const WEEKDAYS = [
               <Field label="سنوات الخبرة العملية" type="number" value={String(guideInfo.years_of_experience)} onChange={(v) => setGuideInfo({ ...guideInfo, years_of_experience: Number(v) })} />
             </div>
 
-            <Field label="رقم ترخيص مزاولة الإرشاد" value={guideInfo.license_number} onChange={(v) => setGuideInfo({ ...guideInfo, license_number: v })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="رقم ترخيص مزاولة الإرشاد" value={guideInfo.license_number} onChange={(v) => setGuideInfo({ ...guideInfo, license_number: v })} />
+              <Field label="أجر الإرشاد لليوم الواحد للرحلات الخاصة (د.ل)" type="number" value={String(guideInfo.daily_rate || 150)} onChange={(v) => setGuideInfo({ ...guideInfo, daily_rate: Number(v) })} />
+            </div>
 
             {/* Operating Regions (مناطق العمل) */}
             <div>

@@ -2377,9 +2377,9 @@ function CompactLocationHotelsFinder() {
               sessionStorage.setItem("dallani_selected_city", selectedCity);
             }}
             className="px-7 py-4 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white font-black text-xs sm:text-sm shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer hover:scale-105 active:scale-95 text-center"
-            title={isAr ? "الانتقال لواجهة الفنادق" : "Go to Hotels"}
+            title={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
           >
-            <span>{isAr ? `الانتقال إلى فنادق ومطاعم ${selectedCity}` : `Explore Stays in ${selectedCity}`}</span>
+            <span>{isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}</span>
             <span className="text-lg font-black transition-transform group-hover:translate-x-1">➔</span>
           </Link>
         </div>

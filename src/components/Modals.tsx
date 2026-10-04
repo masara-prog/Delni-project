@@ -1181,33 +1181,99 @@ export function PrivateTripModal({
   open,
   onClose,
   initialGuide,
+  initialDestination,
 }: {
   open: boolean;
   onClose: () => void;
   initialGuide?: string;
+  initialDestination?: string;
 }) {
   const { language, dir } = useLanguage();
   const isAr = language === 'ar';
   const [step, setStep] = useState<"form" | "done">("form");
-  const [destination, setDestination] = useState("");
+  const [destination, setDestination] = useState(initialDestination || "");
+  const [cityFilter, setCityFilter] = useState("all");
+  const [dayFilter, setDayFilter] = useState("all");
   const [days, setDays] = useState("3");
   const [persons, setPersons] = useState("2");
   const [startDate, setStartDate] = useState("");
   const [selectedGuide, setSelectedGuide] = useState<TourGuide | null>(null);
   const [guideName, setGuideName] = useState(initialGuide || "");
-  const [vehicleType, setVehicleType] = useState("luxury-coach");
+  const [vehicleId, setVehicleId] = useState("luxury-coach");
   const [showAllGuides, setShowAllGuides] = useState(false);
+
+  // Libyan Cities and Tourism Regions for Filtering
+  const CITIES_FILTER = [
+    { id: "all", label: isAr ? "🌐 كافة المدن والوجهات" : "All Cities", key: "" },
+    { id: "tripoli", label: isAr ? "طرابلس وضواحيها" : "Tripoli", key: "طرابلس" },
+    { id: "leptis", label: isAr ? "لبدة الكبرى والخمس" : "Leptis Magna", key: "لبدة" },
+    { id: "sabratha", label: isAr ? "صبراتة والساحل الغربي" : "Sabratha", key: "صبراتة" },
+    { id: "cyrene", label: isAr ? "شحات وقورينا (الجبل الأخضر)" : "Cyrene", key: "شحات" },
+    { id: "benghazi", label: isAr ? "بنغازي والمنطقة الشرقية" : "Benghazi", key: "بنغازي" },
+    { id: "ghadames", label: isAr ? "غدامس القديمة (الواحات)" : "Ghadames", key: "غدامس" },
+    { id: "ubari", label: isAr ? "أوباري والبحيرات وفزان" : "Ubari", key: "أوباري" },
+    { id: "acacus", label: isAr ? "جبال تدرارت أكاكوس وغات" : "Acacus", key: "أكاكوس" },
+  ];
+
+  // Vehicles with clear transparent daily rate
+  const VEHICLE_OPTIONS = [
+    {
+      id: "luxury-coach",
+      name: isAr ? "حافلة سياحية كبرى فاخرة VIP" : "Luxury VIP Large Coach",
+      shortName: isAr ? "حافلة 50 راكب" : "50-Seat Coach",
+      capacity: 50,
+      pricePerDay: 750,
+      icon: "🚍",
+      desc: isAr ? "سعة 50 راكب، مكيفة بالكامل، شاشات عرض، مقاعد مريحة للوفود الكبيرة" : "50 seats, full AC, panoramic view for delegations",
+    },
+    {
+      id: "minibus-25",
+      name: isAr ? "ميني باص سياحي مكيف حديث" : "Modern Tourist Minibus",
+      shortName: isAr ? "ميني باص 25 راكب" : "25-Seat Minibus",
+      capacity: 25,
+      pricePerDay: 450,
+      icon: "🚐",
+      desc: isAr ? "سعة 25 راكب، مرونة عالية وسرعة ومثالي للمجموعات المتوسطة" : "25 seats, fast & comfortable for medium groups",
+    },
+    {
+      id: "4x4-suv",
+      name: isAr ? "مركبة دفع رباعي 4x4 وسفاري صحراوية" : "4x4 Desert SUV Expedition Spec",
+      shortName: isAr ? "دفع رباعي 4x4" : "4x4 Desert SUV",
+      capacity: 6,
+      pricePerDay: 350,
+      icon: "🚙",
+      desc: isAr ? "سعة 6 ركاب، مجهزة للرمال والمسارات الصحراوية والوعرة مع سائق محترف" : "6 seats, desert-equipped with veteran driver",
+    },
+    {
+      id: "vip-sprinter",
+      name: isAr ? "مرسيدس سبرينتر VIP مقاعد رجال أعمال" : "VIP Mercedes Sprinter Executive",
+      shortName: isAr ? "سبرينتر VIP" : "Mercedes Sprinter",
+      capacity: 14,
+      pricePerDay: 500,
+      icon: "🚐",
+      desc: isAr ? "سعة 14 راكب، مقاعد طيارة فارهة، ثلاجة ضيافة، إنترنت ورفاهية قصوى" : "14 executive seats, luxury amenities",
+    },
+    {
+      id: "vip-sedan",
+      name: isAr ? "سيارة سيدان عائلية فاخرة خاصة" : "Private Luxury Family Sedan",
+      shortName: isAr ? "سيدان عائلية خاصة" : "Private Sedan",
+      capacity: 4,
+      pricePerDay: 200,
+      icon: "🚗",
+      desc: isAr ? "سعة 4 ركاب، خصوصية تامة وتنقلات مرنة وسريعة بين المعالم" : "4 seats, maximum privacy and flexibility",
+    },
+  ];
 
   // Popular Libyan destinations quick tags
   const POPULAR_DESTINATIONS = [
-    { label: isAr ? "لبدة الكبرى (الخمس)" : "Leptis Magna", key: "لبدة" },
-    { label: isAr ? "بحيرات أوباري وفزان" : "Ubari Lakes", key: "أوباري" },
-    { label: isAr ? "غدامس القديمة (لؤلؤة الصحراء)" : "Ghadames", key: "غدامس" },
-    { label: isAr ? "صبراتة والمسرح الروماني" : "Sabratha", key: "صبراتة" },
-    { label: isAr ? "شحات وقورينا (الجبل الأخضر)" : "Cyrene", key: "شحات" },
-    { label: isAr ? "جبال تدرارت أكاكوس وغات" : "Acacus", key: "أكاكوس" },
-    { label: isAr ? "طرابلس والمدينة القديمة" : "Tripoli", key: "طرابلس" },
-    { label: isAr ? "بنغازي والمنطقة الشرقية" : "Benghazi", key: "بنغازي" },
+    { label: isAr ? "لبدة الكبرى (الخمس)" : "Leptis Magna", key: "لبدة", cityId: "leptis" },
+    { label: isAr ? "بحيرات أوباري وفزان" : "Ubari Lakes", key: "أوباري", cityId: "ubari" },
+    { label: isAr ? "غدامس القديمة (لؤلؤة الصحراء)" : "Ghadames", key: "غدامس", cityId: "ghadames" },
+    { label: isAr ? "صبراتة والمسرح الروماني" : "Sabratha", key: "صبراتة", cityId: "sabratha" },
+    { label: isAr ? "شحات وقورينا (الجبل الأخضر)" : "Cyrene", key: "شحات", cityId: "cyrene" },
+    { label: isAr ? "جبال تدرارت أكاكوس وغات" : "Acacus", key: "أكاكوس", cityId: "acacus" },
+    { label: isAr ? "طرابلس والمدينة القديمة" : "Tripoli", key: "طرابلس", cityId: "tripoli" },
+    { label: isAr ? "بنغازي والمنطقة الشرقية" : "Benghazi", key: "بنغازي", cityId: "benghazi" },
   ];
 
   // Calculate day of the week from startDate
@@ -1224,11 +1290,13 @@ export function PrivateTripModal({
   useEffect(() => {
     if (open) {
       setStep("form");
-      setDestination("");
+      setDestination(initialDestination || "");
+      setCityFilter("all");
+      setDayFilter("all");
       setDays("3");
       setPersons("2");
       setStartDate("");
-      setVehicleType("luxury-coach");
+      setVehicleId("luxury-coach");
       setShowAllGuides(false);
       if (initialGuide) {
         setGuideName(initialGuide);
@@ -1239,47 +1307,34 @@ export function PrivateTripModal({
         setSelectedGuide(null);
       }
     }
-  }, [open, initialGuide]);
+  }, [open, initialGuide, initialDestination]);
 
-  // Dynamic Guides Filtering by Destination and Working Days
+  // Selected vehicle object
+  const selectedVehicle = VEHICLE_OPTIONS.find(v => v.id === vehicleId) || VEHICLE_OPTIONS[0];
+
+  // Real-time dynamic calculation
+  const durationDays = Math.max(1, parseInt(days) || 1);
+  const guideDailyRate = selectedGuide ? selectedGuide.pricePerDay : 0;
+  const vehicleDailyRate = selectedVehicle.pricePerDay;
+  const totalDailyRate = guideDailyRate + vehicleDailyRate;
+  const totalEstimatedCost = totalDailyRate * durationDays;
+
+  // Dynamic Guides Filtering by City, Destination, and Working Days
   const filteredGuides = useMemo(() => {
     const destTerm = destination.trim().toLowerCase();
-    const dayTerm = selectedDayName;
+    const effectiveDay = dayFilter !== "all" ? dayFilter : selectedDayName;
 
     return TOUR_GUIDES_DATA.filter((g) => {
-      // 1. Destination match
+      // 1. City / Region Filter Match
+      let cityMatch = true;
+      if (cityFilter !== "all") {
+        cityMatch = g.primaryRegion === cityFilter || g.operatingRegions.includes(cityFilter);
+      }
+
+      // 2. Destination text match
       let destMatch = true;
       if (destTerm) {
-        const destKeyMap: Record<string, string> = {
-          "لبدة": "leptis",
-          "خمس": "leptis",
-          "leptis": "leptis",
-          "طرابلس": "tripoli",
-          "tripoli": "tripoli",
-          "صبراتة": "sabratha",
-          "sabratha": "sabratha",
-          "غدامس": "ghadames",
-          "ghadames": "ghadames",
-          "أوباري": "ubari",
-          "اوباري": "ubari",
-          "ubari": "ubari",
-          "أكاكوس": "acacus",
-          "اكاكوس": "acacus",
-          "acacus": "acacus",
-          "شحات": "cyrene",
-          "قورينا": "cyrene",
-          "الجبل": "cyrene",
-          "cyrene": "cyrene",
-          "بنغازي": "benghazi",
-          "benghazi": "benghazi",
-        };
-
-        const targetRegion = Object.keys(destKeyMap).find(k => destTerm.includes(k)) 
-          ? destKeyMap[Object.keys(destKeyMap).find(k => destTerm.includes(k))!] 
-          : "";
-
-        destMatch = 
-          (targetRegion ? (g.primaryRegion === targetRegion || g.operatingRegions.includes(targetRegion)) : false) ||
+        destMatch =
           g.primaryRegion.toLowerCase().includes(destTerm) ||
           g.operatingRegions.some(r => r.toLowerCase().includes(destTerm)) ||
           g.specialties.some(s => s.toLowerCase().includes(destTerm)) ||
@@ -1287,69 +1342,107 @@ export function PrivateTripModal({
           g.title.toLowerCase().includes(destTerm);
       }
 
-      // 2. Day of week match
+      // 3. Day of week match
       let dayMatch = true;
-      if (dayTerm) {
+      if (effectiveDay) {
         dayMatch =
           g.workingDays.includes("طوال أيام الأسبوع") ||
-          g.workingDays.some(wd => wd.includes(dayTerm));
+          g.workingDays.some(wd => wd.includes(effectiveDay));
       }
 
-      return destMatch && dayMatch;
+      return cityMatch && destMatch && dayMatch;
     });
-  }, [destination, selectedDayName]);
+  }, [destination, cityFilter, dayFilter, selectedDayName]);
 
   const guidesToDisplay = showAllGuides ? TOUR_GUIDES_DATA : (filteredGuides.length > 0 ? filteredGuides : TOUR_GUIDES_DATA);
 
   return (
     <Modal open={open} onClose={onClose} size="xl">
       {step === "form" ? (
-        <div dir={dir} className="max-h-[85vh] overflow-y-auto">
+        <div dir={dir} className="max-h-[88vh] overflow-y-auto">
           {/* Header Banner */}
           <div className="relative h-44 sm:h-52 overflow-hidden bg-[#0B132B]">
             <img src={privateTripImg} alt="Private Trip VIP" className="absolute inset-0 w-full h-full object-cover brightness-105 animate-zoom-slow" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B132B]/95 via-[#0B132B]/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B132B]/95 via-[#0B132B]/50 to-transparent" />
             <div className="absolute bottom-4 right-4 left-4 text-white">
               <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-200 text-xs font-black mb-1.5 backdrop-blur-sm">
-                👑 {isAr ? "باقة VIP المخصصة لك تماماً" : "Tailored VIP Custom Package"}
+                👑 {isAr ? "خدمة الرحلات الخاصة المخصصة بالكامل" : "Tailored VIP Custom Expedition"}
               </div>
               <h3 className="text-2xl sm:text-3xl font-black drop-shadow-md">
-                {isAr ? "طلب رحلة خاصة VIP مع اختيار وتصفية المرشد" : "Request VIP Private Tour"}
+                {isAr ? "إنشاء رحلة خاصة حسب رغبتك" : "Create Custom Private Trip"}
               </h3>
-              <p className="text-xs text-slate-200 mt-1 max-w-xl">
-                {isAr ? "اختر وجهاتك وتاريخ رحلتك وسنقوم بعرض نخبة المرشدين السياحيين المتاحين في تلك الأيام والمختصين في معالمها." : "Choose your destination & dates to see available guides matching your itinerary."}
+              <p className="text-xs text-slate-200 mt-1 max-w-2xl font-medium">
+                {isAr
+                  ? "مرونة كاملة: حدد المدينة والوجهة، واختر المركبة المناسبة بسعرها اليومي الشفاف، والمرشد السياحي المعتمد المفضل، واطلع على إجمالي التكلفة فورياً."
+                  : "Filter by city and days, choose your vehicle and certified guide with clear daily rates, and view instant price calculation."}
               </p>
             </div>
           </div>
 
-          <form className="p-6 sm:p-8 space-y-6" onSubmit={(e) => { e.preventDefault(); setStep("done"); }}>
+          <form className="p-5 sm:p-7 space-y-6" onSubmit={(e) => { e.preventDefault(); setStep("done"); }}>
             
-            {/* 1. Destination Field + Quick Suggestions */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-[#0F172A] block">
-                {isAr ? "الوجهة / المعالم السياحية المطلوبة: *" : "Destination / Tourist Attractions: *"}
-              </label>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder={isAr ? "اكتب اسم المعلم أو المدينة (مثلاً: لبدة، غدامس، أوباري، شحات...)" : "Enter city or attraction (e.g. Leptis, Ghadames, Ubari)..."}
-                className="w-full h-11 px-4 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none focus:border-[#D96B27]"
-                required
-              />
+            {/* 1. CITY FILTER & DESTINATION SELECTION */}
+            <div className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-black text-[#0F172A] dark:text-white flex items-center gap-1.5">
+                  <span>📍</span>
+                  <span>{isAr ? "تصفية الوجهة والمدينة المستهدفة للرحلة: *" : "Target City & Destination: *"}</span>
+                </label>
+                <span className="text-[11px] font-bold text-slate-500">
+                  {isAr ? "فلترة المرشدين والمركبات المتاحة حسب المدينة" : "Filters guides & vehicles by region"}
+                </span>
+              </div>
+
+              {/* City Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {CITIES_FILTER.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCityFilter(c.id);
+                      if (c.key) setDestination(c.key);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition cursor-pointer border ${
+                      cityFilter === c.id
+                        ? "bg-[#003580] text-white border-[#003580] shadow-sm"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-[#003580]/40"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Destination Input */}
+              <div className="pt-2">
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder={isAr ? "أو اكتب المعالم المحددة (مثلاً: لبدة الكبرى، المسرح الروماني، أوباري، غدامس...)" : "Or enter specific attractions..."}
+                  className="w-full h-11 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#D96B27]"
+                  required
+                />
+              </div>
+
+              {/* Quick Landmark Suggestions */}
               <div className="flex items-center gap-1.5 flex-wrap pt-1">
                 <span className="text-[10px] font-black text-slate-400">
-                  {isAr ? "اقتراحات شائعة:" : "Popular:"}
+                  {isAr ? "معالم سياحية مقترحة:" : "Suggested Landmarks:"}
                 </span>
                 {POPULAR_DESTINATIONS.map((d) => (
                   <button
                     key={d.key}
                     type="button"
-                    onClick={() => setDestination(d.key)}
+                    onClick={() => {
+                      setDestination(d.key);
+                      setCityFilter(d.cityId);
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer border ${
                       destination.includes(d.key)
-                        ? "bg-[#003580] text-white border-[#003580]"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                        ? "bg-amber-500 text-slate-950 font-black border-amber-600"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
                     }`}
                   >
                     {d.label}
@@ -1358,72 +1451,130 @@ export function PrivateTripModal({
               </div>
             </div>
 
-            {/* 2. Departure Date & Days */}
+            {/* 2. DURATION, DATE & WORKING DAYS FILTER */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-black text-[#0F172A] block">
+                <label className="text-xs font-black text-[#0F172A] dark:text-white block">
                   {isAr ? "تاريخ الانطلاق: *" : "Departure Date: *"}
                 </label>
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none focus:border-[#D96B27]"
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                  }}
+                  className="w-full h-11 px-3 rounded-xl border border-[#E8E2D6] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#D96B27]"
                   required
                 />
                 {selectedDayName && (
-                  <div className="text-[11px] font-black text-[#003580] pt-0.5">
-                    🗓️ {isAr ? `يوم الانطلاق: ${selectedDayName}` : `Day: ${selectedDayName}`}
+                  <div className="text-[11px] font-black text-[#003580] dark:text-blue-400 pt-0.5">
+                    🗓️ {isAr ? `يوم الانطلاق: ${selectedDayName}` : `Departure Day: ${selectedDayName}`}
                   </div>
                 )}
               </div>
 
-              <Field label={isAr ? "عدد الأيام" : "Duration (Days)"} value={days} onChange={setDays} type="number" required />
-              <Field label={isAr ? "عدد المسافرين" : "Travelers"} value={persons} onChange={setPersons} type="number" required />
+              <div className="space-y-1">
+                <label className="text-xs font-black text-[#0F172A] dark:text-white block">
+                  {isAr ? "أيام العمل المفضلة للرحلة:" : "Working Days Filter:"}
+                </label>
+                <select
+                  value={dayFilter}
+                  onChange={(e) => setDayFilter(e.target.value)}
+                  className="w-full h-11 px-3 rounded-xl border border-[#E8E2D6] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-[#0F172A] dark:text-white outline-none cursor-pointer focus:border-[#003580]"
+                >
+                  <option value="all">{isAr ? "🌐 كافة أيام الأسبوع" : "All Weekdays"}</option>
+                  <option value="السبت">{isAr ? "يوم السبت" : "Saturday"}</option>
+                  <option value="الأحد">{isAr ? "يوم الأحد" : "Sunday"}</option>
+                  <option value="الاثنين">{isAr ? "يوم الاثنين" : "Monday"}</option>
+                  <option value="الثلاثاء">{isAr ? "يوم الثلاثاء" : "Tuesday"}</option>
+                  <option value="الأربعاء">{isAr ? "يوم الأربعاء" : "Wednesday"}</option>
+                  <option value="الخميس">{isAr ? "يوم الخميس" : "Thursday"}</option>
+                  <option value="الجمعة">{isAr ? "يوم الجمعة" : "Friday"}</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Field label={isAr ? "عدد الأيام" : "Days"} value={days} onChange={setDays} type="number" required />
+                <Field label={isAr ? "المسافرون" : "Travelers"} value={persons} onChange={setPersons} type="number" required />
+              </div>
             </div>
 
-            {/* 3. Vehicle Type Selection */}
-            <div className="space-y-1">
-              <label className="text-xs font-black text-[#0F172A] block">
-                {isAr ? "نوعية المركبة والحافلة المطلوبة للرحلة: *" : "Vehicle / Transport Preference: *"}
-              </label>
-              <select
-                value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-bold text-[#0F172A] outline-none cursor-pointer focus:border-[#003580]"
-              >
-                <option value="luxury-coach">
-                  {isAr ? "🚌 حافلة سياحية كبرى فاخرة VIP (سعة 50 راكب)" : "Luxury VIP Large Coach (50 seats)"}
-                </option>
-                <option value="minibus-25">
-                  {isAr ? "🚐 ميني باص سياحي مكيف حديث (سعة 25 راكب)" : "Modern Tourist Minibus (25 seats)"}
-                </option>
-                <option value="4x4-suv">
-                  {isAr ? "🚙 أسطول سيارات دفع رباعي 4x4 وسائقيها المحترفين" : "Group of 4x4 Desert SUVs & Professional Drivers"}
-                </option>
-                <option value="vip-sprinter">
-                  {isAr ? "🚐 مرسيدس سبرينتر VIP بمقاعد طيارة فارهة" : "VIP Mercedes Sprinter with Executive Captain Chairs"}
-                </option>
-                <option value="vip-sedan">
-                  {isAr ? "🚗 سيارة سيدان عائلية فاخرة خاصة VIP" : "Private Luxury Family Sedan"}
-                </option>
-              </select>
+            {/* 3. VEHICLE SELECTION WITH DAILY RATE (سعر اليوم للمركبة) */}
+            <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🚌</span>
+                  <h4 className="text-sm font-black text-[#0F172A] dark:text-white">
+                    {isAr ? "اختيار المركبة المناسبة وسعرها لليوم الواحد:" : "Select Vehicle & Daily Rate:"}
+                  </h4>
+                </div>
+                <span className="text-xs font-bold text-[#D96B27]">
+                  {isAr ? "تسعير يومي شفاف ومحدد سلفاً" : "Transparent Daily Vehicle Pricing"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {VEHICLE_OPTIONS.map((v) => {
+                  const isSelected = vehicleId === v.id;
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={() => setVehicleId(v.id)}
+                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 relative ${
+                        isSelected
+                          ? "border-[#D96B27] bg-orange-50/50 dark:bg-orange-950/20 shadow-sm ring-2 ring-[#D96B27]/30"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-[#003580]/40"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-2xl">{v.icon}</span>
+                          <div>
+                            <div className="font-black text-xs text-slate-900 dark:text-white">{v.shortName}</div>
+                            <div className="text-[10px] text-slate-500 font-bold">👥 {v.capacity} {isAr ? "راكب" : "seats"}</div>
+                          </div>
+                        </div>
+
+                        {/* Vehicle Daily Price Badge */}
+                        <div className="text-right shrink-0">
+                          <div className="text-sm font-black text-[#D96B27]">
+                            {v.pricePerDay} <span className="text-[10px] font-bold text-slate-500">د.ل / {isAr ? "يوم" : "day"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-snug">
+                        {v.desc}
+                      </p>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {isAr ? `إجمالي المركبة (${durationDays} أيام):` : "Vehicle Total:"}
+                        </span>
+                        <span className="font-black text-slate-900 dark:text-white text-xs">
+                          {v.pricePerDay * durationDays} د.ل
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 4. SMART GUIDE FILTERING & INTERACTIVE SELECTION */}
-            <div className="space-y-3 pt-2 border-t border-[#E8E2D6]">
+            {/* 4. CERTIFIED TOUR GUIDE SELECTION WITH DAILY RATE (سعر اليوم للمرشد) */}
+            <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">🧭</span>
-                    <h4 className="text-sm font-black text-[#0F172A]">
-                      {isAr ? "المرشدون السياحيون المتاحون حسب الوجهة والأيام:" : "Available Guides by Location & Days:"}
+                    <span className="text-xl">🧭</span>
+                    <h4 className="text-sm font-black text-[#0F172A] dark:text-white">
+                      {isAr ? "اختيار المرشد السياحي المعتمد وسعره لليوم الواحد:" : "Select Certified Guide & Daily Rate:"}
                     </h4>
                   </div>
                   <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                    {destination || startDate
-                      ? (isAr ? `تصفية تلقائية مطابقة لوجهة "${destination || "الكل"}" ${selectedDayName ? `ويوم "${selectedDayName}"` : ""}` : "Filtered by destination & departure day")
-                      : (isAr ? "عرض نخبة المرشدين المعتمدين بالمنصة" : "Showing all verified tour guides")}
+                    {destination || cityFilter !== "all" || dayFilter !== "all" || startDate
+                      ? (isAr ? `مطابقة للمدينة والوجهة المحددة مع أيام العمل المتاحة` : "Filtered by destination & working days")
+                      : (isAr ? "عرض نخبة المرشدين المعتمدين بالمنصة" : "Showing all verified guides")}
                   </p>
                 </div>
 
@@ -1436,7 +1587,7 @@ export function PrivateTripModal({
                     onClick={() => setShowAllGuides(!showAllGuides)}
                     className="text-xs text-[#003580] hover:underline font-bold"
                   >
-                    {showAllGuides ? (isAr ? "عرض المطابقين فقط" : "Show Matches") : (isAr ? "عرض الكل" : "Show All")}
+                    {showAllGuides ? (isAr ? "عرض المطابقين فقط" : "Show Filtered") : (isAr ? "عرض الكل" : "Show All")}
                   </button>
                 </div>
               </div>
@@ -1448,21 +1599,27 @@ export function PrivateTripModal({
                     <img src={selectedGuide.avatar} alt={selectedGuide.name} className="w-12 h-12 rounded-xl object-cover border border-amber-500/30" />
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-black text-[#0F172A] text-sm">{selectedGuide.name}</span>
+                        <span className="font-black text-[#0F172A] dark:text-white text-sm">{selectedGuide.name}</span>
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                          ✓ {isAr ? "تم اختياره لرحلتك" : "Selected Guide"}
+                          ✓ {isAr ? "تم اختياره لرحلتك" : "Selected"}
                         </span>
                       </div>
-                      <div className="text-slate-600 text-[11px] font-bold mt-0.5">{selectedGuide.title}</div>
-                      <div className="text-[10px] text-slate-500 font-medium">
-                        ⭐ {selectedGuide.rating} · ⏳ {selectedGuide.experienceYears} {isAr ? "سنوات خبرة" : "yrs exp"} · 💰 {selectedGuide.pricePerDay} {isAr ? "د.ل/يوم" : "LYD/day"}
+                      <div className="text-slate-600 dark:text-slate-300 text-[11px] font-bold mt-0.5">{selectedGuide.title}</div>
+                      <div className="text-[10px] text-slate-500 font-bold flex items-center gap-2 mt-0.5">
+                        <span>⭐ {selectedGuide.rating}</span>
+                        <span>·</span>
+                        <span>⏳ {selectedGuide.experienceYears} {isAr ? "سنوات خبرة" : "yrs"}</span>
+                        <span>·</span>
+                        <span className="text-[#D96B27] font-black">
+                          💰 {selectedGuide.pricePerDay} {isAr ? "د.ل / يوم" : "LYD / day"}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setSelectedGuide(null); setGuideName(""); }}
-                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer"
                   >
                     {isAr ? "إلغاء التحديد" : "Deselect"}
                   </button>
@@ -1483,23 +1640,23 @@ export function PrivateTripModal({
                       className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2.5 ${
                         isSelected
                           ? "border-[#D96B27] bg-[#D96B27]/5 shadow-sm ring-2 ring-[#D96B27]/20"
-                          : "border-slate-200 bg-white hover:border-[#003580]/40 hover:shadow-xs"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-[#003580]/40 hover:shadow-xs"
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <img
                           src={guide.avatar}
                           alt={guide.name}
-                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1 flex-wrap">
-                            <span className="font-black text-xs text-[#0F172A] truncate">{guide.name}</span>
+                            <span className="font-black text-xs text-[#0F172A] dark:text-white truncate">{guide.name}</span>
                             <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                               ✓ {guide.licenseNumber}
                             </span>
                           </div>
-                          <div className="text-[11px] text-slate-600 font-bold line-clamp-1 mt-0.5">{guide.title}</div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 font-bold line-clamp-1 mt-0.5">{guide.title}</div>
                           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold mt-1">
                             <span>⭐ {guide.rating} ({guide.reviewsCount})</span>
                             <span>·</span>
@@ -1508,8 +1665,8 @@ export function PrivateTripModal({
                         </div>
                       </div>
 
-                      {/* Specialties & Working Days */}
-                      <div className="text-[10px] text-slate-600 space-y-1 pt-1 border-t border-slate-100">
+                      {/* Specialties, Working Days & Daily Rate */}
+                      <div className="text-[10px] text-slate-600 dark:text-slate-300 space-y-1 pt-1 border-t border-slate-100 dark:border-slate-700/60">
                         <div className="flex items-center gap-1 font-bold">
                           <span>📍</span>
                           <span className="truncate">{guide.specialties.slice(0, 3).join("، ")}</span>
@@ -1518,8 +1675,8 @@ export function PrivateTripModal({
                           <span className="font-medium text-slate-500">
                             📅 {formatWorkingDays(guide.workingDays)}
                           </span>
-                          <span className="font-black text-[#D96B27]">
-                            {guide.pricePerDay} {isAr ? "د.ل/يوم" : "LYD/day"}
+                          <span className="font-black text-[#D96B27] text-xs">
+                            {guide.pricePerDay} {isAr ? "د.ل / يوم" : "LYD/day"}
                           </span>
                         </div>
                       </div>
@@ -1535,7 +1692,7 @@ export function PrivateTripModal({
                         className={`w-full py-1.5 px-3 rounded-xl font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
                           isSelected
                             ? "bg-emerald-600 text-white"
-                            : "bg-slate-100 hover:bg-[#003580] hover:text-white text-slate-800"
+                            : "bg-slate-100 dark:bg-slate-700 hover:bg-[#003580] hover:text-white text-slate-800 dark:text-slate-100"
                         }`}
                       >
                         <span>{isSelected ? "✓ " + (isAr ? "تم اختيار هذا المرشد" : "Selected") : (isAr ? "اختيار هذا المرشد" : "Select Guide")}</span>
@@ -1546,29 +1703,109 @@ export function PrivateTripModal({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#FAFAF8] border border-[#E6E1D6] text-xs text-[#526078] flex items-center gap-2">
-              <span className="text-xl">👑</span>
-              <div>
-                <b className="text-[#0B132B] block">{isAr ? "ربط فوري ومباشر بحسابك المسجل:" : "Linked to account:"}</b>
-                <span>{isAr ? "سيتم التواصل معك عبر رقم هاتفك وبياناتك المسجلة فور اعتماد الترتيبات مع المرشد وشركة النقل." : "Our travel specialist will contact you with the finalized custom itinerary."}</span>
+            {/* 5. DYNAMIC REAL-TIME PRICE BREAKDOWN & ESTIMATE (حساب التكلفة التقديرية بالوقت الفعلي) */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-slate-900 via-[#003580] to-slate-950 text-white shadow-xl space-y-3 border border-white/10">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">💰</span>
+                  <div>
+                    <h5 className="font-black text-sm text-white">
+                      {isAr ? "حساب التكلفة التقديرية للرحلة الخاصة (بالوقت الفعلي)" : "Estimated Trip Pricing Breakdown"}
+                    </h5>
+                    <p className="text-[11px] text-slate-300 font-medium">
+                      {isAr ? `محسوبة لعدد ${durationDays} أيام لرحلة مخصصة متكاملة` : `Calculated for ${durationDays} days custom itinerary`}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-3 py-1 rounded-xl bg-amber-400 text-slate-950 font-black text-xs">
+                  {durationDays} {isAr ? "أيام" : "days"}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Vehicle Cost Item */}
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300 font-bold">🚌 {isAr ? "المركبة:" : "Vehicle:"} {selectedVehicle.shortName}</span>
+                    <span className="font-black text-amber-300">{selectedVehicle.pricePerDay} د.ل / يوم</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {selectedVehicle.pricePerDay} × {durationDays} أيام = <b className="text-white">{selectedVehicle.pricePerDay * durationDays} د.ل</b>
+                  </div>
+                </div>
+
+                {/* Guide Cost Item */}
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300 font-bold">🧭 {isAr ? "المرشد المعتمد:" : "Guide:"} {selectedGuide ? selectedGuide.name : (isAr ? "اختياري" : "Optional")}</span>
+                    <span className="font-black text-amber-300">{guideDailyRate} د.ل / يوم</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {guideDailyRate} × {durationDays} أيام = <b className="text-white">{guideDailyRate * durationDays} د.ل</b>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Calculated Row */}
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-300 font-bold">{isAr ? "المجموع التقديري الإجمالي:" : "Total Estimated Trip Price:"}</div>
+                  <div className="text-[10px] text-slate-400">{isAr ? "شامل المركبة بسائقها والمرشد السياحي المعتمد" : "Includes vehicle with driver & certified guide"}</div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-300">
+                  {totalEstimatedCost} <span className="text-sm text-white">د.ل</span>
+                </div>
               </div>
             </div>
 
-            <button className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer text-sm">
+            <div className="p-3.5 rounded-2xl bg-[#FAFAF8] dark:bg-slate-800 border border-[#E6E1D6] dark:border-slate-700 text-xs text-[#526078] dark:text-slate-300 flex items-center gap-2">
+              <span className="text-xl">👑</span>
+              <div>
+                <b className="text-[#0B132B] dark:text-white block">{isAr ? "ربط فوري ومباشر بحسابك المسجل:" : "Linked to account:"}</b>
+                <span>{isAr ? "سيتم التواصل معك عبر رقم هاتفك وبياناتك المسجلة فور اعتماد الترتيبات مع المرشد وشركة النقل لتأكيد المسار الزمني." : "Our travel specialist will contact you with the finalized custom itinerary."}</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-lg shadow-orange-500/20 hover:-translate-y-0.5 transition cursor-pointer text-sm"
+            >
               {isAr ? "إرسال وتأكيد طلب رحلة VIP للإدارة ✨" : "Submit VIP Private Tour Request ✨"}
             </button>
           </form>
         </div>
       ) : (
-        <div className="p-10 text-center" dir={dir}>
-          <div className="w-20 h-20 mx-auto rounded-full bg-amber-100 text-amber-600 grid place-items-center text-4xl">👑</div>
-          <h3 className="mt-5 text-2xl font-black text-[#0B132B]">{isAr ? "تم استلام طلب الرحلة الخاصة VIP بنجاح!" : "Request Received Successfully!"}</h3>
-          <p className="mt-2 text-[#526078] text-sm max-w-lg mx-auto leading-relaxed">
+        <div className="p-8 sm:p-10 text-center" dir={dir}>
+          <div className="w-20 h-20 mx-auto rounded-full bg-amber-100 text-amber-600 grid place-items-center text-4xl shadow-md">👑</div>
+          <h3 className="mt-5 text-2xl font-black text-[#0B132B] dark:text-white">{isAr ? "تم استلام طلب الرحلة الخاصة VIP بنجاح!" : "Request Received Successfully!"}</h3>
+          
+          <div className="mt-4 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 max-w-lg mx-auto text-right text-xs space-y-2">
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-slate-500 font-bold">{isAr ? "رقم الطلب:" : "Order #:"}</span>
+              <span className="font-mono font-black text-[#003580]">#PR-{Math.floor(Math.random() * 90000 + 10000)}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-slate-500 font-bold">{isAr ? "الوجهة المستهدفة:" : "Destination:"}</span>
+              <span className="font-black text-slate-800 dark:text-slate-200">{destination || (isAr ? "حسب برنامج السائح" : "Custom")}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-slate-500 font-bold">{isAr ? "المركبة المختارة:" : "Selected Vehicle:"}</span>
+              <span className="font-black text-slate-800 dark:text-slate-200">{selectedVehicle.name} ({selectedVehicle.pricePerDay} د.ل/يوم)</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-slate-500 font-bold">{isAr ? "المرشد السياحي:" : "Tour Guide:"}</span>
+              <span className="font-black text-slate-800 dark:text-slate-200">{selectedGuide ? `${selectedGuide.name} (${selectedGuide.pricePerDay} د.ل/يوم)` : (isAr ? "سيتم التعيين من الإدارة" : "To be assigned")}</span>
+            </div>
+            <div className="flex justify-between pt-1 text-sm">
+              <span className="text-slate-700 font-black">{isAr ? "التكلفة التقديرية الإجمالية:" : "Total Estimate:"}</span>
+              <span className="font-black text-[#D96B27]">{totalEstimatedCost} د.ل ({durationDays} أيام)</span>
+            </div>
+          </div>
+
+          <p className="mt-4 text-[#526078] dark:text-slate-300 text-xs max-w-lg mx-auto leading-relaxed">
             {isAr
-              ? `رقم طلب الرحلة الخاصة #PR-${Math.floor(Math.random() * 90000 + 10000)}.` +
-                (guideName ? ` تم تخصيص المرشد السياحي: (${guideName}).` : "") +
-                ` ونوع المركبة: (${vehicleType === 'luxury-coach' ? 'حافلة فاخرة VIP 50 راكب' : vehicleType === 'minibus-25' ? 'ميني باص سياحي 25 راكب' : 'مركبة دفع رباعي 4x4'}). سيقوم منسق الرحلات بالتواصل معك لتأكيد المسار الزمني.`
-              : `Private Tour Request #PR-${Math.floor(Math.random() * 90000 + 10000)}. Our dedicated travel consultant will contact you within 24h.`}
+              ? "سيقوم منسق الرحلات السياحية بالمنصة بالتواصل معك هاتفياً وعبر واتساب لتأكيد مسار الرحلة واعتماد الحجز."
+              : "Our dedicated travel consultant will contact you to finalize arrangements and confirm the booking."}
           </p>
           <button onClick={onClose} className="mt-6 px-8 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft cursor-pointer">
             {isAr ? "تم" : "Done"}

@@ -34,7 +34,7 @@ export function HotelDetailsModal({
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
   const [activePhoto, setActivePhoto] = useState(0);
-  const [activeTab, setActiveTab] = useState<"overview" | "rooms" | "amenities" | "location" | "reviews">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "location" | "reviews">("overview");
   const [isLiked, setIsLiked] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -326,8 +326,6 @@ export function HotelDetailsModal({
             <div className="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar text-xs sm:text-sm font-black">
               {[
                 { id: "overview", label: isAr ? "🌟 نبذة وتجربة الإقامة" : "Overview & Story", icon: "🌟" },
-                { id: "rooms", label: isAr ? "🛏️ الغرف والأجنحة الفاخرة" : "Luxury Rooms & Suites", icon: "🛏️" },
-                { id: "amenities", label: isAr ? "✨ المرافق والخدمات الحصرية" : "Amenities & Facilities", icon: "✨" },
                 { id: "location", label: isAr ? "📍 الموقع وساعات العمل" : "Location & Map", icon: "📍" },
                 { id: "reviews", label: isAr ? "⭐ تقييمات الضيوف والرواد" : "Guest Reviews", icon: "⭐" },
               ].map((tab) => {
@@ -337,7 +335,7 @@ export function HotelDetailsModal({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`px-4 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                    className={`px-5 py-2.5 rounded-2xl whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                       isActive
                         ? "bg-[#003580] text-white shadow-md shadow-blue-900/20 scale-102"
                         : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 hover:text-slate-900"
@@ -356,6 +354,16 @@ export function HotelDetailsModal({
             {/* OVERVIEW TAB */}
             {activeTab === "overview" && (
               <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Informational Directory Notice */}
+                <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/80 dark:border-slate-700 flex items-center gap-3 text-xs text-blue-950 dark:text-blue-200 font-bold">
+                  <span className="text-xl shrink-0">ℹ️</span>
+                  <span>
+                    {isAr
+                      ? "دليل تعريفي استكشافي للأماكن: توفر منصة دلّني هذا العرض لتعريف السياح بمكان الإقامة وموقعه الجغرافي وتصنيفه المعتمد ووسائل الاتصال المباشر (عرض تعريفي فقط بدون حجز غرف عبر المنصة)."
+                      : "Directory Showcase: Dallani provides this guide to showcase accommodations, location, official rating, and direct venue contacts (display only)."}
+                  </span>
+                </div>
+
                 {/* Score & Highlights Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Rating Card */}
@@ -377,7 +385,7 @@ export function HotelDetailsModal({
                       <div className="text-lg font-black text-amber-700 dark:text-amber-400">
                         {hotel.stars} {isAr ? "نجوم معتمدة" : "Stars Luxury"}
                       </div>
-                      <div className="text-xs text-slate-500 font-semibold">{isAr ? "وزارة السياحة الليبية" : "Libyan Tourism Dept"}</div>
+                      <div className="text-xs text-slate-500 font-semibold">{isAr ? "وزارة السياحة والآثار" : "Libyan Tourism Dept"}</div>
                     </div>
                     <div className="text-3xl text-amber-500">{"★".repeat(hotel.stars)}</div>
                   </div>
@@ -386,15 +394,15 @@ export function HotelDetailsModal({
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-100 dark:border-slate-700 flex items-center justify-between">
                     <div>
                       <div className="text-xs text-emerald-800 dark:text-emerald-400 font-black flex items-center gap-1">
-                        <span>👑</span>
-                        <span>{isAr ? "ميزة دلّني المعتمدة" : "Dallani Guest Perk"}</span>
+                        <span>📍</span>
+                        <span>{isAr ? "المدينة والموقع" : "Location"}</span>
                       </div>
                       <div className="text-lg font-black text-emerald-700 dark:text-emerald-300">
-                        {isAr ? `خصم ${discountPct}% فوري` : `Instant ${discountPct}% Off`}
+                        {hotel.city}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-bold">{isAr ? "عند إبراز الحجز بالمنصة" : "Upon showing Dallani booking"}</div>
+                      <div className="text-[11px] text-slate-500 font-bold">{hotel.address || hotel.city}</div>
                     </div>
-                    <div className="text-3xl">🏷️</div>
+                    <div className="text-3xl">🏛️</div>
                   </div>
                 </div>
 
@@ -406,145 +414,9 @@ export function HotelDetailsModal({
                   </h4>
                   <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
                     {hotel.description || (isAr
-                      ? `يُعد ${hotel.name} أحد أرقى صروح الضيافة في مدينة ${hotel.city}، حيث يجمع بين راحة الإقامة الفندقية الحديثة وعبق الضيافة الليبية الأصيلة. يتميز الفندق بموقع استراتيجي محاط بأهم المعالم السياحية والخدمية، ويوفر غرفاً وأجنحة فسيحة بإطلالات بانورامية خلابة، وخدمات استقبال وإرشاد سياحي متكاملة لرواد منصة دلّني.`
-                      : `${hotel.name} is one of the premier hospitality stays in ${hotel.city}, offering luxury accommodations and seamless connectivity to cultural attractions.`)}
+                      ? `يُعد ${hotel.name} أحد أبرز صروح الضيافة في مدينة ${hotel.city}، حيث يجمع بين راحة الإقامة الحديثة وعبق الأصالة الليبية. يتميز الفندق بموقع استراتيجي بالقرب من المعالم السياحية والخدمية، ويوفر بيئة مريحة واستقبالاً ودوداً لزوار المدينة ورواد منصة دلّني السياحية.`
+                      : `${hotel.name} is one of the premier hospitality stays in ${hotel.city}, offering authentic Libyan warmth and seamless proximity to cultural attractions.`)}
                   </p>
-                </div>
-
-                {/* Highlights tags */}
-                <div className="space-y-2">
-                  <div className="text-xs font-black text-slate-500 uppercase tracking-wider">{isAr ? "أبرز مميزات الإقامة:" : "Key Highlights:"}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      isAr ? "✓ إطلالة ساحرة ومباشرة" : "Scenic Views",
-                      isAr ? "✓ بوفيه إفطار محلي وعالمي فاخر" : "Luxury Buffet Breakfast",
-                      isAr ? "✓ خدمة غرف واستقبال 24/7" : "24/7 Front Desk",
-                      isAr ? "✓ إنترنت ألياف بصرية سريع ومجاني" : "Free Fiber WiFi",
-                      isAr ? "✓ حراسة ومواقف خاصة مؤمنة" : "Secure Gated Parking",
-                      isAr ? "✓ موقع قريب من المواصلات والمعالم" : "Prime Strategic Location",
-                    ].map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-xs hover:border-[#003580] transition"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ROOMS TAB */}
-            {activeTab === "rooms" && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <h4 className="text-base font-black text-slate-900 dark:text-white">
-                      {isAr ? "خيارات الغرف والأجنحة المتاحة للإقامة" : "Available Rooms & Suites"}
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      {isAr ? "جميع الغرف مكيفة وشاملة للخدمة الفندقية ومطابقة لمعايير منصة دلّني" : "All rooms feature luxury amenities and daily housekeeping"}
-                    </p>
-                  </div>
-                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
-                    ✓ {isAr ? "أسعار خاصة لرواد دلّني" : "Dallani Verified Rates"}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {roomsList.map((room) => (
-                    <div
-                      key={room.id}
-                      className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-[#003580] bg-white dark:bg-slate-800/70 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-5 group"
-                    >
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-md bg-[#003580]/10 text-[#003580] dark:text-blue-300 text-xs font-black">
-                            {room.badge}
-                          </span>
-                          <h5 className="text-base font-black text-slate-900 dark:text-white group-hover:text-[#003580] transition">
-                            {room.name}
-                          </h5>
-                        </div>
-
-                        <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span>🛏️</span>
-                            <span className="font-bold">{room.bed}</span>
-                            <span>·</span>
-                            <span>👥</span>
-                            <span>{room.capacity}</span>
-                          </div>
-                          <div className="text-slate-500 dark:text-slate-400">{room.specs}</div>
-                        </div>
-
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200/60">
-                          <span>✨</span>
-                          <span>{room.perk}</span>
-                        </div>
-                      </div>
-
-                      {/* Room Price & Direct Inquiry */}
-                      <div className="flex md:flex-col items-center md:items-end justify-between border-t md:border-t-0 md:border-s md:border-slate-100 dark:md:border-slate-700 pt-3 md:pt-0 md:ps-6 shrink-0 gap-3">
-                        <div className="text-right">
-                          <div className="text-[11px] text-slate-400 line-through font-bold">
-                            {room.originalPrice} د.ل / {isAr ? "ليلة" : "night"}
-                          </div>
-                          <div className="text-2xl font-black text-[#D96B27]">
-                            {room.price} <span className="text-xs text-slate-500">د.ل / {isAr ? "ليلة" : "night"}</span>
-                          </div>
-                          <div className="text-[10px] text-emerald-600 font-bold">
-                            {isAr ? `وفرت ${room.originalPrice - room.price} د.ل عبر دلّني` : `Save ${room.originalPrice - room.price} LYD`}
-                          </div>
-                        </div>
-
-                        <a
-                          href={`https://wa.me/218${hotel.phone.replace(/^0+/, "")}?text=${encodeURIComponent(
-                            `مرحباً، أود حجز (${room.name}) في ${hotel.name} عبر منصة دلّني السياحية والاستفادة من خصم الـ ${discountPct}%.`
-                          )}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-4 py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white text-xs font-black transition flex items-center gap-1.5 shadow-md shadow-blue-900/20 active:scale-95 cursor-pointer"
-                        >
-                          <span>💬 {isAr ? "طلب حجز الغرفة" : "Book Room"}</span>
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* AMENITIES TAB */}
-            {activeTab === "amenities" && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="space-y-1">
-                  <h4 className="text-base font-black text-slate-900 dark:text-white">
-                    {isAr ? "المرافق والتسهيلات الفندقية المعتمدة" : "Verified Hotel Amenities"}
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    {isAr ? "تم التحقق من جاهزية كافة المرافق لتوفير أعلى درجات الراحة للضيوف" : "All facilities are verified and operational"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                  {amenities.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/50 hover:bg-blue-50/50 dark:hover:bg-slate-800 transition shadow-xs space-y-1.5 group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                        {item.icon}
-                      </div>
-                      <div className="font-black text-xs text-slate-900 dark:text-white group-hover:text-[#003580] transition">
-                        {item.title}
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                        {item.desc}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
@@ -684,21 +556,21 @@ export function HotelDetailsModal({
             )}
           </div>
 
-          {/* ── 4. STICKY BOTTOM LUXURY CONCIERGE BAR ── */}
+          {/* ── 4. STICKY BOTTOM ACTION BAR (Directory Showcase & Direct Hotel Contact) ── */}
           <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl z-30">
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-xl shrink-0">
-                🏷️
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0">
+                🏨
               </div>
               <div>
                 <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <span>{isAr ? "حجز واستعلام مباشر معتمد" : "Direct Verified Concierge"}</span>
-                  <span className="px-2 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300 text-[10px] font-black">
-                    -{discountPct}%
+                  <span>{isAr ? "دليل سياحي تعريفي بالأماكن (عرض فقط)" : "Tourism Directory Showcase (Display Only)"}</span>
+                  <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black">
+                    {isAr ? "استعلام مباشر" : "Direct Inquiry"}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 font-bold">
-                  {isAr ? "بدون عمولات إضافية + ضمان أفضل سعر" : "Zero extra fees + Best Price Match"}
+                  {isAr ? "المنصة تقدم دليلاً للتعريف بالمنشأة — يمكنك التواصل مباشرة مع إدارة الفندق" : "Informational showcase — contact hotel management directly"}
                 </div>
               </div>
             </div>
@@ -715,7 +587,7 @@ export function HotelDetailsModal({
 
               <a
                 href={`https://wa.me/218${hotel.phone.replace(/^0+/, "")}?text=${encodeURIComponent(
-                  `مرحباً، أود الاستفسار عن إمكانية الحجز وتوافر الغرف لدى ${hotel.name} بعد الاطلاع عليه عبر منصة دلّني السياحية للاستفادة من خصم الـ ${discountPct}%.`
+                  `مرحباً، أود الاستفسار والتواصل المباشر مع إدارة ${hotel.name} بعد الاطلاع عليه عبر منصة دلّني السياحية.`
                 )}`}
                 target="_blank"
                 rel="noreferrer"

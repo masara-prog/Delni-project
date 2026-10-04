@@ -281,12 +281,11 @@ export function RestaurantDetailsModal({
           </div>
 
           {/* ── 2. DYNAMIC TABBED NAVIGATION ── */}
+          {/* ── 2. DYNAMIC TABBED NAVIGATION ── */}
           <div className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 sticky top-0 z-20 backdrop-blur-md">
             <div className="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar text-xs sm:text-sm font-black">
               {[
-                { id: "overview", label: isAr ? "🍽️ قصة المطعم والنكهات" : "Culinary Story", icon: "🍽️" },
-                { id: "menu", label: isAr ? "🍕 أشهى الأطباق والقائمة" : "Signature Menu", icon: "🍕" },
-                { id: "features", label: isAr ? "✨ المميزات والجلسات" : "Features & Vibe", icon: "✨" },
+                { id: "overview", label: isAr ? "🍽️ نوع الطعام وتجربة التذوق" : "Cuisine & Dining", icon: "🍽️" },
                 { id: "location", label: isAr ? "📍 الموقع وساعات العمل" : "Location & Hours", icon: "📍" },
                 { id: "reviews", label: isAr ? "⭐ تقييمات الذواقة" : "Reviews", icon: "⭐" },
               ].map((tab) => {
@@ -296,7 +295,7 @@ export function RestaurantDetailsModal({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`px-4 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                    className={`px-5 py-2.5 rounded-2xl whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                       isActive
                         ? "bg-[#D96B27] text-white shadow-md shadow-orange-900/20 scale-102"
                         : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 hover:text-slate-900"
@@ -315,6 +314,16 @@ export function RestaurantDetailsModal({
             {/* OVERVIEW TAB */}
             {activeTab === "overview" && (
               <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Informational Directory Notice */}
+                <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200 font-bold">
+                  <span className="text-xl shrink-0">ℹ️</span>
+                  <span>
+                    {isAr
+                      ? "دليل تعريفي استكشافي: توفر منصة دلّني هذا العرض لتعريف الزوار بنوع الطعام وأوقات العمل ووسائل الاتصال المباشر بالمطعم."
+                      : "Directory Showcase: Dallani provides this guide to introduce visitors to cuisine types, hours, and direct venue contacts."}
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Rating Card */}
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-800 dark:to-slate-800/60 border border-orange-100 dark:border-slate-700 flex items-center justify-between">
@@ -349,10 +358,88 @@ export function RestaurantDetailsModal({
                   </div>
                 </div>
 
+                {/* 🍲 PROMINENT CUISINE & FOOD TYPE SECTION */}
+                <div className="space-y-4 p-5 rounded-2xl bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 dark:from-slate-800/60 dark:to-slate-800/30 border border-orange-200/70 dark:border-slate-700">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-100 dark:border-slate-700/60 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🍲</span>
+                      <div>
+                        <h4 className="text-base font-black text-[#D96B27]">
+                          {isAr ? "نوع وتصنيف الطعام المقدم" : "Cuisine Type & Specialty"}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {isAr ? "طبيعة المأكولات وأسلوب الضيافة المقدم في هذا المطعم" : "Style of food and hospitality offered"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 rounded-xl bg-[#D96B27] text-white text-xs font-black shadow-xs">
+                      {restaurant.type || (isAr ? "مأكولات شعبية وتراثية" : "Traditional Dining")}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-slate-700 text-[#D96B27] flex items-center justify-center font-black text-lg shrink-0">
+                        🥘
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white">
+                          {isAr ? "تخصص المطعم والمذاق الفريد:" : "Primary Specialty:"}
+                        </div>
+                        <div className="text-xs text-[#D96B27] font-black mt-0.5">
+                          {restaurant.specialty}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-slate-700 text-emerald-700 flex items-center justify-center font-black text-lg shrink-0">
+                        🌿
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white">
+                          {isAr ? "طازجة ومحلية:" : "Fresh & Local:"}
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-300 font-bold mt-0.5">
+                          {isAr ? "لحوم بلدية طازجة ومكونات ليبية مختارة يومياً" : "Fresh daily local ingredients and meats"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-slate-700 text-[#003580] flex items-center justify-center font-black text-lg shrink-0">
+                        👨‍👩‍👧
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white">
+                          {isAr ? "أجواء الجلسات:" : "Atmosphere:"}
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-300 font-bold mt-0.5">
+                          {isAr ? "جلسات عائلية مريحة مع خصوصية وتكييف هادئ" : "Comfortable family seating with privacy"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-slate-700 text-amber-700 flex items-center justify-center font-black text-lg shrink-0">
+                        ☕
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white">
+                          {isAr ? "الضيافة والمشروبات:" : "Hospitality & Drinks:"}
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-300 font-bold mt-0.5">
+                          {isAr ? "شاي ليبي تراثي باللوز وقهوة ومشروبات منعشة" : "Libyan almond tea, coffee & fresh drinks"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Culinary Story */}
                 <div className="space-y-3 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
                   <h4 className="text-base font-black text-[#D96B27] flex items-center gap-2">
-                    <span>🍲</span>
+                    <span>📖</span>
                     <span>{isAr ? "عن المطعم وتجربة التذوق" : "Culinary Heritage & Dining Experience"}</span>
                   </h4>
                   <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
@@ -360,102 +447,6 @@ export function RestaurantDetailsModal({
                       ? `يقدم ${restaurant.name} تجربة طعام استثنائية في قلب ${restaurant.city}. يشتهر بـ (${restaurant.specialty}) مع التزام صارم بأعلى معايير الجودة والنظافة وكرم الضيافة الليبية. يتميز المطعم بجلسات مريحة وتصميم يجمع بين الأصالة والحداثة، مما يجعله وجهة مثالية للعائلات والوفود السياحية وزوار المدينة.`
                       : `${restaurant.name} provides an exceptional Libyan dining experience in ${restaurant.city}, renowned for ${restaurant.specialty}.`}
                   </p>
-                </div>
-
-                {/* Specialties */}
-                <div className="space-y-2">
-                  <div className="text-xs font-black text-slate-500 uppercase tracking-wider">{isAr ? "التخصص والمذاق الفريد:" : "Specialties:"}</div>
-                  <div className="p-3.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200/80 text-orange-950 dark:text-orange-200 text-xs font-bold flex items-center gap-2">
-                    <span>✨</span>
-                    <span>{restaurant.specialty}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* MENU TAB */}
-            {activeTab === "menu" && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <h4 className="text-base font-black text-slate-900 dark:text-white">
-                      {isAr ? "أشهر الأطباق والوجبات الخاصة" : "Signature Menu Selection"}
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      {isAr ? "تحضر يومياً على أيدي طهاة محترفين بمكونات طازجة" : "Crafted daily with fresh local ingredients"}
-                    </p>
-                  </div>
-                  <span className="text-xs font-black text-[#D96B27] bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 px-3 py-1 rounded-full">
-                    👑 {isAr ? "مأكولات معتمدة" : "Verified Quality"}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {detailedDishes.map((dish) => (
-                    <div
-                      key={dish.id}
-                      className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-[#D96B27] bg-white dark:bg-slate-800/70 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 group"
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <h5 className="text-base font-black text-slate-900 dark:text-white group-hover:text-[#D96B27] transition">
-                            {dish.name}
-                          </h5>
-                          <span className="px-2.5 py-0.5 rounded-md bg-orange-50 text-[#D96B27] text-[11px] font-black shrink-0">
-                            {dish.badge}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                          {dish.desc}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/80">
-                        <span className="text-xs text-slate-400 font-bold">{isAr ? "السعر التقريبي:" : "Approx. Price:"}</span>
-                        <span className="text-base font-black text-[#D96B27]">{dish.price}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* FEATURES TAB */}
-            {activeTab === "features" && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="space-y-1">
-                  <h4 className="text-base font-black text-slate-900 dark:text-white">
-                    {isAr ? "المرافق والجلسات والخدمات المتاحة" : "Features & Atmosphere"}
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    {isAr ? "توفير كافة سبل الراحة والخصوصية للعائلات والأفراد" : "Comfort and privacy for families & guests"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {(restaurant.features && restaurant.features.length > 0
-                    ? restaurant.features
-                    : [
-                        isAr ? "جلسات عائلية مريحة وخاصة" : "Private Family Booths",
-                        isAr ? "أجواء وتصاميم تراثية مريحة" : "Traditional Atmosphere",
-                        isAr ? "خدمة واي فاي مجانية وسريعة" : "Free WiFi",
-                        isAr ? "مواقف سيارات آمنة ومجانية" : "Free Safe Parking",
-                        isAr ? "خيارات دفع إلكتروني متعددة" : "Digital Payment Options",
-                        isAr ? "تكييف هواء مركزي هادئ" : "Silent Smart AC",
-                      ]
-                  ).map((feat, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/50 hover:bg-orange-50/50 dark:hover:bg-slate-800 transition shadow-xs flex items-center gap-3"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-slate-700 text-[#D96B27] dark:text-orange-400 flex items-center justify-center text-lg font-black shrink-0">
-                        ✓
-                      </div>
-                      <div className="font-black text-xs text-slate-800 dark:text-slate-100">
-                        {feat}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
@@ -546,20 +537,21 @@ export function RestaurantDetailsModal({
           </div>
 
           {/* ── 4. STICKY BOTTOM LUXURY CONCIERGE BAR ── */}
+          {/* ── 4. STICKY BOTTOM ACTION BAR (Directory Showcase & Direct Venue Contact) ── */}
           <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl z-30">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-xl shrink-0">
-                ☕
+                🍽️
               </div>
               <div>
                 <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <span>{isAr ? "حجز طاولة واستعلام مباشر" : "Table Reservation & Inquiry"}</span>
-                  <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                    {isAr ? "شاي مجاني" : "Free Tea"}
+                  <span>{isAr ? "دليل سياحي تعريفي بالأماكن (عرض فقط)" : "Tourism Directory Showcase (Display Only)"}</span>
+                  <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black">
+                    {isAr ? "استعلام مباشر" : "Direct Contact"}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 font-bold">
-                  {isAr ? "أبلغ المطعم أنك من رواد دلّني للحصول على الضيافة التراثية" : "Mention Dallani for complimentary tea perk"}
+                  {isAr ? "المنصة تقدم دليلاً للتعريف بالمنشأة — يمكنك التواصل مباشرة عبر الهاتف والواتساب" : "Contact the venue management directly for inquiries"}
                 </div>
               </div>
             </div>
@@ -575,7 +567,7 @@ export function RestaurantDetailsModal({
 
               <a
                 href={`https://wa.me/218${restaurant.phone.replace(/^0+/, "")}?text=${encodeURIComponent(
-                  `مرحباً، أود الاستفسار وحجز طاولة لدى ${restaurant.name} بعد الاطلاع عليه عبر منصة دلّني السياحية.`
+                  `مرحباً، أود الاستفسار عن نوع الطعام وساعات العمل لدى ${restaurant.name} بعد الاطلاع عليه عبر منصة دلّني السياحية.`
                 )}`}
                 target="_blank"
                 rel="noreferrer"

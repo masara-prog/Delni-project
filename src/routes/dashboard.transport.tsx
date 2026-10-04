@@ -37,6 +37,7 @@ export type Vehicle = {
   company_name: string;
   typ_vehiclee: string;
   capacit_seatingy: number;
+  daily_rate?: number;
   statu_vehicles: "جاهزة" | "في رحلة" | "صيانة" | "خارج الخدمة";
   vehicle_image: string;
   insurance_details: string;
@@ -112,6 +113,7 @@ function TransportDashboard() {
       company_name: "شركة الصحراء للنقل",
       typ_vehiclee: "تويوتا كوستر 2025",
       capacit_seatingy: 22,
+      daily_rate: 450,
       statu_vehicles: "جاهزة",
       insurance_details: "وثيقة تأمين شامل رقم INS-99210 سارية حتى سبتمبر 2027",
       insurance_image: "/assets/ai_city.jpg",
@@ -123,6 +125,7 @@ function TransportDashboard() {
       company_name: "شركة الصحراء للنقل",
       typ_vehiclee: "هيونداي H1 VIP 2024",
       capacit_seatingy: 12,
+      daily_rate: 350,
       statu_vehicles: "جاهزة",
       insurance_details: "تأمين ركاب ومسافرين رقم INS-44120 ساري حتى يناير 2028",
       insurance_image: "/assets/ai_city.jpg",
@@ -134,6 +137,7 @@ function TransportDashboard() {
       company_name: "شركة الصحراء للنقل",
       typ_vehiclee: "ميرسيدس سبرنتر 2024",
       capacit_seatingy: 15,
+      daily_rate: 500,
       statu_vehicles: "جاهزة",
       insurance_details: "تأمين شامل وبطاقة برتقالية دولية سارية حتى ديسمبر 2026",
       insurance_image: "/assets/ai_desert.jpg",
@@ -145,6 +149,7 @@ function TransportDashboard() {
       company_name: "شركة الصحراء للنقل",
       typ_vehiclee: "تويوتا لاندكروزر 4x4",
       capacit_seatingy: 7,
+      daily_rate: 400,
       statu_vehicles: "صيانة",
       insurance_details: "تأمين صحاري وسفاري رقم INS-88120 ساري حتى مارس 2027",
       insurance_image: "/assets/ai_desert.jpg",
@@ -412,7 +417,12 @@ function TransportDashboard() {
                   <div>
                     <div className="text-xs text-muted-foreground font-bold">نوع وموديل السيارة:</div>
                     <h4 className="font-black text-foreground text-base mt-0.5">{v.typ_vehiclee}</h4>
-                    <div className="text-xs font-bold text-primary mt-1">👥 عدد المقاعد: {v.capacit_seatingy} مقعد</div>
+                    <div className="flex items-center justify-between text-xs mt-1">
+                      <span className="font-bold text-primary">👥 عدد المقاعد: {v.capacit_seatingy} مقعد</span>
+                      <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                        💰 {v.daily_rate || 450} د.ل / اليوم
+                      </span>
+                    </div>
                     
                     <div className="mt-3 p-3 rounded-xl bg-muted/30 border border-border/60 text-xs space-y-1">
                       <div className="font-black text-foreground">🛡️ تفاصيل التأمين:</div>
@@ -570,6 +580,7 @@ function VehicleModal({ title, vehicle, companyId, companyName, onClose, onSave 
   const [plate, setPlate] = useState(vehicle?.numbe_plater || "");
   const [type, setType] = useState(vehicle?.typ_vehiclee || "تويوتا كوستر 2025");
   const [seats, setSeats] = useState(vehicle?.capacit_seatingy ? String(vehicle.capacit_seatingy) : "20");
+  const [dailyRate, setDailyRate] = useState(vehicle?.daily_rate ? String(vehicle.daily_rate) : "450");
   const [status, setStatus] = useState<Vehicle["statu_vehicles"]>(vehicle?.statu_vehicles || "جاهزة");
   const [insuranceText, setInsuranceText] = useState(vehicle?.insurance_details || "وثيقة تأمين شامل سارية المفعول");
   const [insuranceImg, setInsuranceImg] = useState(vehicle?.insurance_image || "");
@@ -584,6 +595,7 @@ function VehicleModal({ title, vehicle, companyId, companyName, onClose, onSave 
       company_name: companyName,
       typ_vehiclee: type,
       capacit_seatingy: Number(seats),
+      daily_rate: Number(dailyRate) || 450,
       statu_vehicles: status,
       insurance_details: insuranceText,
       insurance_image: insuranceImg,
@@ -598,7 +610,10 @@ function VehicleModal({ title, vehicle, companyId, companyName, onClose, onSave 
           <Field label="رقم اللوحة المعدنية والمدينة" value={plate} onChange={setPlate} placeholder="مثال: طرابلس 8291" />
           <Field label="عدد المقاعد (capacit_seatingy)" type="number" value={seats} onChange={setSeats} />
         </div>
-        <Field label="نوع السيارة وموديلها (typ_vehiclee)" value={type} onChange={setType} placeholder="مثال: تويوتا كوستر 2025" />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="نوع السيارة وموديلها (typ_vehiclee)" value={type} onChange={setType} placeholder="مثال: تويوتا كوستر 2025" />
+          <Field label="سعر اليوم الواحد للرحلات الخاصة (د.ل)" type="number" value={dailyRate} onChange={setDailyRate} placeholder="مثال: 450" />
+        </div>
         
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">حالة السيارة (statu_vehicles)</label>
