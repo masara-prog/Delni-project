@@ -131,7 +131,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Tripoli+Sea+Street+Libya",
       phone: "0912345678",
       stars: 5,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "hotel",
       price: 988,
       originalPrice: 1318,
@@ -153,7 +153,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Tibesti+Hotel+Benghazi+Libya",
       phone: "0921112233",
       stars: 4,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "hotel",
       price: 1048,
       originalPrice: 1294,
@@ -177,7 +177,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Old+Town+Ghadames+Libya",
       phone: "0919998877",
       stars: 3,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "heritage",
       price: 840,
       originalPrice: 1120,
@@ -201,7 +201,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Gaberoun+Lake+Ubari+Libya",
       phone: "0923334455",
       stars: 5,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "camp",
       price: 3013,
       originalPrice: 4293,
@@ -225,7 +225,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Cyrene+Shahhat+Libya",
       phone: "0925556677",
       stars: 5,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "resort",
       price: 1245,
       originalPrice: 1550,
@@ -249,7 +249,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Leptis+Magna+Al+Khoms+Libya",
       phone: "0914443322",
       stars: 3,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "hotel",
       price: 760,
       originalPrice: 950,
@@ -273,7 +273,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Tripoli+Omar+Mokhtar+Libya",
       phone: "0913337722",
       stars: 4,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "apartment",
       price: 680,
       originalPrice: 850,
@@ -295,7 +295,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Zuwara+Beach+Libya",
       phone: "0926661144",
       stars: 5,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "resort",
       price: 1150,
       originalPrice: 1450,
@@ -319,7 +319,7 @@ function getHotels(lang: "ar" | "en"): HotelData[] {
       mapsQuery: "Derna+Waterfall+Libya",
       phone: "0915559988",
       stars: 4,
-      partnership_status: "نشط ومعتمد",
+      partnership_status: "نشط",
       propertyType: "heritage",
       price: 920,
       originalPrice: 1150,
@@ -618,10 +618,14 @@ function HotelDetailsView({
                     : (isAr ? "🏛️ منتجع / نُزل تراثي" : "Resort / Heritage Stay")}
                 </span>
 
-                {/* Verified Partner */}
-                <span className="px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-black flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>✓ {isAr ? "شريك معتمد في دلّني" : "Verified Dallani Partner"}</span>
+                {/* Partnership Status Badge (نشط أو غير نشط) */}
+                <span className={`px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 ${
+                  hotel.partnership_status === "غير نشط"
+                    ? "bg-slate-500/20 border border-slate-400/30 text-slate-300"
+                    : "bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${hotel.partnership_status === "غير نشط" ? "bg-slate-400" : "bg-emerald-400 animate-pulse"}`} />
+                  <span>{isAr ? `حالة الشراكة: ${hotel.partnership_status || "نشط"}` : `Partnership: ${hotel.partnership_status === "غير نشط" ? "Inactive" : "Active"}`}</span>
                 </span>
 
                 {/* City Tag */}
@@ -656,11 +660,11 @@ function HotelDetailsView({
             {/* Rating Box & Quick Action Pod */}
             <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto bg-white/5 border border-white/15 p-4 rounded-3xl backdrop-blur-xl shadow-xl">
               <div className="text-right">
-                <div className="text-sm font-black text-white">{hotel.ratingWord || (isAr ? "تقييم استثنائي" : "Superb")}</div>
+                <div className="text-sm font-black text-amber-300">{isAr ? "معدل التقييم الرقمي" : "Rating Score"}</div>
                 <div className="text-xs text-slate-400 font-bold">{hotel.reviewsCount || 120} {isAr ? "تقييم نزيل معتمد" : "verified reviews"}</div>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#003580] via-blue-600 to-indigo-700 text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
-                <span className="text-lg leading-tight font-black">{hotel.rating || 9.2}</span>
+                <span className="text-lg leading-tight font-black">{hotel.rating || 9.1}</span>
                 <span className="text-[9px] text-amber-300 font-bold">{isAr ? "من 10" : "/10"}</span>
               </div>
             </div>
@@ -1650,20 +1654,27 @@ function HotelsPage() {
                         </div>
                       </div>
 
-                      <div className="text-xs text-slate-400 font-bold">
-                        {h.partnership_status} · 📞 {h.phone}
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black ${
+                          h.partnership_status === "غير نشط"
+                            ? "bg-slate-100 text-slate-600 border border-slate-300"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        }`}>
+                          {isAr ? `حالة الشراكة: ${h.partnership_status || "نشط"}` : `Partnership: ${h.partnership_status === "غير نشط" ? "Inactive" : "Active"}`}
+                        </span>
+                        <span className="text-slate-400 font-bold">· 📞 {h.phone}</span>
                       </div>
                     </div>
 
                   {/* Right Column: Rating & Price & Action Button */}
                   <div className="md:w-56 flex flex-col justify-between items-end shrink-0 border-t md:border-t-0 md:border-s md:border-slate-100 pt-3 md:pt-0 md:ps-4">
-                    {/* Score Header */}
+                    {/* Score Header (Numerical Score Only) */}
                     <div className="flex items-center gap-2">
                       <div className="text-right">
-                        <div className="font-black text-xs text-[#0F172A]">{h.ratingWord}</div>
+                        <div className="font-black text-xs text-[#003580]">{isAr ? "معدل التقييم" : "Rating"}</div>
                         <div className="text-[10px] text-slate-400">{h.reviewsCount} {isAr ? "تقييم" : "reviews"}</div>
                       </div>
-                      <div className="w-8 h-8 rounded-lg bg-[#003580] text-white font-black text-sm flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-lg bg-[#003580] text-white font-black text-sm flex items-center justify-center shadow-xs">
                         {h.rating}
                       </div>
                     </div>

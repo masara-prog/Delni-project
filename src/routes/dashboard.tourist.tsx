@@ -257,8 +257,8 @@ function TouristDashboard() {
         <SectionCard title="🏢 تعليمات وآلية سداد التكلفة بمقر الشركة (الدفع النقدي)">
           <div className="space-y-4 text-right">
             <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-2 text-amber-900 font-bold">
-              <div className="text-sm font-black text-amber-800">📌 التزام منصة دلّني بأحكام السداد النقدي:</div>
-              <p>تسهيلاً على السياح وحفاظاً على الشفافية، يتم تأكيد وسداد كافة الرحلات والحجوزات <b>نقداً وحضورياً بمقر شركة النقل المعتمد</b> أو أحد الفروع الرئيسية لمنصة دلّني.</p>
+              <div className="text-sm font-black text-amber-800">📌 الدفع الفيزيائي بموقع الشركة:</div>
+              <p>تسهيلاً على السياح وحفاظاً على الشفافية، يتم تأكيد وسداد كافة الرحلات والحجوزات <b>فيزيائياً ونقداً بمقر وموقع شركة النقل المعتمد</b> أو المكتب الرئيسي لمنصة دلّني.</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-4 text-xs font-semibold">
@@ -268,11 +268,11 @@ function TouristDashboard() {
               </div>
               <div className="p-4 rounded-xl border border-border bg-white space-y-1">
                 <div className="font-black text-foreground text-sm">2. زيارة مقر الشركة</div>
-                <p className="text-muted-foreground">توجه لفرع الشركة قبل 24 ساعة على الأقل مع إبراز كود الحجز ورقم الهوية.</p>
+                <p className="text-muted-foreground">توجه لفرع وموقع الشركة قبل موعد الرحلة مع إبراز كود الحجز ورقم الهوية.</p>
               </div>
               <div className="p-4 rounded-xl border border-border bg-white space-y-1">
                 <div className="font-black text-foreground text-sm">3. استلام التذكرة المؤكدة</div>
-                <p className="text-muted-foreground">عند السداد يتم تفعيل التذكرة الإلكترونية فوراً وإظهار رمز الـ QR للصعود.</p>
+                <p className="text-muted-foreground">عند السداد الفيزيائي بمقر الشركة يتم تفعيل التذكرة النهائية واعتماد الصعود.</p>
               </div>
             </div>
           </div>
@@ -316,7 +316,7 @@ function TouristDashboard() {
                 <span className="font-mono text-xs px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black block">
                   {ticketModal.code}
                 </span>
-                <span className="text-[10px] text-emerald-400 font-bold mt-1 block">✅ حجز مؤكد ومسدد كاش</span>
+                <span className="text-[10px] text-emerald-400 font-bold mt-1 block">✅ حجز مؤكد ومسدد فيزيائياً بمقر الشركة</span>
               </div>
             </div>
 
@@ -366,18 +366,16 @@ function TouristDashboard() {
 
                 <div className="p-4 bg-white rounded-2xl text-slate-950 flex flex-col md:flex-row items-center justify-between gap-4 border-2 border-amber-400">
                   <div className="space-y-1 text-center md:text-right">
-                    <div className="text-xs font-black text-slate-800 uppercase tracking-widest">تذكرة سفر وصعود مخصصة</div>
+                    <div className="text-xs font-black text-slate-800 uppercase tracking-widest">تذكرة سفر وصعود معتمدة</div>
                     <div className="text-lg font-black text-slate-900 font-mono tracking-wider">{ticketModal.code}</div>
-                    <div className="text-[11px] text-slate-600 font-bold">امسح الكود عند الصعود للمركبة لتسجيل الحضور الإلكتروني</div>
+                    <div className="text-[11px] text-slate-600 font-bold">يرجى إبراز رقم التذكرة والهوية الرسمية عند الوصول لمقر الشركة أو الصعود للحافلة</div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-100 p-2.5 rounded-xl border border-slate-300">
-                    <div className="w-24 h-24 bg-slate-950 p-1.5 rounded-lg grid place-items-center">
-                      <div className="grid grid-cols-5 gap-1 w-full h-full">
-                        {Array.from({ length: 25 }).map((_, i) => (
-                          <div key={i} className={`rounded-xs ${i % 2 === 0 || i % 5 === 0 ? "bg-amber-400" : "bg-white"}`} />
-                        ))}
-                      </div>
+                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-black shrink-0">
+                    <span className="text-2xl">🏢</span>
+                    <div>
+                      <span className="block font-black">الدفع فيزيائي بمقر الشركة</span>
+                      <span className="text-[10px] text-emerald-600 font-bold">تم تأكيد السداد الفعلي ✓</span>
                     </div>
                   </div>
                 </div>
