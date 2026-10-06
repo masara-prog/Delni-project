@@ -1291,30 +1291,26 @@ export function PrivateTripModal({
     });
   };
 
-  // Filtered Tour Guides
   const availableGuides = useMemo(() => {
     if (guideCityFilter === "all") return TOUR_GUIDES_DATA;
-    return TOUR_GUIDES_DATA.filter((g) => g.city.includes(guideCityFilter) || g.cityEn.toLowerCase().includes(guideCityFilter.toLowerCase()));
+    return TOUR_GUIDES_DATA.filter(
+      (g) => g.primaryRegion.includes(guideCityFilter) || g.operatingRegions.some((r) => r.includes(guideCityFilter))
+    );
   }, [guideCityFilter]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedLandmarkIds.length === 0) {
-      alert(isAr ? "يرجى اختيار معلم سياحي واحد على الأقل من قائمة معالم المنصة لتحديد مسار الرحلة" : "Please select at least one platform landmark");
+      alert(isAr ? "يرجى اختيار معلم سياحي واحد على الأقل" : "Please select at least one landmark");
       return;
     }
     setStep("done");
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={isAr ? "طلب رحلة خاصة VIP (تخصيص كامل)" : "Custom VIP Private Trip"}
-      maxWidth="max-w-3xl"
-    >
+    <Modal open={open} onClose={onClose} size="xl">
       {step === "form" ? (
-        <div dir={dir} className="p-4 sm:p-6 space-y-6">
+        <div className="p-6 sm:p-8 space-y-6" dir={dir}>
           {/* Header Banner */}
           <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-700/50 text-white shadow-lg">
             <div className="absolute inset-0 opacity-30 mix-blend-overlay">
@@ -1421,7 +1417,7 @@ export function PrivateTripModal({
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <img
-                            src={landmark.image}
+                            src={landmark.img}
                             alt={landmark.name}
                             className="w-11 h-11 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                           />
@@ -1655,7 +1651,7 @@ export function PrivateTripModal({
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="flex items-center gap-3">
                     <img
-                      src={selectedGuide.image}
+                      src={selectedGuide.avatar}
                       alt={selectedGuide.name}
                       className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shrink-0"
                     />
@@ -1670,9 +1666,9 @@ export function PrivateTripModal({
                         <span className="text-xs text-amber-500 font-bold">⭐ {selectedGuide.rating}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
-                        <span>📍 {selectedGuide.city}</span>
+                        <span>📍 {selectedGuide.primaryRegion}</span>
                         <span>•</span>
-                        <span>🗣️ {selectedGuide.languages.join("، ")}</span>
+                        <span>🗣️ {selectedGuide.languages.map((l) => (isAr ? l.nameAr : l.nameEn)).join("، ")}</span>
                         <span>•</span>
                         <span>📅 {formatWorkingDays(selectedGuide.workingDays)}</span>
                       </div>
@@ -1780,7 +1776,7 @@ export function PrivateTripModal({
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <img
-                              src={guide.image}
+                              src={guide.avatar}
                               alt={guide.name}
                               className="w-11 h-11 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                             />
@@ -1792,7 +1788,7 @@ export function PrivateTripModal({
                                 <span className="text-[10px] text-amber-500 font-bold">⭐ {guide.rating}</span>
                               </div>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                📍 {guide.city} • 🗣️ {guide.languages.join("، ")}
+                                📍 {guide.primaryRegion} • 🗣️ {guide.languages.map((l) => (isAr ? l.nameAr : l.nameEn)).join("، ")}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
                                 📅 {formatWorkingDays(guide.workingDays)}
