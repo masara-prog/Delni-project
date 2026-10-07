@@ -50,17 +50,6 @@ function TouristDashboard() {
   const [active, setActive] = useState("overview");
   const [ticketModal, setTicketModal] = useState<Ticket | null>(null);
 
-  const nav: NavItem[] = [
-    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "bookings", label: isAr ? "حجوزاتي والتذاكر" : "My Bookings & Tickets", icon: "🎟️", badge: 2 },
-    { id: "trips", label: isAr ? "استكشاف الرحلات" : "Explore Tours", icon: "🧭" },
-    { id: "favorites", label: isAr ? "المفضلة" : "Favorites", icon: "❤️", badge: 3 },
-    { id: "company_payment", label: isAr ? "تعليمات" : "Instructions", icon: "🏢" },
-    { id: "messages", label: isAr ? "الرسائل والتنبيهات" : "Messages & Alerts", icon: "💬", badge: 2 },
-    { id: "reviews", label: isAr ? "تقييماتي" : "My Reviews", icon: "⭐" },
-    { id: "profile", label: isAr ? "الملف الشخصي والحساب" : "My Profile & Account", icon: "👤" },
-  ];
-
   // Tourist Profile Data (Data Dictionary: Tourists table)
   const [touristInfo, setTouristInfo] = useState({
     tourist_id: "P-8812903",
