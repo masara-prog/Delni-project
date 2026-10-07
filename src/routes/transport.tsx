@@ -425,102 +425,48 @@ function TransportPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 pb-16">
-        {/* ── 3. TOP FLEET SHOWCASE (Matching Hotels Top Deals Row) ── */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
+        {/* ── 3. TRANSPORT COMPANIES ── */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-[#0F172A]">
-                {isAr ? "أفضل أسطول نقل ومركبات سياحية VIP" : "Top Luxury Tourist Fleet"}
+                {isAr ? "شركات النقل السياحي المعتمدة" : "Certified Transport Companies"}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                {isAr
-                  ? "مركبات سياحية حديثة ومكيفة تخضع لأعلى معايير السلامة والفحص الدوري مع سائقين محترفين"
-                  : "State-of-the-art air conditioned tourist vehicles maintained to the highest safety standards"}
+                {isAr ? "اختر الشركة لاستعراض أسطول مركباتها" : "Select a company to view their available fleet"}
               </p>
             </div>
-            <span className="text-xs font-black text-[#003580] bg-[#003580]/10 px-3 py-1 rounded-full border border-[#003580]/20">
-              🛡️ {vehicles.length} {isAr ? "مركبات مرخصة" : "Licensed Fleet"}
-            </span>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {vehicles.slice(0, 3).map((v) => {
-              const isFav = !!likedMap[v.id];
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {companies.filter(c => c.key !== "all").map((c) => {
+              const isSelected = companyFilter === c.key;
+              const count = vehicles.filter((v) => v.company.includes(c.key)).length;
               return (
-                <article
-                  key={v.id}
-                  onClick={() => setSelectedVehicle(v)}
-                  className="group bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between"
+                <div
+                  key={c.key}
+                  onClick={() => {
+                    setCompanyFilter(isSelected ? "all" : c.key);
+                  }}
+                  className={`p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center justify-center gap-3 text-center ${
+                    isSelected
+                      ? "bg-gradient-to-br from-[#D96B27] to-[#EA580C] text-white border-transparent shadow-lg shadow-[#D96B27]/30 scale-105"
+                      : "bg-white text-[#0F172A] border-[#E8E2D6] hover:border-[#D96B27] hover:shadow-md hover:-translate-y-1"
+                  }`}
                 >
-                  <div className="relative h-48 overflow-hidden bg-slate-900">
-                    <img
-                      src={v.photos[0]}
-                      alt={v.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70" />
-
-                    {/* Favorite Heart Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => toggleLike(v.id, e)}
-                      className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-sm z-10 cursor-pointer ${
-                        isFav ? "bg-white text-red-500" : "bg-black/35 text-white hover:bg-white hover:text-red-500"
-                      }`}
-                      title={isAr ? "إضافة للمفضلة" : "Save to wishlist"}
-                    >
-                      <span className="text-sm">{isFav ? "❤️" : "🤍"}</span>
-                    </button>
-
-                    <div className="absolute top-2.5 left-2.5 bg-[#003580] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-sm">
-                      {isAr ? v.categoryLabelAr : v.categoryLabelEn}
-                    </div>
-
-                    <div className="absolute bottom-2.5 right-2.5 text-white text-xs font-bold bg-black/50 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/15">
-                      📍 {v.city} · 👥 {v.seats} {isAr ? "مقعد" : "seats"}
-                    </div>
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl transition-colors ${
+                    isSelected ? "bg-white/20 text-white" : "bg-orange-50 text-[#D96B27]"
+                  }`}>
+                    🏢
                   </div>
-
-                  <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="text-[10px] font-bold text-[#003580] bg-[#003580]/10 px-2 py-0.5 rounded w-fit mb-1">
-                        🏢 {v.company}
-                      </div>
-                      <h3 className="font-black text-base text-[#0F172A] group-hover:text-[#003580] transition-colors leading-snug">
-                        {v.name}
-                      </h3>
-                      <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-                        <span>🧑‍✈️</span>
-                        <span>{v.driverName}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      {/* Booking.com Blue Rating Badge */}
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-[#003580] text-white font-black text-xs flex items-center justify-center">
-                          {v.rating}
-                        </div>
-                        <div className="text-[11px] font-bold text-[#0F172A]">
-                          <span>{v.ratingWord}</span>
-                          <span className="text-slate-400 font-normal mr-1 block text-[10px]">
-                            {v.reviewsCount} {isAr ? "تقييم" : "reviews"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-left" dir="ltr">
-                        <span className="text-xs text-red-400 line-through font-bold block">
-                          LYD {v.originalPricePerDay}
-                        </span>
-                        <span className="text-sm font-black text-[#0F172A]">
-                          LYD {v.pricePerDay} / {isAr ? "يوم" : "day"}
-                        </span>
-                      </div>
-                    </div>
+                  <div>
+                    <h3 className="font-black text-xs sm:text-sm">{c.label}</h3>
+                    <p className={`text-[10px] sm:text-xs mt-1 font-bold ${
+                      isSelected ? "text-white/90" : "text-slate-500"
+                    }`}>
+                      {count} {isAr ? "مركبات" : "vehicles"}
+                    </p>
                   </div>
-                </article>
+                </div>
               );
             })}
           </div>
@@ -608,108 +554,96 @@ function TransportPage() {
                 <article
                   key={v.id}
                   onClick={() => setSelectedVehicle(v)}
-                  className="group bg-white rounded-2xl border border-slate-200 hover:border-[#003580]/40 shadow-xs hover:shadow-lg transition-all p-3 sm:p-4 cursor-pointer flex flex-col md:flex-row gap-4"
+                  className="group bg-white rounded-2xl border border-slate-200 hover:border-orange-300 shadow-xs hover:shadow-xl transition-all p-3 sm:p-4 cursor-pointer flex flex-col md:flex-row gap-5"
                 >
-                  {/* Photo */}
-                  <div className="relative w-full md:w-64 h-48 sm:h-52 rounded-xl overflow-hidden shrink-0 bg-slate-900">
+                  {/* Photo Section */}
+                  <div className="relative w-full md:w-72 h-52 sm:h-auto rounded-xl overflow-hidden shrink-0 bg-slate-900 shadow-inner">
                     <img
                       src={v.photos[0]}
                       alt={v.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-80" />
+                    
                     <button
                       type="button"
                       onClick={(e) => toggleLike(v.id, e)}
-                      className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-xs z-10 cursor-pointer ${
-                        isFav ? "bg-white text-red-500" : "bg-black/40 text-white hover:bg-white hover:text-red-500"
+                      className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-md z-10 cursor-pointer ${
+                        isFav ? "bg-white text-red-500" : "bg-black/30 text-white hover:bg-white hover:text-red-500"
                       }`}
                       title={isAr ? "إضافة للمفضلة" : "Save to wishlist"}
                     >
                       <span className="text-sm">{isFav ? "❤️" : "🤍"}</span>
                     </button>
-                    <div className="absolute top-2.5 left-2.5 bg-[#003580] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                    
+                    <div className="absolute top-3 left-3 bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-sm">
                       {isAr ? v.categoryLabelAr : v.categoryLabelEn}
                     </div>
+
+                    <div className="absolute bottom-3 right-3 text-white text-xs font-bold bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20 flex items-center gap-1.5">
+                      <span>📍 {v.city}</span>
+                      <span className="text-white/50">|</span>
+                      <span>👥 {v.seats} {isAr ? "مقعد" : "seats"}</span>
+                    </div>
                   </div>
 
-                  {/* Middle Column: Details, Specs, Company & Driver */}
-                  <div className="flex-1 flex flex-col justify-between space-y-2">
+                  {/* Main Content Section */}
+                  <div className="flex-1 flex flex-col justify-between space-y-3 md:py-2">
+                    {/* Header */}
                     <div>
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h4 className="text-lg font-black text-[#003580] group-hover:underline">
-                          {v.name}
-                        </h4>
-                        <span className="text-[10px] font-black text-[#003580] bg-[#003580]/10 border border-[#003580]/20 px-2 py-0.5 rounded-md">
-                          🏢 {v.company}
-                        </span>
+                      <div className="text-[10px] font-black text-[#D96B27] bg-orange-50 px-2.5 py-1 rounded-md w-fit mb-2 border border-orange-100 flex items-center gap-1.5">
+                        <span>🏢</span>
+                        <span>{v.company}</span>
                       </div>
-
-                      <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                        <span>📍 {v.city}</span>
-                        <span>·</span>
-                        <span>👥 {v.seats} {isAr ? "مقعد مريح" : "comfortable seats"}</span>
-                        <span>·</span>
-                        <span className="text-emerald-700 font-bold">✓ {isAr ? "فحص دوري معتمد" : "Certified Safety"}</span>
-                      </div>
-
-                      {/* Driver & Company Spec Card */}
-                      <div className="mt-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                        <div className="font-black text-[#0F172A] flex items-center gap-1.5">
-                          <span>🧑‍✈️</span>
-                          <span>{v.driverName}</span>
-                          <span className="text-slate-400 font-normal text-[11px]">({v.driverExperience})</span>
-                        </div>
+                      <h4 className="text-xl font-black text-[#0F172A] group-hover:text-[#D96B27] transition-colors leading-tight">
+                        {v.name}
+                      </h4>
+                      <div className="mt-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md w-fit border border-emerald-100">
+                        ✓ {isAr ? "فحص دوري معتمد ومعايير سلامة عالية" : "Certified Safety & High Standards"}
                       </div>
                     </div>
 
-                    <div className="text-xs text-slate-500 font-bold flex items-center gap-2">
-                      <span>📞 {v.driverPhone}</span>
-                      <span>·</span>
-                      <span className="text-[#003580] font-black">{v.company}</span>
+                    {/* Driver Info */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 w-fit">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-lg">
+                        🧑‍✈️
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-[#0F172A]">{v.driverName}</div>
+                        <div className="text-[10px] font-medium text-slate-500">({v.driverExperience})</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Right Column: Rating & Price & Action Button */}
-                  <div className="md:w-52 flex flex-col justify-between items-end shrink-0 border-t md:border-t-0 md:border-s md:border-slate-100 pt-3 md:pt-0 md:ps-4">
-                    {/* Score Header */}
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <div className="font-black text-xs text-[#0F172A]">{v.ratingWord}</div>
-                        <div className="text-[10px] text-slate-400">{v.reviewsCount} {isAr ? "تقييم" : "reviews"}</div>
-                      </div>
-                      <div className="w-8 h-8 rounded-lg bg-[#003580] text-white font-black text-sm flex items-center justify-center">
-                        {v.rating}
-                      </div>
-                    </div>
-
-                    <div className="text-right my-2">
-                      <div className="text-[10px] text-slate-400 font-bold">
-                        {isAr ? "سعر التأجير اليومي مع السائق" : "Daily Rate with Driver"}
+                  {/* Right Action Section */}
+                  <div className="md:w-48 flex flex-col justify-end items-end shrink-0 border-t md:border-t-0 md:border-s md:border-slate-100 pt-4 md:pt-0 md:ps-5">
+                    <div className="text-right mb-4">
+                      <div className="text-[10px] text-slate-400 font-bold mb-1">
+                        {isAr ? "سعر التأجير اليومي" : "Daily Rate"}
                       </div>
                       <div className="flex items-baseline justify-end gap-1.5">
-                        <span className="text-xs text-red-500 line-through font-bold">
+                        <span className="text-xs text-red-400 line-through font-bold">
                           {v.originalPricePerDay} {isAr ? "د.ل" : "LYD"}
                         </span>
-                        <span className="text-xl font-black text-[#0F172A]">
-                          {v.pricePerDay} <span className="text-xs text-slate-500 font-bold">{isAr ? "د.ل/يوم" : "LYD/day"}</span>
+                        <span className="text-2xl font-black text-[#0F172A]">
+                          {v.pricePerDay}
                         </span>
-                      </div>
-                      <div className="text-[10px] text-emerald-600 font-bold">
-                        ✓ {isAr ? "شامل الوقود والسائق" : "Driver & Fuel Included"}
+                        <span className="text-[10px] text-slate-500 font-bold">
+                          /{isAr ? "يوم" : "day"}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Action Button */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedVehicle(v);
                       }}
-                      className="w-full py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-90 text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95"
                     >
-                      <span>{isAr ? "عرض التفاصيل وطلب المركبة" : "View Details & Hire"}</span>
-                      <span>➔</span>
+                      <span>{isAr ? "عرض التفاصيل" : "View Details"}</span>
+                      <span dir="ltr">➔</span>
                     </button>
                   </div>
                 </article>

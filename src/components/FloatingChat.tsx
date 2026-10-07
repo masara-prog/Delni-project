@@ -397,7 +397,7 @@ export function FloatingChat() {
                 </div>
                 <div className="text-[10px] text-[#526078] font-semibold flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> 
-                  {language === 'ar' ? 'التعرف بالصور وترجمة المصطلحات' : 'Photo Recognition & Translation'}
+                  {language === 'ar' ? 'متصل الآن' : 'Online'}
                 </div>
               </div>
             </div>
@@ -451,7 +451,8 @@ export function FloatingChat() {
             )}
           </div>
 
-          <div className="p-2 bg-white border-t border-[#E6E1D6] flex gap-1.5 overflow-x-auto">
+          {/* Input Box */}
+          <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="p-3 bg-white border-t border-[#E6E1D6] flex gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -459,32 +460,6 @@ export function FloatingChat() {
               accept="image/*"
               className="hidden"
             />
-            {[
-              language === 'ar' ? "📷 التعرف على معلم بالصورة" : "📷 Recognize Landmark",
-              language === 'ar' ? "🗣️ ترجمة مصطلحات ليبية" : "🗣️ Libyan Dialect Help",
-              language === 'ar' ? "☀️ طقس وأوقات الزيارة" : "☀️ Weather & Visit Times",
-              language === 'ar' ? "🚨 بلاغ عاجل للإدارة" : "🚨 Emergency Report",
-            ].map((q) => (
-              <button
-                key={q}
-                onClick={() => {
-                  if (q.includes("التعرف") || q.includes("Recognize")) {
-                    fileInputRef.current?.click();
-                  } else if (q.includes("ترجمة") || q.includes("Dialect")) {
-                    handleSend(language === 'ar' ? "شن معنى شاهي باللوز؟" : "What is the meaning of Libyan Tea with almonds?");
-                  } else {
-                    handleSend(q);
-                  }
-                }}
-                className="whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#FAFAF8] border border-[#E6E1D6] text-[#003580] hover:bg-blue-50 hover:border-blue-300 text-[11px] font-extrabold transition-all shadow-xs"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-
-          {/* Input Box */}
-          <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="p-3 bg-white border-t border-[#E6E1D6] flex gap-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
