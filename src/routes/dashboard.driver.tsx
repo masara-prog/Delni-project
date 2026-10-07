@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
+import type { Driver, Vehicle } from "@/lib/dbSchema";
 
 export const Route = createFileRoute("/dashboard/driver")({
   head: () => ({
@@ -26,6 +27,8 @@ type AssignedDriverTrip = {
   id: string;
   route: string;
   company_name: string;
+  contract_number: string;
+  plate_number: string;
   date: string;
   pickup_time: string;
   pax_count: number;
@@ -38,18 +41,9 @@ function DriverDashboard() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [active, setActive] = useState("overview");
-  const [available, setAvailable] = useState(true);
 
-  const nav: NavItem[] = [
-    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "notifications", label: isAr ? "إشعارات التعيين" : "Assignments", icon: "🔔", badge: 2 },
-    { id: "live_trip", label: isAr ? "متابعة الرحلة الحالية" : "Current Active Trip", icon: "📍" },
-    { id: "vehicle", label: isAr ? "مركبتي المسندة" : "Assigned Vehicle", icon: "🚐" },
-    { id: "profile", label: isAr ? "ملف السائق والرخصة" : "Driver License & Profile", icon: "👤" },
-  ];
-
-  // Driver details state (Data Dictionary: Drivers table)
-  const [driverInfo, setDriverInfo] = useState({
+  // Driver details state according to DelniDB: drivers table
+  const [driverInfo, setDriverInfo] = useState<Driver>({
     driver_license_number: "LB-88291",
     full_name: "علي التارقي",
     phone_number: "0912223344",
@@ -58,8 +52,33 @@ function DriverDashboard() {
     contract_number: "CN-2026-01",
     assigned_vehicle_plate: "طرابلس 4517",
     email: "ali@dalni.ly",
-    employer: "شركة الصحراء للنقل السياحي"
+    account_status: "نشط",
+    operational_status: "متاح",
+    experience_years: 8,
+    company_name: "شركة الصحراء للنقل السياحي",
   });
+
+  // Assigned Vehicle details according to DelniDB: vehicles table
+  const [assignedVehicle, setAssignedVehicle] = useState<Vehicle>({
+    plate_number: "طرابلس 4517",
+    vehicle_type: "هيونداي H1 VIP 2024",
+    seating_capacity: 12,
+    vehicle_status: "جاهزة",
+    insurance_details: "تأمين ركاب ومسافرين رقم INS-44120 ساري حتى يناير 2028",
+    contract_number: "CN-2026-01",
+    daily_rate: 350,
+    category: "VIP فان",
+    vehicle_image: "/assets/ai_city.jpg",
+    insurance_image: "/assets/ai_city.jpg",
+  });
+
+  const nav: NavItem[] = [
+    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
+    { id: "notifications", label: isAr ? "إشعارات التعيين" : "Assignments", icon: "🔔", badge: 2 },
+    { id: "live_trip", label: isAr ? "متابعة الرحلة الحالية" : "Current Active Trip", icon: "📍" },
+    { id: "vehicle", label: isAr ? "مركبتي المسندة" : "Assigned Vehicle", icon: "🚐" },
+    { id: "profile", label: isAr ? "ملف السائق والرخصة" : "Driver License & Profile", icon: "👤" },
+  ];
 
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([
@@ -72,6 +91,8 @@ function DriverDashboard() {
     id: "TRP-101",
     route: "طرابلس ← الخمس (لبدة الكبرى)",
     company_name: "شركة الصحراء للنقل",
+    contract_number: "CN-2026-01",
+    plate_number: "طرابلس 4517",
     date: "اليوم",
     pickup_time: "9:00 ص",
     pax_count: 12,
@@ -79,6 +100,11 @@ function DriverDashboard() {
     current_location: "طرابلس - طريق الشط (مقر الانطلاق)",
     status_stage: "في الانتظار"
   });
+
+  const handleToggleOperationalStatus = () => {
+    const nextStatus = driverInfo.operational_status === "متاح" ? "إجازة" : "متاح";
+    setDriverInfo({ ...driverInfo, operational_status: nextStatus });
+  };
 
   const handleUpdateStatusStage = (newStage: AssignedDriverTrip["status_stage"], newLocation: string) => {
     setActiveTrip({
@@ -91,7 +117,7 @@ function DriverDashboard() {
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    alert("تم حفظ وتحديث البيانات الشخصية ورخصة القيادة بنجاح ✓");
+    alert("تم حفظ وتحديث بيانات السائق والرخصة بنجاح في قاعدة البيانات (DelniDB: drivers) ✓");
   };
 
   return (
@@ -103,15 +129,27 @@ function DriverDashboard() {
               <div>
                 <div className="text-sm opacity-80">صباح الخير 👋</div>
                 <h1 className="text-2xl md:text-3xl font-black mt-1">{driverInfo.full_name}</h1>
-                <p className="mt-1 text-sm text-white/90 font-semibold">{driverInfo.employer} · مركبة {driverInfo.assigned_vehicle_plate}</p>
+                <p className="mt-1 text-sm text-white/90 font-semibold">
+                  {driverInfo.company_name} · عقد {driverInfo.contract_number} · مركبة {driverInfo.assigned_vehicle_plate}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-bold">
+                    حالة الحساب: {driverInfo.account_status}
+                  </span>
+                  <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-bold">
+                    الخبرة: {driverInfo.experience_years} سنوات
+                  </span>
+                </div>
               </div>
               <label className="flex items-center gap-3 bg-white/15 backdrop-blur px-4 h-12 rounded-xl cursor-pointer">
-                <span className="text-sm font-black">{available ? "متاح للقيادة" : "في إجازة"}</span>
+                <span className="text-sm font-black">
+                  {driverInfo.operational_status === "متاح" ? "متاح للقيادة" : "في إجازة"}
+                </span>
                 <button
-                  onClick={() => setAvailable(!available)}
-                  className={`w-12 h-6 rounded-full relative transition ${available ? "bg-emerald-400" : "bg-white/30"}`}
+                  onClick={handleToggleOperationalStatus}
+                  className={`w-12 h-6 rounded-full relative transition ${driverInfo.operational_status === "متاح" ? "bg-emerald-400" : "bg-white/30"}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition ${available ? "right-0.5" : "right-6"}`} />
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition ${driverInfo.operational_status === "متاح" ? "right-0.5" : "right-6"}`} />
                 </button>
               </label>
             </div>
@@ -119,9 +157,9 @@ function DriverDashboard() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="إشعارات التعيين" value={notifications.filter(n => !n.is_read).length} icon="🔔" tone="sea" />
-            <StatCard label="رحلة اليوم الحالية" value={activeTrip.status_stage} icon="🧭" tone="green" />
-            <StatCard label="مسافة هذا الشهر" value="1,420 كم" icon="🛣️" tone="clay" />
-            <StatCard label="تقييم القيادة" value="4.8 ⭐" icon="⭐" tone="sun" />
+            <StatCard label="حالة رحلة اليوم" value={activeTrip.status_stage} icon="🧭" tone="green" />
+            <StatCard label="المركبة المسندة" value={driverInfo.assigned_vehicle_plate || "غير محدد"} icon="🚐" tone="clay" />
+            <StatCard label="حالة الحساب" value={driverInfo.account_status} icon="🛡️" tone="sun" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
@@ -192,14 +230,14 @@ function DriverDashboard() {
             <div className="p-6 rounded-3xl bg-gradient-sea text-white space-y-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-xs opacity-80">كود المهمة: {activeTrip.id} · {activeTrip.company_name}</div>
+                  <div className="text-xs opacity-80">كود المهمة: {activeTrip.id} · {activeTrip.company_name} (عقد {activeTrip.contract_number})</div>
                   <h2 className="text-2xl font-black mt-1">{activeTrip.route}</h2>
                 </div>
                 <Badge tone="green">{activeTrip.status_stage}</Badge>
               </div>
               <div className="p-4 rounded-xl bg-white/10 backdrop-blur text-sm">
                 <div>📍 الموقع المسجل حالياً: <span className="font-bold">{activeTrip.current_location}</span></div>
-                <div className="mt-1">🕘 وقت الانطلاق: {activeTrip.pickup_time} · 👥 الركاب: {activeTrip.pax_count} شخص</div>
+                <div className="mt-1">🕘 وقت الانطلاق: {activeTrip.pickup_time} · 👥 الركاب: {activeTrip.pax_count} شخص · 🚐 اللوحة: {activeTrip.plate_number}</div>
               </div>
             </div>
 
@@ -233,27 +271,49 @@ function DriverDashboard() {
         </SectionCard>
       )}
 
-      {/* Vehicle Info */}
+      {/* Vehicle Info according to DelniDB: vehicles table */}
       {active === "vehicle" && (
-        <SectionCard title="تفاصيل المركبة واللوحة المسندة للسائق">
-          <div className="max-w-xl space-y-4 text-right">
-            <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-2">
-              <div className="text-xs text-muted-foreground">شركة النقل التابع لها:</div>
-              <div className="font-black text-foreground text-base">{driverInfo.employer}</div>
-              <div className="text-xs text-muted-foreground">رقم العقد: {driverInfo.contract_number}</div>
+        <SectionCard title="تفاصيل المركبة واللوحة المسندة (DelniDB: vehicles)">
+          <div className="max-w-2xl space-y-4 text-right">
+            <div className="p-4 rounded-2xl border border-border bg-muted/20 flex justify-between items-center">
+              <div>
+                <div className="text-xs text-muted-foreground">شركة النقل التابع لها:</div>
+                <div className="font-black text-foreground text-base">{driverInfo.company_name}</div>
+                <div className="text-xs text-muted-foreground">رقم عقد الشركة: {driverInfo.contract_number}</div>
+              </div>
+              <Badge tone="sea">{assignedVehicle.vehicle_status}</Badge>
             </div>
 
-            <div className="p-4 rounded-xl border border-border bg-white space-y-2">
-              <div className="text-xs text-muted-foreground">رقم اللوحة المعدنية المسندة:</div>
-              <div className="font-black text-xl text-primary font-mono">{driverInfo.assigned_vehicle_plate}</div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
+                <div className="text-xs text-muted-foreground">رقم اللوحة المعدنية المسندة:</div>
+                <div className="font-black text-xl text-primary font-mono">{driverInfo.assigned_vehicle_plate}</div>
+              </div>
+              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
+                <div className="text-xs text-muted-foreground">نوع وطراز المركبة:</div>
+                <div className="font-black text-base text-foreground">{assignedVehicle.vehicle_type}</div>
+              </div>
+              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
+                <div className="text-xs text-muted-foreground">سعة المقاعد:</div>
+                <div className="font-black text-base text-foreground">{assignedVehicle.seating_capacity} راكب</div>
+              </div>
+              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
+                <div className="text-xs text-muted-foreground">الفئة والسعر اليومي:</div>
+                <div className="font-black text-base text-foreground">{assignedVehicle.category} · {assignedVehicle.daily_rate} د.ل/يوم</div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
+              <div className="text-xs text-muted-foreground font-bold">بيانات وثيقة التأمين:</div>
+              <div className="text-xs text-slate-700 font-semibold">{assignedVehicle.insurance_details}</div>
             </div>
           </div>
         </SectionCard>
       )}
 
-      {/* Driver Profile */}
+      {/* Driver Profile according to DelniDB: drivers table */}
       {active === "profile" && (
-        <SectionCard title="تعديل الملف الشخصي وبيانات رخصة القيادة">
+        <SectionCard title="تعديل الملف الشخصي وبيانات رخصة القيادة (DelniDB: drivers)">
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
             <Field 
               label="الاسم الكامل للسائق" 

@@ -1316,7 +1316,6 @@ export function PrivateTripModal({
     });
   };
 
-  // Filtered Tour Guides
   const availableGuides = useMemo(() => {
     if (guideCityFilter === "all") return TOUR_GUIDES_DATA;
     return TOUR_GUIDES_DATA.filter((g) => g.primaryRegion.includes(guideCityFilter) || g.operatingRegions.some(r => r.includes(guideCityFilter)));
@@ -1325,7 +1324,7 @@ export function PrivateTripModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedLandmarkIds.length === 0) {
-      alert(isAr ? "يرجى اختيار معلم سياحي واحد على الأقل من قائمة معالم المنصة لتحديد مسار الرحلة" : "Please select at least one platform landmark");
+      alert(isAr ? "يرجى اختيار معلم سياحي واحد على الأقل" : "Please select at least one landmark");
       return;
     }
     if (!phone.match(/^09\d{8}$/)) {
@@ -1357,7 +1356,7 @@ export function PrivateTripModal({
       size="xl"
     >
       {step === "form" ? (
-        <div dir={dir} className="p-4 sm:p-6 space-y-6">
+        <div className="p-6 sm:p-8 space-y-6" dir={dir}>
           {/* Header Banner */}
           <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-700/50 text-white shadow-lg">
             <div className="absolute inset-0 opacity-30 mix-blend-overlay">

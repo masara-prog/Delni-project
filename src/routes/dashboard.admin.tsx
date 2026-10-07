@@ -2,7 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import type {
+  TransportationCompany,
+  Driver as DbDriver,
+  TourGuide as DbTourGuide,
+  Vehicle as DbVehicle,
+  DailyTrip as DbDailyTrip,
+  WeeklyTrip as DbWeeklyTrip,
+  PrivateTrip as DbPrivateTrip,
+  Hotel as DbHotel,
+  RestaurantCafe as DbRestaurantCafe,
+  PlaceTourist as DbPlaceTourist,
+  OfferDailyTrip,
+  OfferWeeklyTrip,
+  OfferFacility,
+  BookingDaily,
+  BookingWeekly,
+} from "@/lib/dbSchema";
 
 export const Route = createFileRoute("/dashboard/admin")({
   head: () => ({
@@ -29,70 +46,492 @@ type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة �
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
 type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر"; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
-type DailyOffer = { id: string; title_offer: string; description: string; percent_discount: number; url_image_offer?: string; daily_trip_id: string; date_start: string; date_end: string };
-type WeeklyOffer = { id: string; offer_title: string; description: string; percent_discount: number; offer_image_url?: string; weekly_trip_id: string; date_start: string; date_end: string };
-type FacilityOffer = { id: string; title_offer: string; description: string; percent_discount: number; offer_image_url?: string; facility_id: string; date_start: string; date_end: string };
+
+type DailyOffer = OfferDailyTrip & {
+  id?: string;
+  title_offer?: string;
+  url_image_offer?: string;
+  date_start?: string;
+  date_end?: string;
+};
+
+type WeeklyOffer = OfferWeeklyTrip & {
+  id?: string;
+  date_start?: string;
+  date_end?: string;
+  percent_discount?: number;
+};
+
+type FacilityOffer = OfferFacility & {
+  id?: string;
+  title_offer?: string;
+  date_start?: string;
+  date_end?: string;
+  percent_discount?: number;
+};
 
 /* ============ MAIN COMPONENT ============ */
 function AdminDashboard() {
   const [active, setActive] = useState("overview");
 
-  /* ---- STATE DATA ---- */
+  /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
   const [companies, setCompanies] = useState<Company[]>([
-    { id: "COM-001", contract_number: "CN-2026-01", name: "شركة الصحراء للنقل", phone: "0911234567", address: "طرابلس - طريق الشط", email: "sahara@dalni.ly", pass: "123456", total_vehicles: 12, available_cars: 8, contract_date: "2025-01-10", status: "موثق" },
-    { id: "COM-002", contract_number: "CN-2026-02", name: "شركة ليبيا تور للنقل", phone: "0929876543", address: "بنغازي - شارع دبي", email: "lytour@dalni.ly", pass: "abcdef", total_vehicles: 8, available_cars: 5, contract_date: "2025-03-15", status: "موثق" },
-    { id: "COM-003", contract_number: "CN-2026-03", name: "شركة الوديان للنقل", phone: "0914448888", address: "طرابلس - قرقارش", email: "wedan@dalni.ly", pass: "wedan2026", total_vehicles: 5, available_cars: 3, contract_date: "2026-06-01", status: "بانتظار" },
+    {
+      id: "COM-001",
+      contract_number: "CN-2026-01",
+      company_name: "شركة الصحراء للنقل",
+      name: "شركة الصحراء للنقل",
+      phone_number: "0911234567",
+      phone: "0911234567",
+      address: "طرابلس - طريق الشط",
+      city: "طرابلس",
+      email: "sahara@dalni.ly",
+      password: "password123",
+      pass: "password123",
+      total_vehicles: 12,
+      available_vehicles: 8,
+      available_cars: 8,
+      contract_date: "2025-01-10",
+      contract_start_date: "2025-01-10",
+      contract_end_date: "2027-01-10",
+      verification_status: "موثق",
+      status: "موثق",
+    },
+    {
+      id: "COM-002",
+      contract_number: "CN-2026-02",
+      company_name: "شركة ليبيا تور للنقل",
+      name: "شركة ليبيا تور للنقل",
+      phone_number: "0929876543",
+      phone: "0929876543",
+      address: "بنغازي - شارع دبي",
+      city: "بنغازي",
+      email: "lytour@dalni.ly",
+      password: "password456",
+      pass: "password456",
+      total_vehicles: 8,
+      available_vehicles: 5,
+      available_cars: 5,
+      contract_date: "2025-03-15",
+      contract_start_date: "2025-03-15",
+      contract_end_date: "2027-03-15",
+      verification_status: "موثق",
+      status: "موثق",
+    },
+    {
+      id: "COM-003",
+      contract_number: "CN-2026-03",
+      company_name: "شركة الوديان للنقل",
+      name: "شركة الوديان للنقل",
+      phone_number: "0914448888",
+      phone: "0914448888",
+      address: "طرابلس - قرقارش",
+      city: "طرابلس",
+      email: "wedan@dalni.ly",
+      password: "password789",
+      pass: "password789",
+      total_vehicles: 5,
+      available_vehicles: 3,
+      available_cars: 3,
+      contract_date: "2026-06-01",
+      contract_start_date: "2026-06-01",
+      contract_end_date: "2028-06-01",
+      verification_status: "بانتظار",
+      status: "بانتظار",
+    },
   ]);
 
   const [drivers, setDrivers] = useState<Driver[]>([
-    { driver_license_number: "LB-88291", full_name: "علي التارقي", phone_number: "0912223344", national_id_or_passport: "119900223344", license_date_valid: "2029-12-10", contract_number: "CN-2026-01 (شركة الصحراء)", assigned_vehicle_plate: "طرابلس 4517", email: "ali@dalni.ly", account_status: "نشط" },
-    { driver_license_number: "LB-77452", full_name: "مفتاح الفزاني", phone_number: "0923334455", national_id_or_passport: "119850334455", license_date_valid: "2028-05-14", contract_number: "CN-2026-01 (شركة الصحراء)", assigned_vehicle_plate: "طرابلس 8291", email: "miftah@dalni.ly", account_status: "نشط" },
-    { driver_license_number: "LB-99381", full_name: "أنور الترهوني", phone_number: "0915556677", national_id_or_passport: "119920112233", license_date_valid: "2030-08-22", contract_number: "CN-2026-02 (شركة ليبيا تور)", assigned_vehicle_plate: "بنغازي 3382", email: "anwar@dalni.ly", account_status: "نشط" },
+    {
+      driver_license_number: "LB-88291",
+      full_name: "علي التارقي",
+      phone_number: "0912223344",
+      national_id_or_passport: "119900223344",
+      license_date_valid: "2029-12-10",
+      contract_number: "CN-2026-01",
+      assigned_vehicle_plate: "طرابلس 4517",
+      email: "ali@dalni.ly",
+      account_status: "نشط",
+      operational_status: "متاح",
+      experience_years: 8,
+      company_name: "شركة الصحراء للنقل",
+    },
+    {
+      driver_license_number: "LB-77452",
+      full_name: "مفتاح الفزاني",
+      phone_number: "0923334455",
+      national_id_or_passport: "119850334455",
+      license_date_valid: "2028-05-14",
+      contract_number: "CN-2026-01",
+      assigned_vehicle_plate: "طرابلس 8291",
+      email: "miftah@dalni.ly",
+      account_status: "نشط",
+      operational_status: "في رحلة",
+      experience_years: 6,
+      company_name: "شركة الصحراء للنقل",
+    },
+    {
+      driver_license_number: "LB-99381",
+      full_name: "أنور الترهوني",
+      phone_number: "0915556677",
+      national_id_or_passport: "119920112233",
+      license_date_valid: "2030-08-22",
+      contract_number: "CN-2026-02",
+      assigned_vehicle_plate: "بنغازي 3382",
+      email: "anwar@dalni.ly",
+      account_status: "نشط",
+      operational_status: "متاح",
+      experience_years: 9,
+      company_name: "شركة ليبيا تور للنقل",
+    },
   ]);
 
   const [guides, setGuides] = useState<Guide[]>([
-    { license_number: "G-9901", full_name: "سالم القذافي", phone_number: "0917778888", years_of_experience: 7, certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات هلال أحمر", digital_certificate_file: "https://example.com/certificates/salem_license.pdf", bio: "متخصص في الجولات الأثرية بالمنطقة الغربية والصحراء.", speaks_english: true, speaks_french: false, speaks_italian: true, verification_status: "موثق", email: "salem@dalni.ly", daily_rate: 150 },
-    { license_number: "G-9902", full_name: "خالد بن يونس", phone_number: "0921112233", years_of_experience: 4, certificate: "شهادة بكالوريوس تاريخ وآثار - جامعة بنغازي، رخصة إرشاد محلي", digital_certificate_file: "https://example.com/certificates/khaled_license.pdf", bio: "خبير معالم شحات وسوسة والجبل الأخضر.", speaks_english: true, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "khaled@dalni.ly", daily_rate: 140 },
-    { license_number: "G-9903", full_name: "سعاد الفيتوري", phone_number: "0915554433", years_of_experience: 2, certificate: "شهادة دورات إرشاد سياحي غدامس", digital_certificate_file: "https://example.com/certificates/suad_license.pdf", bio: "مرشدة متخصصة في التراث الشعبي والواحات.", speaks_english: false, speaks_french: true, speaks_italian: false, verification_status: "بانتظار التوثيق", email: "suad@dalni.ly", daily_rate: 120 },
+    {
+      license_number: "G-9901",
+      full_name: "سالم القذافي",
+      phone_number: "0917778888",
+      years_of_experience: 7,
+      certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات هلال أحمر",
+      digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
+      bio: "متخصص في الجولات الأثرية بالمنطقة الغربية والصحراء.",
+      speaks_english: true,
+      speaks_french: false,
+      speaks_italian: true,
+      verification_status: "موثق",
+      email: "salem@dalni.ly",
+      price_per_day: 150,
+      daily_rate: 150,
+      primaryRegion: "leptis",
+      operating_regions: "leptis,tripoli,sabratha",
+      working_days: "الأحد,الأربعاء,الجمعة",
+      total_tours_completed: 48,
+    },
+    {
+      license_number: "G-9902",
+      full_name: "خالد بن يونس",
+      phone_number: "0921112233",
+      years_of_experience: 4,
+      certificate: "شهادة بكالوريوس تاريخ وآثار - جامعة بنغازي، رخصة إرشاد محلي",
+      digital_certificate_file: "https://example.com/certificates/khaled_license.pdf",
+      bio: "خبير معالم شحات وسوسة والجبل الأخضر.",
+      speaks_english: true,
+      speaks_french: true,
+      speaks_italian: false,
+      verification_status: "بانتظار التوثيق",
+      email: "khaled@dalni.ly",
+      price_per_day: 140,
+      daily_rate: 140,
+      primaryRegion: "cyrene",
+      operating_regions: "cyrene,benghazi",
+      working_days: "السبت,الثلاثاء,الخميس",
+      total_tours_completed: 25,
+    },
+    {
+      license_number: "G-9903",
+      full_name: "سعاد الفيتوري",
+      phone_number: "0915554433",
+      years_of_experience: 2,
+      certificate: "شهادة دورات إرشاد سياحي غدامس",
+      digital_certificate_file: "https://example.com/certificates/suad_license.pdf",
+      bio: "مرشدة متخصصة في التراث الشعبي والواحات.",
+      speaks_english: false,
+      speaks_french: true,
+      speaks_italian: false,
+      verification_status: "بانتظار التوثيق",
+      email: "suad@dalni.ly",
+      price_per_day: 120,
+      daily_rate: 120,
+      primaryRegion: "ghadames",
+      operating_regions: "ghadames",
+      working_days: "الأحد,الاثنين",
+      total_tours_completed: 12,
+    },
   ]);
 
-  /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES */
+  /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
   const [vehicles] = useState<Vehicle[]>([
-    { plate_number: "طرابلس 4517", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "حافلة سياحية Mercedes Benz 30 مقعد", capacity: 30, daily_rate: 650, status: "جاهزة" },
-    { plate_number: "طرابلس 8291", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "ميني باص Toyota 15 مقعد", capacity: 15, daily_rate: 450, status: "في رحلة" },
-    { plate_number: "بنغازي 3382", company_id: "CN-2026-02", company_name: "شركة ليبيا تور", vehicle_type: "حافلة فاخرة Scania 45 مقعد", capacity: 45, daily_rate: 750, status: "جاهزة" },
-    { plate_number: "طرابلس 1122", company_id: "CN-2026-01", company_name: "شركة الصحراء للنقل", vehicle_type: "سيارة جيب 4×4 Land Cruiser", capacity: 7, daily_rate: 350, status: "جاهزة" },
-    { plate_number: "سبها 9944", company_id: "CN-2026-03", company_name: "شركة الوديان للنقل", vehicle_type: "حافلة صغيرة Hyundai 20 مقعد", capacity: 20, daily_rate: 400, status: "جاهزة" },
+    {
+      plate_number: "طرابلس 4517",
+      contract_number: "CN-2026-01",
+      company_id: "CN-2026-01",
+      company_name: "شركة الصحراء للنقل",
+      vehicle_type: "حافلة سياحية Mercedes Benz 50 مقعد",
+      seating_capacity: 50,
+      capacity: 50,
+      daily_rate: 650,
+      vehicle_status: "جاهزة",
+      status: "جاهزة",
+    },
+    {
+      plate_number: "طرابلس 8291",
+      contract_number: "CN-2026-01",
+      company_id: "CN-2026-01",
+      company_name: "شركة الصحراء للنقل",
+      vehicle_type: "ميني باص Toyota 25 مقعد",
+      seating_capacity: 25,
+      capacity: 25,
+      daily_rate: 450,
+      vehicle_status: "في رحلة",
+      status: "في رحلة",
+    },
+    {
+      plate_number: "بنغازي 3382",
+      contract_number: "CN-2026-02",
+      company_id: "CN-2026-02",
+      company_name: "شركة ليبيا تور للنقل",
+      vehicle_type: "حافلة فاخرة Scania 50 مقعد",
+      seating_capacity: 50,
+      capacity: 50,
+      daily_rate: 750,
+      vehicle_status: "جاهزة",
+      status: "جاهزة",
+    },
+    {
+      plate_number: "طرابلس 1122",
+      contract_number: "CN-2026-01",
+      company_id: "CN-2026-01",
+      company_name: "شركة الصحراء للنقل",
+      vehicle_type: "سيارة دفع رباعي Toyota Land Cruiser",
+      seating_capacity: 6,
+      capacity: 6,
+      daily_rate: 350,
+      vehicle_status: "جاهزة",
+      status: "جاهزة",
+    },
+    {
+      plate_number: "سبها 9944",
+      contract_number: "CN-2026-03",
+      company_id: "CN-2026-03",
+      company_name: "شركة الوديان للنقل",
+      vehicle_type: "حافلة متوسطة Hyundai 25 مقعد",
+      seating_capacity: 25,
+      capacity: 25,
+      daily_rate: 400,
+      vehicle_status: "جاهزة",
+      status: "جاهزة",
+    },
   ]);
 
+  /* DelniDB daily_trips */
   const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([
-    { id: "DT-101", title: "جولة لبدة الكبرى اليومية", description: "زيارة الآثار الرومانية والمتحف في الخمس", price_per_seat: 120, max_capacity: 50, available_seats: 38, bookings_count: 148, rating_avg: 4.9, guide_license: "G-9901", vehicle_plates: ["طرابلس 4517"], is_active: true, photo: "/assets/ai_ruins.jpg", recurring_days: ["الأحد", "الأربعاء"], bus_capacity: 50, destination: "لبدة الكبرى" },
-    { id: "DT-102", title: "رحلة صبراتة الأثرية", description: "استكشاف المسرح الروماني والشاطئ", price_per_seat: 100, max_capacity: 25, available_seats: 17, bookings_count: 96, rating_avg: 4.7, vehicle_plates: ["طرابلس 8291"], is_active: true, photo: "", recurring_days: ["السبت", "الثلاثاء"], bus_capacity: 25, destination: "صبراتة" },
+    {
+      daily_trip_id: "DT-101",
+      id: "DT-101",
+      trip_title: "جولة لبدة الكبرى اليومية",
+      title: "جولة لبدة الكبرى اليومية",
+      description: "زيارة الآثار الرومانية والمتحف في الخمس",
+      price_per_seat: 120,
+      max_capacity: 50,
+      available_seats: 38,
+      bookings_count: 148,
+      rating_avg: 4.9,
+      guide_license_number: "G-9901",
+      guide_license: "G-9901",
+      vehicle_plates: ["طرابلس 4517"],
+      is_active: true,
+      photo: "/assets/ai_ruins.jpg",
+      departure_city: "طرابلس",
+      destination_city: "الخمس",
+      destination: "لبدة الكبرى",
+      recurring_days: "الأحد,الأربعاء",
+      bus_capacity: 50,
+    },
+    {
+      daily_trip_id: "DT-102",
+      id: "DT-102",
+      trip_title: "رحلة صبراتة الأثرية",
+      title: "رحلة صبراتة الأثرية",
+      description: "استكشاف المسرح الروماني والشاطئ",
+      price_per_seat: 100,
+      max_capacity: 25,
+      available_seats: 17,
+      bookings_count: 96,
+      rating_avg: 4.7,
+      guide_license_number: "G-9901",
+      guide_license: "G-9901",
+      vehicle_plates: ["طرابلس 8291"],
+      is_active: true,
+      photo: "",
+      departure_city: "طرابلس",
+      destination_city: "صبراتة",
+      destination: "صبراتة",
+      recurring_days: "السبت,الثلاثاء",
+      bus_capacity: 25,
+    },
   ]);
 
+  /* DelniDB weekly_trips */
   const [weeklyTrips, setWeeklyTrips] = useState<WeeklyTrip[]>([
-    { id: "WT-201", title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)", start_date: "2026-08-01", end_date: "2026-08-07", seat_per_price: 1850, max_capacity: 25, available_seats: 12, bookings_count: 210, rating_avg: 4.95, guide_license: "G-9901", vehicle_plates: ["طرابلس 8291"], is_active: true, photo: "/assets/ai_ghadames.jpg", weekly_day: "الجمعة", bus_capacity: 25, destination: "أوباري" },
-    { id: "WT-202", title: "جولة الواحات وغدامس التراثية (4 أيام)", start_date: "2026-08-10", end_date: "2026-08-14", seat_per_price: 1400, max_capacity: 50, available_seats: 26, bookings_count: 134, rating_avg: 4.8, vehicle_plates: ["بنغازي 3382"], is_active: true, photo: "/assets/ai_ghadames.jpg", weekly_day: "الخميس", bus_capacity: 50, destination: "غدامس" },
+    {
+      weekly_trip_id: "WT-201",
+      id: "WT-201",
+      trip_title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)",
+      title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)",
+      start_date: "2026-08-01",
+      end_date: "2026-08-07",
+      seat_per_price: 1850,
+      max_capacity: 25,
+      available_seats: 12,
+      bookings_count: 210,
+      rating_avg: 4.95,
+      trip_description: "استكشاف بحيرات أم الماء وقبرعون وتجربة التخييم الليلي",
+      guide_license_number: "G-9901",
+      guide_license: "G-9901",
+      vehicle_plates: ["طرابلس 8291"],
+      is_active: true,
+      photo: "/assets/ai_ghadames.jpg",
+      departure_city: "طرابلس",
+      destination_region: "أوباري",
+      destination: "أوباري",
+      weekly_day: "الجمعة",
+      bus_capacity: 25,
+    },
+    {
+      weekly_trip_id: "WT-202",
+      id: "WT-202",
+      trip_title: "جولة الواحات وغدامس التراثية (4 أيام)",
+      title: "جولة الواحات وغدامس التراثية (4 أيام)",
+      start_date: "2026-08-10",
+      end_date: "2026-08-14",
+      seat_per_price: 1400,
+      max_capacity: 50,
+      available_seats: 26,
+      bookings_count: 134,
+      rating_avg: 4.8,
+      trip_description: "زيارة المدينة القديمة في غدامس والمنازل التقليدية والواحة",
+      guide_license_number: "G-9903",
+      guide_license: "G-9903",
+      vehicle_plates: ["بنغازي 3382"],
+      is_active: true,
+      photo: "/assets/ai_ghadames.jpg",
+      departure_city: "طرابلس",
+      destination_region: "غدامس",
+      destination: "غدامس",
+      weekly_day: "الخميس",
+      bus_capacity: 50,
+    },
   ]);
 
+  /* DelniDB private_trips */
   const [privateTrips, setPrivateTrips] = useState<PrivateTripRequest[]>([
-    { private_trip_id: "PT-501", customer_name: "عائلة طارق بن عيسى", customer_phone: "0918887766", customer_description: "طلب رحلة خاصة لكبار الشخصيات إلى شحات ورأس الهلال مع إقامة في فنادق 5 نجوم", preferred_start_date: "2026-08-05", duration_days: 5, number_of_companions: 6, status_order: "قيد الدراسة" },
-    { private_trip_id: "PT-502", customer_name: "مجموعة سياح إيطاليين", customer_phone: "+39 320 112233", customer_description: "جولة تصوير صحراوي خاصة ببحيرات أوباري والجبال", preferred_start_date: "2026-08-12", duration_days: 7, number_of_companions: 4, status_order: "مؤكدة", quoted_price: 6500, admin_itinerary_plan: "اليوم 1: طرابلس-سبها، اليوم 2-5: البحيرات والسفاري، اليوم 6-7: العودة", assigned_guide: "G-9901", assigned_vehicle: "طرابلس 8291" },
+    {
+      private_trip_id: "PT-501",
+      customer_name: "عائلة طارق بن عيسى",
+      customer_phone: "0918887766",
+      customer_description: "طلب رحلة خاصة لكبار الشخصيات إلى شحات ورأس الهلال مع إقامة في فنادق 5 نجوم",
+      preferred_start_date: "2026-08-05",
+      duration_days: 5,
+      number_of_companions: 6,
+      status_order: "قيد الدراسة",
+    },
+    {
+      private_trip_id: "PT-502",
+      customer_name: "مجموعة سياح إيطاليين",
+      customer_phone: "+39 320 112233",
+      customer_description: "جولة تصوير صحراوي خاصة ببحيرات أوباري والجبال",
+      preferred_start_date: "2026-08-12",
+      duration_days: 7,
+      number_of_companions: 4,
+      status_order: "مؤكدة",
+      quoted_price: 6500,
+      admin_itinerary_plan: "اليوم 1: طرابلس-سبها، اليوم 2-5: البحيرات والسفاري، اليوم 6-7: العودة",
+      guide_license_number: "G-9901",
+      assigned_guide: "G-9901",
+      assigned_guide_license: "G-9901",
+      assigned_vehicle: "طرابلس 8291",
+      assigned_vehicle_plate: "طرابلس 8291",
+    },
   ]);
 
+  /* DelniDB bookings_daily & bookings_weekly */
+  const [dailyBookings, setDailyBookings] = useState<BookingDaily[]>([
+    {
+      booking_daily_id: "BKD-9001",
+      tourist_id: "T-1001",
+      daily_trip_id: "DT-101",
+      booking_date: "2026-08-01 10:00:00",
+      number_of_seats: 2,
+      total_price: 240,
+      booking_status: "مؤكدة",
+      payment_status: "paid",
+      attended: true,
+      passengers_names: "محمد سالم، مروان سالم",
+    },
+    {
+      booking_daily_id: "BKD-9002",
+      tourist_id: "T-1002",
+      daily_trip_id: "DT-102",
+      booking_date: "2026-08-02 14:30:00",
+      number_of_seats: 1,
+      total_price: 100,
+      booking_status: "بانتظار التأكيد",
+      payment_status: "unpaid",
+      attended: false,
+      passengers_names: "أحمد بن عثمان",
+    },
+  ]);
+
+  const [weeklyBookings, setWeeklyBookings] = useState<BookingWeekly[]>([
+    {
+      booking_weekly_id: "BKW-4001",
+      tourist_id: "T-1001",
+      weekly_trip_id: "WT-201",
+      booking_date: "2026-08-01 11:15:00",
+      number_of_seats: 2,
+      total_price: 3700,
+      booking_status: "مؤكدة",
+      payment_status: "paid",
+      attended: false,
+      passengers_names: "محمد سالم، عائشة سالم",
+    },
+  ]);
+
+  /* DelniDB hotels */
   const [hotels, setHotels] = useState<Hotel[]>([
     { id: "H-01", name: "فندق الفندق الكبير طرابلس", city: "طرابلس", address: "شارع الفتح - وسط المدينة", phone: "0213334455", stars: 5, bookings_count: 312, rating_avg: 4.85, partnership_status: "نشط", hotel_photo_1: "/assets/ai_city.jpg", hotel_photo_2: "/assets/ai_city.jpg", hotel_photo_3: "/assets/ai_city.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg", description: "فندق 5 نجوم فاخر مطل على الشاطئ ومحاط بالمعالم الأثرية والمدينة القديمة، يضم أجنحة ملكية ومطاعم متعددة.", google_maps_url: "https://maps.google.com/?q=32.897,13.181", working_hours: "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)" },
     { id: "H-02", name: "فندق عين الفرس غدامس", city: "غدامس", address: "وسط غدامس القديمة", phone: "0472221100", stars: 4, bookings_count: 184, rating_avg: 4.75, partnership_status: "نشط", hotel_photo_1: "/assets/ai_ghadames.jpg", hotel_photo_2: "/assets/ai_ghadames.jpg", hotel_photo_3: "/assets/ai_ghadames.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg", description: "فندق تراثي صحراوي مميز بمدينة غدامس القديمة يمتزج مع الطبيعة المعمارية التقليدية للواحة.", google_maps_url: "https://maps.google.com/?q=30.133,9.500", working_hours: "24 ساعة (استقبال متاح طوال اليوم)" },
   ]);
 
+  /* DelniDB restaurants_cafes */
   const [restaurants, setRestaurants] = useState<Restaurant[]>([
     { id: "R-01", name: "مطعم السراياء التراثي", type: "مأكولات شعبية ليبية", city: "طرابلس", address: "المدينة القديمة - زنقة المفتي", phone: "0919991122", rating_avg: 4.9, facility_image_1: "/assets/ai_ruins.jpg", facility_image_2: "/assets/ai_ruins.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg", description: "أشهر مطعم للمأكولات الشعبية الليبية في قلب طرابلس القديمة (كسكسي، بازين، رشتة، شربة طرابلسية).", google_maps_url: "https://maps.google.com/?q=32.895,13.180", working_hours: "09:00 صباحاً — 12:00 ليلاً" },
     { id: "R-02", name: "مقهى ومطعم النخيل الصحراوي", type: "مشويات ومشروبات", city: "سبها", address: "طريق المطار", phone: "0928883344", rating_avg: 4.65, facility_image_1: "/assets/ai_food.jpg", facility_image_2: "/assets/ai_city.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg", description: "مقهى ومطعم عائلي مميز بوجبات المشويات والشاي الصحراوي في أجواء واحات سبها الساحرة.", google_maps_url: "https://maps.google.com/?q=27.037,14.428", working_hours: "10:00 صباحاً — 01:00 فجراً" },
   ]);
 
+  /* DelniDB places_tourist */
   const [attractions, setAttractions] = useState<Attraction[]>([
-    { id: "A-01", name: "لبدة الكبرى (Leptis Magna)", city: "الخمس", category: "آثار رومانية عالمية", description: "واحدة من أروع وأكمل المدن الرومانية في حوض المتوسط.", place_image: "/assets/ai_ruins.jpg", visitors_count: 850, latitude: 32.6381, longitude: 14.2936, google_maps_url: "https://maps.google.com/?q=32.6381,14.2936" },
-    { id: "A-02", name: "بحيرة أم الماء - أوباري", city: "أوباري", category: "طبيعة وصحراء", description: "بحيرة مالحة ساحرة محاطة بالكثبان الرملية العالية والنخيل.", place_image: "/assets/ai_desert.jpg", visitors_count: 620, latitude: 26.5677, longitude: 12.8791, google_maps_url: "https://maps.google.com/?q=26.5677,12.8791" },
+    {
+      place_id: "A-01",
+      id: "A-01",
+      place_name: "لبدة الكبرى (Leptis Magna)",
+      name: "لبدة الكبرى (Leptis Magna)",
+      city: "الخمس",
+      category: "آثار رومانية عالمية",
+      description: "واحدة من أروع وأكمل المدن الرومانية في حوض المتوسط.",
+      place_image: "/assets/ai_ruins.jpg",
+      visitors_count: 850,
+      latitude: 32.6381,
+      longitude: 14.2936,
+      google_maps_url: "https://maps.google.com/?q=32.6381,14.2936",
+      is_unesco: true,
+      unesco_year: 1982,
+    },
+    {
+      place_id: "A-02",
+      id: "A-02",
+      place_name: "بحيرة أم الماء - أوباري",
+      name: "بحيرة أم الماء - أوباري",
+      city: "أوباري",
+      category: "طبيعة وصحراء",
+      description: "بحيرة مالحة ساحرة محاطة بالكثبان الرملية العالية والنخيل.",
+      place_image: "/assets/ai_desert.jpg",
+      visitors_count: 620,
+      latitude: 26.5677,
+      longitude: 12.8791,
+      google_maps_url: "https://maps.google.com/?q=26.5677,12.8791",
+      is_unesco: false,
+    },
   ]);
 
   const [reviews, setReviews] = useState<ItemReview[]>([
@@ -128,15 +567,59 @@ function AdminDashboard() {
   const [activeChatId, setActiveChatId] = useState<string | null>("CS-1");
   const [botInput, setBotInput] = useState("");
 
-  /* ---- OFFERS STATE ---- */
+  /* ---- DelniDB OFFERS STATE (offers_daily_trips, offers_weekly_trips, offers_facilities) ---- */
   const [dailyOffers, setDailyOffers] = useState<DailyOffer[]>([
-    { id: "DO-001", title_offer: "خصم بداية الموسم السياحي", description: "احتفالاً ببداية الموسم، استمتع بخصم 25% على رحلة لبدة الكبرى", percent_discount: 25, url_image_offer: "/assets/ai_ruins.jpg", daily_trip_id: "DT-101", date_start: "2026-08-01", date_end: "2026-08-31" },
+    {
+      offer_daily_id: "DO-001",
+      id: "DO-001",
+      offer_title: "خصم بداية الموسم السياحي",
+      title_offer: "خصم بداية الموسم السياحي",
+      description: "احتفالاً ببداية الموسم، استمتع بخصم 25% على رحلة لبدة الكبرى",
+      percent_discount: 25,
+      offer_image_url: "/assets/ai_ruins.jpg",
+      url_image_offer: "/assets/ai_ruins.jpg",
+      daily_trip_id: "DT-101",
+      start_date: "2026-08-01",
+      date_start: "2026-08-01",
+      end_date: "2026-08-31",
+      date_end: "2026-08-31",
+      badge: "عرض الصيف",
+    },
   ]);
   const [weeklyOffers, setWeeklyOffers] = useState<WeeklyOffer[]>([
-    { id: "WO-001", offer_title: "عرض الصيف الساحر", description: "خصم 15% على رحلة أوباري الصحراوية لأول 10 حاجزين", percent_discount: 15, offer_image_url: "/assets/ai_desert.jpg", weekly_trip_id: "WT-201", date_start: "2026-08-01", date_end: "2026-09-15" },
+    {
+      offer_weekly_id: "WO-001",
+      id: "WO-001",
+      offer_title: "عرض الصيف الساحر",
+      description: "خصم 15% على رحلة أوباري الصحراوية لأول 10 حاجزين",
+      discount_percentage: 15,
+      percent_discount: 15,
+      offer_image_url: "/assets/ai_desert.jpg",
+      weekly_trip_id: "WT-201",
+      start_date: "2026-08-01",
+      date_start: "2026-08-01",
+      end_date: "2026-09-15",
+      date_end: "2026-09-15",
+      badge: "خصم حصري",
+    },
   ]);
   const [facilityOffers, setFacilityOffers] = useState<FacilityOffer[]>([
-    { id: "FO-001", title_offer: "عشاء ترحيبي مجاني", description: "احصل على وجبة عشاء مجانية عند حجزك وجبة رئيسية من مطعم السراياء", percent_discount: 30, offer_image_url: "/assets/ai_city.jpg", facility_id: "R-01", date_start: "2026-08-01", date_end: "2026-08-31" },
+    {
+      facility_offer_id: "FO-001",
+      id: "FO-001",
+      offer_title: "عشاء ترحيبي مجاني",
+      title_offer: "عشاء ترحيبي مجاني",
+      description: "احصل على وجبة عشاء مجانية عند حجزك وجبة رئيسية من مطعم السراياء",
+      discount_percentage: 30,
+      percent_discount: 30,
+      offer_image_url: "/assets/ai_city.jpg",
+      facility_id: "R-01",
+      start_date: "2026-08-01",
+      date_start: "2026-08-01",
+      end_date: "2026-08-31",
+      date_end: "2026-08-31",
+      badge: "ضيافة خاصة",
+    },
   ]);
 
   /* ---- MODAL STATES ---- */
@@ -163,22 +646,22 @@ function AdminDashboard() {
 
   /* ---- HANDLERS ---- */
   const handleAddCompany = (c: any) => {
-    setCompanies([...companies, { id: `COM-00${companies.length + 1}`, status: c.status || "موثق", contract_end_date: c.contract_end_date || "", available_cars: c.available_cars || 0, ...c }]);
+    setCompanies([...companies, { contract_number: c.contract_number, status: c.status || "موثق", contract_end_date: c.contract_end_date || "", available_cars: c.available_cars || 0, ...c }]);
     setShowAddCompany(false);
   };
-  const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.id === updated.id ? updated : c)); setEditingCompany(null); };
-  const handleDeleteCompany = (id: string) => { if (confirm("هل أنت متأكد من حذف شركة النقل هذه؟")) setCompanies(companies.filter(c => c.id !== id)); };
+  const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); setEditingCompany(null); };
+  const handleDeleteCompany = (contractNo: string) => { if (confirm("هل أنت متأكد من حذف شركة النقل هذه؟")) setCompanies(companies.filter(c => c.contract_number !== contractNo && c.id !== contractNo)); };
   const handleVerifyGuide = (lic: string, status: "موثق" | "مرفوض") => { setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g)); setViewingGuide(null); };
   const handleDeleteGuide = (lic: string) => { if (confirm("هل تريد حذف حساب هذا المرشد؟")) setGuides(guides.filter(g => g.license_number !== lic)); };
   const handleCreateTrip = (type: "daily" | "weekly", data: any) => {
-    if (type === "daily") setDailyTrips([...dailyTrips, { id: `DT-${100 + dailyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
-    else setWeeklyTrips([...weeklyTrips, { id: `WT-${200 + weeklyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
+    if (type === "daily") setDailyTrips([...dailyTrips, { daily_trip_id: `DT-${100 + dailyTrips.length + 1}`, id: `DT-${100 + dailyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
+    else setWeeklyTrips([...weeklyTrips, { weekly_trip_id: `WT-${200 + weeklyTrips.length + 1}`, id: `WT-${200 + weeklyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
     setShowAddTrip(null);
   };
-  const handleUpdateDailyTrip = (updated: DailyTrip) => { setDailyTrips(dailyTrips.map(d => d.id === updated.id ? updated : d)); setEditingDailyTrip(null); };
-  const handleDeleteDailyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة اليومية؟")) setDailyTrips(dailyTrips.filter(d => d.id !== id)); };
-  const handleUpdateWeeklyTrip = (updated: WeeklyTrip) => { setWeeklyTrips(weeklyTrips.map(w => w.id === updated.id ? updated : w)); setEditingWeeklyTrip(null); };
-  const handleDeleteWeeklyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة الأسبوعية؟")) setWeeklyTrips(weeklyTrips.filter(w => w.id !== id)); };
+  const handleUpdateDailyTrip = (updated: DailyTrip) => { setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === (updated.daily_trip_id || updated.id) ? updated : d)); setEditingDailyTrip(null); };
+  const handleDeleteDailyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة اليومية؟")) setDailyTrips(dailyTrips.filter(d => (d.daily_trip_id || d.id) !== id)); };
+  const handleUpdateWeeklyTrip = (updated: WeeklyTrip) => { setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === (updated.weekly_trip_id || updated.id) ? updated : w)); setEditingWeeklyTrip(null); };
+  const handleDeleteWeeklyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة الأسبوعية؟")) setWeeklyTrips(weeklyTrips.filter(w => (w.weekly_trip_id || w.id) !== id)); };
   const handleSavePrivate = (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => {
     setPrivateTrips(privateTrips.map(p => p.private_trip_id === id ? { ...p, status_order: status, quoted_price: price, admin_itinerary_plan: plan, assigned_guide: guide, assigned_vehicle: vehicle } : p));
     setEvaluatingPrivateTrip(null);
@@ -307,15 +790,15 @@ function AdminDashboard() {
   const handleDeleteAttraction = (id: string) => { if (confirm("هل تريد حذف المعلم السياحي؟")) setAttractions(attractions.filter(a => a.id !== id)); };
   const handleReplyTicket = (ticketId: string, reply: string) => { setTickets(tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" } : t)); };
   // Offers
-  const handleAddDailyOffer = (o: any) => { setDailyOffers([...dailyOffers, { ...o, id: `DO-${String(dailyOffers.length + 1).padStart(3, "0")}` }]); setShowAddDailyOffer(false); };
-  const handleUpdateDailyOffer = (o: DailyOffer) => { setDailyOffers(dailyOffers.map(x => x.id === o.id ? o : x)); setEditingDailyOffer(null); };
-  const handleDeleteDailyOffer = (id: string) => { if (confirm("حذف العرض؟")) setDailyOffers(dailyOffers.filter(o => o.id !== id)); };
-  const handleAddWeeklyOffer = (o: any) => { setWeeklyOffers([...weeklyOffers, { ...o, id: `WO-${String(weeklyOffers.length + 1).padStart(3, "0")}` }]); setShowAddWeeklyOffer(false); };
-  const handleUpdateWeeklyOffer = (o: WeeklyOffer) => { setWeeklyOffers(weeklyOffers.map(x => x.id === o.id ? o : x)); setEditingWeeklyOffer(null); };
-  const handleDeleteWeeklyOffer = (id: string) => { if (confirm("حذف العرض؟")) setWeeklyOffers(weeklyOffers.filter(o => o.id !== id)); };
-  const handleAddFacilityOffer = (o: any) => { setFacilityOffers([...facilityOffers, { ...o, id: `FO-${String(facilityOffers.length + 1).padStart(3, "0")}` }]); setShowAddFacilityOffer(false); };
-  const handleUpdateFacilityOffer = (o: FacilityOffer) => { setFacilityOffers(facilityOffers.map(x => x.id === o.id ? o : x)); setEditingFacilityOffer(null); };
-  const handleDeleteFacilityOffer = (id: string) => { if (confirm("حذف العرض؟")) setFacilityOffers(facilityOffers.filter(o => o.id !== id)); };
+  const handleAddDailyOffer = (o: any) => { const newId = `DO-${String(dailyOffers.length + 1).padStart(3, "0")}`; setDailyOffers([...dailyOffers, { ...o, offer_daily_id: newId, id: newId }]); setShowAddDailyOffer(false); };
+  const handleUpdateDailyOffer = (o: DailyOffer) => { setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x)); setEditingDailyOffer(null); };
+  const handleDeleteDailyOffer = (id: string) => { if (confirm("حذف العرض؟")) setDailyOffers(dailyOffers.filter(o => (o.offer_daily_id || o.id) !== id)); };
+  const handleAddWeeklyOffer = (o: any) => { const newId = `WO-${String(weeklyOffers.length + 1).padStart(3, "0")}`; setWeeklyOffers([...weeklyOffers, { ...o, offer_weekly_id: newId, id: newId }]); setShowAddWeeklyOffer(false); };
+  const handleUpdateWeeklyOffer = (o: WeeklyOffer) => { setWeeklyOffers(weeklyOffers.map(x => (x.offer_weekly_id || x.id) === (o.offer_weekly_id || o.id) ? o : x)); setEditingWeeklyOffer(null); };
+  const handleDeleteWeeklyOffer = (id: string) => { if (confirm("حذف العرض؟")) setWeeklyOffers(weeklyOffers.filter(o => (o.offer_weekly_id || o.id) !== id)); };
+  const handleAddFacilityOffer = (o: any) => { const newId = `FO-${String(facilityOffers.length + 1).padStart(3, "0")}`; setFacilityOffers([...facilityOffers, { ...o, facility_offer_id: newId, id: newId }]); setShowAddFacilityOffer(false); };
+  const handleUpdateFacilityOffer = (o: FacilityOffer) => { setFacilityOffers(facilityOffers.map(x => (x.facility_offer_id || x.id) === (o.facility_offer_id || o.id) ? o : x)); setEditingFacilityOffer(null); };
+  const handleDeleteFacilityOffer = (id: string) => { if (confirm("حذف العرض؟")) setFacilityOffers(facilityOffers.filter(o => (o.facility_offer_id || o.id) !== id)); };
   // Bot
   const handleBotSend = () => {
     if (!botInput.trim() || !activeChatId) return;
@@ -328,6 +811,31 @@ function AdminDashboard() {
     setBotInput("");
   };
 
+  /* ---- BOOKINGS HANDLERS (DelniDB bookings_daily & bookings_weekly) ---- */
+  const handleTogglePaymentDaily = (id: string) => {
+    setDailyBookings(prev =>
+      prev.map(b => (b.booking_daily_id === id ? { ...b, payment_status: b.payment_status === "paid" ? "unpaid" : "paid" } : b))
+    );
+  };
+
+  const handleToggleAttendedDaily = (id: string) => {
+    setDailyBookings(prev =>
+      prev.map(b => (b.booking_daily_id === id ? { ...b, attended: !b.attended } : b))
+    );
+  };
+
+  const handleTogglePaymentWeekly = (id: string) => {
+    setWeeklyBookings(prev =>
+      prev.map(b => (b.booking_weekly_id === id ? { ...b, payment_status: b.payment_status === "paid" ? "unpaid" : "paid" } : b))
+    );
+  };
+
+  const handleToggleAttendedWeekly = (id: string) => {
+    setWeeklyBookings(prev =>
+      prev.map(b => (b.booking_weekly_id === id ? { ...b, attended: !b.attended } : b))
+    );
+  };
+
   const { language } = useLanguage();
   const isAr = language === 'ar';
 
@@ -337,6 +845,7 @@ function AdminDashboard() {
     { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
     { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: 2 },
     { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭" },
+    { id: "bookings", label: isAr ? "سجل الحجوزات والدفع" : "Bookings & Payments", icon: "🎟️", badge: dailyBookings.length + weeklyBookings.length },
     { id: "offers", label: isAr ? "العروض الترويجية" : "Promotions & Offers", icon: "🎯" },
     { id: "private_trips", label: isAr ? "الرحلات الخاصة" : "Private Custom Trips", icon: "👑", badge: 2 },
     { id: "entities", label: isAr ? "المرافق والوجهات" : "Entities & Stays", icon: "🏛️" },
@@ -435,7 +944,7 @@ function AdminDashboard() {
                     <td className="py-3"><Badge tone={c.status === "موثق" ? "green" : "sun"}>{c.status}</Badge></td>
                     <td className="py-3 flex gap-2">
                       <button onClick={() => setEditingCompany(c)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                      <button onClick={() => handleDeleteCompany(c.id)} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                      <button onClick={() => handleDeleteCompany(c.contract_number || c.id || "")} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                     </td>
                   </tr>
                 ))}
@@ -517,7 +1026,7 @@ function AdminDashboard() {
                       <h4 className="font-black text-foreground text-sm">{d.title}</h4>
                       <Badge tone={d.is_active ? "green" : "muted"}>{d.is_active ? "نشطة" : "موقوفة"}</Badge>
                       <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-black">
-                        📅 يومان أسبوعياً: {d.recurring_days ? d.recurring_days.join(" و ") : "الأحد والأربعاء"}
+                        📅 يومان أسبوعياً: {Array.isArray(d.recurring_days) ? d.recurring_days.join(" و ") : (d.recurring_days || "الأحد والأربعاء")}
                       </span>
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
                         🚌 حافلة {d.bus_capacity || 50} راكب
@@ -547,7 +1056,7 @@ function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => setEditingDailyTrip(d)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين الحافلة</button>
-                    <button onClick={() => handleDeleteDailyTrip(d.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                    <button onClick={() => handleDeleteDailyTrip(d.daily_trip_id || d.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
                   </div>
                 </div>
               ))}
@@ -595,7 +1104,7 @@ function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => setEditingWeeklyTrip(w)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين الحافلة</button>
-                    <button onClick={() => handleDeleteWeeklyTrip(w.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                    <button onClick={() => handleDeleteWeeklyTrip(w.weekly_trip_id || w.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
                   </div>
                 </div>
               ))}
@@ -621,6 +1130,143 @@ function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* BOOKINGS TAB (DelniDB bookings_daily & bookings_weekly) */}
+      {active === "bookings" && (
+        <div className="space-y-6 text-right">
+          <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/70 text-xs font-semibold text-blue-950 flex items-center gap-3">
+            <span className="text-2xl">🎟️</span>
+            <div>
+              <span className="font-black block text-sm mb-0.5">سجل الحجوزات الميدانية (حجوزات الرحلات اليومية والأسبوعية):</span>
+              متابعة مباشرة لمدفوعات السياح وحالة الحضور والتأكيد وفق جداول قاعدة بيانات DelniDB (bookings_daily و bookings_weekly).
+            </div>
+          </div>
+
+          {/* Daily Trips Bookings */}
+          <SectionCard title="🎟️ حجوزات الرحلات اليومية (bookings_daily)">
+            <div className="overflow-x-auto text-right">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-right text-xs text-muted-foreground border-b border-border">
+                    <th className="pb-3 font-bold">رقم الحجز</th>
+                    <th className="pb-3 font-bold">السائح / المرافقون</th>
+                    <th className="pb-3 font-bold">الرحلة اليومية</th>
+                    <th className="pb-3 font-bold">المقاعد</th>
+                    <th className="pb-3 font-bold">المبلغ الإجمالي</th>
+                    <th className="pb-3 font-bold">حالة الدفع</th>
+                    <th className="pb-3 font-bold">حالة الحضور</th>
+                    <th className="pb-3 font-bold">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {dailyBookings.map((b) => {
+                    const trip = dailyTrips.find((t) => (t.daily_trip_id || t.id) === b.daily_trip_id);
+                    return (
+                      <tr key={b.booking_daily_id}>
+                        <td className="py-3 font-mono text-xs font-bold text-primary">{b.booking_daily_id}</td>
+                        <td className="py-3 font-bold text-foreground">
+                          <div>{b.tourist_id}</div>
+                          {b.passengers_names && <div className="text-[11px] text-muted-foreground font-normal">{b.passengers_names}</div>}
+                        </td>
+                        <td className="py-3 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.daily_trip_id}</td>
+                        <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
+                        <td className="py-3 font-black text-emerald-600">{b.total_price} د.ل</td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePaymentDaily(b.booking_daily_id)}
+                            className="cursor-pointer"
+                          >
+                            <Badge tone={b.payment_status === "paid" ? "green" : "red"}>
+                              {b.payment_status === "paid" ? "✓ مدفوع" : "غير مدفوع (اضغط للدفع)"}
+                            </Badge>
+                          </button>
+                        </td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAttendedDaily(b.booking_daily_id)}
+                            className="cursor-pointer"
+                          >
+                            <Badge tone={b.attended ? "green" : "muted"}>
+                              {b.attended ? "✓ حضر" : "لم يحضر بعد"}
+                            </Badge>
+                          </button>
+                        </td>
+                        <td className="py-3">
+                          <span className="text-xs font-bold text-blue-700">{b.booking_status}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+
+          {/* Weekly Trips Bookings */}
+          <SectionCard title="🗓️ حجوزات الرحلات الأسبوعية (bookings_weekly)">
+            <div className="overflow-x-auto text-right">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-right text-xs text-muted-foreground border-b border-border">
+                    <th className="pb-3 font-bold">رقم الحجز</th>
+                    <th className="pb-3 font-bold">السائح / المرافقون</th>
+                    <th className="pb-3 font-bold">الرحلة الأسبوعية</th>
+                    <th className="pb-3 font-bold">المقاعد</th>
+                    <th className="pb-3 font-bold">المبلغ الإجمالي</th>
+                    <th className="pb-3 font-bold">حالة الدفع</th>
+                    <th className="pb-3 font-bold">حالة الحضور</th>
+                    <th className="pb-3 font-bold">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {weeklyBookings.map((b) => {
+                    const trip = weeklyTrips.find((t) => (t.weekly_trip_id || t.id) === b.weekly_trip_id);
+                    return (
+                      <tr key={b.booking_weekly_id}>
+                        <td className="py-3 font-mono text-xs font-bold text-primary">{b.booking_weekly_id}</td>
+                        <td className="py-3 font-bold text-foreground">
+                          <div>{b.tourist_id}</div>
+                          {b.passengers_names && <div className="text-[11px] text-muted-foreground font-normal">{b.passengers_names}</div>}
+                        </td>
+                        <td className="py-3 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.weekly_trip_id}</td>
+                        <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
+                        <td className="py-3 font-black text-emerald-600">{b.total_price} د.ل</td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePaymentWeekly(b.booking_weekly_id)}
+                            className="cursor-pointer"
+                          >
+                            <Badge tone={b.payment_status === "paid" ? "green" : "red"}>
+                              {b.payment_status === "paid" ? "✓ مدفوع" : "غير مدفوع (اضغط للدفع)"}
+                            </Badge>
+                          </button>
+                        </td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAttendedWeekly(b.booking_weekly_id)}
+                            className="cursor-pointer"
+                          >
+                            <Badge tone={b.attended ? "green" : "muted"}>
+                              {b.attended ? "✓ حضر" : "لم يحضر بعد"}
+                            </Badge>
+                          </button>
+                        </td>
+                        <td className="py-3">
+                          <span className="text-xs font-bold text-blue-700">{b.booking_status}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </SectionCard>
         </div>
@@ -654,7 +1300,7 @@ function AdminDashboard() {
                         <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
                         <div className="flex gap-2 pt-1">
                           <button onClick={() => setEditingDailyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                          <button onClick={() => handleDeleteDailyOffer(o.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                          <button onClick={() => handleDeleteDailyOffer(o.offer_daily_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                         </div>
                       </div>
                     </div>
@@ -685,7 +1331,7 @@ function AdminDashboard() {
                         <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
                         <div className="flex gap-2 pt-1">
                           <button onClick={() => setEditingWeeklyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                          <button onClick={() => handleDeleteWeeklyOffer(o.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                          <button onClick={() => handleDeleteWeeklyOffer(o.offer_weekly_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                         </div>
                       </div>
                     </div>
@@ -716,7 +1362,7 @@ function AdminDashboard() {
                         <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
                         <div className="flex gap-2 pt-1">
                           <button onClick={() => setEditingFacilityOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                          <button onClick={() => handleDeleteFacilityOffer(o.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                          <button onClick={() => handleDeleteFacilityOffer(o.facility_offer_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                         </div>
                       </div>
                     </div>
@@ -904,7 +1550,7 @@ function AdminDashboard() {
               {attractions.map((a) => (
                 <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
                   <div className="flex gap-3">
-                    <img src={a.place_image} alt="" className="w-24 h-24 rounded-xl object-cover flex-shrink-0 border" />
+                    <img src={a.place_image || "/assets/ai_ruins.jpg"} alt="" className="w-24 h-24 rounded-xl object-cover flex-shrink-0 border" />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-foreground text-sm">{a.name}</h4>
                       <div className="text-xs text-muted-foreground mt-0.5">📍 {a.city} · 👥 {a.visitors_count} استعلام وزيارة</div>
@@ -928,7 +1574,7 @@ function AdminDashboard() {
                   )}
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingAttraction(a)} className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                    <button onClick={() => handleDeleteAttraction(a.id)} className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                    <button onClick={() => handleDeleteAttraction(a.place_id || a.id || "")} className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                   </div>
                 </div>
               ))}
@@ -964,7 +1610,7 @@ function AdminDashboard() {
           <div className="grid md:grid-cols-2 gap-6">
             <SectionCard title="🔥 الرحلات الأكثر حجزاً">
               <div className="space-y-3">
-                {[...dailyTrips, ...weeklyTrips].sort((a, b) => b.bookings_count - a.bookings_count).map((t, idx) => (
+                {[...dailyTrips, ...weeklyTrips].sort((a, b) => (b.bookings_count ?? 0) - (a.bookings_count ?? 0)).map((t, idx) => (
                   <div key={t.id} className="flex justify-between items-center p-3 rounded-xl bg-muted/40">
                     <div>
                       <div className="font-black text-sm text-foreground">#{idx + 1} - {t.title}</div>
@@ -1342,10 +1988,12 @@ function AddCompanyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: a
 }
 
 function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; onClose: () => void; onUpdate: (c: Company) => void }) {
-  const [name, setName] = useState(company.name); const [phone, setPhone] = useState(company.phone);
-  const [address, setAddress] = useState(company.address); const [status, setStatus] = useState(company.status);
+  const [name, setName] = useState(company.company_name || company.name || "");
+  const [phone, setPhone] = useState(company.phone_number || company.phone || "");
+  const [address, setAddress] = useState(company.address || "");
+  const [status, setStatus] = useState(company.verification_status || company.status || "موثق");
   return (
-    <ModalShell title={`تعديل شركة: ${company.name}`} onClose={onClose}>
+    <ModalShell title={`تعديل شركة: ${company.company_name || company.name || ""}`} onClose={onClose}>
       <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onUpdate({ ...company, name, phone, address, status }); }}>
         <Field label="اسم الشركة" value={name} onChange={setName} />
         <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
@@ -1492,11 +2140,15 @@ function CreateTripModal({
     }
 
     const base = {
+      daily_trip_id: `DT-${100 + Math.floor(Math.random() * 890 + 10)}`,
+      weekly_trip_id: `WT-${200 + Math.floor(Math.random() * 790 + 10)}`,
+      trip_title: title,
       title,
       description: desc,
       max_capacity: busCapacity,
       available_seats: busCapacity,
       bus_capacity: busCapacity,
+      guide_license_number: guideLic,
       guide_license: guideLic,
       vehicle_plates: selVehicles,
       is_active: isActive,
@@ -1509,7 +2161,8 @@ function CreateTripModal({
         ...base,
         destination,
         price_per_seat: +price,
-        recurring_days: recurringDays,
+        recurring_days: recurringDays.join(","),
+        recurring_days_list: recurringDays,
       });
     } else {
       onCreate("weekly", {
@@ -1521,6 +2174,7 @@ function CreateTripModal({
         end_date: endDate,
         hotel_id: hotelId,
         weekly_day: weeklyDay,
+        trip_description: desc,
       });
     }
   };
@@ -1882,14 +2536,20 @@ function DailyTripEditModal({
   onClose: () => void;
   onSave: (t: DailyTrip) => void;
 }) {
-  const [title, setTitle] = useState(trip.title);
+  const [title, setTitle] = useState(trip.trip_title || trip.title || "");
   const [desc, setDesc] = useState(trip.description);
   const [destination, setDestination] = useState(trip.destination || "لبدة الكبرى");
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.price_per_seat));
   const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
   const [guide, setGuide] = useState(trip.guide_license || "");
-  const [recurringDays, setRecurringDays] = useState<string[]>(trip.recurring_days || ["الأحد", "الأربعاء"]);
+  const [recurringDays, setRecurringDays] = useState<string[]>(
+    Array.isArray(trip.recurring_days)
+      ? trip.recurring_days
+      : typeof trip.recurring_days === "string"
+      ? trip.recurring_days.split(",")
+      : ["الأحد", "الأربعاء"]
+  );
   const [photo, setPhoto] = useState(trip.photo || "");
 
   const filteredGuidesList = useMemo(() => {
@@ -1918,7 +2578,7 @@ function DailyTripEditModal({
   };
 
   return (
-    <ModalShell title={`تعديل الرحلة اليومية: ${trip.title}`} onClose={onClose}>
+    <ModalShell title={`تعديل الرحلة اليومية: ${trip.trip_title || trip.title || ""}`} onClose={onClose}>
       <form
         className="space-y-4 text-right text-xs"
         onSubmit={(e) => {
@@ -1929,6 +2589,7 @@ function DailyTripEditModal({
           }
           onSave({
             ...trip,
+            trip_title: title,
             title,
             description: desc,
             destination,
@@ -1937,7 +2598,8 @@ function DailyTripEditModal({
             bus_capacity: busCapacity,
             max_capacity: busCapacity,
             available_seats: busCapacity,
-            recurring_days: recurringDays,
+            recurring_days: recurringDays.join(","),
+            guide_license_number: guide,
             guide_license: guide,
             photo,
             vehicle_plates: selVehicles,
@@ -2118,7 +2780,7 @@ function WeeklyTripEditModal({
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
   return (
-    <ModalShell title={`تعديل الرحلة الأسبوعية: ${trip.title}`} onClose={onClose}>
+    <ModalShell title={`تعديل الرحلة الأسبوعية: ${trip.trip_title || trip.title || ""}`} onClose={onClose}>
       <form
         className="space-y-4 text-right text-xs"
         onSubmit={(e) => {
@@ -2129,6 +2791,7 @@ function WeeklyTripEditModal({
           }
           onSave({
             ...trip,
+            trip_title: title,
             title,
             destinations: multiDestinations,
             destination: multiDestinations.join(" + "),
@@ -2140,6 +2803,7 @@ function WeeklyTripEditModal({
             weekly_day: weeklyDay,
             start_date: startDate,
             end_date: endDate,
+            guide_license_number: guide,
             guide_license: guide,
             hotel_id: hotelId,
             photo,

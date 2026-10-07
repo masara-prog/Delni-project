@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { MapPin, User, Check } from "lucide-react";
+import { MapPin, Check } from "lucide-react";
+import type { TourGuide } from "@/lib/dbSchema";
 
 export const Route = createFileRoute("/dashboard/guide")({
   head: () => ({
@@ -27,27 +28,18 @@ type AssignedTrip = {
   rejection_reason?: string;
 };
 
-type TouristBooking = {
+type TouristManifestItem = {
   booking_id: string;
+  tourist_id: string;
   tourist_name: string;
   phone_number: string;
   nationality: string;
   seats_count: number;
   trip_name: string;
+  payment_status: "paid" | "unpaid" | "cash_at_office";
   attended: boolean;
+  passengers_names?: string;
 };
-
-function GuideDashboard() {
-  const { language } = useLanguage();
-  const isAr = language === 'ar';
-  const [active, setActive] = useState("overview");
-
-  const nav: NavItem[] = [
-    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "assigned_trips", label: isAr ? "الرحلات المسندة والقبول" : "Assigned Tours", icon: "🧭", badge: 2 },
-    { id: "active_tourists", label: isAr ? "تأكيد حضور سياح الرحلة النشطة" : "Active Tourist Manifest", icon: "☑️" },
-    { id: "profile", label: isAr ? "الملف والشهادات الرقمية" : "Profile & Certificates", icon: "📄" },
-  ];
 
 const REGIONS_LIST = [
   { id: "tripoli", nameAr: "طرابلس وضواحيها", nameEn: "Tripoli & Suburbs" },
@@ -72,39 +64,56 @@ const WEEKDAYS = [
   { id: "fri", nameAr: "الجمعة", nameEn: "Friday" },
 ];
 
-  // Guide Profile Details
-  const [guideInfo, setGuideInfo] = useState({
+function GuideDashboard() {
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+  const [active, setActive] = useState("overview");
+
+  const nav: NavItem[] = [
+    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
+    { id: "assigned_trips", label: isAr ? "الرحلات المسندة والقبول" : "Assigned Tours", icon: "🧭", badge: 2 },
+    { id: "active_tourists", label: isAr ? "تأكيد حضور سياح الرحلة النشطة" : "Active Tourist Manifest", icon: "☑️" },
+    { id: "profile", label: isAr ? "الملف والشهادات الرقمية" : "Profile & Certificates", icon: "📄" },
+  ];
+
+  // Guide Profile Details according to DelniDB: tour_guides table
+  const [guideInfo, setGuideInfo] = useState<TourGuide>({
     license_number: "G-9901",
     full_name: "سالم القذافي",
-    gender: "male" as "male" | "female",
     phone_number: "0917778888",
     years_of_experience: 7,
-    daily_rate: 150,
-    operating_regions: ["tripoli", "leptis", "sabratha"] as string[],
-    working_days: ["sat", "sun", "mon", "tue", "wed", "thu"] as string[],
-    certificate_description: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات أولية من الهلال الأحمر",
-    digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
+    certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات أولية من الهلال الأحمر",
     bio: "مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية. متخصص في الجولات الأثرية في لبدة وصبراتة وقورينا، بالإضافة إلى تنظيم رحلات السفاري في أوباري وغدامس.",
     speaks_english: true,
     speaks_french: false,
     speaks_italian: true,
     verification_status: "موثق",
-    email: "salem@dalni.ly"
+    email: "salem@dalni.ly",
+    gender: "male",
+    working_days: JSON.stringify(["sat", "sun", "mon", "tue", "wed", "thu"]),
+    operating_regions: JSON.stringify(["tripoli", "leptis", "sabratha"]),
+    primaryRegion: "طرابلس والساحل الغربي",
+    price_per_day: 150,
+    avatar: "/assets/ai_desert.jpg",
+    title: "خبير الإرشاد الأثري والصحراوي",
+    specialties: "آثار رومانية، سفاري الواحات، جولات تاريخية",
+    total_tours_completed: 48,
+    digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
   });
 
-  // Assigned Trips State
+  // Assigned Trips State (DelniDB: daily_trips, weekly_trips, private_trips)
   const [assignedTrips, setAssignedTrips] = useState<AssignedTrip[]>([
-    { id: "TRP-8801", trip_name: "رحلة لبدة الكبرى الأثرية", type: "يومية", date: "اليوم (قيد الإجراء)", time_or_duration: "9:00 ص - 3:00 م", tourist_group_name: "عائلة المصراتي والعجيلي", seats_booked: 8, status: "مقبولة", is_active_now: true },
-    { id: "TRP-8802", trip_name: "سفاري بحيرات أوباري والصحراء", type: "أسبوعية", date: "17 أغسطس 2026", time_or_duration: "6 أيام كاملة", tourist_group_name: "حجز جماعي صحراوي", seats_booked: 12, status: "بانتظار القبول", is_active_now: false },
-    { id: "TRP-8803", trip_name: "جولة خاصة للآثار والمدينة القديمة", type: "خاصة VIP", date: "22 أغسطس 2026", time_or_duration: "يومان", tourist_group_name: "وفد إيطالي سياحي", seats_booked: 4, status: "بانتظار القبول", is_active_now: false }
+    { id: "DT-101", trip_name: "رحلة لبدة الكبرى الأثرية", type: "يومية", date: "اليوم (قيد الإجراء)", time_or_duration: "9:00 ص - 3:00 م", tourist_group_name: "عائلة المصراتي والعجيلي", seats_booked: 8, status: "مقبولة", is_active_now: true },
+    { id: "WT-201", trip_name: "سفاري بحيرات أوباري والصحراء", type: "أسبوعية", date: "17 أغسطس 2026", time_or_duration: "6 أيام كاملة", tourist_group_name: "حجز جماعي صحراوي", seats_booked: 12, status: "بانتظار القبول", is_active_now: false },
+    { id: "PT-501", trip_name: "جولة خاصة للآثار والمدينة القديمة", type: "خاصة VIP", date: "22 أغسطس 2026", time_or_duration: "يومان", tourist_group_name: "وفد إيطالي سياحي", seats_booked: 4, status: "بانتظار القبول", is_active_now: false }
   ]);
 
-  // Active Trip Tourists Manifest & Attendance State
-  const [tourists, setTourists] = useState<TouristBooking[]>([
-    { booking_id: "BK-1001", tourist_name: "أحمد بن علي المصراتي", phone_number: "0912229988", nationality: "ليبي", seats_count: 4, trip_name: "رحلة لبدة الكبرى الأثرية", attended: true },
-    { booking_id: "BK-1002", tourist_name: "عمر خالد العجيلي", phone_number: "0924441122", nationality: "ليبي", seats_count: 4, trip_name: "رحلة لبدة الكبرى الأثرية", attended: true },
-    { booking_id: "BK-1003", tourist_name: "Marco Rossi", phone_number: "+39 340 556677", nationality: "إيطالي", seats_count: 2, trip_name: "جولة خاصة للآثار والمدينة القديمة", attended: false },
-    { booking_id: "BK-1004", tourist_name: "Giovanni Bianchi", phone_number: "+39 342 998811", nationality: "إيطالي", seats_count: 2, trip_name: "جولة خاصة للآثار والمدينة القديمة", attended: false }
+  // Active Trip Tourists Manifest & Attendance State (DelniDB: bookings_daily & bookings_weekly)
+  const [tourists, setTourists] = useState<TouristManifestItem[]>([
+    { booking_id: "BK-D-101", tourist_id: "T-881", tourist_name: "أحمد بن علي المصراتي", phone_number: "0912229988", nationality: "ليبي", seats_count: 4, trip_name: "رحلة لبدة الكبرى الأثرية", payment_status: "cash_at_office", attended: true, passengers_names: "أحمد المصراتي، عائشة المصراتي، يوسف، فاطمة" },
+    { booking_id: "BK-D-102", tourist_id: "T-882", tourist_name: "عمر خالد العجيلي", phone_number: "0924441122", nationality: "ليبي", seats_count: 4, trip_name: "رحلة لبدة الكبرى الأثرية", payment_status: "paid", attended: true, passengers_names: "عمر العجيلي، خديجة، كمال، سامي" },
+    { booking_id: "BK-W-201", tourist_id: "T-883", tourist_name: "Marco Rossi", phone_number: "+39 340 556677", nationality: "إيطالي", seats_count: 2, trip_name: "جولة خاصة للآثار والمدينة القديمة", payment_status: "paid", attended: false, passengers_names: "Marco Rossi, Laura Rossi" },
+    { booking_id: "BK-W-202", tourist_id: "T-884", tourist_name: "Giovanni Bianchi", phone_number: "+39 342 998811", nationality: "إيطالي", seats_count: 2, trip_name: "جولة خاصة للآثار والمدينة القديمة", payment_status: "paid", attended: false, passengers_names: "Giovanni Bianchi, Sofia Bianchi" }
   ]);
 
   const [rejectionModalTrip, setRejectionModalTrip] = useState<AssignedTrip | null>(null);
@@ -113,6 +122,22 @@ const WEEKDAYS = [
   const activeTrip = assignedTrips.find(t => t.is_active_now);
   const activeTripTourists = tourists.filter(t => activeTrip && t.trip_name === activeTrip.trip_name);
   const attendedCount = activeTripTourists.filter(t => t.attended).reduce((acc, curr) => acc + curr.seats_count, 0);
+
+  const selectedRegions: string[] = (() => {
+    try {
+      return guideInfo.operating_regions ? JSON.parse(guideInfo.operating_regions) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const selectedDays: string[] = (() => {
+    try {
+      return guideInfo.working_days ? JSON.parse(guideInfo.working_days) : [];
+    } catch {
+      return [];
+    }
+  })();
 
   const handleTripResponse = (tripId: string, status: "مقبولة" | "مرفوضة", reason?: string) => {
     setAssignedTrips(assignedTrips.map(t => t.id === tripId ? { ...t, status, rejection_reason: reason } : t));
@@ -189,7 +214,17 @@ const WEEKDAYS = [
               <div>
                 <div className="text-sm opacity-80">أهلاً وسهلاً 👋</div>
                 <h1 className="text-2xl md:text-3xl font-black mt-1">{guideInfo.full_name}</h1>
-                <p className="mt-1 text-sm opacity-90 font-semibold">ترخيص المزاولة: {guideInfo.license_number} · تقييمك 4.9 ⭐</p>
+                <p className="mt-1 text-sm opacity-90 font-semibold">
+                  ترخيص المزاولة: {guideInfo.license_number} · إجمالي الجولات المنفذة: {guideInfo.total_tours_completed} رحلة
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="text-xs bg-black/15 px-2.5 py-0.5 rounded-full font-bold">
+                    🗣️ اللغات: {[guideInfo.speaks_english && "الإنجليزية", guideInfo.speaks_french && "الفرنسية", guideInfo.speaks_italian && "الإيطالية"].filter(Boolean).join("، ") || "العربية فقط"}
+                  </span>
+                  <span className="text-xs bg-black/15 px-2.5 py-0.5 rounded-full font-bold">
+                    📍 المنطقة الأساسية: {guideInfo.primaryRegion}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={guideInfo.verification_status === "موثق" ? "green" : "sun"}>{guideInfo.verification_status}</Badge>
@@ -201,8 +236,8 @@ const WEEKDAYS = [
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="الرحلة النشطة الحالية" value={activeTrip ? activeTrip.trip_name : "لا يوجد رحلة حالياً"} icon="🧭" tone="sea" />
             <StatCard label="الرحلات بانتظار القبول" value={assignedTrips.filter(t => t.status === "بانتظار القبول").length} icon="📥" tone="sun" />
-            <StatCard label="أجر اليوم الواحد للرحلات الخاصة" value={`${guideInfo.daily_rate || 150} د.ل / يوم`} icon="💰" tone="green" />
-            <StatCard label="متوسط تقييم المرشد" value="4.9 ⭐" icon="⭐" tone="clay" />
+            <StatCard label="أجر اليوم الواحد للرحلات الخاصة" value={`${guideInfo.price_per_day || 150} د.ل / يوم`} icon="💰" tone="green" />
+            <StatCard label="إجمالي الجولات المكتملة" value={`${guideInfo.total_tours_completed} جولة`} icon="🏆" tone="clay" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
@@ -257,10 +292,11 @@ const WEEKDAYS = [
             </div>
 
             <div className="space-y-6">
-              <SectionCard title="إشعار الملف والترخيص">
+              <SectionCard title="بيانات الترخيص والوثائق">
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-2 text-xs text-right">
-                  <div className="font-black text-primary">تحميل الشهادات والترخيص</div>
-                  <p className="text-muted-foreground">يقوم المرشد بإدخال بياناته وتأكيد نسخ الملفات الرقمية للشهادات لتصل مباشرة للأدمن للمعاينة والتأكيد.</p>
+                  <div className="font-black text-primary">توثيق وترخيص وزارة السياحة</div>
+                  <p className="text-muted-foreground">رقم الترخيص: <span className="font-bold text-foreground">{guideInfo.license_number}</span></p>
+                  <p className="text-muted-foreground">{guideInfo.certificate}</p>
                   <button onClick={() => setActive("profile")} className="w-full py-2 bg-white border border-border rounded-lg text-primary font-black">
                     تحديث الملف والشهادات
                   </button>
@@ -320,7 +356,7 @@ const WEEKDAYS = [
         </SectionCard>
       )}
 
-      {/* ACTIVE TRIP TOURISTS & ATTENDANCE CHECK-IN */}
+      {/* ACTIVE TRIP TOURISTS & ATTENDANCE CHECK-IN (DelniDB: bookings_daily / bookings_weekly) */}
       {active === "active_tourists" && (
         <SectionCard title={`كشف حضور سياح الرحلة النشطة (${activeTrip ? activeTrip.trip_name : "لا يوجد رحلة جارية"})`}>
           {activeTrip ? (
@@ -342,9 +378,10 @@ const WEEKDAYS = [
                     <tr>
                       <th className="p-3">رقم الحجز</th>
                       <th className="p-3">اسم السائح</th>
-                      <th className="p-3">الجنسية</th>
                       <th className="p-3">رقم الهاتف</th>
                       <th className="p-3">عدد المقاعد</th>
+                      <th className="p-3">أسماء المرافقين</th>
+                      <th className="p-3">حالة الدفع</th>
                       <th className="p-3">إجراء الحضور</th>
                     </tr>
                   </thead>
@@ -353,9 +390,14 @@ const WEEKDAYS = [
                       <tr key={tr.booking_id} className={tr.attended ? "bg-emerald-50/40" : ""}>
                         <td className="p-3 font-mono font-bold">{tr.booking_id}</td>
                         <td className="p-3 font-black text-foreground">{tr.tourist_name}</td>
-                        <td className="p-3 font-bold">{tr.nationality}</td>
                         <td className="p-3 font-mono font-bold text-muted-foreground" dir="ltr">{tr.phone_number}</td>
                         <td className="p-3 font-black text-primary">{tr.seats_count} مقاعد</td>
+                        <td className="p-3 text-muted-foreground">{tr.passengers_names || "-"}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${tr.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                            {tr.payment_status === "paid" ? "مدفوع" : "نقداً بالفرع"}
+                          </span>
+                        </td>
                         <td className="p-3">
                           <button
                             onClick={() => handleToggleAttendance(tr.booking_id)}
@@ -382,183 +424,154 @@ const WEEKDAYS = [
         </SectionCard>
       )}
 
-      {/* Guide Profile & Credentials File Upload */}
+      {/* Guide Profile & Credentials (DelniDB: tour_guides) */}
       {active === "profile" && (
-        <SectionCard title="إدخال واستكمال بيانات المرشد ورفع ملفات الشهادات الرقمية للأدمن">
+        <SectionCard title="إدخال واستكمال بيانات المرشد ورفع ملفات الشهادات الرقمية (DelniDB: tour_guides)">
           <form className="max-w-2xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
-            <Field label="الاسم الكامل للمرشد" value={guideInfo.full_name} onChange={(v) => setGuideInfo({ ...guideInfo, full_name: v })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="الاسم الكامل للمرشد (full_name)" value={guideInfo.full_name} onChange={(v) => setGuideInfo({ ...guideInfo, full_name: v })} />
+              <Field label="المسمى الوظيفي واللقب (title)" value={guideInfo.title || ""} onChange={(v) => setGuideInfo({ ...guideInfo, title: v })} />
+            </div>
 
-            {/* Gender Selection (الجنس) */}
+            {/* Gender Selection */}
             <div>
-              <label className="text-sm font-bold text-foreground mb-2 block">جنس المرشد:</label>
+              <label className="text-sm font-bold text-foreground mb-2 block">الجنس (gender):</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setGuideInfo({ ...guideInfo, gender: "male" })}
-                  className={`group relative p-3 rounded-2xl border text-right transition-all duration-300 flex items-center gap-3 cursor-pointer select-none ${
+                  className={`p-3 rounded-2xl border text-right transition flex items-center gap-3 cursor-pointer ${
                     guideInfo.gender === "male"
-                      ? "border-[#D96B27] bg-gradient-to-br from-amber-50 via-orange-50/40 to-white shadow-soft ring-2 ring-[#D96B27]/20"
-                      : "border-[#E6E1D6] bg-white hover:border-[#D96B27]/40 hover:bg-[#FAFAF8]"
+                      ? "border-[#D96B27] bg-amber-50/50 shadow-soft ring-2 ring-[#D96B27]/20"
+                      : "border-border bg-white"
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 transition-transform group-hover:scale-110 ${
-                    guideInfo.gender === "male" ? "bg-gradient-to-br from-[#D96B27] to-[#EA580C] text-white shadow-soft" : "bg-[#F4F1EA] text-[#0B132B]"
-                  }`}>
-                    👨
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-[#0B132B]">ذكر</span>
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                        guideInfo.gender === "male" ? "border-[#D96B27] bg-[#D96B27] text-white shadow-xs" : "border-[#D0C9B8]"
-                      }`}>
-                        {guideInfo.gender === "male" && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-[#526078] block truncate mt-0.5">مرشد سياحي</span>
+                  <span className="text-2xl">👨</span>
+                  <div>
+                    <div className="font-black text-xs text-foreground">ذكر</div>
+                    <span className="text-[10px] text-muted-foreground">مرشد سياحي</span>
                   </div>
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setGuideInfo({ ...guideInfo, gender: "female" })}
-                  className={`group relative p-3 rounded-2xl border text-right transition-all duration-300 flex items-center gap-3 cursor-pointer select-none ${
+                  className={`p-3 rounded-2xl border text-right transition flex items-center gap-3 cursor-pointer ${
                     guideInfo.gender === "female"
-                      ? "border-[#D96B27] bg-gradient-to-br from-amber-50 via-orange-50/40 to-white shadow-soft ring-2 ring-[#D96B27]/20"
-                      : "border-[#E6E1D6] bg-white hover:border-[#D96B27]/40 hover:bg-[#FAFAF8]"
+                      ? "border-[#D96B27] bg-amber-50/50 shadow-soft ring-2 ring-[#D96B27]/20"
+                      : "border-border bg-white"
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 transition-transform group-hover:scale-110 ${
-                    guideInfo.gender === "female" ? "bg-gradient-to-br from-[#D96B27] to-[#EA580C] text-white shadow-soft" : "bg-[#F4F1EA] text-[#0B132B]"
-                  }`}>
-                    👩
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-[#0B132B]">أنثى</span>
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                        guideInfo.gender === "female" ? "border-[#D96B27] bg-[#D96B27] text-white shadow-xs" : "border-[#D0C9B8]"
-                      }`}>
-                        {guideInfo.gender === "female" && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-[#526078] block truncate mt-0.5">مرشدة سياحية</span>
+                  <span className="text-2xl">👩</span>
+                  <div>
+                    <div className="font-black text-xs text-foreground">أنثى</div>
+                    <span className="text-[10px] text-muted-foreground">مرشدة سياحية</span>
                   </div>
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="رقم الهاتف" value={guideInfo.phone_number} onChange={(v) => setGuideInfo({ ...guideInfo, phone_number: v })} />
-              <Field label="سنوات الخبرة العملية" type="number" value={String(guideInfo.years_of_experience)} onChange={(v) => setGuideInfo({ ...guideInfo, years_of_experience: Number(v) })} />
+              <Field label="رقم الهاتف (phone_number)" value={guideInfo.phone_number} onChange={(v) => setGuideInfo({ ...guideInfo, phone_number: v })} />
+              <Field label="البريد الإلكتروني (email)" type="email" value={guideInfo.email} onChange={(v) => setGuideInfo({ ...guideInfo, email: v })} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="رقم ترخيص مزاولة الإرشاد" value={guideInfo.license_number} onChange={(v) => setGuideInfo({ ...guideInfo, license_number: v })} />
-              <Field label="أجر الإرشاد لليوم الواحد للرحلات الخاصة (د.ل)" type="number" value={String(guideInfo.daily_rate || 150)} onChange={(v) => setGuideInfo({ ...guideInfo, daily_rate: Number(v) })} />
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="سنوات الخبرة (years_of_experience)" type="number" value={String(guideInfo.years_of_experience)} onChange={(v) => setGuideInfo({ ...guideInfo, years_of_experience: Number(v) })} />
+              <Field label="رقم ترخيص الإرشاد (license_number)" value={guideInfo.license_number} onChange={(v) => setGuideInfo({ ...guideInfo, license_number: v })} />
+              <Field label="سعر اليوم بالدينار (price_per_day)" type="number" value={String(guideInfo.price_per_day || 150)} onChange={(v) => setGuideInfo({ ...guideInfo, price_per_day: Number(v) })} />
             </div>
 
-            {/* Operating Regions (مناطق العمل) */}
+            {/* Languages (BIT columns in DelniDB) */}
+            <div>
+              <label className="text-sm font-bold text-foreground mb-1 block">اللغات الأجنبية المتقنة (Languages - BIT Flags):</label>
+              <div className="grid grid-cols-3 gap-3 p-3 bg-[#FAFAF8] rounded-xl border border-border">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={guideInfo.speaks_english}
+                    onChange={(e) => setGuideInfo({ ...guideInfo, speaks_english: e.target.checked })}
+                    className="w-4 h-4 rounded text-primary"
+                  />
+                  <span>الإنجليزية (speaks_english)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={guideInfo.speaks_french}
+                    onChange={(e) => setGuideInfo({ ...guideInfo, speaks_french: e.target.checked })}
+                    className="w-4 h-4 rounded text-primary"
+                  />
+                  <span>الفرنسية (speaks_french)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={guideInfo.speaks_italian}
+                    onChange={(e) => setGuideInfo({ ...guideInfo, speaks_italian: e.target.checked })}
+                    className="w-4 h-4 rounded text-primary"
+                  />
+                  <span>الإيطالية (speaks_italian)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Operating Regions */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-bold text-foreground">مناطق ووجهات العمل المرغوبة:</label>
+                <label className="text-sm font-bold text-foreground">مناطق ووجهات العمل (operating_regions):</label>
                 <button
                   type="button"
                   onClick={() => {
-                    const allSelected = guideInfo.operating_regions.length === REGIONS_LIST.length;
-                    setGuideInfo({ ...guideInfo, operating_regions: allSelected ? [] : REGIONS_LIST.map((r) => r.id) });
+                    const allSelected = selectedRegions.length === REGIONS_LIST.length;
+                    setGuideInfo({ ...guideInfo, operating_regions: JSON.stringify(allSelected ? [] : REGIONS_LIST.map((r) => r.id)) });
                   }}
-                  className="text-xs font-bold text-[#D96B27] hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs font-bold text-[#D96B27] hover:underline cursor-pointer"
                 >
-                  <span>{guideInfo.operating_regions.length === REGIONS_LIST.length ? "✕ إلغاء تحديد الكل" : "✓ تحديد كافة المناطق"}</span>
+                  {selectedRegions.length === REGIONS_LIST.length ? "✕ إلغاء تحديد الكل" : "✓ تحديد كافة المناطق"}
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2 p-2.5 bg-[#FAFAF8] rounded-2xl border border-[#E6E1D6] max-h-48 overflow-y-auto">
                 {REGIONS_LIST.map((reg) => {
-                  const isChecked = guideInfo.operating_regions.includes(reg.id);
+                  const isChecked = selectedRegions.includes(reg.id);
                   return (
                     <div
                       key={reg.id}
                       onClick={() => {
-                        const exists = guideInfo.operating_regions.includes(reg.id);
-                        setGuideInfo({
-                          ...guideInfo,
-                          operating_regions: exists
-                            ? guideInfo.operating_regions.filter((r) => r !== reg.id)
-                            : [...guideInfo.operating_regions, reg.id],
-                        });
+                        const next = isChecked ? selectedRegions.filter((r) => r !== reg.id) : [...selectedRegions, reg.id];
+                        setGuideInfo({ ...guideInfo, operating_regions: JSON.stringify(next) });
                       }}
-                      className={`group relative flex items-center gap-2.5 p-2.5 rounded-xl border text-right transition-all duration-200 cursor-pointer select-none ${
-                        isChecked
-                          ? "border-[#D96B27] bg-white shadow-xs ring-1 ring-[#D96B27]/30 text-[#0B132B]"
-                          : "border-[#E6E1D6]/80 bg-white/70 hover:border-[#D96B27]/40 hover:bg-white text-[#526078]"
+                      className={`flex items-center gap-2 p-2 rounded-xl border text-right transition cursor-pointer ${
+                        isChecked ? "border-[#D96B27] bg-white text-[#0B132B]" : "border-border bg-white/70 text-muted-foreground"
                       }`}
                     >
-                      <MapPin className={`w-3.5 h-3.5 shrink-0 transition-colors ${isChecked ? "text-[#D96B27]" : "text-[#8C9AA8] group-hover:text-[#D96B27]"}`} />
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-[11px] font-black block truncate ${isChecked ? "text-[#0B132B]" : "text-[#475569]"}`}>
-                          {reg.nameAr}
-                        </span>
-                      </div>
-                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all ${
-                        isChecked
-                          ? "bg-gradient-to-br from-[#D96B27] to-[#EA580C] border-[#D96B27] text-white shadow-xs"
-                          : "border-[#D0C9B8] bg-white group-hover:border-[#D96B27]/50"
-                      }`}>
-                        {isChecked && (
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        )}
-                      </div>
+                      <MapPin className={`w-3.5 h-3.5 ${isChecked ? "text-[#D96B27]" : "text-muted-foreground"}`} />
+                      <span className="text-xs font-bold flex-1 truncate">{reg.nameAr}</span>
+                      {isChecked && <Check className="w-3.5 h-3.5 text-[#D96B27]" />}
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Working Days (أيام العمل) */}
+            {/* Working Days */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-bold text-foreground">أيام العمل والجاهزية للجولات:</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allSelected = guideInfo.working_days.length === WEEKDAYS.length;
-                    setGuideInfo({ ...guideInfo, working_days: allSelected ? [] : WEEKDAYS.map((d) => d.id) });
-                  }}
-                  className="text-xs font-bold text-[#D96B27] hover:underline cursor-pointer"
-                >
-                  {guideInfo.working_days.length === WEEKDAYS.length ? "تحديد أيام معينة" : "طوال أيام الأسبوع"}
-                </button>
-              </div>
-              <div className="grid grid-cols-7 gap-1 p-2 bg-[#FAFAF8] rounded-2xl border border-[#E6E1D6]">
+              <label className="text-sm font-bold text-foreground mb-1 block">أيام العمل المتاحة (working_days):</label>
+              <div className="grid grid-cols-7 gap-1 p-2 bg-[#FAFAF8] rounded-2xl border border-border">
                 {WEEKDAYS.map((day) => {
-                  const isChecked = guideInfo.working_days.includes(day.id);
+                  const isChecked = selectedDays.includes(day.id);
                   return (
                     <button
                       key={day.id}
                       type="button"
                       onClick={() => {
-                        const exists = guideInfo.working_days.includes(day.id);
-                        setGuideInfo({
-                          ...guideInfo,
-                          working_days: exists
-                            ? guideInfo.working_days.filter((d) => d !== day.id)
-                            : [...guideInfo.working_days, day.id],
-                        });
+                        const next = isChecked ? selectedDays.filter((d) => d !== day.id) : [...selectedDays, day.id];
+                        setGuideInfo({ ...guideInfo, working_days: JSON.stringify(next) });
                       }}
-                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-center transition-all duration-200 cursor-pointer ${
-                        isChecked
-                          ? "bg-gradient-to-br from-[#D96B27] to-[#EA580C] border-[#D96B27] text-white shadow-soft scale-[1.02]"
-                          : "bg-white border-[#E6E1D6]/80 text-[#526078] hover:border-[#D96B27]/40 hover:bg-[#FAFAF8]"
+                      className={`py-2 px-1 rounded-xl border text-center transition ${
+                        isChecked ? "bg-gradient-to-br from-[#D96B27] to-[#EA580C] text-white" : "bg-white border-border text-muted-foreground"
                       }`}
                     >
-                      <span className={`text-[8px] font-bold block ${isChecked ? "text-white/85" : "text-[#8C9AA8]"}`}>
-                        {day.nameEn.slice(0, 2)}
-                      </span>
-                      <span className="text-[10px] font-black mt-0.5">
-                        {day.nameAr}
-                      </span>
-                      <span className={`w-1.5 h-1.5 rounded-full mt-1 ${isChecked ? "bg-white" : "bg-transparent"}`} />
+                      <span className="text-[10px] font-black block">{day.nameAr}</span>
                     </button>
                   );
                 })}
@@ -566,19 +579,18 @@ const WEEKDAYS = [
             </div>
 
             <div>
-              <label className="text-sm font-bold text-foreground mb-1 block">تفاصيل وتوصيف الشهادات والترخيص</label>
+              <label className="text-sm font-bold text-foreground mb-1 block">الشهادات والتراخيص (certificate)</label>
               <textarea
-                value={guideInfo.certificate_description}
-                onChange={(e) => setGuideInfo({ ...guideInfo, certificate_description: e.target.value })}
-                rows={3}
+                value={guideInfo.certificate}
+                onChange={(e) => setGuideInfo({ ...guideInfo, certificate: e.target.value })}
+                rows={2}
                 className="w-full p-3 rounded-xl border border-border text-sm font-semibold text-right"
               />
             </div>
 
-            {/* Digital Certificate File Upload */}
             <div className="p-4 rounded-2xl border border-primary/30 bg-primary/5 space-y-2">
-              <label className="text-xs font-black text-primary block">📜 تحميل نسخ ملفات الشهادات والترخيص الرقمية (Digital Certificate File):</label>
-              <p className="text-xs text-muted-foreground">قم بتحميل نسخة رقمية من ملف الشهادة (PDF أو صورة) ليتم إرسالها للأدمن لمعاينتها وتوثيق حسابك.</p>
+              <label className="text-xs font-black text-primary block">📜 تحميل نسخ الشهادات الرقمية (digital_certificate_file):</label>
+              <p className="text-xs text-muted-foreground">قم بتحميل نسخة رقمية من الشهادة ليتم إرسالها للأدمن لمعاينتها وتوثيق حسابك.</p>
               <div className="flex items-center gap-3 pt-1">
                 <label className="px-4 py-2 rounded-xl bg-gradient-sea text-white text-xs font-black cursor-pointer shadow-soft">
                   📁 اختيار ملف الشهادة من جهازك
@@ -591,9 +603,9 @@ const WEEKDAYS = [
             </div>
 
             <div>
-              <label className="text-sm font-bold text-foreground mb-1 block">النبذة التعريفية (Bio)</label>
+              <label className="text-sm font-bold text-foreground mb-1 block">النبذة التعريفية (bio)</label>
               <textarea
-                value={guideInfo.bio}
+                value={guideInfo.bio || ""}
                 onChange={(e) => setGuideInfo({ ...guideInfo, bio: e.target.value })}
                 rows={3}
                 className="w-full p-3 rounded-xl border border-border text-sm font-semibold text-right"
