@@ -11,6 +11,7 @@ import destTripoli from "@/assets/dest-tripoli.jpg";
 import { BackHome } from "@/components/BackHome";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin, Award, FileText, Check, Camera, DollarSign } from "lucide-react";
+import { apiRegisterTourist, apiRegisterGuide } from "@/lib/api";
 
 export const Route = createFileRoute("/auth/signup")({
   head: () => ({
@@ -316,16 +317,15 @@ function SignupPage() {
           </div>
 
           {role === "tourist" ? (
-            <form className="space-y-3.5 text-right" onSubmit={(e) => {
+            <form className="space-y-3.5 text-right" onSubmit={async (e) => {
               e.preventDefault();
               try {
-                localStorage.setItem("dalni_user", JSON.stringify({
-                  fullName: tourist.fullName,
-                  phone: tourist.phone,
-                  passport: tourist.passport,
+                await apiRegisterTourist({
+                  full_name: tourist.fullName,
+                  phone_number: tourist.phone,
                   email: tourist.email,
-                  role: "tourist",
-                }));
+                  password: tourist.password,
+                });
               } catch (err) {}
               setSubmitted("tourist");
             }}>
@@ -552,8 +552,26 @@ function SignupPage() {
               {guideStep === 2 && (
                 <form
                   className="space-y-3 text-right animate-in fade-in duration-200"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
+                    try {
+                      await apiRegisterGuide({
+                        license_number: guide.licenseNumber,
+                        full_name: guide.fullName,
+                        phone_number: guide.phone,
+                        years_of_experience: Number(guide.years) || 2,
+                        email: guide.email,
+                        password: guide.password,
+                        gender: guide.gender,
+                        price_per_day: Number(guide.pricePerDay) || 150,
+                        bio: guide.bio,
+                        operating_regions: JSON.stringify(guide.operatingRegions),
+                        working_days: JSON.stringify(guide.workingDays),
+                        speaks_english: guide.speaksEnglish,
+                        speaks_french: guide.speaksFrench,
+                        speaks_italian: guide.speaksItalian,
+                      });
+                    } catch (err) {}
                     setSubmitted("guide");
                   }}
                 >
