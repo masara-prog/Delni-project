@@ -169,11 +169,11 @@ function GuideDashboard() {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
       return;
     }
-    if (guideInfo.operating_regions.length === 0) {
+    if (!guideInfo.operating_regions || guideInfo.operating_regions.length === 0) {
       alert("الرجاء اختيار منطقة عمل واحدة على الأقل.");
       return;
     }
-    if (guideInfo.working_days.length === 0) {
+    if (!guideInfo.working_days || guideInfo.working_days.length === 0) {
       alert("الرجاء اختيار يوم عمل واحد على الأقل.");
       return;
     }
@@ -190,11 +190,11 @@ function GuideDashboard() {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
       return;
     }
-    if (guideInfo.operating_regions.length === 0) {
+    if (!guideInfo.operating_regions || guideInfo.operating_regions.length === 0) {
       alert("الرجاء اختيار منطقة عمل واحدة على الأقل.");
       return;
     }
-    if (guideInfo.working_days.length === 0) {
+    if (!guideInfo.working_days || guideInfo.working_days.length === 0) {
       alert("الرجاء اختيار يوم عمل واحد على الأقل.");
       return;
     }

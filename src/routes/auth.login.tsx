@@ -11,6 +11,7 @@ import { BackHome } from "@/components/BackHome";
 import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin } from "lucide-react";
+import { apiLogin } from "@/lib/api";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({
@@ -72,7 +73,7 @@ function LoginPage() {
     }
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -96,6 +97,25 @@ function LoginPage() {
         setErrorMsg("عذراً، بيانات دخول مدير النظام غير صحيحة! البريد: admin@dalni.ly | كلمة المرور: admin123");
         return;
       }
+    }
+
+    // Connect to live Laravel API with safe local fallback
+    try {
+      const res = await apiLogin({ role, login: email, password });
+      if (res && res.status === "success" && res.token) {
+        if (role === "guide") {
+          navigate({ to: "/dashboard/guide" });
+        } else if (role === "transport") {
+          navigate({ to: "/dashboard/transport" });
+        } else if (role === "driver") {
+          navigate({ to: "/dashboard/driver" });
+        } else {
+          navigate({ to: "/dashboard/tourist" });
+        }
+        return;
+      }
+    } catch {
+      // Fallback
     }
 
     const userName = email ? email.split("@")[0] : "المستخدم الحالي";

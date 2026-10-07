@@ -8,6 +8,7 @@ import destAcacus from "@/assets/dest-acacus.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
 import { useLanguage } from "@/lib/i18n";
 import { QrCode } from "lucide-react";
+import type { PrivateTrip } from "@/lib/dbSchema";
 
 export const Route = createFileRoute("/dashboard/tourist")({
   head: () => ({
@@ -53,9 +54,10 @@ function TouristDashboard() {
   // Tourist Profile Data (Data Dictionary: Tourists table)
   const [touristInfo, setTouristInfo] = useState({
     tourist_id: "P-8812903",
-    name_full: "أحمد بن علي المصراتي",
+    full_name: "أحمد بن علي المصراتي",
     email: "ahmed.misrati@dalni.ly",
     phone_number: "0912345678",
+    national_id_or_passport: "09123456789",
     password: "••••••••",
   });
 
@@ -384,9 +386,9 @@ function TouristDashboard() {
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
             <Field label="كود السائح بالمنصة (tourist_id)" value={touristInfo.tourist_id} onChange={() => {}} />
             <Field 
-              label="الاسم الكامل للسائح (name_full)" 
-              value={touristInfo.name_full} 
-              onChange={(v) => setTouristInfo({ ...touristInfo, name_full: v })} 
+              label="الاسم الكامل للسائح (full_name)" 
+              value={touristInfo.full_name} 
+              onChange={(v) => setTouristInfo({ ...touristInfo, full_name: v })} 
               pattern={/^[\u0600-\u06FF\sA-Za-z]+$/} 
               errorMessage="الاسم يجب أن يحتوي على حروف فقط (عربي/إنجليزي)" 
               maxLength={50} 

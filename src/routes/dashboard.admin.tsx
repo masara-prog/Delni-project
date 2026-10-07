@@ -32,16 +32,164 @@ export const Route = createFileRoute("/dashboard/admin")({
 });
 
 /* ============ TYPES ============ */
-type Company = { id: string; contract_number: string; name: string; phone: string; address: string; email: string; pass: string; total_vehicles: number; available_cars: number; contract_date: string; contract_end_date?: string; status: "موثق" | "بانتظار" | "مرفوض" };
-type Driver = { driver_license_number: string; full_name: string; phone_number: string; national_id_or_passport: string; license_date_valid: string; contract_number: string; assigned_vehicle_plate: string; email: string; account_status: "نشط" | "معلق" | "موقوف" };
-type Guide = { license_number: string; full_name: string; phone_number: string; years_of_experience: number; certificate: string; digital_certificate_file?: string; bio: string; speaks_english: boolean; speaks_french: boolean; speaks_italian: boolean; verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; email: string; daily_rate: number };
-type Vehicle = { plate_number: string; company_id: string; company_name: string; vehicle_type: string; capacity: number; daily_rate: number; status: "جاهزة" | "في رحلة" | "صيانة" };
-type DailyTrip = { id: string; title: string; description: string; price_per_seat: number; max_capacity: number; available_seats: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; recurring_days?: string[]; bus_capacity?: 25 | 50; destination?: string; departure_city?: string };
-type WeeklyTrip = { id: string; title: string; start_date: string; end_date: string; seat_per_price: number; max_capacity: number; available_seats?: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; weekly_day?: string; bus_capacity?: 25 | 50; destinations?: string[]; departure_city?: string; destination?: string; hotel_id?: string; };
-type PrivateTripRequest = { private_trip_id: string; customer_name: string; customer_phone: string; customer_description: string; preferred_start_date: string; duration_days: number; number_of_companions: number; quoted_price?: number; admin_itinerary_plan?: string; assigned_guide?: string; assigned_vehicle?: string; status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" };
+type Company = { 
+  id: string; 
+  contract_number: string; 
+  name: string; 
+  company_name?: string;
+  phone: string; 
+  phone_number?: string;
+  address: string; 
+  city?: string;
+  email: string; 
+  pass?: string; 
+  password?: string;
+  total_vehicles?: number; 
+  available_cars?: number; 
+  available_vehicles?: number; 
+  contract_date?: string; 
+  contract_start_date?: string; 
+  contract_end_date?: string; 
+  status?: "موثق" | "بانتظار" | "مرفوض" | string;
+  verification_status?: "موثق" | "بانتظار التوثيق" | "بانتظار" | "مرفوض" | string;
+};
+
+type Driver = { 
+  driver_license_number: string; 
+  full_name: string; 
+  phone_number: string; 
+  national_id_or_passport?: string; 
+  license_date_valid?: string; 
+  contract_number?: string; 
+  assigned_vehicle_plate?: string; 
+  email?: string; 
+  company_name?: string; 
+  account_status?: "نشط" | "معلق" | "موقوف" | string;
+  operational_status?: string;
+  experience_years?: number;
+};
+
+type Guide = { 
+  license_number: string; 
+  full_name: string; 
+  phone_number: string; 
+  years_of_experience: number; 
+  certificate: string; 
+  digital_certificate_file?: string; 
+  bio?: string; 
+  speaks_english?: boolean; 
+  speaks_french?: boolean; 
+  speaks_italian?: boolean; 
+  verification_status?: "موثق" | "بانتظار التوثيق" | "مرفوض" | string; 
+  email?: string; 
+  daily_rate?: number; 
+  price_per_day?: number;
+  primaryRegion?: string;
+  operating_regions?: string | string[];
+  working_days?: string | string[];
+  total_tours_completed?: number;
+};
+
+type Vehicle = { 
+  plate_number: string; 
+  company_id?: string; 
+  contract_number?: string;
+  company_name?: string; 
+  vehicle_type: string; 
+  capacity: number; 
+  seating_capacity?: number;
+  daily_rate?: number; 
+  status: "جاهزة" | "في رحلة" | "صيانة" | string; 
+  vehicle_status?: string;
+};
+
+type DailyTrip = { 
+  id: string; 
+  daily_trip_id?: string;
+  title: string; 
+  trip_title?: string;
+  description: string; 
+  price_per_seat: number; 
+  max_capacity: number; 
+  available_seats: number; 
+  bookings_count: number; 
+  rating_avg: number; 
+  guide_license?: string; 
+  guide_license_number?: string;
+  vehicle_plates?: string[]; 
+  is_active: boolean; 
+  photo?: string; 
+  recurring_days?: string[] | string; 
+  bus_capacity?: 25 | 50; 
+  destination?: string; 
+  destination_city?: string;
+  departure_city?: string; 
+};
+
+type WeeklyTrip = { 
+  id: string; 
+  weekly_trip_id?: string;
+  title: string; 
+  trip_title?: string;
+  trip_description?: string;
+  description?: string;
+  start_date: string; 
+  end_date: string; 
+  seat_per_price: number; 
+  max_capacity: number; 
+  available_seats?: number; 
+  bookings_count: number; 
+  rating_avg: number; 
+  guide_license?: string; 
+  guide_license_number?: string;
+  vehicle_plates?: string[]; 
+  is_active: boolean; 
+  photo?: string; 
+  weekly_day?: string; 
+  bus_capacity?: 25 | 50; 
+  destinations?: string[]; 
+  destination_region?: string;
+  departure_city?: string; 
+  destination?: string; 
+  hotel_id?: string; 
+};
+
+type PrivateTripRequest = { 
+  private_trip_id: string; 
+  customer_name: string; 
+  customer_phone: string; 
+  customer_description: string; 
+  preferred_start_date: string; 
+  duration_days: number; 
+  number_of_companions: number; 
+  quoted_price?: number; 
+  admin_itinerary_plan?: string; 
+  assigned_guide?: string; 
+  assigned_guide_license?: string;
+  guide_license_number?: string;
+  assigned_vehicle?: string; 
+  assigned_vehicle_plate?: string;
+  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
+};
+
 type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string };
 type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string };
-type Attraction = { id: string; name: string; city: string; category: string; description: string; place_image: string; visitors_count: number; latitude?: number; longitude?: number; google_maps_url?: string };
+type Attraction = { 
+  id: string; 
+  place_id?: string;
+  name: string; 
+  place_name?: string;
+  city: string; 
+  category: string; 
+  description: string; 
+  place_image: string; 
+  visitors_count: number; 
+  latitude?: number; 
+  longitude?: number; 
+  google_maps_url?: string; 
+  is_unesco?: boolean;
+  unesco_year?: number;
+};
 type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
