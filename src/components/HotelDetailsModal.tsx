@@ -458,22 +458,6 @@ export function HotelDetailsModal({
                       <span>↗</span>
                     </a>
                   </div>
-
-                  {/* Nearby Attractions */}
-                  <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
-                      <span className="text-amber-400 font-black">🚗 {isAr ? "المطار والميناء:" : "Transit:"}</span>
-                      <p className="text-slate-300">{isAr ? "25 دقيقة بالسيارة من المطار" : "25 min to airport"}</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
-                      <span className="text-emerald-400 font-black">🏛️ {isAr ? "المدينة القديمة والآثار:" : "Old City Ruins:"}</span>
-                      <p className="text-slate-300">{isAr ? "10 دقائق سيراً على الأقدام" : "10 min walking"}</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
-                      <span className="text-blue-400 font-black">🌊 {isAr ? "الشاطئ والكورنيش:" : "Beachfront:"}</span>
-                      <p className="text-slate-300">{isAr ? "إطلالة مباشرة على البحر" : "Direct waterfront view"}</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

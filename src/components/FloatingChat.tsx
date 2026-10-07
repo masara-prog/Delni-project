@@ -64,15 +64,72 @@ export function FloatingChat() {
         : "Welcome to Libya Journeys Pro Smart AI 🤖👋\nI am your travel assistant: Feel free to ask about any trip, hotel, attraction, or upload a photo to identify landmarks!" 
     },
   ]);
+  const [supportMessages, setSupportMessages] = useState<Msg[]>([
+    {
+      id: 1,
+      from: "admin",
+      time: now(),
+      text: language === 'ar' ? "مرحباً بك في مركز دعم دلّني! كيف يمكنني مساعدتك اليوم؟ 😊" : "Welcome to Dallani Support! How can I help you today? 😊"
+    }
+  ]);
+  const [supportInput, setSupportInput] = useState("");
+  const [supportTyping, setSupportTyping] = useState(false);
+
+  const handleSupportSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    const txt = supportInput.trim();
+    if (!txt) return;
+
+    const userMsg: Msg = { id: Date.now(), from: "user", text: txt, time: now() };
+    setSupportMessages((prev) => [...prev, userMsg]);
+    setSupportInput("");
+    setSupportTyping(true);
+
+    // Save ticket to localStorage for Admin Dashboard
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
+      stored.unshift({
+        id: `TK-${Date.now().toString().slice(-4)}`,
+        user_name: "زائر عبر شات الدعم",
+        user_role: "سائح",
+        subject: txt.slice(0, 35),
+        message: txt,
+        status: "جديد",
+        created_at: now()
+      });
+      localStorage.setItem("dalni_support_tickets", JSON.stringify(stored));
+    } catch {}
+
+    setTimeout(() => {
+      setSupportTyping(false);
+      setSupportMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          from: "admin",
+          text: language === 'ar' 
+            ? "شكراً لتواصلك! تم استلام رسالتك وتمريرها لمسؤول الدعم والإدارة فوراً ⏳" 
+            : "Thank you! Your message has been received and forwarded to our support team ⏳",
+          time: now()
+        }
+      ]);
+    }, 1000);
+  };
+
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const supportScrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, analyzingImage, open]);
+
+  useEffect(() => {
+    supportScrollRef.current?.scrollTo({ top: supportScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [supportMessages, supportTyping, supportOpen]);
 
   if (path.startsWith("/support")) return null;
 
@@ -133,22 +190,55 @@ export function FloatingChat() {
         return;
       }
 
-      // Default AI answer
-      setMessages((m) => [
-        ...m,
-        {
-          id: Date.now() + 1,
-          from: "ai",
-          text: language === 'ar' 
-            ? `شكراً لاستفسارك! في منصة دلني نسعد بتقديم كافة التسهيلات حول المعالم، والمرشدين المعينين، وشركات النقل. يمكنك تجربة رفع صورة معلم أو كتابة مصطلح مثل "شاهي باللوز".`
-            : `Thanks for your inquiry! At Libya Journeys, we are happy to assist with landmarks, guides, and transport. Try uploading a photo or asking about a local term.`,
-          time: now()
-        }
-      ]);
-    }, 1000);
+      // Call real Python FastAPI Delni AI backend
+      try {
+        const historyForBackend = messages.slice(-6).map((msg) => ({
+          role: msg.from === "user" ? "user" : "model",
+          content: msg.text,
+        }));
+        
+        fetch("http://127.0.0.1:8000/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: t, history: historyForBackend }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Backend offline");
+            return res.json();
+          })
+          .then((data) => {
+            setMessages((m) => [
+              ...m,
+              {
+                id: Date.now() + 1,
+                from: "ai",
+                badge: data.source === "gemini" ? "✨ ذكاء دلّني (Gemini AI)" : "🤖 مرشد دلّني الذكي",
+                text: data.reply,
+                time: now(),
+              },
+            ]);
+          })
+          .catch(() => {
+            // Graceful fallback to local response if backend is offline
+            setMessages((m) => [
+              ...m,
+              {
+                id: Date.now() + 1,
+                from: "ai",
+                text: language === 'ar' 
+                  ? `شكراً لاستفسارك! في منصة دلني نسعد بتقديم كافة التسهيلات حول المعالم، والمرشدين المعينين، وشركات النقل. يمكنك تجربة رفع صورة معلم أو كتابة استفسارك بالتفصيل.`
+                  : `Thanks for your inquiry! At Libya Journeys, we are happy to assist with landmarks, guides, and transport.`,
+                time: now()
+              }
+            ]);
+          });
+      } catch {
+        // Fallback
+      }
+    }, 400);
   };
 
-  const handleImageSimulate = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSimulate = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -160,6 +250,33 @@ export function FloatingChat() {
 
     setAnalyzingImage(true);
 
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("http://127.0.0.1:8000/api/ai/vision", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyzingImage(false);
+        setMessages((m) => [
+          ...m,
+          {
+            id: Date.now() + 1,
+            from: "ai",
+            badge: "👁️ نتائج التعرف البصري (Delni Vision)",
+            text: data.analysis || "تم التعرف على المعلم بنجاح.",
+            time: now()
+          }
+        ]);
+        return;
+      }
+    } catch {
+      // Ignore and fallback below
+    }
+
+    // Local fallback if vision endpoint unavailable
     setTimeout(() => {
       setAnalyzingImage(false);
       const sample = landmarkSamples[Math.floor(Math.random() * landmarkSamples.length)];
@@ -174,7 +291,7 @@ export function FloatingChat() {
           time: now()
         }
       ]);
-    }, 2000);
+    }, 1200);
   };
 
   return (
@@ -213,21 +330,39 @@ export function FloatingChat() {
             <button onClick={() => setSupportOpen(false)} className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center text-sm transition-colors border-none bg-transparent text-white cursor-pointer outline-none font-bold">✕</button>
           </div>
           
-          <div className="flex-1 p-4 bg-[#FAFAF8] overflow-y-auto space-y-3">
-            <div className="flex justify-start">
-              <div className="max-w-[85%] p-3 text-xs md:text-sm rounded-2xl bg-white border border-[#E6E1D6] text-[#0B132B] rounded-tl-none shadow-xs font-semibold">
-                {language === 'ar' ? 'مرحباً! كيف يمكنني مساعدتك اليوم؟ 😊' : 'Hello! How can I help you today? 😊'}
-                <div className="text-[9px] mt-1.5 text-[#526078]">{now()}</div>
+          <div ref={supportScrollRef} className="flex-1 p-4 bg-[#FAFAF8] overflow-y-auto space-y-3">
+            {supportMessages.map((m) => (
+              <div key={m.id} className={`flex ${m.from === "user" ? "justify-start" : "justify-end"}`}>
+                <div className={`max-w-[85%] p-3 text-xs md:text-sm rounded-2xl shadow-xs ${
+                  m.from === "user"
+                    ? "bg-[#003580] text-white font-bold rounded-bl-none"
+                    : "bg-white border border-[#E6E1D6] text-[#0B132B] rounded-br-none font-semibold"
+                }`}>
+                  <div>{m.text}</div>
+                  <div className={`text-[9px] mt-1.5 ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</div>
+                </div>
               </div>
-            </div>
+            ))}
+
+            {supportTyping && (
+              <div className="flex justify-end">
+                <div className="bg-white border border-[#E6E1D6] p-2.5 rounded-2xl text-stone-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" style={{ animationDelay: "0.15s" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" style={{ animationDelay: "0.3s" }} />
+                </div>
+              </div>
+            )}
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="p-3 bg-white border-t border-[#E6E1D6] flex gap-2">
+          <form onSubmit={handleSupportSend} className="p-3 bg-white border-t border-[#E6E1D6] flex gap-2">
             <input 
+              value={supportInput}
+              onChange={(e) => setSupportInput(e.target.value)}
               placeholder={language === 'ar' ? 'اكتب رسالتك هنا...' : 'Type your message...'} 
               className="flex-1 h-9 px-3 rounded-xl bg-[#F4F1EA] border border-[#E6E1D6] focus:bg-white focus:border-[#D96B27] text-xs outline-none transition-all text-[#0B132B]" 
             />
-            <button type="submit" className="w-9 h-9 rounded-xl bg-[#D96B27] hover:bg-[#0b7a70] flex items-center justify-center text-white shadow-soft transition-colors border-none cursor-pointer outline-none">
+            <button type="submit" className="w-9 h-9 rounded-xl bg-[#D96B27] hover:bg-[#b0531c] flex items-center justify-center text-white shadow-soft transition-colors border-none cursor-pointer outline-none">
               <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 pl-0.5" stroke="currentColor" strokeWidth="2">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" strokeLinejoin="round" strokeLinecap="round" />
               </svg>

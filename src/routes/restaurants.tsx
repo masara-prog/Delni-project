@@ -499,18 +499,11 @@ function RestaurantOffersSpotlight({
               {offer.details}
             </p>
 
-            {/* Price & Savings */}
-            <div className="flex items-baseline gap-3 pt-2">
-              <div>
-                <span className="text-xs text-slate-400 font-bold block">
-                  {isAr ? "متوسط التكلفة للوجبة:" : "Average Price:"}
-                </span>
-                <div className="text-2xl sm:text-3xl font-black text-[#D96B27]">
-                  {offer.priceRange}
-                </div>
-              </div>
-              <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black">
-                {isAr ? "ضيافة شاي باللوز مجاناً لرواد دلّني" : "Free Mint/Almond Tea Perk"}
+            {/* Dallani Verified Perk */}
+            <div className="flex items-center gap-3 pt-2">
+              <span className="px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black flex items-center gap-1.5">
+                <span>🏷️</span>
+                <span>{isAr ? "خصم معتمد 20% وضيافة شاي باللوز مجاناً لرواد دلّني" : "20% Dallani Perk & Complimentary Almond Tea"}</span>
               </span>
             </div>
 
@@ -522,7 +515,7 @@ function RestaurantOffersSpotlight({
                 className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
               >
                 <span>🍽️</span>
-                <span>{isAr ? "معاينة المطعم وقائمة الأطباق" : "View Menu & Details"}</span>
+                <span>{isAr ? "معاينة المطعم والتفاصيل" : "View Restaurant Details"}</span>
                 <span>➔</span>
               </button>
 
@@ -636,7 +629,7 @@ function RestaurantDetailsView({
   const isAr = language === "ar";
   const [activePhoto, setActivePhoto] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "menu" | "features" | "location">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "features" | "location">("overview");
 
   // Scroll to top on mount
   useEffect(() => {
@@ -932,7 +925,6 @@ function RestaurantDetailsView({
             <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
               {[
                 { id: "overview", label: isAr ? "نبذة وتجربة التذوق" : "Culinary Story", icon: "🍽️" },
-                { id: "menu", label: isAr ? "الأطباق المميزة" : "Signature Dishes", icon: "⭐" },
                 { id: "features", label: isAr ? "الأجواء والجلسات" : "Atmosphere", icon: "🌟" },
                 { id: "location", label: isAr ? "الموقع والمواعيد" : "Hours & Map", icon: "📍" },
               ].map((tab) => (
@@ -963,60 +955,22 @@ function RestaurantDetailsView({
                   {description}
                 </p>
 
-                {/* Culinary Highlights */}
+                {/* Real Database Attributes: Order Type & Specialty */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-white/10">
-                  {[
-                    { title: isAr ? "مكونات طازجة ولحوم وطنية يومية" : "100% Fresh Daily Local Ingredients", icon: "🥩" },
-                    { title: isAr ? "أجواء عائلية راقية وخصوصية تامة" : "Family Private Dining Booths", icon: "👨‍👩‍👧‍👦" },
-                    { title: isAr ? "جلسات شاي وتحلية تراثية أصيلة" : "Authentic Tea & Heritage Sweets", icon: "🫖" },
-                    { title: isAr ? "خدمة سريعة واهتمام فائق بالزبائن" : "Attentive Hospitality & Rapid Service", icon: "⚡" },
-                  ].map((hl, i) => (
-                    <div key={i} className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/5 border border-white/5 text-xs sm:text-sm font-bold text-slate-200">
-                      <span className="text-lg">{hl.icon}</span>
-                      <span>{hl.title}</span>
+                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <span className="text-2xl">🥩</span>
+                    <div>
+                      <div className="text-[11px] font-bold text-slate-400">{isAr ? "نوع وتصنيف المأكولات:" : "Cuisine / Order Type:"}</div>
+                      <div className="text-sm font-black text-amber-300">{restaurant.type}</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* B. Signature Dishes (ZERO PRICES) */}
-            {activeTab === "menu" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
-                <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
-                  <span>⭐</span>
-                  <h2>{isAr ? "أبرز الأطباق والتخصصات الموصى بها" : "Signature Dishes & Specialties"}</h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {(restaurant.signatureDishes && restaurant.signatureDishes.length > 0
-                    ? restaurant.signatureDishes
-                    : [
-                        isAr ? "كسكسي بالبصلة واللحم الوطني" : "Couscous with Lamb",
-                        isAr ? "شربة ليبية بالأعشاب والليمون" : "Traditional Libyan Soup",
-                        isAr ? "مشاوي مشكلة على الفحم" : "Mixed Charcoal Grill",
-                        isAr ? "مبطن طرابلسي وبراك مقلي" : "Stuffed Mbaten & Burek",
-                      ]
-                  ).map((dish, i) => (
-                    <div
-                      key={i}
-                      className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 flex items-start gap-3.5"
-                    >
-                      <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#D96B27] to-amber-600 text-white flex items-center justify-center font-black text-sm shrink-0 mt-0.5 shadow-md">
-                        {i + 1}
-                      </span>
-                      <div className="space-y-1">
-                        <div className="font-black text-sm text-white">{dish}</div>
-                        <div className="text-xs text-amber-300/80 font-bold">
-                          {isAr ? "طبق مميز موصى به من الشيف ورواد دلّني" : "Chef Special Recommendation"}
-                        </div>
-                        <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1 pt-0.5">
-                          <span>✓</span>
-                          <span>{isAr ? "محضر يومياً بمكونات طازجة 100%" : "Fresh Daily Preparation"}</span>
-                        </div>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <span className="text-2xl">🔥</span>
+                    <div>
+                      <div className="text-[11px] font-bold text-slate-400">{isAr ? "التخصص والطلب الأكثر طلباً:" : "Primary Specialty:"}</div>
+                      <div className="text-sm font-black text-[#D96B27]">{restaurant.specialty}</div>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1256,6 +1210,80 @@ function RestaurantDetailsView({
   );
 }
 
+function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
+  let category: "seafood" | "traditional" | "fastfood" | "cafe" = "traditional";
+  const typeStr = (r.type || "").toLowerCase();
+  const nameStr = (r.name || "").toLowerCase();
+
+  if (typeStr.includes("بحر") || nameStr.includes("بحر") || typeStr.includes("سمك") || nameStr.includes("سمك") || typeStr.includes("seafood")) {
+    category = "seafood";
+  } else if (
+    typeStr.includes("مقهى") ||
+    typeStr.includes("قهوة") ||
+    typeStr.includes("كافيه") ||
+    nameStr.includes("مقهى") ||
+    nameStr.includes("كافيه") ||
+    typeStr.includes("cafe")
+  ) {
+    category = "cafe";
+  } else if (
+    typeStr.includes("سريع") ||
+    typeStr.includes("برجر") ||
+    typeStr.includes("فاست") ||
+    typeStr.includes("شاورما") ||
+    typeStr.includes("fast")
+  ) {
+    category = "fastfood";
+  } else {
+    category = "traditional";
+  }
+
+  const photos = [
+    r.facility_image_1,
+    r.facility_image_2,
+    r.facility_image_3,
+    r.facility_image_4,
+    r.facility_image_5,
+  ].filter((p): p is string => Boolean(p && typeof p === "string" && p.trim().length > 0));
+
+  if (photos.length === 0) {
+    photos.push(
+      category === "cafe"
+        ? "/assets/cafe-libya.jpg"
+        : category === "seafood"
+        ? "/assets/ai_food.jpg"
+        : "/assets/restaurant-libya.jpg"
+    );
+  }
+
+  return {
+    id: r.id || `REST-CUSTOM-${Math.random()}`,
+    name: r.name || (isAr ? "مطعم جديد" : "New Restaurant"),
+    category: category,
+    type: r.type || (isAr ? "مطعم ومقهى" : "Restaurant & Cafe"),
+    city: r.city || (isAr ? "طرابلس" : "Tripoli"),
+    address: r.address || (isAr ? "ليبيا" : "Libya"),
+    phone: r.phone || "0910000000",
+    mapsQuery: r.google_maps_url || `${r.name || ""} ${r.city || ""}`,
+    rating: typeof r.rating_avg === "number" ? r.rating_avg : 5.0,
+    ratingWord: isAr ? "استثنائي" : "Superb",
+    reviewsCount: 120,
+    priceRange: isAr ? "حسب الطلب" : "On Demand",
+    hours: r.working_hours || (isAr ? "10:00 ص – 11:00 م" : "10:00 AM – 11:00 PM"),
+    specialty: r.description || (isAr ? "تشكيلة فاخرة من المأكولات والمشاريب الطازجة" : "Fresh Food & Drinks"),
+    photos: photos,
+    signatureDishes: [
+      isAr ? "الأطباق الرئيسية والوجبة الخاصة" : "Main House Specialties",
+      isAr ? "المقبلات والمشروبات الطازجة" : "Fresh Appetizers & Beverages",
+    ],
+    features: [
+      isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
+      isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
+      isAr ? "خصم 20% لرواد دلّني" : "20% Dallani Perk",
+    ],
+  };
+}
+
 function RestaurantsPage() {
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
@@ -1264,6 +1292,59 @@ function RestaurantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRest, setSelectedRest] = useState<Restaurant | null>(null);
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+  const [customRestaurants, setCustomRestaurants] = useState<Restaurant[]>([]);
+
+  useEffect(() => {
+    const loadCustom = () => {
+      try {
+        const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+        if (Array.isArray(storedRests) && storedRests.length > 0) {
+          const mapped = storedRests.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
+          setCustomRestaurants(mapped);
+        }
+      } catch {}
+
+      fetch("http://127.0.0.1:8000/api/restaurants")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const mappedApi = data.map((item: any) =>
+              mapAdminRestaurantToPublic(
+                {
+                  id: item.facility_id,
+                  name: item.facility_name,
+                  type: item.facility_type,
+                  city: item.city,
+                  address: item.address_details,
+                  phone: item.phone_number,
+                  description: item.description,
+                  google_maps_url: item.google_maps_url,
+                  working_hours: item.working_hours,
+                  facility_image_1: item.facility_image_1,
+                  facility_image_2: item.facility_image_2,
+                  facility_image_3: item.facility_image_3,
+                  facility_image_4: item.facility_image_4,
+                  facility_image_5: item.facility_image_5,
+                },
+                isAr
+              )
+            );
+
+            setCustomRestaurants((prev) => {
+              const ids = new Set(prev.map((p) => p.id));
+              const newFromApi = mappedApi.filter((m: any) => !ids.has(m.id));
+              return [...prev, ...newFromApi];
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadCustom();
+
+    window.addEventListener("storage", loadCustom);
+    return () => window.removeEventListener("storage", loadCustom);
+  }, [isAr]);
 
   const resultsSectionRef = useRef<HTMLElement>(null);
   const scrollToResults = () => {
@@ -1279,7 +1360,12 @@ function RestaurantsPage() {
     restScrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };
 
-  const restaurants = useMemo(() => getRestaurants(language), [language]);
+  const restaurants = useMemo(() => {
+    const base = getRestaurants(language);
+    const customIds = new Set(customRestaurants.map((c) => c.id));
+    const filteredBase = base.filter((b) => !customIds.has(b.id));
+    return [...customRestaurants, ...filteredBase];
+  }, [language, customRestaurants]);
 
   const cities = useMemo(
     () => [

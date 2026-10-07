@@ -653,14 +653,11 @@ function TransportPage() {
                       </div>
 
                       {/* Driver & Company Spec Card */}
-                      <div className="mt-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
+                      <div className="mt-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
                         <div className="font-black text-[#0F172A] flex items-center gap-1.5">
                           <span>🧑‍✈️</span>
                           <span>{v.driverName}</span>
                           <span className="text-slate-400 font-normal text-[11px]">({v.driverExperience})</span>
-                        </div>
-                        <div className="text-slate-600 text-[11px]">
-                          {v.features.join(" · ")}
                         </div>
                       </div>
                     </div>
@@ -814,20 +811,6 @@ function TransportPage() {
                         </div>
                         <div className="font-black text-xs text-[#0F172A]">{selectedVehicle.driverName}</div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Features */}
-                  <div>
-                    <h3 className="text-base font-black text-[#0F172A] mb-2">
-                      {isAr ? "الميزات ووسائل الراحة المشمولة" : "Included Amenities & Comfort"}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedVehicle.features.map((feat, i) => (
-                        <span key={i} className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black">
-                          ✓ {feat}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 </div>

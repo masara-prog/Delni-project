@@ -1,0 +1,312 @@
+
+========================================================
+Table #1: Tourists - .1 جدول السياح  (Tourists)
+========================================================
+tourist_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  معرف السائح الفريد (رقم جواز السفر)
+full_name  |  VARCHAR  |  100  |  NOT NULL  |  _  |  الاسم بالكامل
+email  |  VARCHAR  |  100  |  NOT NULL, UNIQUE  |  _  |  البريد الإلكتروني
+phone_number  |  VARCHAR  |  20  |  NOT NULL, UNIQUE  |  _  |  رقم الهاتف
+password  |  VARCHAR  |  255  |  NOT NULL  |  _  |  كلمة المرور
+
+========================================================
+Table #2: Tour_Guides - .2  جدول المرشدين السياحيين (Tour_Guides)
+========================================================
+license_number  |  VARCHAR  |  50  |  Primary Key  |  Primary Key  |  _  |  رقم ترخيص مزاولة المهنة
+Primary Key
+full_name  |  VARCHAR  |  100  |  NOT NULL  |  -  |  الاسم بالكامل
+phone_number  |  VARCHAR  |  20  |  NOT NULL, UNIQUE  |  _  |  رقم هاتف المرشد
+years_of_experience  |  INT  |  _  |  NOT NULL, CHECK (years_of_experience >=2  |  _  |  عدد سنوات الخبرة
+certificate  |  VARCHAR  |  255  |  NOT NULL  |  NOT NULL  |  _  |  شهادة المرشد
+NOT NULL
+bio  |  TEXT  |  _  |  NULL  |  _  |  نبذة تعريفية مختصرة
+speaks_english  |  BOOLEAN  |  _  |  NOT NULL, DEFAULT FALSE  |  _  |  هل يتحدث الإنجليزية
+speaks_french  |  BOOLEAN  |  _  |  NOT NULL, DEFAULT FALSE  |  NOT NULL, DEFAULT FALSE  |  _  |  هل يتحدث الفرنسية
+NOT NULL, DEFAULT FALSE
+speaks_italian  |  BOOLEAN  |  _  |  NOT NULL, DEFAULT FALSE  |  _  |  هل يتحدث الإيطالية
+verification_status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة الاعتماد
+password  |  VARCHAR)  |  255  |  NOT NULL  |  _  |  كلمة المرور
+email  |  VARCHAR)  |  100  |  NOT NULL, UNIQUE  |  _  |  بريد المرشد لتسجيل الدخول
+
+========================================================
+Table #3: Transportation_Companies - .3  جدول شركات النقل  (Transportation_Companies)
+========================================================
+contract_number  |  VARCHAR  |  50  |  Primary Key  |  _  |  رقم العقد
+company_name  |  VARCHAR(100)  |  100  |  NOT NULL  |  _  |  اسم شركة النقل
+phone_number  |  VARCHAR(20)  |  20  |  NOT NULL, UNIQUE  |  _  |  رقم هاتف الشركة
+Address  |  VARCHAR  |  150  |  NOT NULL  |  _  |  العنوان الرئيسي للشركة
+total_vehicles  |  INT  |  _  |  NOT NULL, CHECK (vehicles_total>=0)  |  _  |  عدد السيارات المتاحة
+verification_status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة اعتماد الشركة
+contract_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ انتهاء التعاقد
+email  |  VARCHAR)  |  100  |  NOT NULL, UNIQUE  |  _  |  بريد المرشد لتسجيل الدخول
+password  |  VARCHAR)  |  255  |  NOT NULL  |  _  |  كلمة المرور
+
+========================================================
+Table #4: Vehicles - .4 جدول السيارات (Vehicles)
+========================================================
+plate_number  |  VARCHAR  |  30  |  Primary Key  |  _  |  رقم اللوحة للسيارة
+vehicle_type  |  VARCHAR  |  50  |  NOT NULL  |  _  |  نوع السيارة وموديلها
+seating_capacity  |  INT  |  _  |  NOT NULL  |  _  |  عدد المقاعد
+vehicle_image  |  VARCHAR  |  255  |  _  |  _  |  صورة السيارة
+vehicle_status  |  VARCHAR  |  20  |  NOT NULL  |    |  NOT NULL  |  _  |  حالة السيارة
+NOT NULL
+insurance_details  |  TEXT  |  _  |  _  |  _  |  بيانات التأمين
+contract_number  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Transportation_Companies  |  يربط في جدول الشركات لتحديد الشركة المالكة
+
+========================================================
+Table #5: Drivers - .5 جدول السائقين  (Drivers)
+========================================================
+driver_license_number  |  VARCHAR  |  50  |  Primary Key  |  —  |  رقم رخصة القيادة
+full_name  |  VARCHAR  |  100  |  NOT NULL  |  —  |  الاسم بالكامل
+phone_number  |  VARCHAR  |  20  |  NOT NULL, UNIQUE  |  —  |  رقم الهاتف
+national_id_or_passport  |  VARCHAR  |  50  |  NOT NULL, UNIQUE  |  —  |  الرقم الوطني أو رقم جواز السفر
+license_date_valid  |  DATE  |  —  |  NOT NULL  |  —  |  تاريخ صلاحية رخصة القيادة
+contract_number  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Transportation_Companies  |  يربط السائق بالشركة المالكة للعقد
+assigned_vehicle_plate  |  VARCHAR  |  30  |  Foreign Key, UNIQUE  |  Vehicles  |  السيارة المخصصة للسائق
+email  |  VARCHAR  |  100  |  NOT NULL, UNIQUE  |  —  |  البريد الإلكتروني المستخدم لتسجيل الدخول
+account_status  |  VARCHAR  |  20  |  NOT NULL  |  —  |  حالة حساب السائق (نشط، موقوف، معلق...)
+password  |  VARCHAR  |  255  |  NOT NULL  |  —  |  كلمة المرور (مشفرة)
+
+========================================================
+Table #6: Places_Tourist - .6 جدول الأماكن السياحية (Places_Tourist)
+========================================================
+place_id  |  VARCHAR(50)  |  50  |  Primary Key  |    |  معرف المكان السياحي
+place_name  |  VARCHAR(100)  |  100  |  NOT NULL  |    |  اسم المكان السياحي
+description  |  TEXT  |  _  |  NOT NULL  |    |  وصف تاريخي وتفصيلي
+city  |  VARCHAR(50)  |  50  |  _ NOT NULL  |    |  المدينة
+longitude  |  DECIMAL(9,6)  |  9,6  |  NOT NULL  |    |  خط الطول
+latitude  |  DECIMAL(9,6)  |  9,6  |  NOT NULL  |    |  خط العرض
+category  |  VARCHAR(50)  |  50  |  NOT NULL  |    |  تصنيف المكان
+place_image  |  VARCHAR(255)  |  255  |  _  |    |  صورة المكان السياحي
+
+========================================================
+Table #7: Hotels - .7 جدول الفنادق (Hotels)
+========================================================
+Hotel_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  معرف الفندق
+Hotel_name  |  VARCHAR  |  100  |  NOT NULL  |  _  |  اسم الفندق
+city  |  VARCHAR  |  50  |  NOT NULL  |  _  |  المدينة المتوجد بها
+Address_details  |  VARCHAR  |  255  |  NOT NULL  |  _  |  العنوان
+Phone_number  |  VARCHAR  |  20  |  NOT NULL  |  _  |  رقم الهاتف
+Star_rating  |  INT  |  _  |  NOT NULL, CHECK (star_rating BETWEEN 1 AND 5)  |  _  |  عدد النجوم
+Partnership_status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة التعاقد
+hotel_photo_1  |  VARCHAR  |  255  |  _  |  _  |  صورة رقم 1
+hotel_photo_2  |  VARCHAR  |  255  |  _  |  _  |  صورة رقم 2
+hotel_photo_3  |  VARCHAR  |  255  |  _  |  _  |  صورة رقم 3
+hotel_photo_4  |  VARCHAR  |  255  |  _  |  _  |  صورة رقم 4
+hotel_photo_5  |  VARCHAR  |  255  |  _  |  _  |  صورة رقم 5
+contract_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ انتهاء التعاقد
+verification_status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة الاعتماد
+
+========================================================
+Table #8: Restaurants_Cafes - .8 جدول المطاعم والمقاهي  (Restaurants_Cafes)
+========================================================
+facility_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  المعرف الفريد للمرفق
+facility_name  |  VARCHAR  |  100  |  NOT NULL  |  _  |  اسم المطعم أو المقهى
+facility_type  |  VARCHAR  |  50  |  NOT NULL  |  _  |  نوع المرفق
+city  |  VARCHAR  |  50  |  NOT NULL  |  _  |  المدينة
+address_details  |  VARCHAR  |  255  |  NOT NULL  |  _  |  العنوان
+phone_number  |  VARCHAR  |  20  |  _  |  _  |  رقم الهاتف
+description  |  TEXT  |  _  |  _  |  _  |  وصف المرفق
+facility_image_1  |  VARCHAR  |  255  |  _  |  _  |  الصورة الأولى
+facility_image_2  |  VARCHAR  |  255  |  _  |  _  |  الصورة الثانية
+facility_image_3  |  VARCHAR  |  255  |  _  |  _  |  الصورة الثالثة
+facility_image_4  |  VARCHAR  |  255  |  _  |  _  |  الصورة الرابعة
+facility_image_5  |  VARCHAR(255)  |  255  |  _  |  _  |  الصورة الخامسة
+contract_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ انتهاء التعاقد
+verification_status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة الاعتماد
+
+========================================================
+Table #9: Daily_Trips - .9  جدول الرحلات اليومية  (Daily_Trips)
+========================================================
+daily_trip_id  |  VARCHAR  |  50  |  Primary Key  |    |  Primary Key  |  _  |  المعرف الفريد للرحلة اليومية
+Primary Key
+trip_title  |  VARCHAR  |  150  |  NOT NULL  |  _  |  عنوان الرحلة
+description  |  TEXT  |  _  |  NOT NULL  |  _  |  وصف البرنامج والانشطة
+price_per_seat  |  DECIMAL  |  10,2  |  NOT NULL, CHECK (price_per_seat > 0)  |  _  |  سعر المقعد للشخص الواحد
+is_active  |  BOOLEAN  |  _  |  NOT NULL, DEFAULT TRUE  |  _  |  حالة العرض في المنصة
+Photo  |  VARCHAR  |  255  |  _  |  _  |  صورة للعرض
+max_capacity  |  INT  |  _  |  NOT NULL, CHECK (capacity_max > 0)  |  _  |  عدد الاشخاص المستهدفين
+available_seats  |  INT  |  _  |  NOT NULL, CHECK (seats_available >= 0 AND seats_available <= capacity_max)  |  _  |  عدد المقاعد المتاحة
+guide_license_number  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tour_Guides  |  المرشد المحدد للرحلة
+
+========================================================
+Table #10: Weekly_Trips - .10جدول الرحلات الأسبوعية  (Weekly_Trips)
+========================================================
+weekly_trip_id  |  VARCHAR  |  50  |  Primary Key  |  —  |  معرف الرحلة الأسبوعية
+trip_title  |  VARCHAR  |  150  |  NOT NULL  |  —  |  عنوان الرحلة
+start_date  |  DATE  |  —  |  NOT NULL  |  —  |  تاريخ بداية الرحلة
+end_date  |  DATE  |  —  |  NOT NULL, CHECK (end_date > start_date)  |  —  |  تاريخ نهاية الرحلة
+max_capacity  |  INT  |  —  |  NOT NULL, CHECK (max_capacity > 0)  |  —  |  العدد الأقصى للمشاركين في الرحلة
+available_seats  |  INT  |  —  |  NOT NULL, CHECK (available_seats >= 0 AND available_seats <= max_capacity)  |  —  |  عدد المقاعد المتاحة للحجز
+seat_per_price  |  DECIMAL  |  10,2  |  NOT NULL, CHECK (seat_per_price > 0)  |  —  |  سعر المقعد (يشمل المبيت والخدمات)
+trip_description  |  TEXT  |  —  |  NOT NULL  |  —  |  وصف تفصيلي للرحلة
+guide_license_number  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tour_Guides  |  رقم رخصة المرشد السياحي المسؤول عن الرحلة
+is_active  |  BOOLEAN  |  —  |  NOT NULL, DEFAULT TRUE  |  —  |  حالة عرض الرحلة (نشطة/غير نشطة)
+
+========================================================
+Table #11: Private_Trips - .11 جدول الرحلات الخاصة  (Private_Trips)
+========================================================
+weekly_trip_id  |  VARCHAR  |  50  |  Primary Key  |  —  |  معرف الرحلة الأسبوعية
+trip_title  |  VARCHAR  |  150  |  NOT NULL  |  —  |  عنوان الرحلة
+start_date  |  DATE  |  —  |  NOT NULL  |  —  |  تاريخ بداية الرحلة
+end_date  |  DATE  |  —  |  NOT NULL, CHECK (end_date > start_date)  |  —  |  تاريخ نهاية الرحلة
+max_capacity  |  INT  |  —  |  NOT NULL, CHECK (max_capacity > 0)  |  —  |  الحد الأقصى لعدد المشاركين في الرحلة
+available_seats  |  INT  |  —  |  NOT NULL, CHECK (available_seats >= 0 AND available_seats <= max_capacity)  |  —  |  عدد المقاعد المتاحة للحجز
+seat_per_price  |  DECIMAL  |  10,2  |  NOT NULL, CHECK (seat_per_price > 0)  |  —  |  سعر المقعد شاملاً المبيت والخدمات
+trip_description  |  TEXT  |  —  |  NOT NULL  |  —  |  وصف تفصيلي للرحلة
+guide_license_number  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tour_Guides  |  رقم رخصة المرشد السياحي المسؤول عن الرحلة
+is_active  |  BOOLEAN  |  —  |  NOT NULL, DEFAULT TRUE  |  —  |  حالة عرض الرحلة (نشطة أو غير نشطة)
+
+========================================================
+Table #12: Offers_Daily_Trips - .12  جدول عروض الرحلات اليومية  (Offers_Daily_Trips)
+========================================================
+offer_daily_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  رقم الإعلان والعرض الفريد
+daily_trip_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Trips_Daily  |  الرحلة المرتبطة
+offer_title  |  VARCHAR  |  100  |  NOT NULL  |  _  |  عنوان العرض
+Description  |  TEXT  |  _  |  NOT NULL  |  _  |  تفاصيل العرض
+percent_discount  |  DECIMAL  |  5،2  |  NOT NULL, CHECK (percent_discount BETWEEN 0 AND 100)  |    |  NOT NULL, CHECK (percent_discount BETWEEN 0 AND 100)  |  _  |  نسبة الخصم
+NOT NULL, CHECK (percent_discount BETWEEN 0 AND 100)
+offer_image_url  |  VARCHAR  |  255  |  _  |  _  |  صورة العرض الإعلاني
+start_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ بداية ظهور العرض
+end_date  |  DATE  |  _  |  NOT NULL, CHECK (end_date > start_date)  |  _  |  تاريخ انتهاء صلاحية العرض
+
+========================================================
+Table #13: Offers_Weekly_Trips - .13  جدول عروض الرحلات الأسبوعية  (Offers_Weekly_Trips)
+========================================================
+offer_weekly_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  رقم الإعلان والعرض الفريد
+weekly_trip_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Trips_Weekly  |  الرحلة المرتبطة
+offer_title  |  VARCHAR  |  100  |  NOT NULL  |  _  |  عنوان العرض
+Description  |  TEXT  |  _  |  NOT NULL  |  _  |  تفاصيل العرض
+discount_percentage  |  DECIMAL  |  5،2  |  NOT NULL, CHECK (discount_percentage BETWEEN 0 AND 100)  |  _  |  نسبة الخصم
+offer_image_url  |  VARCHAR  |  255  |  NOT NULL  |  _  |  صورة للاعلان
+start_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ البداية
+end_date  |  DATE  |  _  |  NOT NULL, CHECK (end_date > start_date)  |  _  |  تاريخ النهاية
+
+========================================================
+Table #14: Offers_Hotels - 14  جدول عروض الفنادق  (Offers_Hotels)
+========================================================
+id_offer  |  VARCHAR  |  50  |  Primary Key  |  _  |  رقم العرض
+title_offer  |  VARCHAR  |  100  |  NOT NULL  |  _  |  عنوان العرض لفندق معين
+description  |  TEXT  |  _  |  NOT NULL  |  _  |  تفاصيل العرض والشروط
+percent_discount  |  INT  |  _  |  NOT NULL, CHECK (percent_discount BETWEEN 0 AND 100)  |    |  NOT NULL, CHECK (percent_discount BETWEEN 0 AND 100)  |  _  |  نسبة الخصم
+NOT NULL, CHECK (percent_discount BETWEEN 0 AND 100)
+offer_image  |  VARCHAR  |  255  |  NOT NULL  |  _  |  صورة الإعلان
+hotel_id  |  VARCHAR  |  50  |  FK  |  Hotels  |  يربط بالفندق المستهدف بالعرض
+date_start  |  DATE  |  _  |  Foreign Key, NOT NULL  |  _  |  تاريخ بداية العرض
+date_end  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ انتهاء العرض
+
+========================================================
+Table #15: Offers_Facilities - .15  جدول عروض المطاعم والكافيهات  (Offers_Facilities)
+========================================================
+facility_offer_id  |  VARCHAR(50)  |  50  |  Primary Key  |  _  |  رقم العرض
+facility_id  |  VARCHAR(50)  |  50  |  Foreign Key, NOT NULL  |  Cafes_Restaurants  |  يربط بالمطعم/الكافيه المستهدف بالعرض
+Description  |  TEXT  |  _  |  NOT NULL  |  _  |  تفاصيل العرض
+offer_title  |  VARCHAR(100)  |  100  |  NOT NULL  |  _  |  عنوان العرض
+offer_image_url  |  VARCHAR(255)  |  255  |  NOT NULL  |  _  |  صورة للإعلان
+discount_percentage  |  DECIMAL(5,2)  |  5،2  |  NOT NULL, CHECK (percentage_discount BETWEEN 0 AND 100)  |  _  |  نسبة الخصم الممنوحة
+start_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ بداية العرض
+end_date  |  DATE  |  _  |    |  _  |  تاريخ انتهاء العرض
+
+========================================================
+Table #16: Daily_Trip_Vehicles - .16 جدول ربط السيارات بالرحلات اليومية  (Daily_Trip_Vehicles)
+========================================================
+daily_alloc_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  معرف للرحلة الخاص
+daily_trip_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Daily_Trips  |  يربط بجدول الرحلات اليومية
+plate_number  |  VARCHAR  |  30  |  Foreign Key, NOT NULL  |  Vehicles  |  يربط بجدول السيارات الرئيسي
+allocation_date  |  DATE  |  _  |  NOT NULL  |  _  |  تاريخ يوم الرحلة الفعلي
+status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة التخصيص (Active / Completed)
+
+========================================================
+Table #17: Weekly_Trip_Vehicles - .17 جدول ربط السيارات بالرحلات الأسبوعية  (Weekly_Trip_Vehicles)
+========================================================
+الوصف  |  الجدول المرجعي  |  القيود  |  الحجم  |  نوع البيانات  |  اسم الحقل
+المعرف الأسبوعي الخاص  |  _  |  Primary Key  |  50  |  VARCHAR  |  weekly_alloc_id
+يربط بجدول الرحلات الأسبوعية  |  Weekly_Trips  |  Foreign Key, NOT NULL  |  50  |  VARCHAR  |  weekly_trip_id
+يربط بجدول السيارات  |  Vehicles  |  Foreign Key, NOT NULL  |  30  |  VARCHAR  |  plate_number
+تاريخ انطلاق  السيارة لرحلة الأسبوعية  |  _  |  NOT NULL  |  _  |  DATE  |  start_date
+تاريخ العودة وانتهاء الرحلة  |  _  |  NOT NULL, CHECK (date_end >= date_start)  |  _  |  DATE  |  end_date
+حالة التخصيص (Active / Completed)  |  _  |  NOT NULL  |  20  |  VARCHAR(  |  status
+
+========================================================
+Table #18: Private_Trip_Vehicles - .18 جدول ربط السيارات بالرحلات الخاصة (Private_Trip_Vehicles)
+========================================================
+الوصف  |  الجدول المرجعي  |  القيود  |  الحجم  |  نوع البيانات  |  اسم الحقل
+المعرف لعملية تخصيص السيارة في الرحلة الخاصة  |  _  |  Primary Key  |  50  |  VARCHAR  |  private_alloc_id
+يربط بجدول الرحلات الخاصة  |  Private_Trips  |  Foreign Key, NOT NULL  |  50  |  VARCHAR  |  private_trip_id
+يربط بجدول السيارات الرئيسي لمعرفة السيارة المختارة  |  Vehicles  |  Foreign Key, NOT NULL  |  30  |  VARCHAR  |  plate_number
+تاريخ بداية انشغال السيارة (من تاريخ انطلاق الرحلة)  |  _  |  NOT NULL  |  _  |  DATE  |  start_date
+تاريخ انتهاء انشغال السيارة (يُحسب بناءً على تاريخ البداية + عدد الأيام)  |  _  |  NOT NULL, CHECK (end_date >= start_date)  |  _  |  DATE  |  end_date
+حالة التخصيص (مطلوبة من السائح / مؤكدة من الأدمن / ملغية)  |  _  |  NOT NULL  |  25  |  VARCHAR  |  allocation_status
+
+========================================================
+Table #19: Bookings_Daily - .19 جدول حجوزات الرحلات اليومية  (Bookings_Daily)
+========================================================
+booking_daily_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  رقم حجز الرحلة اليومية
+tourist_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tourists  |  يربط ب لمعرفة السائح الذي حجز
+daily_trip_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Daily_Trips  |  يربط بـ  لتحديد الرحلة اليومية المحجوزة
+booking_date  |  DATETIME  |  _  |  NOT NULL  |  _  |  تاريخ ووقت إجراء عملية الحجز
+number_of_seats  |  INT  |  _  |  NOT NULL, CHECK (number_of_seats > 0)  |  _  |  عدد المقاعد المحجوزة
+booking_status  |  VARCHAR  |  20  |  NOT NULL  |  _  |  حالة الحجز (مؤكد / معلق / ملغي)
+total_price  |  DECIMAL  |  10،2  |  NOT NULL, CHECK (price_total >= 0)  |  _  |  السعر الإجمالي  للرحلة اليومية
+
+========================================================
+Table #20: Bookings_Weekly - .20 جدول حجوزات الرحلات الأسبوعية  (Bookings_Weekly)
+========================================================
+booking_weekly_id  |  VARCHAR  |  50  |  Primary Key  |  —  |  رقم حجز الرحلة الأسبوعية
+tourist_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tourists  |  يربط بجدول السياح لتحديد السائح الذي أجرى الحجز
+weekly_trip_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Weekly_Trips  |  يربط بجدول الرحلات الأسبوعية لتحديد الرحلة المحجوزة
+booking_date  |  DATETIME  |  —  |  NOT NULL  |  —  |  تاريخ ووقت إجراء عملية الحجز
+number_of_seats  |  INT  |  —  |  NOT NULL, CHECK (number_of_seats > 0)  |  —  |  عدد المقاعد المحجوزة في هذا الطلب
+total_price  |  DECIMAL  |  10,2  |  NOT NULL, CHECK (total_price >= 0)  |  —  |  السعر الإجمالي للحجز
+booking_status  |  VARCHAR  |  20  |  NOT NULL  |  —  |  حالة الحجز (مؤكد، معلق، ملغي)
+
+========================================================
+Table #21: Hotels_Trip_Weekly - .21 جدول ربط الفنادق بالرحلات الأسبوعية (Hotels_Trip_Weekly)
+========================================================
+hotel_id  |  VARCHAR  |  50  |  Primary Key, Foreign Key  |  Hotels  |  يربط بجدول الفنادق المتاحة بالنظام لمعرفة فنادق الإقامة
+weekly_trip_id  |  VARCHAR  |  50  |  Primary Key, Foreign Key  |  Weekly_Trips  |  يربط بجدول الرحلات الأسبوعية
+
+========================================================
+Table #22: Places_Trip_Weekly - .22  جدول ربط الأماكن السياحية بالرحلات الأسبوعية  (Places_Trip_Weekly)
+========================================================
+place_id  |  VARCHAR  |  50  |  Primary Key, Foreign Key  |  Tourist_Places  |  يربط بجدول الأماكن السياحية (Places) لمعرفة المعالم
+weekly_trip_id  |  VARCHAR  |  50  |  Primary Key, Foreign Key  |  Trips_Weekly  |  يربط بجدول الرحلات الأسبوعية
+
+========================================================
+Table #23: Reviews_Daily_Trips - .23  جدول تقييم الرحلات اليومية  (Reviews_Daily_Trips)
+========================================================
+review_daily_id  |  VARCHAR  |  50  |  Primary Key  |  _  |  رقم تقييم الرحلة اليومية
+tourist_id  |  VARCHAR  |  50  |  Primary Key, Foreign Key  |  Tourists  |  يربط بالسائح  صاحب التقييم
+daily_trip_id  |  VARCHAR  |  50  |  Primary Key, Foreign Key  |  Trips_Daily  |  يربط بالرحلة اليومية المستهدفة بالتقييم
+stars_rating  |  INT  |  _  |  NOT NULL, CHECK (rating_stars BETWEEN 1 AND 5)  |  _  |  عدد النجوم (من 1 إلى5)
+Comment_text  |  TEXT  |  _  |  _  |  _  |  تعليق السائح
+At_created  |  TIMESTAMP  |  _  |  NOT NULL, DEFAULT CURRENT_TIMESTAMP  |  _  |  تاريخ ووقت كتابة التقييم
+
+========================================================
+Table #24: Reviews_Weekly_Trips - .24  جدول تقييم الرحلات الأسبوعية  (Reviews_Weekly_Trips)
+========================================================
+review_weekly_id  |  VARCHAR  |  50  |  Primary Key  |  —  |  رقم تقييم الرحلة الأسبوعية الفريد
+tourist_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tourists  |  يربط بالسائح صاحب التقييم
+weekly_trip_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Weekly_Trips  |  يربط بالرحلة الأسبوعية المشمولة بالتقييم
+rating_stars  |  INT  |  —  |  NOT NULL, CHECK (rating_stars BETWEEN 1 AND 5)  |  —  |  عدد النجوم (من 1 إلى 5)
+comment_text  |  TEXT  |  —  |  NULL  |  —  |  تعليق السائح على الرحلة
+created_at  |  TIMESTAMP  |  —  |  NOT NULL, DEFAULT CURRENT_TIMESTAMP  |  —  |  تاريخ ووقت كتابة التقييم
+
+========================================================
+Table #25: Reviews_Hotels - .25 جدول تقييم الفنادق  (Reviews_Hotels)
+========================================================
+review_hotel_id  |  VARCHAR  |  50  |  Primary Key  |  —  |  رقم تقييم الفندق الفريد
+tourist_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tourists  |  يربط بالسائح صاحب التقييم
+hotel_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Hotels  |  يربط بالفندق المستهدف بالتقييم
+rating_stars  |  INT  |  —  |  NOT NULL, CHECK (rating_stars BETWEEN 1 AND 5)  |  —  |  عدد النجوم (من 1 إلى 5)
+comment_text  |  TEXT  |  —  |  NULL  |  —  |  تعليق السائح على الفندق
+created_at  |  TIMESTAMP  |  —  |  NOT NULL, DEFAULT CURRENT_TIMESTAMP  |  —  |  تاريخ ووقت كتابة التقييم
+
+========================================================
+Table #26: Reviews_Facilities - .26 جدول تقييم المطاعم والكافيهات  (Reviews_Facilities)
+========================================================
+review_facility_id  |  VARCHAR  |  50  |  Primary Key  |  —  |  رقم تقييم المرفق الفريد
+tourist_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Tourists  |  يربط بالسائح صاحب التقييم
+facility_id  |  VARCHAR  |  50  |  Foreign Key, NOT NULL  |  Cafes_Restaurants  |  يربط بالمطعم أو الكافيه المستهدف بالتقييم
+rating_stars  |  INT  |  —  |  NOT NULL, CHECK (rating_stars BETWEEN 1 AND 5)  |  —  |  عدد النجوم (من 1 إلى 5)
+comment_text  |  TEXT  |  —  |  NULL  |  —  |  تعليق السائح على المرفق
+created_at  |  TIMESTAMP  |  —  |  NOT NULL, DEFAULT CURRENT_TIMESTAMP  |  —  |  تاريخ ووقت كتابة التقييم

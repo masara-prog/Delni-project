@@ -1,0 +1,371 @@
+﻿## bookings_daily PK= ['booking_daily_id']
+   [booking_daily_id] [varchar](50) NOT NULL
+   [tourist_id] [varchar](50) NOT NULL
+   [daily_trip_id] [varchar](50) NOT NULL
+   [booking_date] [datetime] NOT NULL
+   [number_of_seats] [int] NOT NULL
+   [booking_status] [varchar](20) NOT NULL
+   [total_price] [decimal](10, 2) NOT NULL
+   [booking_notes] [text] NULL
+   [passengers_names] [nvarchar](max) NULL
+   [payment_status] [varchar](20) NOT NULL
+   [attended] [bit] NOT NULL
+## bookings_weekly PK= ['booking_weekly_id']
+   [booking_weekly_id] [varchar](50) NOT NULL
+   [tourist_id] [varchar](50) NOT NULL
+   [weekly_trip_id] [varchar](50) NOT NULL
+   [booking_date] [datetime] NOT NULL
+   [number_of_seats] [int] NOT NULL
+   [total_price] [decimal](10, 2) NOT NULL
+   [booking_status] [varchar](20) NOT NULL
+   [booking_notes] [text] NULL
+   [passengers_names] [nvarchar](max) NULL
+   [payment_status] [varchar](20) NOT NULL
+   [attended] [bit] NOT NULL
+## daily_trip_vehicles PK= ['daily_alloc_id']
+   [daily_alloc_id] [varchar](50) NOT NULL
+   [daily_trip_id] [varchar](50) NOT NULL
+   [plate_number] [varchar](30) NOT NULL
+   [allocation_date] [date] NOT NULL
+   [status] [varchar](20) NOT NULL
+## daily_trips PK= ['daily_trip_id']
+   [daily_trip_id] [varchar](50) NOT NULL
+   [trip_title] [varchar](150) NOT NULL
+   [description] [text] NOT NULL
+   [price_per_seat] [decimal](10, 2) NOT NULL
+   [is_active] [bit] NOT NULL
+   [photo] [varchar](255) NULL
+   [max_capacity] [int] NOT NULL
+   [available_seats] [int] NOT NULL
+   [guide_license_number] [varchar](50) NOT NULL
+   [departure_city] [varchar](50) NULL
+   [destination_city] [varchar](50) NULL
+   [recurring_days] [nvarchar](max) NULL
+   [activities] [nvarchar](max) NULL
+## drivers PK= ['driver_license_number']
+   [driver_license_number] [varchar](50) NOT NULL
+   [full_name] [varchar](100) NOT NULL
+   [phone_number] [varchar](20) NOT NULL
+   [national_id_or_passport] [varchar](50) NOT NULL
+   [license_date_valid] [date] NOT NULL
+   [contract_number] [varchar](50) NOT NULL
+   [assigned_vehicle_plate] [varchar](30) NULL
+   [email] [varchar](100) NOT NULL
+   [account_status] [varchar](20) NOT NULL
+   [password] [varchar](255) NOT NULL
+   [operational_status] [varchar](20) NULL
+   [experience_years] [int] NULL
+   [driver_photo] [varchar](255) NULL
+## hotels PK= ['hotel_id']
+   [hotel_id] [varchar](50) NOT NULL
+   [hotel_name] [varchar](100) NOT NULL
+   [city] [varchar](50) NOT NULL
+   [address_details] [varchar](255) NOT NULL
+   [phone_number] [varchar](20) NOT NULL
+   [star_rating] [int] NOT NULL
+   [partnership_status] [varchar](20) NOT NULL
+   [hotel_photo_1] [varchar](255) NULL
+   [hotel_photo_2] [varchar](255) NULL
+   [hotel_photo_3] [varchar](255) NULL
+   [hotel_photo_4] [varchar](255) NULL
+   [hotel_photo_5] [varchar](255) NULL
+   [contract_date] [date] NULL
+   [verification_status] [varchar](20) NULL
+   [price_per_night] [decimal](10, 2) NULL
+   [property_type] [varchar](50) NULL
+   [amenities] [nvarchar](max) NULL
+## hotels_trip_weekly PK= ['hotel_id', 'weekly_trip_id']
+   [hotel_id] [varchar](50) NOT NULL
+   [weekly_trip_id] [varchar](50) NOT NULL
+## offers_daily_trips PK= ['offer_daily_id']
+   [offer_daily_id] [varchar](50) NOT NULL
+   [daily_trip_id] [varchar](50) NOT NULL
+   [offer_title] [varchar](100) NOT NULL
+   [description] [text] NOT NULL
+   [percent_discount] [decimal](5, 2) NOT NULL
+   [offer_image_url] [varchar](255) NULL
+   [start_date] [date] NOT NULL
+   [end_date] [date] NOT NULL
+   [badge] [varchar](50) NULL
+## offers_facilities PK= ['facility_offer_id']
+   [facility_offer_id] [varchar](50) NOT NULL
+   [facility_id] [varchar](50) NOT NULL
+   [description] [text] NOT NULL
+   [offer_title] [varchar](100) NOT NULL
+   [offer_image_url] [varchar](255) NOT NULL
+   [discount_percentage] [decimal](5, 2) NOT NULL
+   [start_date] [date] NOT NULL
+   [end_date] [date] NOT NULL
+   [badge] [varchar](50) NULL
+## offers_hotels PK= ['id_offer']
+   [id_offer] [varchar](50) NOT NULL
+   [title_offer] [varchar](100) NOT NULL
+   [description] [text] NOT NULL
+   [percent_discount] [int] NOT NULL
+   [offer_image] [varchar](255) NOT NULL
+   [hotel_id] [varchar](50) NOT NULL
+   [date_start] [date] NOT NULL
+   [date_end] [date] NOT NULL
+   [badge] [varchar](50) NULL
+## offers_weekly_trips PK= ['offer_weekly_id']
+   [offer_weekly_id] [varchar](50) NOT NULL
+   [weekly_trip_id] [varchar](50) NOT NULL
+   [offer_title] [varchar](100) NOT NULL
+   [description] [text] NOT NULL
+   [discount_percentage] [decimal](5, 2) NOT NULL
+   [offer_image_url] [varchar](255) NOT NULL
+   [start_date] [date] NOT NULL
+   [end_date] [date] NOT NULL
+   [badge] [varchar](50) NULL
+## places_tourist PK= ['place_id']
+   [place_id] [varchar](50) NOT NULL
+   [place_name] [varchar](100) NOT NULL
+   [description] [text] NOT NULL
+   [city] [varchar](50) NOT NULL
+   [longitude] [decimal](9, 6) NOT NULL
+   [latitude] [decimal](9, 6) NOT NULL
+   [category] [varchar](50) NOT NULL
+   [place_image] [varchar](255) NULL
+   [is_unesco] [bit] NOT NULL
+   [unesco_year] [int] NULL
+   [gallery] [nvarchar](max) NULL
+   [entry_fee] [varchar](50) NULL
+   [best_season] [varchar](50) NULL
+   [google_maps_url] [varchar](500) NULL
+## places_trip_weekly PK= ['place_id', 'weekly_trip_id']
+   [place_id] [varchar](50) NOT NULL
+   [weekly_trip_id] [varchar](50) NOT NULL
+## private_trip_vehicles PK= ['private_alloc_id']
+   [private_alloc_id] [varchar](50) NOT NULL
+   [private_trip_id] [varchar](50) NOT NULL
+   [plate_number] [varchar](30) NOT NULL
+   [start_date] [date] NOT NULL
+   [end_date] [date] NOT NULL
+   [allocation_status] [varchar](25) NOT NULL
+## private_trips PK= ['private_trip_id']
+   [private_trip_id] [varchar](50) NOT NULL
+   [status_order] [varchar](25) NOT NULL
+   [customer_description] [varchar](100) NOT NULL
+   [preferred_start_date] [date] NOT NULL
+   [duration_days] [int] NOT NULL
+   [number_of_companions] [int] NOT NULL
+   [quoted_price] [decimal](10, 2) NULL
+   [admin_itinerary_plan] [text] NULL
+   [guide_license_number] [varchar](50) NULL
+   [tourist_id] [varchar](50) NULL
+   [customer_name] [varchar](100) NULL
+   [customer_phone] [varchar](20) NULL
+   [customer_requirements] [text] NULL
+   [assigned_guide_license] [varchar](50) NULL
+   [assigned_vehicle_plate] [varchar](30) NULL
+## restaurants_cafes PK= ['facility_id']
+   [facility_id] [varchar](50) NOT NULL
+   [facility_name] [varchar](100) NOT NULL
+   [facility_type] [varchar](50) NOT NULL
+   [city] [varchar](50) NOT NULL
+   [address_details] [varchar](255) NOT NULL
+   [phone_number] [varchar](20) NULL
+   [description] [text] NULL
+   [facility_image_1] [varchar](255) NULL
+   [facility_image_2] [varchar](255) NULL
+   [facility_image_3] [varchar](255) NULL
+   [facility_image_4] [varchar](255) NULL
+   [facility_image_5] [varchar](255) NULL
+   [contract_date] [date] NULL
+   [verification_status] [varchar](20) NULL
+   [price_range] [varchar](50) NULL
+   [working_hours] [varchar](100) NULL
+   [signature_dishes] [nvarchar](max) NULL
+   [features] [nvarchar](max) NULL
+## reviews_daily_trips PK= ['review_daily_id']
+   [review_daily_id] [varchar](50) NOT NULL
+   [tourist_id] [varchar](50) NOT NULL
+   [daily_trip_id] [varchar](50) NOT NULL
+   [stars_rating] [int] NOT NULL
+   [comment_text] [text] NULL
+   [created_at] [datetime] NOT NULL
+## reviews_facilities PK= ['review_facility_id']
+   [review_facility_id] [varchar](50) NOT NULL
+   [tourist_id] [varchar](50) NOT NULL
+   [facility_id] [varchar](50) NOT NULL
+   [stars_rating] [int] NOT NULL
+   [comment_text] [text] NULL
+   [created_at] [datetime] NOT NULL
+## reviews_hotels PK= ['review_hotel_id']
+   [review_hotel_id] [varchar](50) NOT NULL
+   [tourist_id] [varchar](50) NOT NULL
+   [hotel_id] [varchar](50) NOT NULL
+   [stars_rating] [int] NOT NULL
+   [comment_text] [text] NULL
+   [created_at] [datetime] NOT NULL
+## reviews_weekly_trips PK= ['review_weekly_id']
+   [review_weekly_id] [varchar](50) NOT NULL
+   [tourist_id] [varchar](50) NOT NULL
+   [weekly_trip_id] [varchar](50) NOT NULL
+   [stars_rating] [int] NOT NULL
+   [comment_text] [text] NULL
+   [created_at] [datetime] NOT NULL
+## tour_guides PK= ['license_number']
+   [license_number] [varchar](50) NOT NULL
+   [full_name] [varchar](100) NOT NULL
+   [phone_number] [varchar](20) NOT NULL
+   [years_of_experience] [int] NOT NULL
+   [certificate] [varchar](255) NOT NULL
+   [bio] [text] NULL
+   [speaks_english] [bit] NOT NULL
+   [speaks_french] [bit] NOT NULL
+   [speaks_italian] [bit] NOT NULL
+   [verification_status] [varchar](20) NOT NULL
+   [password] [varchar](255) NOT NULL
+   [email] [varchar](100) NOT NULL
+   [gender] [varchar](10) NULL
+   [working_days] [nvarchar](max) NULL
+   [operating_regions] [nvarchar](max) NULL
+   [primaryRegion] [varchar](50) NULL
+   [price_per_day] [decimal](10, 2) NULL
+   [avatar] [varchar](255) NULL
+   [title] [varchar](100) NULL
+   [specialties] [nvarchar](max) NULL
+   [total_tours_completed] [int] NOT NULL
+## tourists PK= ['tourist_id']
+   [tourist_id] [varchar](50) NOT NULL
+   [full_name] [varchar](100) NOT NULL
+   [email] [varchar](100) NOT NULL
+   [phone_number] [varchar](20) NOT NULL
+   [password] [varchar](255) NOT NULL
+## transportation_companies PK= ['contract_number']
+   [contract_number] [varchar](50) NOT NULL
+   [company_name] [varchar](100) NOT NULL
+   [phone_number] [varchar](20) NOT NULL
+   [address] [varchar](150) NOT NULL
+   [total_vehicles] [int] NOT NULL
+   [verification_status] [varchar](20) NOT NULL
+   [contract_date] [date] NOT NULL
+   [email] [varchar](100) NULL
+   [password] [varchar](255) NULL
+   [city] [varchar](50) NULL
+   [available_vehicles] [int] NULL
+   [contract_start_date] [date] NULL
+   [contract_end_date] [date] NULL
+## vehicles PK= ['plate_number']
+   [plate_number] [varchar](30) NOT NULL
+   [vehicle_type] [varchar](50) NOT NULL
+   [seating_capacity] [int] NOT NULL
+   [vehicle_image] [varchar](255) NULL
+   [vehicle_status] [varchar](20) NOT NULL
+   [insurance_details] [text] NULL
+   [contract_number] [varchar](50) NOT NULL
+   [daily_rate] [decimal](10, 2) NULL
+   [category] [varchar](50) NULL
+   [features] [nvarchar](max) NULL
+   [photos] [nvarchar](max) NULL
+   [insurance_image] [varchar](255) NULL
+## weekly_trip_vehicles PK= ['weekly_alloc_id']
+   [weekly_alloc_id] [varchar](50) NOT NULL
+   [weekly_trip_id] [varchar](50) NOT NULL
+   [plate_number] [varchar](30) NOT NULL
+   [start_date] [date] NOT NULL
+   [end_date] [date] NOT NULL
+   [status] [varchar](20) NOT NULL
+## weekly_trips PK= ['weekly_trip_id']
+   [weekly_trip_id] [varchar](50) NOT NULL
+   [trip_title] [varchar](150) NOT NULL
+   [start_date] [date] NOT NULL
+   [end_date] [date] NOT NULL
+   [max_capacity] [int] NOT NULL
+   [available_seats] [int] NOT NULL
+   [seat_per_price] [decimal](10, 2) NOT NULL
+   [trip_description] [text] NOT NULL
+   [guide_license_number] [varchar](50) NOT NULL
+   [is_active] [bit] NOT NULL
+   [departure_city] [varchar](50) NULL
+   [destination_region] [varchar](100) NULL
+   [photo] [varchar](255) NULL
+   [gallery] [nvarchar](max) NULL
+## FKs
+   ('drivers', 'daily_trip_id', 'daily_trips', 'daily_trip_id')
+   ('bookings_daily', 'tourist_id', 'tourists', 'tourist_id')
+   ('bookings_weekly', 'tourist_id', 'tourists', 'tourist_id')
+   ('bookings_weekly', 'weekly_trip_id', 'weekly_trips', 'weekly_trip_id')
+   ('daily_trip_vehicles', 'daily_trip_id', 'daily_trips', 'daily_trip_id')
+   ('daily_trip_vehicles', 'plate_number', 'vehicles', 'plate_number')
+   ('daily_trips', 'guide_license_number', 'tour_guides', 'license_number')
+   ('drivers', 'assigned_vehicle_plate', 'vehicles', 'plate_number')
+   ('drivers', 'contract_number', 'transportation_companies', 'contract_number')
+   ('hotels_trip_weekly', 'hotel_id', 'hotels', 'hotel_id')
+   ('hotels_trip_weekly', 'weekly_trip_id', 'weekly_trips', 'weekly_trip_id')
+   ('offers_daily_trips', 'daily_trip_id', 'daily_trips', 'daily_trip_id')
+   ('offers_facilities', 'facility_id', 'restaurants_cafes', 'facility_id')
+   ('offers_hotels', 'hotel_id', 'hotels', 'hotel_id')
+   ('offers_weekly_trips', 'weekly_trip_id', 'weekly_trips', 'weekly_trip_id')
+   ('places_trip_weekly', 'place_id', 'places_tourist', 'place_id')
+   ('places_trip_weekly', 'weekly_trip_id', 'weekly_trips', 'weekly_trip_id')
+   ('private_trip_vehicles', 'plate_number', 'vehicles', 'plate_number')
+   ('private_trip_vehicles', 'private_trip_id', 'private_trips', 'private_trip_id')
+   ('private_trips', 'guide_license_number', 'tour_guides', 'license_number')
+   ('private_trips', 'assigned_guide_license', 'tour_guides', 'license_number')
+   ('private_trips', 'assigned_vehicle_plate', 'vehicles', 'plate_number')
+   ('private_trips', 'tourist_id', 'tourists', 'tourist_id')
+   ('private_trips', 'daily_trip_id', 'daily_trips', 'daily_trip_id')
+   ('reviews_daily_trips', 'tourist_id', 'tourists', 'tourist_id')
+   ('reviews_facilities', 'facility_id', 'restaurants_cafes', 'facility_id')
+   ('reviews_facilities', 'tourist_id', 'tourists', 'tourist_id')
+   ('reviews_hotels', 'hotel_id', 'hotels', 'hotel_id')
+   ('reviews_hotels', 'tourist_id', 'tourists', 'tourist_id')
+   ('reviews_weekly_trips', 'tourist_id', 'tourists', 'tourist_id')
+   ('reviews_weekly_trips', 'weekly_trip_id', 'weekly_trips', 'weekly_trip_id')
+   ('vehicles', 'contract_number', 'transportation_companies', 'contract_number')
+   ('weekly_trip_vehicles', 'plate_number', 'vehicles', 'plate_number')
+   ('weekly_trip_vehicles', 'weekly_trip_id', 'weekly_trips', 'weekly_trip_id')
+   ('weekly_trips', 'guide_license_number', 'tour_guides', 'license_number')
+## CHECKS 32
+   drivers ([number_of_seats]>(0))
+   bookings_daily ([total_price]>=(0))
+   bookings_daily ([number_of_seats]>(0))
+   bookings_weekly ([total_price]>=(0))
+   bookings_weekly ([max_capacity]>(0))
+   daily_trips ([price_per_seat]>(0))
+   daily_trips ([available_seats]>=(0) AND [available_seats]<=[max_capacity])
+   daily_trips ([star_rating]>=(1) AND [star_rating]<=(5))
+   hotels ([percent_discount]>=(0) AND [percent_discount]<=(100))
+   offers_daily_trips ([end_date]>[start_date])
+   offers_daily_trips ([discount_percentage]>=(0) AND [discount_percentage]<=(100))
+   offers_facilities ([end_date]>=[start_date])
+   offers_facilities ([percent_discount]>=(0) AND [percent_discount]<=(100))
+   offers_hotels ([date_end]>[date_start])
+   offers_hotels ([end_date]>[start_date])
+   offers_weekly_trips ([discount_percentage]>=(0) AND [discount_percentage]<=(100))
+   offers_weekly_trips ([end_date]>=[start_date])
+   private_trip_vehicles ([number_of_companions]>=(0))
+   private_trips ([duration_days]>(0))
+   private_trips ([quoted_price]>=(0))
+   private_trips ([stars_rating]>=(1) AND [stars_rating]<=(5))
+   reviews_daily_trips ([stars_rating]>=(1) AND [stars_rating]<=(5))
+   reviews_facilities ([stars_rating]>=(1) AND [stars_rating]<=(5))
+   reviews_hotels ([stars_rating]>=(1) AND [stars_rating]<=(5))
+   reviews_weekly_trips ([years_of_experience]>=(2))
+   tour_guides ([total_vehicles]>=(0))
+   transportation_companies ([seating_capacity]>(0))
+   vehicles ([end_date]>=[start_date])
+   weekly_trip_vehicles ([max_capacity]>(0))
+   weekly_trips ([end_date]>[start_date])
+   weekly_trips ([seat_per_price]>(0))
+   weekly_trips ([available_seats]>=(0) AND [available_seats]<=[max_capacity])
+## DEFAULTS
+   ('bookings_daily', 'getdate()', 'booking_date')
+   ('bookings_daily', "'unpaid'", 'payment_status')
+   ('bookings_daily', '(0)', 'attended')
+   ('bookings_weekly', 'getdate()', 'booking_date')
+   ('bookings_weekly', "'unpaid'", 'payment_status')
+   ('bookings_weekly', '(0)', 'attended')
+   ('daily_trips', '(1)', 'is_active')
+   ('places_tourist', '(0)', 'is_unesco')
+   ('reviews_daily_trips', 'getdate()', 'created_at')
+   ('reviews_facilities', 'getdate()', 'created_at')
+   ('reviews_hotels', 'getdate()', 'created_at')
+   ('reviews_weekly_trips', 'getdate()', 'created_at')
+   ('tour_guides', '(0)', 'speaks_english')
+   ('tour_guides', '(0)', 'speaks_french')
+   ('tour_guides', '(0)', 'speaks_italian')
+   ('tour_guides', '(0)', 'total_tours_completed')
+   ('weekly_trips', '(1)', 'is_active')

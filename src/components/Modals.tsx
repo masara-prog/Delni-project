@@ -368,6 +368,7 @@ export type DetailsItem = {
   price?: number | string;
   currency?: string;
   bookable?: boolean;
+  bookLabel?: string;
   schedules?: ScheduledTrip[];
   vehicle?: {
     model: string;
@@ -674,7 +675,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
             ) : <span />}
             {item.bookable && onBook ? (
               <button onClick={onBook} className="px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition">
-                {isAr ? "احجز الرحلة الآن 🚀" : "Book Trip Now 🚀"}
+                {item.bookLabel || (isAr ? "احجز الرحلة الآن 🚀" : "Book Trip Now 🚀")}
               </button>
             ) : (
               <span className="text-[11px] font-black text-muted-foreground bg-muted px-3 py-2 rounded-lg">{isAr ? "للعرض فقط — غير قابل للحجز" : "Display only — Not bookable"}</span>
@@ -1303,6 +1304,21 @@ export function PrivateTripModal({
       alert(isAr ? "يرجى اختيار معلم سياحي واحد على الأقل من قائمة معالم المنصة لتحديد مسار الرحلة" : "Please select at least one platform landmark");
       return;
     }
+    // Send to Python FastAPI & MySQL Backend
+    fetch("http://127.0.0.1:8000/api/trips/private", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_name: "عميل دلّني VIP",
+        customer_phone: "0910000000",
+        preferred_start_date: startDate || new Date().toISOString().split("T")[0],
+        duration_days: durationDays,
+        number_of_companions: parseInt(persons, 10) || 1,
+        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`
+      })
+    }).catch(() => {
+      // Offline fallback
+    });
     setStep("done");
   };
 

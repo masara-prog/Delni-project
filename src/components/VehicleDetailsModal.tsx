@@ -79,29 +79,6 @@ export function VehicleDetailsModal({ open, onClose, vehicle }: VehicleDetailsMo
                 </span>
               </div>
             </div>
-
-            {/* Features */}
-            <div className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-200/80">
-              <div className="font-black text-[#D96B27] mb-2">مميزات وتجهيزات الحافلة:</div>
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-[#0F172A]">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#D96B27]" />
-                  <span>تكييف مركزي شامل</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#D96B27]" />
-                  <span>شواحن USB ومقاعد VIP مريحة</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#D96B27]" />
-                  <span>حقيبة إسعافات تبريد مياه</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#D96B27]" />
-                  <span>تأمين شامل للمسافرين</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
