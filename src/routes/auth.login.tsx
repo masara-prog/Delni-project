@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destSabratah from "@/assets/dest-sabratah.png";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/auth/login")({
   component: LoginPage,
 });
 
-type Role = "tourist" | "guide" | "transport" | "driver";
+type Role = "tourist" | "admin" | "guide" | "transport" | "driver";
 
 const LANDMARK_SLIDES = [
   { img: heroImg, titleAr: "لبدة الكبرى — تحفة البحر المتوسط", locationAr: "الخمس" },
@@ -36,12 +36,15 @@ const LANDMARK_SLIDES = [
 ];
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [role, setRole] = useState<Role>("tourist");
   const [showPass, setShowPass] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [slideIdx, setSlideIdx] = useState(0);
   const { dir } = useLanguage();
+
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -53,11 +56,70 @@ function LoginPage() {
   const currentSlide = LANDMARK_SLIDES[slideIdx];
 
   const roles = [
-    { id: "tourist" as const, label: "سائح", desc: "استكشف واحجز رحلاتك", emoji: "🧳" },
+    { id: "tourist" as const, label: "سائح", desc: "تصفح واحجز رحلاتك", emoji: "🧳" },
+    { id: "admin" as const, label: "مدير النظام (الأدمن)", desc: "لوحة التحكم الشاملة", emoji: "👑" },
     { id: "guide" as const, label: "مرشد سياحي", desc: "أدر جولاتك ومواعيدك", emoji: "🗺️" },
     { id: "transport" as const, label: "شركة نقل", desc: "أدر أسطولك وسائقيك", emoji: "🚌" },
     { id: "driver" as const, label: "سائق", desc: "استقبل الرحلات المخصصة", emoji: "🚗" },
   ];
+
+  const handleRoleSelect = (rId: Role) => {
+    setRole(rId);
+    setErrorMsg("");
+    if (rId === "admin") {
+      setEmail("admin@dalni.ly");
+      setPassword("admin123");
+    }
+  };
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    const isLoginAsAdmin = role === "admin" || email.toLowerCase().trim().includes("admin");
+
+    if (isLoginAsAdmin) {
+      const cleanEmail = email.trim().toLowerCase();
+      if ((cleanEmail === "admin@dalni.ly" || cleanEmail === "admin") && (password === "admin123" || password === "admin")) {
+        localStorage.setItem(
+          "dalni_user",
+          JSON.stringify({
+            fullName: "مدير النظام (الأدمن)",
+            email: "admin@dalni.ly",
+            role: "admin",
+            loginTime: new Date().toISOString(),
+          })
+        );
+        navigate({ to: "/dashboard/admin" });
+        return;
+      } else {
+        setErrorMsg("عذراً، بيانات دخول مدير النظام غير صحيحة! البريد: admin@dalni.ly | كلمة المرور: admin123");
+        return;
+      }
+    }
+
+    const userName = email ? email.split("@")[0] : "المستخدم الحالي";
+
+    localStorage.setItem(
+      "dalni_user",
+      JSON.stringify({
+        fullName: userName,
+        email: email || "user@dalni.ly",
+        role: role,
+        loginTime: new Date().toISOString(),
+      })
+    );
+
+    if (role === "guide") {
+      navigate({ to: "/dashboard/guide" });
+    } else if (role === "transport") {
+      navigate({ to: "/dashboard/transport" });
+    } else if (role === "driver") {
+      navigate({ to: "/dashboard/driver" });
+    } else {
+      navigate({ to: "/dashboard/tourist" });
+    }
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-[#FAF7F2]" dir={dir}>
@@ -145,37 +207,57 @@ function LoginPage() {
             </p>
           </div>
 
-          {/* 2x2 Role Selector Cards */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+          {/* Role Selector Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6">
             {roles.map((r) => {
               const isSelected = role === r.id;
               return (
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => setRole(r.id)}
-                  className={`p-3.5 sm:p-4 rounded-[22px] bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-2 ${
+                  onClick={() => handleRoleSelect(r.id)}
+                  className={`p-3 rounded-[18px] bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
                     isSelected
-                      ? "border-2 border-[#1B5A78] shadow-sm ring-1 ring-[#1B5A78]/20"
+                      ? "border-2 border-[#1B5A78] shadow-sm ring-1 ring-[#1B5A78]/20 bg-blue-50/50"
                       : "border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/40"
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="font-black text-xs sm:text-sm text-[#0F172A] truncate">
+                    <div className="font-black text-xs text-[#0F172A] truncate">
                       {r.label}
                     </div>
-                    <div className="text-[10px] sm:text-xs text-[#718096] font-medium truncate mt-0.5">
+                    <div className="text-[9px] text-[#718096] font-medium truncate mt-0.5">
                       {r.desc}
                     </div>
                   </div>
-                  <span className="text-2xl sm:text-3xl shrink-0">{r.emoji}</span>
+                  <span className="text-xl shrink-0">{r.emoji}</span>
                 </button>
               );
             })}
           </div>
 
+          {/* Admin Info Notice */}
+          {role === "admin" && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
+              <div className="flex items-center gap-1.5 font-black text-amber-950 mb-1">
+                <span>👑</span>
+                <span>بيانات دخول مدير النظام (الأدمن) مخصّصة ومثبتة:</span>
+              </div>
+              <div>• البريد الإلكتروني: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin@dalni.ly</code></div>
+              <div>• كلمة المرور: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin123</code></div>
+              <div className="text-[10px] text-amber-700 mt-1 font-semibold">* ملاحظة: لا يمكن إنشاء حسابات أدمن جديدة من صفحة التسجيل.</div>
+            </div>
+          )}
+
+          {/* Error Message Notice */}
+          {errorMsg && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold leading-relaxed text-right animate-shake">
+              {errorMsg}
+            </div>
+          )}
+
           {/* Form Controls - Right Aligned */}
-          <form className="space-y-4 text-right" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4 text-right" onSubmit={handleLoginSubmit}>
             <div>
               <label className="text-xs sm:text-sm font-bold text-[#0F172A] mb-1.5 block text-right">
                 البريد الإلكتروني أو رقم الهاتف
@@ -185,6 +267,7 @@ function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@dalni.ly"
+                required
                 className="w-full h-13 sm:h-14 px-5 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 transition shadow-2xs text-right"
               />
             </div>
@@ -202,6 +285,7 @@ function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  required
                   className="w-full h-13 sm:h-14 px-5 pl-20 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 transition shadow-2xs text-right"
                 />
                 <button
@@ -218,26 +302,19 @@ function LoginPage() {
               <label className="flex items-center gap-2.5 cursor-pointer select-none text-xs sm:text-sm text-[#718096] font-semibold">
                 <input
                   type="checkbox"
+                  defaultChecked
                   className="w-5 h-5 rounded-md border-2 border-[#CBD5E0] accent-[#1B5A78] cursor-pointer"
                 />
                 <span>تذكرني على هذا الجهاز</span>
               </label>
             </div>
 
-            <Link
-              to={
-                role === "guide"
-                  ? "/dashboard/guide"
-                  : role === "transport"
-                  ? "/dashboard/transport"
-                  : role === "driver"
-                  ? "/dashboard/driver"
-                  : "/dashboard/tourist"
-              }
-              className="w-full h-13 sm:h-14 rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-base sm:text-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition flex items-center justify-center mt-2 cursor-pointer"
+            <button
+              type="submit"
+              className="w-full h-13 sm:h-14 rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-base sm:text-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition flex items-center justify-center mt-2 cursor-pointer border-none"
             >
               تسجيل الدخول
-            </Link>
+            </button>
           </form>
 
           {/* Right-aligned Signup Footer */}

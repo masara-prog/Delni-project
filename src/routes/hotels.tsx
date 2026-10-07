@@ -407,18 +407,11 @@ function HotelOffersSpotlight({
               {offer.details}
             </p>
 
-            {/* Price & Savings */}
-            <div className="flex items-baseline gap-3 pt-2">
-              <div>
-                <span className="text-xs text-slate-400 line-through font-bold block">
-                  {isAr ? `السعر السابق: ${offer.oldPrice} د.ل` : `Was: LYD ${offer.oldPrice}`}
-                </span>
-                <div className="text-2xl sm:text-3xl font-black text-[#D96B27]">
-                  {offer.price} <span className="text-sm font-bold text-slate-700">{isAr ? "د.ل / الليلة" : "LYD / night"}</span>
-                </div>
-              </div>
-              <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black">
-                {isAr ? `وفرت ${offer.oldPrice - offer.price} د.ل` : `Save LYD ${offer.oldPrice - offer.price}`}
+            {/* Verified Dallani Perk */}
+            <div className="flex items-center gap-3 pt-2">
+              <span className="px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black flex items-center gap-1.5">
+                <span>🏷️</span>
+                <span>{isAr ? "خصم معتمد 20% لرواد منصة دلّني · حجز واستفسار مباشر" : "20% Verified Perk for Dallani Guests · Direct Concierge"}</span>
               </span>
             </div>
 
@@ -1201,7 +1194,41 @@ function HotelsPage() {
     } catch {}
   }, []);
 
-  const hotels = useMemo(() => getHotels(language), [language]);
+  const [dbHotels, setDbHotels] = useState<HotelData[]>([]);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/hotels")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: HotelData[] = data.map((item: any) => ({
+            id: item.hotel_id,
+            name: item.hotel_name,
+            city: item.city,
+            address: item.address_details,
+            mapsQuery: `${item.hotel_name}+${item.city}`,
+            phone: item.phone_number,
+            stars: item.star_rating,
+            partnership_status: item.partnership_status || "نشط",
+            propertyType: "hotel",
+            photos: [
+              item.hotel_photo_1 || "/assets/ai_hotel.jpg",
+              item.hotel_photo_2 || "/assets/dest-harbor-coast.jpg",
+              item.hotel_photo_3 || "/assets/cafe-libya.jpg",
+            ],
+          }));
+          setDbHotels(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const hotels = useMemo(() => {
+    const defaultList = getHotels(language);
+    if (dbHotels.length === 0) return defaultList;
+    const dbIds = new Set(dbHotels.map((h) => h.id));
+    return [...dbHotels, ...defaultList.filter((h) => !dbIds.has(h.id))];
+  }, [language, dbHotels]);
 
   const cities = useMemo(
     () => [

@@ -40,7 +40,6 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
 import {
-  BookingModal,
   DetailsModal,
   PrivateTripModal,
   useModalPair,
@@ -63,12 +62,12 @@ export const Route = createFileRoute("/attractions")({
       {
         name: "description",
         content:
-          "استكشف أبرز المعالم السياحية والأثرية ومواقع التراث العالمي لليونسكو في ليبيا: لبدة الكبرى، صبراتة، قورينا شحات، غدامس، بحيرات أوباري وأكاكوس مع مواعيد ونقاط الانطلاق اليومية.",
+          "استكشف أبرز المعالم السياحية والأثرية ومواقع التراث العالمي لليونسكو في ليبيا مع إمكانية تصميم وإنشاء رحلات سياحية خاصة مخصصة بالكامل.",
       },
       { property: "og:title", content: "معالم ليبيا الخالدة — منصة دلّني" },
       {
         property: "og:description",
-        content: "دليلك الشامل لآثار ومعالم ليبيا التاريخية والطبيعية مع برامج الانطلاق اليومية والرحلات الخاصة.",
+        content: "دليلك الشامل لآثار ومعالم ليبيا التاريخية والطبيعية مع خدمة إنشاء وتصميم الرحلات الخاصة.",
       },
     ],
   }),
@@ -96,8 +95,6 @@ export function AttractionsPage() {
   const modals = useModalPair();
   const [privateTripModalOpen, setPrivateTripModalOpen] = useState(false);
   const [privateTripDest, setPrivateTripDest] = useState("");
-  const [bookingTripModalOpen, setBookingTripModalOpen] = useState(false);
-  const [selectedAttraction, setSelectedAttraction] = useState<AttractionItem | null>(null);
 
   // City Details & Video Modal State
   const [selectedCityForModal, setSelectedCityForModal] = useState<CityDestinationItem | null>(null);
@@ -210,25 +207,20 @@ export function AttractionsPage() {
       subtitle: `${isAr ? att.city : att.cityEn} · ${isAr ? att.category : att.categoryEn}`,
       image: att.img,
       description: isAr ? att.description : att.descriptionEn,
-      bookable: att.hasDailyTrip,
+      bookable: true,
+      bookLabel: isAr ? "إنشاء رحلة خاصة لهذا المعلم 🧭" : "Create Private Trip 🧭",
       info: [
         { label: isAr ? "المدينة والمنطقة" : "City & Region", value: `${isAr ? att.city : att.cityEn} (${isAr ? att.region : att.regionEn})` },
-        { label: isAr ? "مكان وموعد الانطلاق" : "Departure Info", value: att.hasDailyTrip ? `${isAr ? `تنطلق من ${att.departureCity}` : `Departs from ${att.departureCityEn}`} (${isAr ? att.departureTime : att.departureTimeEn})` : (isAr ? "عبر رحلة خاصة / أسبوعية مخصصة" : "Via Private / Weekly Tour") },
+        { label: isAr ? "نظام الانطلاق والرحلات" : "Tour Access", value: isAr ? "عبر تصميم رحلة خاصة مخصصة بالكامل" : "Via Fully Customized Private Tour" },
         { label: isAr ? "رسوم الدخول التقديرية" : "Estimated Entry Fee", value: isAr ? att.entryFee : att.entryFeeEn },
-        { label: isAr ? "أفضل مواسم الزيارة" : "Best Season to Visit", value: isAr ? att.bestSeason : att.bestSeasonEn },
         { label: isAr ? "موقع التراث العالمي لليونسكو" : "UNESCO Status", value: att.isUnesco ? (isAr ? `مسجل باليونسكو عام ${att.unescoYear}` : `Inscribed UNESCO ${att.unescoYear}`) : (isAr ? "معلم وطني طبيعي/تاريخي" : "National Heritage Site") },
       ],
       features: isAr ? att.highlights : att.highlightsEn,
-      price: att.hasDailyTrip ? (att.approxTripPrice || 180) : 0,
     });
   }
 
   function handleOpenCityDetails(city: CityDestinationItem) {
-    const tripSystemSummary = [
-      city.hasDailyTrip ? (isAr ? "☀️ رحلات يومية منتظمة (09:00 ص)" : "☀️ Regular Daily Trips (09:00 AM)") : "",
-      city.hasWeeklyTrip ? (isAr ? "🗓️ رحلات أسبوعية المواعيد" : "🗓️ Weekly Expeditions") : "",
-      city.hasPrivateTrip ? (isAr ? "🧭 إمكانية حجز رحلات خاصة مخصصة" : "🧭 Custom Private Trips Available") : "",
-    ].filter(Boolean).join(" · ");
+    const tripSystemSummary = isAr ? "🧭 إمكانية حجز وتصميم رحلات خاصة مخصصة" : "🧭 Custom Private Trips Available";
 
     modals.openDetails({
       title: isAr ? city.name : city.nameEn,
@@ -236,15 +228,14 @@ export function AttractionsPage() {
       image: city.img,
       description: isAr ? city.description : city.descriptionEn,
       bookable: true,
+      bookLabel: isAr ? "إنشاء رحلة خاصة لهذه الوجهة 🧭" : "Create Private Trip 🧭",
       info: [
         { label: isAr ? "المنطقة والإقليم" : "Region", value: city.region },
         { label: isAr ? "نظام الرحلات المتوفرة" : "Available Trip System", value: tripSystemSummary },
         { label: isAr ? "عدد المعالم السياحية" : "Documented Landmarks", value: isAr ? `${city.landmarksCount} معالم موثقة بالكامل` : `${city.landmarksCount} Documented Sites` },
-        { label: isAr ? "سعر الانطلاق التقديري" : "Starting Price", value: isAr ? `تبدأ الرحلات من ${city.startPriceLYD} د.ل` : `From ${city.startPriceLYD} LYD` },
         { label: isAr ? "تقييم السياح والزوار" : "Guest Rating", value: `⭐ ${city.rating} / 5 (${city.ratingLabel} — ${city.reviewsCount} تقييم)` },
       ],
       features: city.highlights,
-      price: city.startPriceLYD,
     });
   }
 
@@ -278,8 +269,8 @@ export function AttractionsPage() {
 
           <p className="mt-2 text-white/95 max-w-3xl text-xs sm:text-sm md:text-base leading-relaxed drop-shadow-md">
             {isAr
-              ? "دليلك المتكامل لمواقع التراث العالمي لليونسكو، الآثار الرومانية والإغريقية، الواحات الصحراوية، والمدن القديمة مع جدول الانطلاق اليومي الدقيق والرحلات المنظمة."
-              : "Your comprehensive guide to UNESCO World Heritage Sites, Roman & Greek marvels, Sahara desert oases, and ancient fortified towns with live daily departure schedules."}
+              ? "دليلك المتكامل لمواقع التراث العالمي لليونسكو، الآثار الرومانية والإغريقية، الواحات الصحراوية، والمدن القديمة مع إمكانية تصميم وإنشاء رحلتك الخاصة بالكامل."
+              : "Your comprehensive guide to UNESCO World Heritage Sites, Roman & Greek marvels, Sahara desert oases, and ancient fortified towns with custom private tours."}
           </p>
 
           {/* Quick Stats Strip inside Hero */}
@@ -289,8 +280,8 @@ export function AttractionsPage() {
               <span className="text-[11px] sm:text-xs">{isAr ? "مواقع تراث عالمي (UNESCO)" : "UNESCO World Heritage Sites"}</span>
             </div>
             <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10">
-              <span className="text-emerald-400 font-black text-xs sm:text-sm">09:00 ص</span>
-              <span className="text-[11px] sm:text-xs">{isAr ? "انطلاق يومي منتظم من طرابلس وبنغازي" : "Daily 9:00 AM Departures"}</span>
+              <span className="text-amber-400 font-black text-xs sm:text-sm">🧭</span>
+              <span className="text-[11px] sm:text-xs">{isAr ? "إنشاء رحلات خاصة مخصصة بالكامل" : "Customized Private Trips"}</span>
             </div>
             <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10">
               <span className="text-teal-300 font-black text-xs sm:text-sm">{LIBYAN_ATTRACTIONS.length}</span>
@@ -488,23 +479,23 @@ export function AttractionsPage() {
           </div>
         </section>
 
-        {/* ── Daily Trip Departure System Notice ── */}
+        {/* ── Custom Private Trips System Notice ── */}
         <section className="bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-[#D96B27]/10 text-[#D96B27] text-2xl font-black grid place-items-center shrink-0 border border-[#D96B27]/20 shadow-xs">
-              ☀️
+              🧭
             </div>
             <div>
               <h3 className="font-black text-sm sm:text-base text-[#0B132B] flex items-center gap-2">
-                <span>{isAr ? "مواعيد ونقاط الانطلاق اليومية المنظمة" : "Organized Daily Departure Schedules"}</span>
+                <span>{isAr ? "تصميم وإنشاء الرحلات الخاصة للمعالم السياحية" : "Create & Customize Private Tours to Landmarks"}</span>
                 <span className="text-[10px] bg-[#D96B27]/10 text-[#D96B27] font-black px-2.5 py-0.5 rounded-full border border-[#D96B27]/20">
-                  {isAr ? "09:00 صباحاً يومياً" : "09:00 AM Daily"}
+                  {isAr ? "رحلات خاصة 100%" : "100% Private Tours"}
                 </span>
               </h3>
               <p className="text-xs text-[#526078] mt-1 leading-relaxed">
                 {isAr
-                  ? "تنطلق رحلات معالم المنطقة الغربية (لبدة الكبرى، صبراتة، السراي الحمراء) من طرابلس الساعة 9:00 ص، ورحلات معالم الجبل الأخضر (شحات وقورينا، أبولونيا) من بنغازي الساعة 9:00 ص شاملة النقل السياحي المكيف والمرشد المعتمد."
-                  : "Western region tours (Leptis Magna, Sabratha, Red Castle) depart from Tripoli at 9:00 AM. Eastern tours (Cyrene, Apollonia) depart from Benghazi at 9:00 AM with luxury transport and certified guides."}
+                  ? "صمم برنامج رحلتك الخاصة لزيارة أي معلم أثري أو طبيعي في ليبيا مع حرية تامة في اختيار نوع المركبة، السائق، المرشد السياحي المعتمد، وتوقيت الانطلاق المناسب لك."
+                  : "Design your custom private tour to visit any historical or natural landmark in Libya with full freedom to choose vehicle, driver, certified guide, and preferred schedule."}
               </p>
             </div>
           </div>
@@ -512,10 +503,10 @@ export function AttractionsPage() {
           <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
             <button
               onClick={() => setPrivateTripModalOpen(true)}
-              className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black text-xs shadow-soft transition flex items-center justify-center gap-2"
+              className="w-full md:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black text-xs sm:text-sm shadow-soft transition flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
             >
-              <span>👑</span>
-              <span>{isAr ? "طلب رحلة خاصة مخصصة" : "Request Custom Tour"}</span>
+              <span>🧭</span>
+              <span>{isAr ? "إنشاء رحلة خاصة الآن" : "Create Private Tour Now"}</span>
             </button>
           </div>
         </section>
@@ -692,30 +683,16 @@ export function AttractionsPage() {
         </section>
       </div>
 
-      {/* ── Details, Booking, and Private Modals ── */}
+      {/* ── Details and Private Modals ── */}
       <DetailsModal
         open={!!modals.detailsItem}
         onClose={modals.closeDetails}
         item={modals.detailsItem}
         onBook={() => {
+          const itemTitle = modals.detailsItem?.title || "";
           modals.closeDetails();
-          setBookingTripModalOpen(true);
-        }}
-      />
-
-      <BookingModal
-        open={bookingTripModalOpen}
-        onClose={() => setBookingTripModalOpen(false)}
-        item={{
-          title: selectedAttraction ? (isAr ? selectedAttraction.name : selectedAttraction.nameEn) : (isAr ? "رحلة معالم ليبيا اليومية" : "Libya Landmarks Daily Tour"),
-          subtitle: selectedAttraction ? (isAr ? `${selectedAttraction.city} — تنطلق 09:00 صباحاً` : `${selectedAttraction.cityEn} — Departs 09:00 AM`) : "",
-          price: selectedAttraction?.approxTripPrice || 180,
-          departure: selectedAttraction?.departureCity ? (isAr ? `فرع منصة دلّني (${selectedAttraction.departureCity})` : `Dallani Branch (${selectedAttraction.departureCityEn})`) : (isAr ? "فرع طرابلس الرئيسي" : "Tripoli Main Office"),
-          image: selectedAttraction?.img || "",
-          img: selectedAttraction?.img || "",
-          details: isAr
-            ? "رحلة يومية لزيارة المعلم السياحي شاملة النقل المكيف، المرشد المعتمد، وتذاكر الدخول من 9:00 ص وحتى 9:00 م."
-            : "Full day tour including luxury air-conditioned transport, certified tour guide, and entry tickets from 09:00 AM to 09:00 PM.",
+          setPrivateTripDest(itemTitle);
+          setPrivateTripModalOpen(true);
         }}
       />
 
@@ -729,10 +706,6 @@ export function AttractionsPage() {
       <LandmarkDetailsModal
         city={selectedCityForModal}
         onClose={() => setSelectedCityForModal(null)}
-        onBookDaily={() => {
-          setSelectedCityForModal(null);
-          setBookingTripModalOpen(true);
-        }}
         onBookPrivate={() => {
           const destName = selectedCityForModal ? selectedCityForModal.name : "";
           setSelectedCityForModal(null);
@@ -750,12 +723,10 @@ export function AttractionsPage() {
 function LandmarkDetailsModal({
   city,
   onClose,
-  onBookDaily,
   onBookPrivate,
 }: {
   city: CityDestinationItem | null;
   onClose: () => void;
-  onBookDaily: () => void;
   onBookPrivate: () => void;
 }) {
   const { language, dir } = useLanguage();
@@ -850,7 +821,7 @@ function LandmarkDetailsModal({
             {[
               { id: "history", label: isAr ? "📖 نبذة وتاريخ المعلم" : "History & Heritage", icon: "🏛️" },
               { id: "highlights", label: isAr ? "✨ أبرز ٤ محطات وتجارب" : "Top 4 Highlights", icon: "⭐" },
-              { id: "trips", label: isAr ? "🧭 تفاصيل الرحلات والوصول" : "Tours & Access", icon: "🚌" },
+              { id: "trips", label: isAr ? "🧭 تفاصيل الرحلات الخاصة" : "Private Tours Info", icon: "🧭" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -910,7 +881,7 @@ function LandmarkDetailsModal({
             </div>
           )}
 
-          {/* Tab 2: Highlights & Top Landmarks Section (Exactly 4 Cards with Elite Design) */}
+          {/* Tab 2: Highlights & Top Landmarks Section */}
           {activeModalTab === "highlights" && (
             <div className="space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
@@ -952,60 +923,33 @@ function LandmarkDetailsModal({
             </div>
           )}
 
-          {/* Tab 3: Tours & Linked Daily Trips */}
+          {/* Tab 3: Custom Private Tours */}
           {activeModalTab === "trips" && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {city.hasDailyTrip ? (
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-900 border border-amber-400/30 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md">
-                      ☀️ {isAr ? "رحلة يومية منتظمة (يومان في الأسبوع)" : "Scheduled Daily Tour (2 Days a Week)"}
-                    </span>
-                    <span className="text-xs font-bold text-amber-200">{isAr ? "انطلاق الساعة 09:00 صباحاً" : "Departs 09:00 AM"}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-200 font-semibold leading-relaxed pt-1">
-                    {isAr ? city.dailyTripsInfo : city.dailyTripsInfoEn}
-                  </p>
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-900 border border-amber-400/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md">
+                    🧭 {isAr ? "رحلات خاصة مخصصة بالكامل" : "Custom Private Tours"}
+                  </span>
+                  <span className="text-xs font-bold text-amber-200">{isAr ? "سيارة خاصة + مرشد معتمد" : "Private Vehicle + Guide"}</span>
                 </div>
-              ) : (
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                  <div className="text-sm font-black text-amber-300">
-                    🧭 {isAr ? "رحلات استكشافية خاصة وأسبوعية" : "Private & Expedition Tours"}
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed font-normal">
-                    {isAr ? city.dailyTripsInfo : city.dailyTripsInfoEn}
-                  </p>
-                </div>
-              )}
+                <p className="text-xs sm:text-sm text-slate-200 font-semibold leading-relaxed">
+                  {isAr 
+                    ? "يمكنك إنشاء وتصميم رحلتك الخاصة لزيارة هذا المعلم بكامل الخصوصية والراحة، مع اختيار وسيلة النقل المناسبة والمرشد السياحي المرافق وتحديد وقت ومكان الانطلاق المناسب لك."
+                    : "You can create and customize your own private tour to this landmark with full privacy and flexibility, choosing your vehicle, certified guide, and departure time."}
+                </p>
+              </div>
             </div>
           )}
 
         </div>
 
-        {/* Modal Footer Action Buttons */}
-        <div className="p-4 bg-slate-900/90 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div>
-            {city.hasDailyTrip ? (
-              <button
-                type="button"
-                onClick={onBookDaily}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-[#003580] to-blue-600 hover:from-blue-700 hover:to-blue-800 text-white font-black text-xs sm:text-sm shadow-xl transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-              >
-                <span>☀️</span>
-                <span>{isAr ? "الاطلاع على الرحلات اليومية المتوفرة لهذه الوجهة" : "View Daily Tours for this Landmark"}</span>
-              </button>
-            ) : (
-              <span className="text-xs font-bold text-slate-400">
-                {isAr ? "رحلات خاصة وسفاري حصرية لهذا المعلم" : "Exclusive Private Expedition Only"}
-              </span>
-            )}
-          </div>
-
-          {/* Private Trip Button (Golden/Orange) */}
+        {/* Modal Footer Action Button: ONLY Private Trip Creation */}
+        <div className="p-4 bg-slate-900/90 border-t border-white/10 flex items-center justify-center shrink-0">
           <button
             type="button"
             onClick={onBookPrivate}
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-[#D96B27] hover:from-amber-400 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/20 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-[#D96B27] hover:from-amber-400 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/20 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
           >
             <span>🧭</span>
             <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>

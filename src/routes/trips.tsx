@@ -2034,7 +2034,7 @@ function FloatingRecommendations({ trip }: { trip: Trip }) {
 }
 
 /* ============================================================ */
-/* 3. SPECIAL OFFERS SPOTLIGHT (STACKED CARDS DECK & CORNER TAG) */
+/* 3. SPECIAL OFFERS SPOTLIGHT (SINGLE ROTATING LARGE CARD) */
 /* ============================================================ */
 function SpecialOffersSpotlight({
   offers,
@@ -2045,7 +2045,7 @@ function SpecialOffersSpotlight({
   onBook: (offer: TripOffer) => void;
   onDetails: (offer: TripOffer) => void;
 }) {
-  const { language, dir } = useLanguage();
+  const { language } = useLanguage();
   const isAr = language === "ar";
   const [offerIndex, setOfferIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -2057,7 +2057,7 @@ function SpecialOffersSpotlight({
     if (isPaused) return;
     const timer = setInterval(() => {
       setOfferIndex((prev) => (prev + 1) % offers.length);
-    }, 2000);
+    }, 5000);
     return () => clearInterval(timer);
   }, [isPaused, offers.length]);
 
@@ -2065,21 +2065,14 @@ function SpecialOffersSpotlight({
     setOfferIndex((prev) => (prev + 1) % offers.length);
   };
 
-  const handlePrevOffer = () => {
-    setOfferIndex((prev) => (prev - 1 + offers.length) % offers.length);
-  };
-
-  // Stack of photos for the offer
-  const photos = currentOffer.gallery && currentOffer.gallery.length > 0
-    ? currentOffer.gallery
-    : [currentOffer.img, heroImg, destTripoli];
+  const displayImg = currentOffer.gallery && currentOffer.gallery.length > 0 ? currentOffer.gallery[0] : currentOffer.img;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-10">
-      <div
+      <div 
+        className="bg-gradient-to-br from-[#FFF9F5] via-white to-[#FEF3EB] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-xl relative overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-        className="bg-gradient-to-br from-[#FFF9F5] via-white to-[#FEF3EB] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-xl relative overflow-hidden transition-all"
       >
         {/* Subtle decorative glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-radial from-[#D96B27]/10 to-transparent rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
@@ -2094,178 +2087,78 @@ function SpecialOffersSpotlight({
           <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
             {isAr ? "عروض الرحلات السياحية المميزة" : "Featured Special Tour Offers"}
           </h2>
-          <p className="text-xs text-[#5A6A85] font-semibold">
-            {isAr
-              ? "انقر على كروت العرض أو انتظر 5 ثوانٍ للتقليب التلقائي بين العروض المخفضة"
-              : "Click the cards deck or wait 5 seconds to auto-rotate between offers"}
-          </p>
         </div>
 
-        {/* Main Grid: Info on Right (RTL), 3D Stacked Deck on Left */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
-          
-          {/* Offer Info Side (7 cols) */}
-          <div className="lg:col-span-7 space-y-4 text-right">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-gradient-to-r from-red-600 to-[#D96B27] text-white font-black text-xs shadow-xs">
-                🔥 {currentOffer.tag}
-              </span>
-              <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-black text-xs border border-amber-200">
-                {currentOffer.kind === "daily" ? (isAr ? "☀️ رحلة يومية (9 ص - 9 م)" : "☀️ Daily Tour") : (isAr ? "🗓️ رحلة أسبوعية" : "🗓️ Weekly Tour")}
-              </span>
-              <span className="text-xs font-bold text-[#003580] bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                📍 {currentOffer.departure}
-              </span>
+        {/* Single Rotating Large Image Card */}
+        <div className="relative z-10">
+          <div 
+            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-2xl border-4 border-white cursor-pointer transition-all duration-500"
+            onClick={handleNextOffer}
+          >
+            <img
+              key={currentOffer.id} // Forces re-render/animation on image change
+              src={displayImg}
+              alt={currentOffer.title}
+              loading="lazy"
+              className="w-full h-full object-cover brightness-95 animate-in fade-in zoom-in-95 duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
+
+            {/* Prominent Corner Triangle Discount Ribbon on Top-Right */}
+            <div className="absolute top-0 right-0 w-48 h-48 overflow-hidden z-30 pointer-events-none">
+              <div className="absolute transform rotate-45 bg-gradient-to-r from-red-600 via-[#EA580C] to-[#D96B27] text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-2xl border-b-4 border-white/40 drop-shadow-xl tracking-wide">
+                {currentOffer.tag}
+              </div>
             </div>
 
-            <h3 className="text-2xl sm:text-3xl font-black text-[#0F172A] leading-snug">
-              {currentOffer.title}
-            </h3>
-
-            <div className="text-sm font-bold text-[#D96B27]">
-              {currentOffer.sub}
-            </div>
-
-            <p className="text-xs sm:text-sm text-[#526078] leading-relaxed font-medium bg-white p-4 rounded-2xl border border-[#E8E2D6] shadow-xs">
-              {currentOffer.perk}
-            </p>
-
-            {/* Price & Action Row */}
-            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-t border-[#E8E2D6]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#5A6A85] font-bold line-through">
+            {/* Card Footer Info */}
+            <div className="absolute bottom-6 inset-x-6 text-white z-20 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-full bg-black/50 backdrop-blur-md text-amber-300 text-xs font-black border border-white/20 inline-block">
+                    📍 {currentOffer.departure}
+                  </span>
+                </div>
+                <h4 className="font-black text-2xl md:text-4xl text-white drop-shadow-md">
+                  {currentOffer.title}
+                </h4>
+                <p className="text-sm md:text-base text-slate-200 mt-2 max-w-2xl">{currentOffer.sub}</p>
+              </div>
+              
+              <div className="flex flex-col items-start md:items-end shrink-0">
+                <div className="flex flex-col items-start md:items-end mb-2">
+                  <span className="text-sm md:text-base text-slate-300 font-bold line-through">
                     {isAr ? `السعر السابق: ${currentOffer.oldPrice} د.ل` : `Was: ${currentOffer.oldPrice}`}
                   </span>
-                  <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-100">
-                    {isAr ? `وفر ${Number(currentOffer.oldPrice.replace(/,/g, "")) - Number(currentOffer.price.replace(/,/g, ""))} د.ل` : "Discounted"}
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-[#D96B27] mt-0.5">
-                  {currentOffer.price} <span className="text-xs font-bold text-slate-600">{isAr ? "د.ل / للمقعد" : "LYD"}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onDetails(currentOffer)}
-                  className="py-3 px-5 rounded-2xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] shadow-xs transition cursor-pointer"
-                >
-                  {isAr ? "تفاصيل العرض" : "Offer Details"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onBook(currentOffer)}
-                  className="py-3 px-6 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <span>{isAr ? "احجز هذا العرض الآن" : "Book Offer Now"}</span>
-                  <span className="text-sm">➔</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Carousel Dots & Controls */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-1.5">
-                {offers.map((_, dotIdx) => (
-                  <button
-                    key={dotIdx}
-                    type="button"
-                    onClick={() => setOfferIndex(dotIdx)}
-                    className={`h-2.5 rounded-full transition-all cursor-pointer ${
-                      dotIdx === offerIndex ? "w-7 bg-[#D96B27]" : "w-2.5 bg-slate-300 hover:bg-slate-400"
-                    }`}
-                    title={`عرض ${dotIdx + 1}`}
-                  />
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                <button
-                  type="button"
-                  onClick={handlePrevOffer}
-                  className="w-8 h-8 rounded-full bg-white border border-[#E8E2D6] hover:bg-slate-50 flex items-center justify-center text-sm cursor-pointer shadow-xs"
-                  title="السابق"
-                >
-                  {dir === "rtl" ? "→" : "←"}
-                </button>
-                <span>{offerIndex + 1} / {offers.length}</span>
-                <button
-                  type="button"
-                  onClick={handleNextOffer}
-                  className="w-8 h-8 rounded-full bg-white border border-[#E8E2D6] hover:bg-slate-50 flex items-center justify-center text-sm cursor-pointer shadow-xs"
-                  title="التالي"
-                >
-                  {dir === "rtl" ? "←" : "→"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive 3D Stacked Photos Deck (5 cols) with Corner Triangle Ribbon */}
-          <div className="lg:col-span-5 relative flex justify-center py-6">
-            <div
-              onClick={handleNextOffer}
-              className="relative w-64 h-80 sm:w-72 sm:h-96 cursor-pointer group select-none"
-              title={isAr ? "انقر للتقليب للعرض التالي" : "Click to view next offer"}
-            >
-              {photos.slice(0, 4).map((photoUrl, pIdx) => {
-                const diff = pIdx;
-
-                let styleClass = "";
-                if (diff === 0) {
-                  styleClass = "translate-x-0 translate-y-0 rotate-0 scale-100 shadow-2xl border-4 border-white opacity-100 z-30";
-                } else if (diff === 1) {
-                  styleClass = "translate-x-5 -translate-y-3 rotate-6 scale-95 shadow-xl border-4 border-white/90 opacity-90 z-20";
-                } else if (diff === 2) {
-                  styleClass = "translate-x-10 -translate-y-6 rotate-12 scale-90 shadow-md border-4 border-white/80 opacity-75 z-10";
-                } else {
-                  styleClass = "translate-x-12 -translate-y-8 rotate-18 scale-85 opacity-0 z-0";
-                }
-
-                return (
-                  <div
-                    key={`${currentOffer.id}-${pIdx}`}
-                    className={`absolute inset-0 rounded-[30px] overflow-hidden transition-all duration-300 transform ${styleClass}`}
-                  >
-                    <img
-                      src={photoUrl}
-                      alt={currentOffer.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover brightness-100 group-hover:scale-108 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none" />
-
-                    {/* Prominent Corner Triangle Discount Ribbon on Top-Right */}
-                    {diff === 0 && (
-                      <div className="absolute top-0 right-0 w-24 h-24 overflow-hidden z-30 pointer-events-none">
-                        <div className="absolute transform rotate-45 bg-gradient-to-r from-red-600 via-[#EA580C] to-[#D96B27] text-white font-black text-[11px] py-1 right-[-35px] top-[20px] w-[130px] text-center shadow-lg border-b border-white/40">
-                          {currentOffer.tag}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Card Footer Info */}
-                    {diff === 0 && (
-                      <div className="absolute bottom-4 inset-x-4 text-white z-20">
-                        <span className="px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-amber-300 text-[10px] font-black border border-white/20 inline-block mb-1">
-                          📍 {currentOffer.departure}
-                        </span>
-                        <h4 className="font-black text-sm text-white drop-shadow-md truncate">
-                          {currentOffer.title}
-                        </h4>
-                        <div className="text-xs text-amber-300 font-black mt-0.5">
-                          {currentOffer.price} د.ل
-                        </div>
-                      </div>
-                    )}
+                  <div className="text-4xl md:text-5xl font-black text-amber-400 drop-shadow-md">
+                    {currentOffer.price} <span className="text-lg md:text-xl font-bold text-slate-300">{isAr ? "د.ل" : "LYD"}</span>
                   </div>
-                );
-              })}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onBook(currentOffer); }}
+                  className="mt-2 py-3 px-8 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-sm md:text-base shadow-md transition cursor-pointer w-full md:w-auto"
+                >
+                  {isAr ? "احجز هذا العرض الآن" : "Book This Offer"}
+                </button>
+              </div>
             </div>
           </div>
-
+          
+          {/* Dot Indicators */}
+          <div className="flex justify-center items-center gap-2 mt-6">
+            {offers.map((_, dotIdx) => (
+              <button
+                key={dotIdx}
+                type="button"
+                onClick={() => setOfferIndex(dotIdx)}
+                className={`h-2.5 rounded-full transition-all cursor-pointer ${
+                  dotIdx === offerIndex ? "w-8 bg-[#D96B27]" : "w-2.5 bg-slate-300 hover:bg-slate-400"
+                }`}
+                title={`عرض ${dotIdx + 1}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -2335,10 +2228,15 @@ function CompactLocationHotelsFinder() {
         
         {/* Left Side (RTL Right): Info & Geolocation Button */}
         <div className="space-y-2 flex-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D96B27]/10 text-[#D96B27] text-xs font-black border border-[#D96B27]/25">
-            <span>📍</span>
+          <button 
+            type="button"
+            onClick={handleDetectLocation}
+            disabled={isDetecting}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D96B27]/10 hover:bg-[#D96B27]/20 text-[#D96B27] text-xs font-black border border-[#D96B27]/25 transition cursor-pointer"
+          >
+            <span>{isDetecting ? "⏳" : "📍"}</span>
             <span>{isAr ? "تحديد الموقع الجغرافي المباشر" : "Nearby Accommodation & Dining"}</span>
-          </div>
+          </button>
           <h3 className="text-lg sm:text-xl font-black text-[#003580] tracking-tight">
             {isAr ? "حدد موقعك واستكشف الفنادق والمطاعم المجاورة" : "Locate Nearby Hotels, Resorts & Partner Dining"}
           </h3>
@@ -2348,18 +2246,8 @@ function CompactLocationHotelsFinder() {
               : "Find partner hotels and dining near your trip departure point or current location."}
           </p>
 
-          {/* Quick Location Action & Status */}
+          {/* Location Status */}
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={handleDetectLocation}
-              disabled={isDetecting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] text-xs font-black border border-[#003580]/30 shadow-xs transition cursor-pointer hover:border-[#003580]"
-            >
-              <span>{isDetecting ? "⏳" : "📡"}</span>
-              <span>{isAr ? "تحديد موقعي الجغرافي تلقائياً" : "Auto-detect My Location"}</span>
-            </button>
-
             {geoStatus && (
               <span className="text-xs font-black text-[#D96B27] bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
                 {geoStatus}
@@ -2644,10 +2532,7 @@ function TripsPage() {
 
             {/* Counter & Reset Actions */}
             <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
-              <div className="text-xs font-black text-[#003580] bg-[#EBF3FF] px-3.5 py-2 rounded-xl border border-blue-100 flex items-center gap-1.5">
-                <span>🎯</span>
-                <span>{isAr ? `إجمالي الرحلات المتاحة: ${filtered.length}` : `Available Tours: ${filtered.length}`}</span>
-              </div>
+
 
               {hasActiveFilters && (
                 <button
@@ -2726,12 +2611,12 @@ function TripsPage() {
                 {[
                   {
                     id: "طرابلس",
-                    label: isAr ? "طرابلس (المنطقة الغربية)" : "Tripoli",
+                    label: isAr ? "طرابلس" : "Tripoli",
                     count: allTrips.filter((t) => "departure" in t && t.departure === "طرابلس").length,
                   },
                   {
                     id: "بنغازي",
-                    label: isAr ? "بنغازي (المنطقة الشرقية)" : "Benghazi",
+                    label: isAr ? "بنغازي" : "Benghazi",
                     count: allTrips.filter((t) => "departure" in t && t.departure === "بنغازي").length,
                   },
                 ].map((item) => {
@@ -2778,139 +2663,7 @@ function TripsPage() {
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* 2. ATTRACTIVE TOURS OVERVIEW SECTION (نبذة عن الرحلات)       */}
-      {/* ============================================================ */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-        <div className="text-center max-w-3xl mx-auto mb-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EBF3FF] text-[#003580] text-xs font-black border border-blue-100 mb-2">
-            <span>✨</span>
-            <span>{isAr ? "دليلك الشامل لبرامج وتجارب دلّني" : "Your Comprehensive Guide to Dallani Tours"}</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-[#003580] tracking-tight">
-            {isAr ? "رحلات صُممت لتمنحك استكشافاً ليبياً أصيلاً" : "Tailored Expeditions for Authentic Discovery"}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 font-medium mt-2 leading-relaxed">
-            {isAr
-              ? "سواء كنت تبحث عن جولة يومية متكاملة لزيارة المعالم التاريخية والتراثية، أو بعثة أسبوعية لمغامرات الصحراء الكبرى، أو تريد تصميم رحلتك الخاصة بكل تفاصيلها، نحن هنا لنضمن لك تجربة استثنائية."
-              : "Whether you seek daily cultural excursions, weekly multi-day desert safaris, or custom private tours designed by you."}
-          </p>
-        </div>
 
-        {/* 3 Interactive Cards - Compact & Concise */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Pillar 1: Daily Tours */}
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-[#E8E2D6] hover:border-[#003580] shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between group">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
-                ☀️
-              </div>
-              <div className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100/70 text-amber-900 text-[10px] font-black">
-                {isAr ? "من 09:00 ص إلى 09:00 م" : "09:00 AM - 09:00 PM"}
-              </div>
-              <h3 className="text-base font-black text-[#003580]">
-                {isAr ? "الرحلات اليومية المنظمة" : "Daily Organized Tours"}
-              </h3>
-              <p className="text-[11px] text-slate-600 leading-normal font-medium">
-                {isAr
-                  ? "جولات يومية مكثفة للمعالم الأثرية والمنتزهات مع وجبة غداء فاخرة."
-                  : "Comprehensive 12-hour day tours covering historical landmarks & heritage lunch."}
-              </p>
-              <div className="pt-2 border-t border-slate-100 text-[11px] font-bold text-[#1B5A78] space-y-1">
-                <div>📍 {isAr ? "انطلاق من طرابلس وبنغازي" : "Departs from Tripoli & Benghazi"}</div>
-                <div>🚌 {isAr ? "مركبات سياحية VIP مكيفة" : "VIP air-conditioned transport"}</div>
-              </div>
-            </div>
-            <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-black text-[#003580]">{isAr ? "تبدأ من 120 د.ل" : "From 120 LYD"}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTypes(["daily"]);
-                  scrollContainerRef.current?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-xs font-black text-[#D96B27] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>{isAr ? "استعراض اليومية" : "View Tours"}</span>
-                <span>➔</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Pillar 2: Weekly Expeditions */}
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-[#E8E2D6] hover:border-[#1B5A78] shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between group">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
-                🗓️
-              </div>
-              <div className="inline-block px-2.5 py-0.5 rounded-full bg-blue-100/70 text-[#003580] text-[10px] font-black">
-                {isAr ? "برامج ٤ إلى ٧ أيام" : "4 - 7 Days All-Inclusive"}
-              </div>
-              <h3 className="text-base font-black text-[#003580]">
-                {isAr ? "الرحلات والبعثات الأسبوعية" : "Weekly Expeditions"}
-              </h3>
-              <p className="text-[11px] text-slate-600 leading-normal font-medium">
-                {isAr
-                  ? "مغامرات متعددة الأيام لاستكشاف سحر الصحراء (أوباري، أكاكوس) وغدامس والجبل الأخضر."
-                  : "Multi-day expeditions across Sahara dunes, Acacus, and UNESCO Ghadames."}
-              </p>
-              <div className="pt-2 border-t border-slate-100 text-[11px] font-bold text-[#1B5A78] space-y-1">
-                <div>🏕️ {isAr ? "إقامة مخيمات صحراوية ونزل تراثية" : "Desert camps & heritage lodges"}</div>
-                <div>🚙 {isAr ? "سيارات دفع رباعي وسائقون معتمدون" : "4x4 SUVs & native desert drivers"}</div>
-              </div>
-            </div>
-            <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-black text-[#003580]">{isAr ? "شامل الإقامة والنقل" : "All inclusive"}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTypes(["weekly"]);
-                  scrollContainerRef.current?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-xs font-black text-[#D96B27] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>{isAr ? "استعراض الأسبوعية" : "View Expeditions"}</span>
-                <span>➔</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Pillar 3: Custom Private Tours */}
-          <div className="bg-gradient-to-br from-[#0B132B] via-[#003580] to-[#1B5A78] text-white rounded-2xl p-4 sm:p-5 border-2 border-white/20 shadow-lg flex flex-col justify-between group">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
-                👑
-              </div>
-              <div className="inline-block px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-black">
-                {isAr ? "تصميم مخصص بالكامل" : "100% Customized"}
-              </div>
-              <h3 className="text-base font-black text-white">
-                {isAr ? "أنشئ رحلتك الخاصة بنفسك" : "Create Private Tour"}
-              </h3>
-              <p className="text-[11px] text-slate-200 leading-normal font-medium">
-                {isAr
-                  ? "صمّم رحلتك بحرية! حدد الوجهات والمواعيد والمسار، وسيلة النقل، والمرشد بالاسم."
-                  : "Design your tour! Pick destinations, dates, transport mode, and certified guide."}
-              </p>
-              <div className="pt-2 border-t border-white/15 text-[11px] font-bold text-amber-200 space-y-1">
-                <div>✓ {isAr ? "خصوصية تامة لعائلتك أو مجموعتك" : "Full Privacy"}</div>
-                <div>✓ {isAr ? "عرض سعر وخطة خلال 24 ساعة" : "Plan & quote in 24 hrs"}</div>
-              </div>
-            </div>
-            <div className="pt-3 mt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-xs font-black text-amber-300">{isAr ? "تخصيص فوري" : "Instant"}</span>
-              <button
-                type="button"
-                onClick={() => setPrivateOpen(true)}
-                className="py-1.5 px-3.5 rounded-lg bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white text-xs font-black shadow-md transition cursor-pointer flex items-center gap-1"
-              >
-                <span>{isAr ? "صمم رحلتك الآن" : "Design Tour"}</span>
-                <span>✨</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ============================================================ */}
       {/* 3. SPECIAL OFFERS SPOTLIGHT (INTERACTIVE 3D STACKED DECK)    */}
@@ -3072,14 +2825,9 @@ function TripsPage() {
               </h3>
               <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                 {isAr
-                  ? "أنت من يحدد مسار الرحلة والوجهات التي ترغب بزيارتها، وتاريخ الانطلاق، ونوع سيارة الدفع الرباعي أو الحافلة، والمرشد السياحي المعتمد الذي ترغب بمرافقته. نحن نتولى التنفيذ بكل احترافية."
-                  : "You define the route, destinations, departure dates, 4x4 or luxury vehicle, and personal certified guide. We execute every detail to perfection."}
+                  ? "أنت من يحدد مسار الرحلة والوجهات التي ترغب بزيارتها، وتاريخ الانطلاق، ونوع شركة النقل، والمرشد السياحي المعتمد الذي ترغب بمرافقته. نحن نتولى التنفيذ بكل احترافية."
+                  : "You define the route, destinations, departure dates, transport company, and personal certified guide. We execute every detail to perfection."}
               </p>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-1 text-xs font-bold text-amber-200">
-                <span className="flex items-center gap-1.5">✓ {isAr ? "خصوصية تامة لعائلتك أو مجموعتك" : "Full Privacy"}</span>
-                <span className="flex items-center gap-1.5">✓ {isAr ? "اختيار مرشدك وسائقك المفضل" : "Pick Your Guide & Driver"}</span>
-                <span className="flex items-center gap-1.5">✓ {isAr ? "مرونة كاملة في المسار والمواعيد" : "Flexible Itinerary"}</span>
-              </div>
             </div>
 
             <div className="shrink-0">

@@ -315,57 +315,52 @@ function DriverDashboard() {
       {active === "profile" && (
         <SectionCard title="تعديل الملف الشخصي وبيانات رخصة القيادة (DelniDB: drivers)">
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
-            <Field label="الاسم الكامل للسائق (full_name)" value={driverInfo.full_name} onChange={(v) => setDriverInfo({ ...driverInfo, full_name: v })} />
-            <Field label="رقم الهاتف (phone_number)" value={driverInfo.phone_number} onChange={(v) => setDriverInfo({ ...driverInfo, phone_number: v })} />
-            <Field label="رقم رخصة القيادة (driver_license_number)" value={driverInfo.driver_license_number} onChange={(v) => setDriverInfo({ ...driverInfo, driver_license_number: v })} />
-            <Field label="تاريخ صلاحية انتهاء الرخصة (license_date_valid)" type="date" value={driverInfo.license_date_valid} onChange={(v) => setDriverInfo({ ...driverInfo, license_date_valid: v })} />
-            <Field label="الرقم الوطني أو رقم جواز السفر (national_id_or_passport)" value={driverInfo.national_id_or_passport} onChange={(v) => setDriverInfo({ ...driverInfo, national_id_or_passport: v })} />
-            <Field label="البريد الإلكتروني لحساب السائق (email)" type="email" value={driverInfo.email} onChange={(v) => setDriverInfo({ ...driverInfo, email: v })} />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-bold text-foreground mb-1 block">رقم عقد شركة النقل (contract_number)</label>
-                <input
-                  type="text"
-                  value={driverInfo.contract_number}
-                  disabled
-                  className="w-full h-11 px-3 rounded-xl border border-border bg-muted/40 text-muted-foreground text-right font-mono text-sm cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-foreground mb-1 block">المركبة المسندة (assigned_vehicle_plate)</label>
-                <input
-                  type="text"
-                  value={driverInfo.assigned_vehicle_plate || ""}
-                  disabled
-                  className="w-full h-11 px-3 rounded-xl border border-border bg-muted/40 text-muted-foreground text-right font-mono text-sm cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-bold text-foreground mb-1 block">سنوات الخبرة (experience_years)</label>
-                <input
-                  type="number"
-                  value={driverInfo.experience_years || 0}
-                  onChange={(e) => setDriverInfo({ ...driverInfo, experience_years: Number(e.target.value) })}
-                  className="w-full h-11 px-3 rounded-xl border border-border bg-white text-right font-semibold text-sm outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-foreground mb-1 block">الحالة التشغيلية (operational_status)</label>
-                <select
-                  value={driverInfo.operational_status || "متاح"}
-                  onChange={(e) => setDriverInfo({ ...driverInfo, operational_status: e.target.value as any })}
-                  className="w-full h-11 px-3 rounded-xl border border-border bg-white text-right font-semibold text-sm outline-none focus:border-primary"
-                >
-                  <option value="متاح">متاح</option>
-                  <option value="في رحلة">في رحلة</option>
-                  <option value="إجازة">إجازة</option>
-                </select>
-              </div>
-            </div>
+            <Field 
+              label="الاسم الكامل للسائق" 
+              value={driverInfo.full_name} 
+              onChange={(v) => setDriverInfo({ ...driverInfo, full_name: v })} 
+              pattern={/^[\u0600-\u06FF\sA-Za-z]+$/} 
+              errorMessage="الاسم يجب أن يحتوي على حروف فقط (عربي/إنجليزي)" 
+              maxLength={50} 
+            />
+            <Field 
+              label="رقم الهاتف" 
+              value={driverInfo.phone_number} 
+              onChange={(v) => setDriverInfo({ ...driverInfo, phone_number: v })} 
+              pattern={/^09\d{8}$/} 
+              errorMessage="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)" 
+              maxLength={10} 
+            />
+            <Field 
+              label="رقم رخصة القيادة" 
+              value={driverInfo.driver_license_number} 
+              onChange={(v) => setDriverInfo({ ...driverInfo, driver_license_number: v })} 
+              pattern={/^[A-Za-z0-9-]+$/} 
+              errorMessage="رقم الرخصة غير صالح" 
+              maxLength={20} 
+            />
+            <Field 
+              label="تاريخ صلاحية انتهاء الرخصة" 
+              type="date" 
+              value={driverInfo.license_date_valid} 
+              onChange={(v) => setDriverInfo({ ...driverInfo, license_date_valid: v })} 
+            />
+            <Field 
+              label="الرقم الوطني أو رقم جواز السفر" 
+              value={driverInfo.national_id_or_passport} 
+              onChange={(v) => setDriverInfo({ ...driverInfo, national_id_or_passport: v })} 
+              pattern={/^[A-Za-z0-9]{6,15}$/} 
+              errorMessage="يجب أن يتكون من 6 إلى 15 حرفاً أو رقماً" 
+              maxLength={15} 
+            />
+            <Field 
+              label="البريد الإلكتروني لحساب السائق" 
+              type="email" 
+              value={driverInfo.email} 
+              onChange={(v) => setDriverInfo({ ...driverInfo, email: v })} 
+              pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/} 
+              errorMessage="صيغة البريد الإلكتروني غير صحيحة" 
+            />
 
             <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow">
               حفظ التغييرات ✓
@@ -377,17 +372,28 @@ function DriverDashboard() {
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Field({ label, type = "text", value, onChange, placeholder, pattern, errorMessage, maxLength }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; pattern?: RegExp; errorMessage?: string; maxLength?: number }) {
+  const [error, setError] = useState("");
+  const handleChange = (val: string) => {
+    if (maxLength && val.length > maxLength) return;
+    onChange(val);
+    if (pattern && val) {
+      setError(!pattern.test(val) ? (errorMessage || "إدخال غير صحيح") : "");
+    } else {
+      setError("");
+    }
+  };
   return (
     <div>
       <label className="text-sm font-bold text-foreground mb-1 block">{label}</label>
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-11 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-sm font-semibold"
+        className={`w-full h-11 px-3 rounded-xl border bg-white text-right focus:outline-none text-sm font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`}
       />
+      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }

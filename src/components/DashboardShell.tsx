@@ -43,14 +43,13 @@ export function DashboardShell({
               </svg>
             </button>
             <Link to="/" className="flex items-center gap-2.5">
-              <Logo size="sm" />
+              <Logo size="sm" showText={false} />
               <div className="hidden md:block border-r border-border pr-3 mr-1">
                 <div className="text-[11px] font-black text-muted-foreground tracking-wide uppercase">{roleLabel}</div>
               </div>
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            <LanguageToggle />
             <Link to="/support" className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition">
               💬 {isAr ? "الدعم" : "Support"}
             </Link>
@@ -160,6 +159,20 @@ export function DashboardShell({
                 );
               })}
             </nav>
+
+            <button
+              onClick={() => {
+                if (window.confirm("هل أنت متأكد من تسجيل الخروج؟")) {
+                  window.location.href = "/";
+                }
+              }}
+              className="w-full mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:bg-red-500/10 text-red-400 group"
+            >
+              <span className="w-8 h-8 rounded-lg grid place-items-center text-base flex-shrink-0 transition-all bg-white/5 group-hover:bg-red-500/20">
+                🚪
+              </span>
+              <span className="text-[13px] font-bold leading-tight">{isAr ? "تسجيل الخروج" : "Logout"}</span>
+            </button>
 
             {/* Divider */}
             <div className="my-4 h-px" style={{ background: "rgba(197,160,89,0.12)" }} />

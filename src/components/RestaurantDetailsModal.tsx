@@ -95,29 +95,10 @@ export function RestaurantDetailsModal({
 
   const photoCaptions = [
     { title: isAr ? "الجلسات والأجواء العامة" : "Ambiance & Seating", icon: "✨" },
-    { title: isAr ? "الأطباق والولائم المميزة" : "Signature Dishes", icon: "🍽️" },
+    { title: isAr ? "أجواء التقديم والضيافة" : "Dining & Hospitality", icon: "🍽️" },
     { title: isAr ? "المشروبات والحلويات التراثية" : "Beverages & Desserts", icon: "☕" },
     { title: isAr ? "الموقع والواجهة الخارجية" : "Exterior & Venue", icon: "🏛️" },
   ];
-
-  // Extended signature dishes with descriptions
-  const detailedDishes = (restaurant.signatureDishes && restaurant.signatureDishes.length > 0
-    ? restaurant.signatureDishes
-    : [
-        isAr ? "كسكسي بالبصلة ولحم الخروف الوطني" : "Traditional Lamb Couscous",
-        isAr ? "شربة ليبية أصيلة مع خبز الفرن" : "Traditional Libyan Soup",
-        isAr ? "مبطن طرابلسي وبوريك بالجبن" : "Crispy Mbatten & Burek",
-        isAr ? "شاي رغوي باللوز المحمص" : "Frothy Almond Tea",
-      ]
-  ).map((title, idx) => ({
-    id: `dish-${idx}`,
-    name: title,
-    badge: idx === 0 ? (isAr ? "الأكثر طلباً" : "Chef's Choice") : (isAr ? "طبق مميز" : "Signature"),
-    desc: isAr
-      ? "مُعد يومياً بمكونات طازجة محلية 100% وفق وصفات المطبخ الليبي التقليدي المتوارث."
-      : "Prepared fresh daily with premium local ingredients.",
-    price: idx === 0 ? "45 - 65 د.ل" : idx === 1 ? "18 - 25 د.ل" : idx === 2 ? "22 - 30 د.ل" : "10 - 15 د.ل",
-  }));
 
   const handleShare = () => {
     if (navigator.share) {
@@ -337,15 +318,7 @@ export function RestaurantDetailsModal({
                     </div>
                   </div>
 
-                  {/* Price Range */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-bold">{isAr ? "متوسط التكلفة للوجبة" : "Average Price"}</div>
-                      <div className="text-lg font-black text-[#003580] dark:text-blue-400">{restaurant.priceRange}</div>
-                      <div className="text-xs text-slate-500 font-semibold">{isAr ? "وجبة متكاملة للشخص" : "Full Meal / Person"}</div>
-                    </div>
-                    <div className="text-3xl">💰</div>
-                  </div>
+
 
                   {/* Hours */}
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-100 dark:border-slate-700 flex items-center justify-between">
@@ -368,7 +341,7 @@ export function RestaurantDetailsModal({
                           {isAr ? "نوع وتصنيف الطعام المقدم" : "Cuisine Type & Specialty"}
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {isAr ? "طبيعة المأكولات وأسلوب الضيافة المقدم في هذا المطعم" : "Style of food and hospitality offered"}
+                          {isAr ? "طبيعة المأكولات ونوع الطلبات المقدمة" : "Food category and specialties"}
                         </p>
                       </div>
                     </div>
@@ -377,59 +350,31 @@ export function RestaurantDetailsModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-slate-700 text-[#D96B27] flex items-center justify-center font-black text-lg shrink-0">
-                        🥘
+                      <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-slate-700 text-[#D96B27] flex items-center justify-center font-black text-xl shrink-0">
+                        🥩
                       </div>
                       <div>
-                        <div className="text-xs font-black text-slate-900 dark:text-white">
-                          {isAr ? "تخصص المطعم والمذاق الفريد:" : "Primary Specialty:"}
+                        <div className="text-xs font-black text-slate-500 dark:text-slate-400">
+                          {isAr ? "نوع الطلبات والمأكولات:" : "Order & Cuisine Type:"}
                         </div>
-                        <div className="text-xs text-[#D96B27] font-black mt-0.5">
+                        <div className="text-sm text-[#003580] dark:text-blue-300 font-black mt-0.5">
+                          {restaurant.type}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-slate-700 text-amber-700 flex items-center justify-center font-black text-xl shrink-0">
+                        🔥
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-500 dark:text-slate-400">
+                          {isAr ? "التخصص والطلب الأكثر طلباً:" : "Signature Dish / Specialty:"}
+                        </div>
+                        <div className="text-sm text-[#D96B27] font-black mt-0.5">
                           {restaurant.specialty}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-slate-700 text-emerald-700 flex items-center justify-center font-black text-lg shrink-0">
-                        🌿
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-900 dark:text-white">
-                          {isAr ? "طازجة ومحلية:" : "Fresh & Local:"}
-                        </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-300 font-bold mt-0.5">
-                          {isAr ? "لحوم بلدية طازجة ومكونات ليبية مختارة يومياً" : "Fresh daily local ingredients and meats"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-slate-700 text-[#003580] flex items-center justify-center font-black text-lg shrink-0">
-                        👨‍👩‍👧
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-900 dark:text-white">
-                          {isAr ? "أجواء الجلسات:" : "Atmosphere:"}
-                        </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-300 font-bold mt-0.5">
-                          {isAr ? "جلسات عائلية مريحة مع خصوصية وتكييف هادئ" : "Comfortable family seating with privacy"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-slate-700 text-amber-700 flex items-center justify-center font-black text-lg shrink-0">
-                        ☕
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-900 dark:text-white">
-                          {isAr ? "الضيافة والمشروبات:" : "Hospitality & Drinks:"}
-                        </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-300 font-bold mt-0.5">
-                          {isAr ? "شاي ليبي تراثي باللوز وقهوة ومشروبات منعشة" : "Libyan almond tea, coffee & fresh drinks"}
                         </div>
                       </div>
                     </div>

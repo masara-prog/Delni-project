@@ -7,7 +7,7 @@ import destGhadames from "@/assets/dest-ghadames.jpg";
 import destAcacus from "@/assets/dest-acacus.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
 import { useLanguage } from "@/lib/i18n";
-import type { Tourist, BookingDaily, BookingWeekly, PrivateTrip, ReviewDailyTrip, ReviewHotel } from "@/lib/dbSchema";
+import { QrCode } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/tourist")({
   head: () => ({
@@ -50,10 +50,21 @@ function TouristDashboard() {
   const [active, setActive] = useState("overview");
   const [ticketModal, setTicketModal] = useState<Ticket | null>(null);
 
-  // Tourist Profile Data according to DelniDB: tourists table
-  const [touristInfo, setTouristInfo] = useState<Tourist>({
-    tourist_id: "T-8812903",
-    full_name: "أحمد بن علي المصراتي",
+  const nav: NavItem[] = [
+    { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
+    { id: "bookings", label: isAr ? "حجوزاتي والتذاكر" : "My Bookings & Tickets", icon: "🎟️", badge: 2 },
+    { id: "trips", label: isAr ? "استكشاف الرحلات" : "Explore Tours", icon: "🧭" },
+    { id: "favorites", label: isAr ? "المفضلة" : "Favorites", icon: "❤️", badge: 3 },
+    { id: "company_payment", label: isAr ? "تعليمات" : "Instructions", icon: "🏢" },
+    { id: "messages", label: isAr ? "الرسائل والتنبيهات" : "Messages & Alerts", icon: "💬", badge: 2 },
+    { id: "reviews", label: isAr ? "تقييماتي" : "My Reviews", icon: "⭐" },
+    { id: "profile", label: isAr ? "الملف الشخصي والحساب" : "My Profile & Account", icon: "👤" },
+  ];
+
+  // Tourist Profile Data (Data Dictionary: Tourists table)
+  const [touristInfo, setTouristInfo] = useState({
+    tourist_id: "P-8812903",
+    name_full: "أحمد بن علي المصراتي",
     email: "ahmed.misrati@dalni.ly",
     phone_number: "0912345678",
     password: "••••••••",
@@ -195,10 +206,16 @@ function TouristDashboard() {
               <div className="space-y-4">
                 {bookings.map((b) => (
                   <div key={b.code} className="flex flex-col sm:flex-row gap-4 p-4 rounded-2xl border border-border bg-white hover:border-amber-400 transition shadow-sm text-right">
-                    <div className="w-full sm:w-28 h-28 rounded-xl bg-[#D96B27] text-white flex flex-col items-center justify-center p-2 shrink-0 border border-[#C56A30] text-center shadow-soft">
-                      <span className="text-2xl mb-1">🎟️</span>
-                      <span className="text-[10px] font-mono font-black text-amber-200">{b.code}</span>
-                      <span className="text-[9px] text-white/80 mt-1">{b.type}</span>
+                    <div className="w-full sm:w-32 h-auto min-h-[110px] rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-200/60 flex flex-col items-center justify-center p-3 shrink-0 text-center shadow-sm relative overflow-hidden">
+                      {/* Decorative elements */}
+                      <div className="absolute -right-4 -top-4 w-12 h-12 bg-orange-500/10 rounded-full blur-xl"></div>
+                      <div className="absolute -left-4 -bottom-4 w-12 h-12 bg-amber-500/10 rounded-full blur-xl"></div>
+                      
+                      <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-orange-100 flex items-center justify-center mb-2 z-10">
+                        <span className="text-lg">🎫</span>
+                      </div>
+                      <span className="text-[11px] font-mono font-black text-orange-700 z-10 tracking-tight">{b.code}</span>
+                      <span className="text-[9px] text-orange-600/80 mt-1 font-bold z-10 leading-tight">{b.type.split(' (')[0]}</span>
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -347,7 +364,7 @@ function TouristDashboard() {
 
       {/* COMPANY PAYMENT INSTRUCTIONS */}
       {active === "company_payment" && (
-        <SectionCard title="🏢 تعليمات وآلية سداد التكلفة بمقر الشركة (الدفع النقدي)">
+        <SectionCard title="🏢 تعليمات السداد">
           <div className="space-y-4 text-right">
             <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-2 text-amber-900 font-bold">
               <div className="text-sm font-black text-amber-800">📌 الدفع الفيزيائي بموقع الشركة:</div>
@@ -377,10 +394,33 @@ function TouristDashboard() {
         <SectionCard title="تعديل الملف الشخصي وبيانات حساب السائح (DelniDB: tourists)">
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
             <Field label="كود السائح بالمنصة (tourist_id)" value={touristInfo.tourist_id} onChange={() => {}} />
-            <Field label="الاسم الكامل للسائح (full_name)" value={touristInfo.full_name} onChange={(v) => setTouristInfo({ ...touristInfo, full_name: v })} />
-            <Field label="البريد الإلكتروني (email)" type="email" value={touristInfo.email} onChange={(v) => setTouristInfo({ ...touristInfo, email: v })} />
-            <Field label="رقم الهاتف (phone_number)" value={touristInfo.phone_number} onChange={(v) => setTouristInfo({ ...touristInfo, phone_number: v })} />
-            <Field label="كلمة المرور (password)" type="password" value={touristInfo.password || ""} onChange={(v) => setTouristInfo({ ...touristInfo, password: v })} />
+            <Field 
+              label="الاسم الكامل للسائح (name_full)" 
+              value={touristInfo.name_full} 
+              onChange={(v) => setTouristInfo({ ...touristInfo, name_full: v })} 
+              pattern={/^[\u0600-\u06FF\sA-Za-z]+$/} 
+              errorMessage="الاسم يجب أن يحتوي على حروف فقط (عربي/إنجليزي)" 
+              maxLength={50} 
+            />
+            <Field 
+              label="البريد الإلكتروني (email)" 
+              type="email" 
+              value={touristInfo.email} 
+              onChange={(v) => setTouristInfo({ ...touristInfo, email: v })} 
+              pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/} 
+              errorMessage="صيغة البريد الإلكتروني غير صحيحة" 
+            />
+            <LibyanPhoneField label="رقم الهاتف (phone_number)" value={touristInfo.phone_number} onChange={(v) => setTouristInfo({ ...touristInfo, phone_number: v })} />
+            <Field 
+              label="رقم جواز السفر أو الرقم الوطني (national_id_or_passport)" 
+              value={touristInfo.national_id_or_passport} 
+              onChange={(v) => setTouristInfo({ ...touristInfo, national_id_or_passport: v })} 
+              pattern={/^[A-Za-z0-9]{6,15}$/} 
+              errorMessage="يجب أن يتكون من 6 إلى 15 حرفاً أو رقماً" 
+              maxLength={15} 
+            />
+
+            <Field label="كلمة المرور الحالية أو الجديدة" type="password" value={touristInfo.password} onChange={(v) => setTouristInfo({ ...touristInfo, password: v })} />
 
             <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow">
               حفظ وتحديث الملف الشخصي في DelniDB ✓
@@ -392,103 +432,109 @@ function TouristDashboard() {
       {/* E-Ticket View Modal */}
       {ticketModal && (
         <Modal open={!!ticketModal} onClose={() => setTicketModal(null)} size="lg">
-          <div className="p-6 dir-rtl space-y-5 bg-slate-950 text-slate-100 rounded-3xl overflow-hidden relative shadow-glow" dir="rtl">
-            <div className="flex items-center justify-between border-b border-amber-500/30 pb-4">
+          <div className="p-0 dir-rtl bg-white rounded-3xl overflow-hidden relative shadow-2xl" dir="rtl">
+            
+            {/* Header / Brand */}
+            <div className="p-6 pb-0 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-sun text-gold-foreground grid place-items-center text-2xl font-black shadow-gold">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#D96B27] to-[#F3A150] text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-orange-500/30">
                   🎫
                 </div>
                 <div>
-                  <h3 className="font-black text-lg text-amber-400 tracking-wide">التذكرة الإلكترونية الرسمية (E-Ticket Boarding Pass)</h3>
-                  <p className="text-xs text-slate-400 font-bold">منصة دلني لخدمات السياحة والرحلات في ليبيا · Delni Journeys</p>
+                  <h3 className="font-black text-xl text-slate-900 tracking-tight">التذكرة الإلكترونية (E-Ticket)</h3>
+                  <p className="text-xs text-slate-500 font-bold">منصة دلني لخدمات السياحة والرحلات في ليبيا</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="font-mono text-xs px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black block">
+              <div className="text-left">
+                <span className="font-mono text-sm px-4 py-1.5 rounded-xl bg-orange-50 text-orange-600 border border-orange-200 font-black block">
                   {ticketModal.code}
                 </span>
-                <span className="text-[10px] text-emerald-400 font-bold mt-1 block">✅ حجز مؤكد ومسدد فيزيائياً بمقر الشركة</span>
               </div>
             </div>
 
-            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-              {ticketModal.tripImage && (
-                <div className="h-32 w-full relative overflow-hidden">
-                  <img src={ticketModal.tripImage} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
-                  <div className="absolute bottom-3 right-4 left-4 flex justify-between items-end">
-                    <h4 className="text-lg font-black text-white drop-shadow-md">{ticketModal.tripName}</h4>
-                    <span className="text-xs bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg font-black">{ticketModal.type}</span>
-                  </div>
-                </div>
-              )}
+            {/* Ticket Body */}
+            <div className="p-6 mt-4 relative">
+              {/* Divider lines imitating a real ticket */}
+              <div className="absolute top-0 left-6 right-6 border-t-2 border-dashed border-slate-200"></div>
+              <div className="absolute -top-3 -left-3 w-6 h-6 bg-slate-900/50 rounded-full" style={{ mixBlendMode: 'overlay' }}></div>
+              <div className="absolute -top-3 -right-3 w-6 h-6 bg-slate-900/50 rounded-full" style={{ mixBlendMode: 'overlay' }}></div>
 
-              <div className="p-5 space-y-4 text-xs font-semibold text-right">
-                <div className="grid md:grid-cols-2 gap-3 text-slate-300">
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-                    <div className="text-amber-400 font-bold text-[11px]">🗓️ التاريخ ووقت الانطلاق:</div>
-                    <div className="text-white font-black text-sm">{ticketModal.date}</div>
-                    <div className="text-slate-400 font-mono text-[11px]">{ticketModal.time}</div>
+              <div className="flex flex-col lg:flex-row gap-6 mt-4">
+                {/* Left Side: QR Code & Status */}
+                <div className="w-full lg:w-48 shrink-0 flex flex-col items-center justify-center bg-slate-50 border border-slate-100 rounded-2xl p-5 text-center">
+                  <div className="w-32 h-32 bg-white rounded-xl shadow-sm border border-slate-200 p-2 flex items-center justify-center mb-3">
+                    <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
                   </div>
-
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-                    <div className="text-amber-400 font-bold text-[11px]">📍 نقطة التجمع والانطلاق الثابتة:</div>
-                    <div className="text-white font-bold">{ticketModal.pickup}</div>
+                  <div className="text-[10px] text-slate-500 font-bold mb-2">يرجى إبراز هذا الرمز عند الدفع بمقر الشركة للتحقق</div>
+                  <div className="w-full py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-black">
+                    ✅ {ticketModal.status}
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-3 text-slate-300">
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-                    <div className="text-amber-400 font-bold text-[11px]">🚌 الناقل وشركة النقل:</div>
-                    <div><b>الشركة:</b> {ticketModal.companyName} (<span className="font-mono text-amber-300">{ticketModal.contractNo}</span>)</div>
-                    <div><b>السائق المكلف:</b> {ticketModal.driverName} (<span className="font-mono">{ticketModal.driverLicense}</span>)</div>
-                    <div><b>السيارة واللوحة:</b> {ticketModal.vehicleModel} · <span className="font-bold text-amber-300 font-mono">{ticketModal.vehiclePlate}</span></div>
+                {/* Right Side: Details */}
+                <div className="flex-1 space-y-5">
+                  <div className="space-y-1">
+                    <h4 className="text-xl font-black text-slate-900">{ticketModal.tripName}</h4>
+                    <span className="inline-block text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-bold border border-slate-200">{ticketModal.type}</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-                    <div className="text-amber-400 font-bold text-[11px]">👨‍✈️ المرشد السياحي والتأمين:</div>
-                    <div><b>المرشد المعتمد:</b> {ticketModal.guideName} (<span className="font-mono">{ticketModal.guideLicense}</span>)</div>
-                    <div><b>عدد المقاعد:</b> {ticketModal.seats} مقعد ({ticketModal.passengers})</div>
-                    <div className="text-emerald-400 font-bold text-[10px] bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20">
-                      🛡️ {ticketModal.insuranceInfo}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">🗓️ التاريخ والوقت</div>
+                      <div className="text-sm font-black text-slate-800">{ticketModal.date}</div>
+                      <div className="text-xs font-bold text-[#D96B27]">{ticketModal.time}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">📍 نقطة التجمع والانطلاق</div>
+                      <div className="text-sm font-bold text-slate-800 leading-tight">{ticketModal.pickup}</div>
                     </div>
                   </div>
-                </div>
 
-                <div className="p-4 bg-white rounded-2xl text-slate-950 flex flex-col md:flex-row items-center justify-between gap-4 border-2 border-amber-400">
-                  <div className="space-y-1 text-center md:text-right">
-                    <div className="text-xs font-black text-slate-800 uppercase tracking-widest">تذكرة سفر وصعود معتمدة</div>
-                    <div className="text-lg font-black text-slate-900 font-mono tracking-wider">{ticketModal.code}</div>
-                    <div className="text-[11px] text-slate-600 font-bold">يرجى إبراز رقم التذكرة والهوية الرسمية عند الوصول لمقر الشركة أو الصعود للحافلة</div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">🚌 الناقل والمركبة</div>
+                      <div className="text-xs font-bold text-slate-700">{ticketModal.companyName}</div>
+                      <div className="text-[11px] text-slate-500">{ticketModal.vehicleModel} · <span className="font-mono text-slate-700 font-bold">{ticketModal.vehiclePlate}</span></div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">👨‍✈️ المرشد السياحي</div>
+                      <div className="text-xs font-bold text-slate-700">{ticketModal.guideName}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{ticketModal.guideLicense}</div>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-black shrink-0">
-                    <span className="text-2xl">🏢</span>
+                  
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                     <div>
-                      <span className="block font-black">الدفع فيزيائي بمقر الشركة</span>
-                      <span className="text-[10px] text-emerald-600 font-bold">تم تأكيد السداد الفعلي ✓</span>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">👥 المقاعد والسعر</div>
+                      <div className="text-sm font-black text-slate-800">{ticketModal.seats} مقاعد · <span className="text-[#003580]">{ticketModal.price}</span></div>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[10px] text-emerald-500 font-bold bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                        🛡️ {ticketModal.insuranceInfo.split('(')[0].trim()}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <div className="text-xs text-amber-300 font-bold flex items-center gap-1.5">
-                <span>💡</span> يُرجى التواجد في نقطة الانطلاق قبل 30 دقيقة من الموعد إبراز الهوية الرسمية.
+            {/* Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 p-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-slate-500 font-bold flex items-center gap-1.5">
+                <span>💡</span> يُرجى التواجد في نقطة الانطلاق قبل 30 دقيقة من الموعد.
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 h-10 rounded-xl bg-[#1ABC9C] text-white font-black text-xs hover:bg-[#16A085] transition shadow-soft"
+                  className="px-4 h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 hover:text-slate-900 transition flex items-center gap-2"
                 >
                   🖨️ طباعة التذكرة
                 </button>
                 <button
                   onClick={() => setTicketModal(null)}
-                  className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-gold hover:scale-105 transition"
+                  className="px-5 h-10 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#F3A150] text-white font-black text-xs shadow-md shadow-orange-500/20 hover:scale-105 transition"
                 >
-                  تم والاحتفاظ بالتذكرة ✓
+                  إغلاق التذكرة
                 </button>
               </div>
             </div>
@@ -499,17 +545,43 @@ function TouristDashboard() {
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function LibyanPhoneField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [error, setError] = useState("");
+  const handleChange = (val: string) => {
+    onChange(val);
+    setError(val && !/^09\d{8}$/.test(val) ? "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)" : "");
+  };
+  return (
+    <div>
+      <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
+      <input type="tel" value={value} onChange={e => handleChange(e.target.value)} placeholder="09..." className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
+      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+    </div>
+  );
+}
+
+function Field({ label, type = "text", value, onChange, placeholder, pattern, errorMessage, maxLength }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; pattern?: RegExp; errorMessage?: string; maxLength?: number }) {
+  const [error, setError] = useState("");
+  const handleChange = (val: string) => {
+    if (maxLength && val.length > maxLength) return;
+    onChange(val);
+    if (pattern && val) {
+      setError(!pattern.test(val) ? (errorMessage || "إدخال غير صحيح") : "");
+    } else {
+      setError("");
+    }
+  };
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+        className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`}
       />
+      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }

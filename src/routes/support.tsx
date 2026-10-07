@@ -63,6 +63,22 @@ function SupportChatPage() {
     setMessages((m) => [...m, { id: Date.now(), from: "user", text, time }]);
     setInput("");
     setTyping(true);
+
+    // Save ticket to localStorage for Admin Dashboard
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
+      stored.unshift({
+        id: `TK-${Date.now().toString().slice(-4)}`,
+        user_name: "سائح / زائر الموقع",
+        user_role: "سائح",
+        subject: text.slice(0, 35),
+        message: text,
+        status: "جديد",
+        created_at: time
+      });
+      localStorage.setItem("dalni_support_tickets", JSON.stringify(stored));
+    } catch {}
+
     setTimeout(() => {
       setTyping(false);
       setMessages((m) => [
@@ -70,11 +86,11 @@ function SupportChatPage() {
         {
           id: Date.now() + 1,
           from: "admin",
-          text: language === 'ar' ? "شكراً لتواصلك، تم استلام رسالتك وسيتم الرد من قبل مسؤول الدعم خلال دقائق ⏳" : "Thank you for contacting us. Your message has been received and support will reply shortly ⏳",
+          text: language === 'ar' ? "شكراً لتواصلك، تم استلام رسالتك وإرسالها فوراً للوحة الإدارة ⏳" : "Thank you for contacting us. Your message has been received and forwarded to Admin ⏳",
           time: new Date().toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
-    }, 1400);
+    }, 1200);
   };
 
   return (

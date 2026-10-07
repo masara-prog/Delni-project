@@ -209,6 +209,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             onSubmit={(e) => {
               e.preventDefault();
               if (hasSeatError) return;
+              if (!phone.match(/^09\d{8}$/)) return;
               setStep("success");
             }}
           >
@@ -305,6 +306,20 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             </div>
 
             <Field label={isAr ? "تاريخ الرحلة *" : "Trip Date *"} value={date} onChange={setDate} type="date" required />
+            <Field 
+              label={isAr ? "رقم الهاتف (الواتساب) *" : "Phone Number (WhatsApp) *"} 
+              value={phone} 
+              onChange={setPhone} 
+              type="tel" 
+              placeholder={isAr ? "مثال: 0912345678" : "e.g., 0912345678"} 
+              required 
+            />
+            {phone && !phone.match(/^09\d{8}$/) && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-300 text-red-700 text-xs font-bold flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{isAr ? "الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)" : "Please enter a valid Libyan phone number (e.g., 0912345678)"}</span>
+              </div>
+            )}
 
             {unit > 0 && !hasSeatError && (
               <div className="rounded-2xl bg-[#FAFAF8] p-4 border border-[#E6E1D6]">
@@ -368,6 +383,7 @@ export type DetailsItem = {
   price?: number | string;
   currency?: string;
   bookable?: boolean;
+  bookLabel?: string;
   schedules?: ScheduledTrip[];
   vehicle?: {
     model: string;
@@ -674,7 +690,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
             ) : <span />}
             {item.bookable && onBook ? (
               <button onClick={onBook} className="px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition">
-                {isAr ? "احجز الرحلة الآن 🚀" : "Book Trip Now 🚀"}
+                {item.bookLabel || (isAr ? "احجز الرحلة الآن 🚀" : "Book Trip Now 🚀")}
               </button>
             ) : (
               <span className="text-[11px] font-black text-muted-foreground bg-muted px-3 py-2 rounded-lg">{isAr ? "للعرض فقط — غير قابل للحجز" : "Display only — Not bookable"}</span>
@@ -1204,6 +1220,8 @@ export function PrivateTripModal({
   const [days, setDays] = useState("3");
   const [persons, setPersons] = useState("4");
   const [startDate, setStartDate] = useState("");
+  const [phone, setPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedGuide, setSelectedGuide] = useState<TourGuide | null>(() => {
     if (!initialGuide) return null;
@@ -1266,9 +1284,16 @@ export function PrivateTripModal({
 
   const selectedVehicle = VEHICLE_OPTIONS.find((v) => v.id === vehicleId) || VEHICLE_OPTIONS[0];
   const durationDays = Math.max(1, parseInt(days, 10) || 1);
+  const numCompanions = parseInt(persons, 10) || 1;
   const vehicleCost = selectedVehicle.pricePerDay * durationDays;
   const guideCost = selectedGuide ? selectedGuide.pricePerDay * durationDays : 0;
-  const totalEstimatedCost = vehicleCost + guideCost;
+  const ticketsCost = selectedLandmarkIds.length * 20 * numCompanions;
+  const foodCost = 50 * numCompanions * durationDays;
+  const hotelCost = durationDays > 1 ? (100 * numCompanions * (durationDays - 1)) : 0;
+  
+  const subtotal = vehicleCost + guideCost + ticketsCost + foodCost + hotelCost;
+  const platformProfit = subtotal * 0.10;
+  const totalEstimatedCost = subtotal + platformProfit;
 
   // Filtered Platform Attractions
   const availableLandmarks = useMemo(() => {
@@ -1293,9 +1318,7 @@ export function PrivateTripModal({
 
   const availableGuides = useMemo(() => {
     if (guideCityFilter === "all") return TOUR_GUIDES_DATA;
-    return TOUR_GUIDES_DATA.filter(
-      (g) => g.primaryRegion.includes(guideCityFilter) || g.operatingRegions.some((r) => r.includes(guideCityFilter))
-    );
+    return TOUR_GUIDES_DATA.filter((g) => g.primaryRegion.includes(guideCityFilter) || g.operatingRegions.some(r => r.includes(guideCityFilter)));
   }, [guideCityFilter]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1304,11 +1327,34 @@ export function PrivateTripModal({
       alert(isAr ? "يرجى اختيار معلم سياحي واحد على الأقل" : "Please select at least one landmark");
       return;
     }
+    if (!phone.match(/^09\d{8}$/)) {
+      alert(isAr ? "الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)" : "Please enter a valid Libyan phone number (e.g., 0912345678)");
+      return;
+    }
+    // Send to Python FastAPI & MySQL Backend
+    fetch("http://127.0.0.1:8000/api/trips/private", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_name: customerName || "عميل دلّني VIP",
+        customer_phone: phone,
+        preferred_start_date: startDate || new Date().toISOString().split("T")[0],
+        duration_days: durationDays,
+        number_of_companions: parseInt(persons, 10) || 1,
+        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`
+      })
+    }).catch(() => {
+      // Offline fallback
+    });
     setStep("done");
   };
 
   return (
-    <Modal open={open} onClose={onClose} size="xl">
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="xl"
+    >
       {step === "form" ? (
         <div className="p-6 sm:p-8 space-y-6" dir={dir}>
           {/* Header Banner */}
@@ -1668,7 +1714,7 @@ export function PrivateTripModal({
                       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
                         <span>📍 {selectedGuide.primaryRegion}</span>
                         <span>•</span>
-                        <span>🗣️ {selectedGuide.languages.map((l) => (isAr ? l.nameAr : l.nameEn)).join("، ")}</span>
+                        <span>🗣️ {selectedGuide.languages.map((l:any) => isAr ? l.nameAr : l.nameEn).join("، ")}</span>
                         <span>•</span>
                         <span>📅 {formatWorkingDays(selectedGuide.workingDays)}</span>
                       </div>
@@ -1788,7 +1834,7 @@ export function PrivateTripModal({
                                 <span className="text-[10px] text-amber-500 font-bold">⭐ {guide.rating}</span>
                               </div>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                📍 {guide.primaryRegion} • 🗣️ {guide.languages.map((l) => (isAr ? l.nameAr : l.nameEn)).join("، ")}
+                                📍 {guide.primaryRegion} • 🗣️ {guide.languages.map((l:any) => isAr ? l.nameAr : l.nameEn).join("، ")}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
                                 📅 {formatWorkingDays(guide.workingDays)}
@@ -1860,6 +1906,9 @@ export function PrivateTripModal({
                 </div>
               </div>
 
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
                   📅 {isAr ? "تاريخ الانطلاق المقترح" : "Start Date"}
@@ -1871,6 +1920,42 @@ export function PrivateTripModal({
                   className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs outline-none focus:border-[#D96B27]"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
+                  👤 {isAr ? "الاسم الكامل" : "Full Name"}
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder={isAr ? "الاسم" : "Name"}
+                  className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs outline-none focus:border-[#D96B27]"
+                  required
+                  pattern="^[\u0600-\u06FF\sA-Za-z]+$"
+                  title={isAr ? "الاسم يجب أن يحتوي على حروف فقط (عربي/إنجليزي)" : "Name must contain only letters"}
+                  maxLength={50}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
+                  📞 {isAr ? "رقم الهاتف (واتساب)" : "Phone Number"}
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="0912345678"
+                  className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs outline-none focus:border-[#D96B27]"
+                  required
+                />
+                {phone && !phone.match(/^09\d{8}$/) && (
+                  <p className="text-[10px] text-red-500 font-bold mt-1">
+                    {isAr ? "الرجاء إدخال رقم هاتف ليبي صحيح" : "Valid Libyan phone required"}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1914,15 +1999,29 @@ export function PrivateTripModal({
                   <span className="font-mono font-black text-white">{guideCost} د.ل</span>
                 </div>
 
-                {/* تسعيرة ورسوم إدارة المنصة المعتمدة (Admin) */}
-                <div className="flex justify-between items-center pt-2 border-t border-white/10 text-amber-300">
+                <div className="flex justify-between items-center">
+                  <span>🎟️ {isAr ? "تذاكر المعالم (مقدرة)" : "Tickets (Est.)"}:</span>
+                  <span className="font-mono font-black text-white">{ticketsCost} د.ل</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span>🍔 {isAr ? "مصاريف الإعاشة والمأكولات" : "Food & Meals"}:</span>
+                  <span className="font-mono font-black text-white">{foodCost} د.ل</span>
+                </div>
+
+                {hotelCost > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span>🏨 {isAr ? "حجز الفنادق (مقدر)" : "Hotels (Est.)"}:</span>
+                    <span className="font-mono font-black text-white">{hotelCost} د.ل</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t border-white/10 text-emerald-300">
                   <span className="flex items-center gap-1.5">
-                    <span>👑</span>
-                    <span className="font-bold">{isAr ? "تسعيرات وخدمات إدارة المنصة (Admin):" : "Admin Plan Quotation & Services:"}</span>
+                    <span>💼</span>
+                    <span className="font-bold">{isAr ? "نسبة المنصة (10%)" : "Platform Fee (10%)"}:</span>
                   </span>
-                  <span className="font-black text-[11px] px-2.5 py-0.5 rounded-lg bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    {isAr ? "يحددها الأدمن بعد دراسة المسار" : "Quoted by Admin"}
-                  </span>
+                  <span className="font-mono font-black">{platformProfit} د.ل</span>
                 </div>
               </div>
 
@@ -1938,8 +2037,8 @@ export function PrivateTripModal({
 
               <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-300 block">{isAr ? "المجموع التقديري المبدئي (مركبة + مرشد):" : "Baseline Operational Estimate:"}</span>
-                  <span className="text-[10px] text-amber-300 font-bold">{isAr ? "+ تسعيرات الأدمن المعتمدة للبرنامج" : "+ Final Admin Plan Quotation"}</span>
+                  <span className="text-xs text-slate-300 block">{isAr ? "المجموع التقديري المبدئي:" : "Total Estimated Cost:"}</span>
+                  <span className="text-[10px] text-amber-300 font-bold">{isAr ? "شامل جميع المصاريف ونسبة المنصة" : "Including all expenses & fee"}</span>
                 </div>
                 <div className="text-2xl sm:text-3xl font-black text-amber-300">
                   {totalEstimatedCost} <span className="text-sm text-white">د.ل</span>

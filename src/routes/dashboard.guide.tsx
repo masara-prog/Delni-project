@@ -163,9 +163,46 @@ function GuideDashboard() {
     }
   };
 
+  const handleProfileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guideInfo.phone_number.match(/^09\d{8}$/)) {
+      alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
+      return;
+    }
+    if (guideInfo.operating_regions.length === 0) {
+      alert("الرجاء اختيار منطقة عمل واحدة على الأقل.");
+      return;
+    }
+    if (guideInfo.working_days.length === 0) {
+      alert("الرجاء اختيار يوم عمل واحد على الأقل.");
+      return;
+    }
+    if (!guideInfo.full_name || !guideInfo.license_number) {
+      alert("الرجاء تعبئة كافة الحقول المطلوبة (الاسم الكامل، رقم الترخيص).");
+      return;
+    }
+    alert("تم حفظ التعديلات وإرسال البيانات بنجاح!");
+  };
+
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    alert("تم حفظ ملف المرشد في قاعدة البيانات (DelniDB: tour_guides) بنجاح ✓");
+    if (!guideInfo.phone_number.match(/^09\d{8}$/)) {
+      alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
+      return;
+    }
+    if (guideInfo.operating_regions.length === 0) {
+      alert("الرجاء اختيار منطقة عمل واحدة على الأقل.");
+      return;
+    }
+    if (guideInfo.working_days.length === 0) {
+      alert("الرجاء اختيار يوم عمل واحد على الأقل.");
+      return;
+    }
+    if (!guideInfo.full_name || !guideInfo.license_number) {
+      alert("الرجاء تعبئة كافة الحقول المطلوبة (الاسم الكامل، رقم الترخيص).");
+      return;
+    }
+    alert("تم حفظ التعديلات وتحديث ملفك الشخصي بنجاح ✓");
   };
 
   return (
@@ -575,8 +612,8 @@ function GuideDashboard() {
               />
             </div>
 
-            <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow">
-              إرسال وتحديث البيانات في DelniDB ✓
+            <button type="submit" className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow hover:scale-105 transition-transform">
+              حفظ وتحديث الملف الشخصي ✓
             </button>
           </form>
         </SectionCard>

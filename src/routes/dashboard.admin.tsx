@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
@@ -31,96 +31,19 @@ export const Route = createFileRoute("/dashboard/admin")({
   component: AdminDashboard,
 });
 
-/* ============ TYPES ALIGNED 1:1 WITH DelniDB ============ */
-type Company = TransportationCompany & {
-  id?: string;
-  name?: string;
-  phone?: string;
-  pass?: string;
-  available_cars?: number;
-  status?: "موثق" | "بانتظار" | "مرفوض";
-};
-
-type Driver = DbDriver & {
-  id?: string;
-};
-
-type Guide = DbTourGuide & {
-  daily_rate?: number;
-};
-
-type Vehicle = DbVehicle & {
-  capacity?: number;
-  status?: "جاهزة" | "في رحلة" | "صيانة" | "خارج الخدمة";
-  company_id?: string;
-};
-
-type DailyTrip = DbDailyTrip & {
-  id?: string;
-  title?: string;
-  guide_license?: string;
-  vehicle_plates?: string[];
-  bus_capacity?: 25 | 50;
-  destination?: string;
-  recurring_days_list?: string[];
-};
-
-type WeeklyTrip = DbWeeklyTrip & {
-  id?: string;
-  title?: string;
-  guide_license?: string;
-  vehicle_plates?: string[];
-  bus_capacity?: 25 | 50;
-  destination?: string;
-};
-
-type PrivateTripRequest = DbPrivateTrip & {
-  assigned_guide?: string;
-  assigned_vehicle?: string;
-};
-
-type Hotel = DbHotel & {
-  id?: string;
-  name?: string;
-  address?: string;
-  phone?: string;
-  stars?: number;
-};
-
-type Restaurant = DbRestaurantCafe & {
-  id?: string;
-  name?: string;
-  type?: string;
-  address?: string;
-  phone?: string;
-};
-
-type Attraction = DbPlaceTourist & {
-  id?: string;
-  name?: string;
-};
-
-type ItemReview = {
-  id: string;
-  target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل";
-  target_name: string;
-  tourist_name: string;
-  stars_rating: number;
-  comment_text: string;
-  created_at: string;
-};
-
-type SupportTicket = {
-  id: string;
-  user_name: string;
-  user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل";
-  subject: string;
-  message: string;
-  status: "جديد" | "تم الرد" | "مغلق";
-  reply?: string;
-  created_at: string;
-};
-
+/* ============ TYPES ============ */
+type Company = { id: string; contract_number: string; name: string; phone: string; address: string; email: string; pass: string; total_vehicles: number; available_cars: number; contract_date: string; contract_end_date?: string; status: "موثق" | "بانتظار" | "مرفوض" };
+type Driver = { driver_license_number: string; full_name: string; phone_number: string; national_id_or_passport: string; license_date_valid: string; contract_number: string; assigned_vehicle_plate: string; email: string; account_status: "نشط" | "معلق" | "موقوف" };
+type Guide = { license_number: string; full_name: string; phone_number: string; years_of_experience: number; certificate: string; digital_certificate_file?: string; bio: string; speaks_english: boolean; speaks_french: boolean; speaks_italian: boolean; verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; email: string; daily_rate: number };
+type Vehicle = { plate_number: string; company_id: string; company_name: string; vehicle_type: string; capacity: number; daily_rate: number; status: "جاهزة" | "في رحلة" | "صيانة" };
+type DailyTrip = { id: string; title: string; description: string; price_per_seat: number; max_capacity: number; available_seats: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; recurring_days?: string[]; bus_capacity?: 25 | 50; destination?: string; departure_city?: string };
+type WeeklyTrip = { id: string; title: string; start_date: string; end_date: string; seat_per_price: number; max_capacity: number; available_seats?: number; bookings_count: number; rating_avg: number; guide_license?: string; vehicle_plates?: string[]; is_active: boolean; photo?: string; weekly_day?: string; bus_capacity?: 25 | 50; destinations?: string[]; departure_city?: string; destination?: string; hotel_id?: string; };
+type PrivateTripRequest = { private_trip_id: string; customer_name: string; customer_phone: string; customer_description: string; preferred_start_date: string; duration_days: number; number_of_companions: number; quoted_price?: number; admin_itinerary_plan?: string; assigned_guide?: string; assigned_vehicle?: string; status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" };
+type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string };
+type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string };
+type Attraction = { id: string; name: string; city: string; category: string; description: string; place_image: string; visitors_count: number; latitude?: number; longitude?: number; google_maps_url?: string };
+type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
+type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
 type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر"; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
 
@@ -566,90 +489,14 @@ function AdminDashboard() {
 
   /* DelniDB hotels */
   const [hotels, setHotels] = useState<Hotel[]>([
-    {
-      hotel_id: "H-01",
-      id: "H-01",
-      hotel_name: "فندق الفندق الكبير طرابلس",
-      name: "فندق الفندق الكبير طرابلس",
-      city: "طرابلس",
-      address_details: "شارع الفتح - وسط المدينة",
-      address: "شارع الفتح - وسط المدينة",
-      phone_number: "0213334455",
-      phone: "0213334455",
-      star_rating: 5,
-      stars: 5,
-      bookings_count: 312,
-      rating_avg: 4.85,
-      partnership_status: "نشط",
-      hotel_photo_1: "/assets/ai_city.jpg",
-      hotel_photo_2: "/assets/ai_city.jpg",
-      hotel_photo_3: "/assets/ai_city.jpg",
-      hotel_photo_4: "/assets/ai_ghadames.jpg",
-      hotel_photo_5: "/assets/ai_ghadames.jpg",
-    },
-    {
-      hotel_id: "H-02",
-      id: "H-02",
-      hotel_name: "فندق عين الفرس غدامس",
-      name: "فندق عين الفرس غدامس",
-      city: "غدامس",
-      address_details: "وسط غدامس القديمة",
-      address: "وسط غدامس القديمة",
-      phone_number: "0472221100",
-      phone: "0472221100",
-      star_rating: 4,
-      stars: 4,
-      bookings_count: 184,
-      rating_avg: 4.75,
-      partnership_status: "نشط",
-      hotel_photo_1: "/assets/ai_ghadames.jpg",
-      hotel_photo_2: "/assets/ai_ghadames.jpg",
-      hotel_photo_3: "/assets/ai_ghadames.jpg",
-      hotel_photo_4: "/assets/ai_ghadames.jpg",
-      hotel_photo_5: "/assets/ai_ghadames.jpg",
-    },
+    { id: "H-01", name: "فندق الفندق الكبير طرابلس", city: "طرابلس", address: "شارع الفتح - وسط المدينة", phone: "0213334455", stars: 5, bookings_count: 312, rating_avg: 4.85, partnership_status: "نشط", hotel_photo_1: "/assets/ai_city.jpg", hotel_photo_2: "/assets/ai_city.jpg", hotel_photo_3: "/assets/ai_city.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg", description: "فندق 5 نجوم فاخر مطل على الشاطئ ومحاط بالمعالم الأثرية والمدينة القديمة، يضم أجنحة ملكية ومطاعم متعددة.", google_maps_url: "https://maps.google.com/?q=32.897,13.181", working_hours: "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)" },
+    { id: "H-02", name: "فندق عين الفرس غدامس", city: "غدامس", address: "وسط غدامس القديمة", phone: "0472221100", stars: 4, bookings_count: 184, rating_avg: 4.75, partnership_status: "نشط", hotel_photo_1: "/assets/ai_ghadames.jpg", hotel_photo_2: "/assets/ai_ghadames.jpg", hotel_photo_3: "/assets/ai_ghadames.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg", description: "فندق تراثي صحراوي مميز بمدينة غدامس القديمة يمتزج مع الطبيعة المعمارية التقليدية للواحة.", google_maps_url: "https://maps.google.com/?q=30.133,9.500", working_hours: "24 ساعة (استقبال متاح طوال اليوم)" },
   ]);
 
   /* DelniDB restaurants_cafes */
   const [restaurants, setRestaurants] = useState<Restaurant[]>([
-    {
-      facility_id: "R-01",
-      id: "R-01",
-      facility_name: "مطعم السراياء التراثي",
-      name: "مطعم السراياء التراثي",
-      facility_type: "مأكولات شعبية ليبية",
-      type: "مأكولات شعبية ليبية",
-      city: "طرابلس",
-      address_details: "المدينة القديمة - زنقة المفتي",
-      address: "المدينة القديمة - زنقة المفتي",
-      phone_number: "0919991122",
-      phone: "0919991122",
-      rating_avg: 4.9,
-      facility_image_1: "/assets/ai_ruins.jpg",
-      facility_image_2: "/assets/ai_ruins.jpg",
-      facility_image_3: "/assets/ai_ruins.jpg",
-      facility_image_4: "/assets/ai_ruins.jpg",
-      facility_image_5: "/assets/ai_ruins.jpg",
-    },
-    {
-      facility_id: "R-02",
-      id: "R-02",
-      facility_name: "مقهى ومطعم النخيل الصحراوي",
-      name: "مقهى ومطعم النخيل الصحراوي",
-      facility_type: "مشويات ومشروبات",
-      type: "مشويات ومشروبات",
-      city: "سبها",
-      address_details: "طريق المطار",
-      address: "طريق المطار",
-      phone_number: "0928883344",
-      phone: "0928883344",
-      rating_avg: 4.65,
-      facility_image_1: "/assets/ai_food.jpg",
-      facility_image_2: "/assets/ai_city.jpg",
-      facility_image_3: "/assets/ai_ruins.jpg",
-      facility_image_4: "/assets/ai_ruins.jpg",
-      facility_image_5: "/assets/ai_ruins.jpg",
-    },
+    { id: "R-01", name: "مطعم السراياء التراثي", type: "مأكولات شعبية ليبية", city: "طرابلس", address: "المدينة القديمة - زنقة المفتي", phone: "0919991122", rating_avg: 4.9, facility_image_1: "/assets/ai_ruins.jpg", facility_image_2: "/assets/ai_ruins.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg", description: "أشهر مطعم للمأكولات الشعبية الليبية في قلب طرابلس القديمة (كسكسي، بازين، رشتة، شربة طرابلسية).", google_maps_url: "https://maps.google.com/?q=32.895,13.180", working_hours: "09:00 صباحاً — 12:00 ليلاً" },
+    { id: "R-02", name: "مقهى ومطعم النخيل الصحراوي", type: "مشويات ومشروبات", city: "سبها", address: "طريق المطار", phone: "0928883344", rating_avg: 4.65, facility_image_1: "/assets/ai_food.jpg", facility_image_2: "/assets/ai_city.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg", description: "مقهى ومطعم عائلي مميز بوجبات المشويات والشاي الصحراوي في أجواء واحات سبها الساحرة.", google_maps_url: "https://maps.google.com/?q=27.037,14.428", working_hours: "10:00 صباحاً — 01:00 فجراً" },
   ]);
 
   /* DelniDB places_tourist */
@@ -821,15 +668,126 @@ function AdminDashboard() {
   };
   const handleAddPrivateTrip = (p: any) => { setPrivateTrips([...privateTrips, p]); setShowAddPrivateTrip(false); };
   const handleDeletePrivate = (id: string) => { if (confirm("هل تريد حذف طلب الرحلة الخاصة؟")) setPrivateTrips(privateTrips.filter(p => p.private_trip_id !== id)); };
-  const handleAddHotel = (h: any) => { setHotels([...hotels, { hotel_id: `H-0${hotels.length + 1}`, id: `H-0${hotels.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...h }]); setShowAddHotel(false); };
-  const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => (x.hotel_id || x.id) === (h.hotel_id || h.id) ? h : x)); setEditingHotel(null); };
-  const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => (h.hotel_id || h.id) !== id)); };
-  const handleAddRestaurant = (r: any) => { setRestaurants([...restaurants, { facility_id: `R-0${restaurants.length + 1}`, id: `R-0${restaurants.length + 1}`, rating_avg: 5.0, ...r }]); setShowAddRestaurant(false); };
-  const handleUpdateRestaurant = (r: Restaurant) => { setRestaurants(restaurants.map(x => (x.facility_id || x.id) === (r.facility_id || r.id) ? r : x)); setEditingRestaurant(null); };
-  const handleDeleteRestaurant = (id: string) => { if (confirm("هل تريد حذف المطعم؟")) setRestaurants(restaurants.filter(r => (r.facility_id || r.id) !== id)); };
-  const handleAddAttraction = (a: any) => { setAttractions([...attractions, { place_id: `A-0${attractions.length + 1}`, id: `A-0${attractions.length + 1}`, visitors_count: 0, ...a }]); setShowAddAttraction(false); };
-  const handleUpdateAttraction = (a: Attraction) => { setAttractions(attractions.map(x => (x.place_id || x.id) === (a.place_id || a.id) ? a : x)); setEditingAttraction(null); };
-  const handleDeleteAttraction = (id: string) => { if (confirm("هل تريد حذف المعلم السياحي؟")) setAttractions(attractions.filter(a => (a.place_id || a.id) !== id)); };
+  useEffect(() => {
+    try {
+      const storedTickets = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
+      if (Array.isArray(storedTickets) && storedTickets.length > 0) {
+        setTickets((prev) => {
+          const ids = new Set(prev.map((t) => t.id));
+          return [...storedTickets.filter((t: any) => !ids.has(t.id)), ...prev];
+        });
+      }
+
+      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+      if (Array.isArray(storedRests) && storedRests.length > 0) {
+        setRestaurants((prev) => {
+          const ids = new Set(prev.map((r) => r.id));
+          return [...storedRests.filter((r: any) => !ids.has(r.id)), ...prev];
+        });
+      }
+    } catch {}
+
+    fetch("http://127.0.0.1:8000/api/hotels")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((item: any) => ({
+            id: item.hotel_id,
+            name: item.hotel_name,
+            city: item.city,
+            address: item.address_details,
+            phone: item.phone_number,
+            stars: item.star_rating,
+            bookings_count: 0,
+            rating_avg: 5.0,
+            partnership_status: item.partnership_status || "نشط",
+            hotel_photo_1: item.hotel_photo_1 || "/assets/ai_city.jpg",
+            hotel_photo_2: item.hotel_photo_2 || "/assets/ai_city.jpg",
+            hotel_photo_3: item.hotel_photo_3 || "/assets/ai_city.jpg",
+            hotel_photo_4: item.hotel_photo_4 || "/assets/ai_city.jpg",
+            hotel_photo_5: item.hotel_photo_5 || "/assets/ai_city.jpg",
+          }));
+          setHotels((prev) => {
+            const ids = new Set(mapped.map((m) => m.id));
+            return [...mapped, ...prev.filter((x) => !ids.has(x.id))];
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAddHotel = (h: any) => {
+    const hotelId = `HTL-00${hotels.length + 1}`;
+    const newHotelObj = { id: hotelId, bookings_count: 0, rating_avg: 5.0, ...h };
+    setHotels((prev) => [...prev, newHotelObj]);
+    setShowAddHotel(false);
+
+    fetch("http://127.0.0.1:8000/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        hotel_id: hotelId,
+        hotel_name: h.name,
+        city: h.city || "طرابلس",
+        address_details: h.address || "العنوان الرئيسي",
+        phone_number: h.phone || "0910000000",
+        star_rating: parseInt(h.stars, 10) || 4,
+        partnership_status: "نشط",
+        property_type: "فندق",
+        hotel_photo_1: h.hotel_photo_1 || "/assets/ai_city.jpg",
+      }),
+    }).catch(() => {});
+  };
+  const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => x.id === h.id ? h : x)); setEditingHotel(null); };
+  const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => h.id !== id)); };
+  const handleAddRestaurant = (r: any) => {
+    const newRest = { id: `R-0${restaurants.length + 1}`, rating_avg: 5.0, ...r };
+    setRestaurants((prev) => [newRest, ...prev]);
+    setShowAddRestaurant(false);
+
+    try {
+      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests]));
+    } catch {}
+
+    fetch("http://127.0.0.1:8000/api/restaurants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        facility_id: newRest.id,
+        facility_name: r.name,
+        facility_type: r.type || "مأكولات شعبية",
+        city: r.city || "طرابلس",
+        address_details: r.address || "العنوان الرئيسي",
+        phone_number: r.phone || "0910000000",
+        description: r.description || "",
+        google_maps_url: r.google_maps_url || "",
+        working_hours: r.working_hours || "",
+        facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
+      }),
+    }).catch(() => {});
+  };
+  const handleUpdateRestaurant = (r: Restaurant) => {
+    setRestaurants(restaurants.map(x => x.id === r.id ? r : x));
+    setEditingRestaurant(null);
+    try {
+      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+      const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
+      localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
+    } catch {}
+  };
+  const handleDeleteRestaurant = (id: string) => {
+    if (confirm("هل تريد حذف المطعم؟")) {
+      setRestaurants(restaurants.filter(r => r.id !== id));
+      try {
+        const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+        localStorage.setItem("dalni_restaurants", JSON.stringify(storedRests.filter((r: any) => r.id !== id)));
+      } catch {}
+    }
+  };
+  const handleAddAttraction = (a: any) => { setAttractions([...attractions, { id: `A-0${attractions.length + 1}`, visitors_count: 0, ...a }]); setShowAddAttraction(false); };
+  const handleUpdateAttraction = (a: Attraction) => { setAttractions(attractions.map(x => x.id === a.id ? a : x)); setEditingAttraction(null); };
+  const handleDeleteAttraction = (id: string) => { if (confirm("هل تريد حذف المعلم السياحي؟")) setAttractions(attractions.filter(a => a.id !== id)); };
   const handleReplyTicket = (ticketId: string, reply: string) => { setTickets(tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" } : t)); };
   // Offers
   const handleAddDailyOffer = (o: any) => { const newId = `DO-${String(dailyOffers.length + 1).padStart(3, "0")}`; setDailyOffers([...dailyOffers, { ...o, offer_daily_id: newId, id: newId }]); setShowAddDailyOffer(false); };
@@ -1454,31 +1412,67 @@ function AdminDashboard() {
             </div>
           </div>
 
-          <SectionCard title="🏨 دليل الفنادق وأماكن الإقامة (دليل تعريفي — عرض فقط بدون حجز غرف)" action={<button onClick={() => setShowAddHotel(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة فندق بالدليل</button>}>
+          <SectionCard title="🏨 دليل الفنادق وأماكن الإقامة (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddHotel(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة فندق بالدليل</button>}>
             <div className="grid md:grid-cols-2 gap-4">
               {hotels.map((h) => (
-                <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
+                <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-black text-foreground text-sm">{h.name}</h4>
-                      <div className="text-xs font-bold text-gold-foreground">{"⭐".repeat(h.star_rating || h.stars || 5)} · 👁️ {h.bookings_count} زيارة تعريفية · ⭐ {h.rating_avg}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">📍 {h.city} — {h.address}</div>
+                      <h4 className="font-black text-foreground text-base">{h.name}</h4>
+                      <div className="text-xs font-bold text-gold-foreground mt-0.5">{"⭐".repeat(h.stars)} · ⭐ {h.rating_avg} ({h.bookings_count} زيارة)</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {h.city} — {h.address}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge tone="green">{h.partnership_status}</Badge>
                       <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
-                        عرض تعريفي فقط
+                        دليل تعريفي
                       </span>
                     </div>
                   </div>
-                  <div>
-                    <img src={h.hotel_photo_1 || "/assets/ai_city.jpg"} alt={h.name} className="w-full h-36 rounded-xl object-cover border" />
+
+                  {/* Main & Thumbnails Gallery (5 Photos) */}
+                  <div className="space-y-1.5">
+                    <img src={h.hotel_photo_1} alt={h.name} className="w-full h-40 rounded-xl object-cover border shadow-2xs" />
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[h.hotel_photo_1, h.hotel_photo_2, h.hotel_photo_3, h.hotel_photo_4, h.hotel_photo_5].map((imgUrl, idx) => (
+                        <div key={idx} className="h-10 rounded-lg overflow-hidden border border-border bg-muted/30">
+                          <img src={imgUrl || h.hotel_photo_1} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center pt-1 border-t border-border/50 text-xs text-muted-foreground">
-                    <span>📞 {h.phone}</span>
+
+                  {/* Bio Description */}
+                  {h.description && (
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs leading-relaxed text-slate-800 font-semibold">
+                      <span className="font-bold text-slate-900 block mb-0.5">📝 نبذة الفندق والمميزات:</span>
+                      {h.description}
+                    </div>
+                  )}
+
+                  {/* Working Hours & Check-in */}
+                  {h.working_hours && (
+                    <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 bg-amber-50/60 p-2 rounded-xl border border-amber-200/60">
+                      <span>⏰</span>
+                      <span className="text-amber-950 font-bold">{h.working_hours}</span>
+                    </div>
+                  )}
+
+                  {/* Google Maps Location */}
+                  {h.google_maps_url && (
+                    <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs font-bold text-blue-900">
+                      <span className="flex items-center gap-1">📍 موقع الفندق الجغرافي:</span>
+                      <a href={h.google_maps_url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-black hover:bg-blue-700 transition">
+                        🗺️ فتح في خرائط جوجل ↗
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-2 border-t border-border/60 text-xs text-muted-foreground">
+                    <span className="font-bold text-foreground">📞 {h.phone}</span>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditingHotel(h)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                      <button onClick={() => handleDeleteHotel(h.hotel_id || h.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                      <button onClick={() => setEditingHotel(h)} className="px-3.5 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
+                      <button onClick={() => handleDeleteHotel(h.id)} className="px-3.5 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
                     </div>
                   </div>
                 </div>
@@ -1486,31 +1480,64 @@ function AdminDashboard() {
             </div>
           </SectionCard>
 
-          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نوع الطعام وعرض فقط)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة مطعم بالدليل</button>}>
+          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة مطعم/مقهى بالدليل</button>}>
             <div className="grid md:grid-cols-2 gap-4">
               {restaurants.map((r) => (
-                <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
+                <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-black text-foreground text-sm">{r.name}</h4>
-                      <div className="text-xs text-muted-foreground mt-0.5">📍 {r.city} — {r.address} · ⭐ {r.rating_avg}</div>
+                      <h4 className="font-black text-foreground text-base">{r.name}</h4>
+                      <div className="text-xs font-bold text-emerald-700 mt-0.5">🍲 {r.type} · ⭐ {r.rating_avg}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {r.city} — {r.address}</div>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
                       دليل تعريفي
                     </span>
                   </div>
-                  <div>
-                    <img src={r.facility_image_1 || "/assets/ai_city.jpg"} alt={r.name} className="w-full h-36 rounded-xl object-cover border" />
+
+                  {/* Main & Thumbnails Gallery (5 Photos) */}
+                  <div className="space-y-1.5">
+                    <img src={r.facility_image_1} alt={r.name} className="w-full h-40 rounded-xl object-cover border shadow-2xs" />
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[r.facility_image_1, r.facility_image_2, r.facility_image_3, r.facility_image_4, r.facility_image_5].map((imgUrl, idx) => (
+                        <div key={idx} className="h-10 rounded-lg overflow-hidden border border-border bg-muted/30">
+                          <img src={imgUrl || r.facility_image_1} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs">
-                    <span className="font-bold text-foreground">🍲 نوع وتصنيف الطعام المقدم: </span>
-                    <span className="font-black text-primary">{r.type}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-1 border-t border-border/50 text-xs text-muted-foreground">
-                    <span>📞 {r.phone}</span>
+
+                  {/* Bio Description */}
+                  {r.description && (
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs leading-relaxed text-slate-800 font-semibold">
+                      <span className="font-bold text-slate-900 block mb-0.5">📜 نبذة الوجبات والخدمات:</span>
+                      {r.description}
+                    </div>
+                  )}
+
+                  {/* Working Hours */}
+                  {r.working_hours && (
+                    <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 bg-amber-50/60 p-2 rounded-xl border border-amber-200/60">
+                      <span>⏰</span>
+                      <span className="text-amber-950 font-bold">ساعات العمل: {r.working_hours}</span>
+                    </div>
+                  )}
+
+                  {/* Google Maps Location */}
+                  {r.google_maps_url && (
+                    <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs font-bold text-blue-900">
+                      <span className="flex items-center gap-1">📍 موقع المطعم/المقهى على الخريطة:</span>
+                      <a href={r.google_maps_url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-black hover:bg-blue-700 transition">
+                        🗺️ فتح في خرائط جوجل ↗
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-2 border-t border-border/60 text-xs text-muted-foreground">
+                    <span className="font-bold text-foreground">📞 {r.phone}</span>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditingRestaurant(r)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                      <button onClick={() => handleDeleteRestaurant(r.facility_id || r.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                      <button onClick={() => setEditingRestaurant(r)} className="px-3.5 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
+                      <button onClick={() => handleDeleteRestaurant(r.id)} className="px-3.5 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
                     </div>
                   </div>
                 </div>
@@ -1764,9 +1791,9 @@ function AdminDashboard() {
       {showAddCompany && <AddCompanyModal onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
       {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
       {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
-      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
+      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
       {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
-      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
+      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
       {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
       {showAddHotel && <HotelModal title="إضافة فندق جديد" onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
       {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
@@ -2012,12 +2039,14 @@ function CreateTripModal({
   type,
   guides,
   vehicles,
+  hotels,
   onClose,
   onCreate,
 }: {
   type: "daily" | "weekly";
   guides: Guide[];
   vehicles: Vehicle[];
+  hotels: Hotel[];
   onClose: () => void;
   onCreate: (t: "daily" | "weekly", d: any) => void;
 }) {
@@ -2025,6 +2054,8 @@ function CreateTripModal({
   const [title, setTitle] = useState(isDaily ? "جولة لبدة الكبرى والآثار الرومانية" : "مغامرة الصحراء وبحيرات أوباري الكبرى");
   const [desc, setDesc] = useState(isDaily ? "رحلة سياحية يومية متكاملة تشمل جولة أثرية مرشدة والنقل السياحي الفاخر" : "رحلة استكشاف أسبوعية متكاملة تشمل الإقامة والمخيمات ومرشد سياحي متخصص");
   const [destination, setDestination] = useState(isDaily ? "لبدة الكبرى" : "أوباري");
+  const [multiDestinations, setMultiDestinations] = useState<string[]>(isDaily ? [] : ["أوباري"]);
+  const [departureCity, setDepartureCity] = useState("طرابلس");
   const [price, setPrice] = useState(isDaily ? "120" : "1650");
   const [busCapacity, setBusCapacity] = useState<25 | 50>(isDaily ? 50 : 25);
   const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "G-9901");
@@ -2033,6 +2064,7 @@ function CreateTripModal({
   const [endDate, setEndDate] = useState("2026-09-06");
   const [photo, setPhoto] = useState(isDaily ? "/assets/ai_ruins.jpg" : "/assets/ai_ghadames.jpg");
   const [isActive, setIsActive] = useState(true);
+  const [hotelId, setHotelId] = useState("");
 
   // Daily Trips schedule: MUST be exactly 2 days in a week
   const [recurringDays, setRecurringDays] = useState<string[]>(["الأحد", "الأربعاء"]);
@@ -2040,15 +2072,19 @@ function CreateTripModal({
   // Weekly Trips schedule: MUST be exactly 1 day in a week
   const [weeklyDay, setWeeklyDay] = useState<string>("الجمعة");
 
-  // Admin Smart Guide Filtering
-  const [guideFilterDest, setGuideFilterDest] = useState(destination);
-  const [guideFilterMinExp, setGuideFilterMinExp] = useState(0);
-  const [guideFilterDaysMatch, setGuideFilterDaysMatch] = useState(true);
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+    if (!isDaily) {
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) {
+        const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+        setWeeklyDay(days[d.getDay()]);
+      }
+    }
+  };
 
-  // Sync guide filter destination when trip destination changes
-  const handleDestinationChange = (dest: string) => {
-    setDestination(dest);
-    setGuideFilterDest(dest);
+  const handleMultiDestToggle = (city: string) => {
+    setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
   };
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
@@ -2067,31 +2103,26 @@ function CreateTripModal({
     }
   };
 
-  // Smart Guide Filtered Results from TOUR_GUIDES_DATA
-  const filteredSmartGuides = useMemo(() => {
-    return TOUR_GUIDES_DATA.filter((g) => {
-      // 1. Destination match
-      const q = guideFilterDest.trim().toLowerCase();
-      const matchDest = !q || g.operatingRegions.some((r: string) => (REGIONS_MAP[r] || r).toLowerCase().includes(q) || q.includes((REGIONS_MAP[r] || r).toLowerCase())) ||
-        g.specialties.some((s) => s.toLowerCase().includes(q) || q.includes(s.toLowerCase()));
-
-      // 2. Experience match
-      const matchExp = g.experienceYears >= guideFilterMinExp;
-
-      // 3. Days match
-      let matchDays = true;
-      if (guideFilterDaysMatch) {
-        if (isDaily) {
-          // Guide must be available on both daily days if possible, or at least one
-          matchDays = recurringDays.some((d) => g.workingDays.includes(d));
-        } else {
-          matchDays = g.workingDays.includes(weeklyDay);
-        }
+  const filteredGuidesList = useMemo(() => {
+    return TOUR_GUIDES_DATA.filter(g => {
+      let destMatch = false;
+      if (isDaily) {
+        destMatch = g.operatingRegions.some((r: string) => destination.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(destination));
+      } else {
+        destMatch = multiDestinations.some(d => g.operatingRegions.some((r: string) => d.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(d)));
       }
-
-      return matchDest && matchExp && matchDays;
+      let daysMatch = false;
+      if (isDaily) {
+        daysMatch = recurringDays.some(d => g.workingDays.includes(d));
+      } else {
+        daysMatch = g.workingDays.includes(weeklyDay);
+      }
+      if (isDaily && !destination) return true;
+      if (!isDaily && multiDestinations.length === 0) return true;
+      return destMatch && daysMatch;
     });
-  }, [guideFilterDest, guideFilterMinExp, guideFilterDaysMatch, isDaily, recurringDays, weeklyDay]);
+  }, [isDaily, destination, multiDestinations, recurringDays, weeklyDay]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2103,6 +2134,10 @@ function CreateTripModal({
       alert("تنبيه: الرحلات الأسبوعية يجب تحديد يوم انطلاق أسبوعي واحد لها!");
       return;
     }
+    if (!isDaily && multiDestinations.length === 0) {
+      alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل في الرحلات الأسبوعية!");
+      return;
+    }
 
     const base = {
       daily_trip_id: `DT-${100 + Math.floor(Math.random() * 890 + 10)}`,
@@ -2110,10 +2145,6 @@ function CreateTripModal({
       trip_title: title,
       title,
       description: desc,
-      destination,
-      departure_city: "طرابلس",
-      destination_city: destination,
-      destination_region: destination,
       max_capacity: busCapacity,
       available_seats: busCapacity,
       bus_capacity: busCapacity,
@@ -2122,11 +2153,13 @@ function CreateTripModal({
       vehicle_plates: selVehicles,
       is_active: isActive,
       photo,
+      departure_city: departureCity,
     };
 
     if (isDaily) {
       onCreate("daily", {
         ...base,
+        destination,
         price_per_seat: +price,
         recurring_days: recurringDays.join(","),
         recurring_days_list: recurringDays,
@@ -2134,9 +2167,12 @@ function CreateTripModal({
     } else {
       onCreate("weekly", {
         ...base,
+        destinations: multiDestinations,
+        destination: multiDestinations.join(" + "),
         seat_per_price: +price,
         start_date: startDate,
         end_date: endDate,
+        hotel_id: hotelId,
         weekly_day: weeklyDay,
         trip_description: desc,
       });
@@ -2165,29 +2201,59 @@ function CreateTripModal({
 
           <Field label="عنوان الرحلة السياحية" value={title} onChange={setTitle} />
 
-          <div>
-            <label className="text-xs font-bold mb-1 block">المكان / الوجهة السياحية</label>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => handleDestinationChange(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
-              placeholder="مثال: لبدة الكبرى، غدامس، أوباري..."
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
+              <select
+                value={departureCity}
+                onChange={(e) => setDepartureCity(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
+              >
+                <option value="طرابلس">طرابلس</option>
+                <option value="بنغازي">بنغازي</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold mb-1 block">
+                {isDaily ? "المكان / الوجهة السياحية" : "الوجهات السياحية (اختر أكثر من معلم)"}
+              </label>
+              {isDaily ? (
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
+                  placeholder="مثال: لبدة الكبرى..."
+                />
+              ) : (
+                <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white flex flex-wrap gap-1">
+                  {multiDestinations.length === 0 && <span className="text-slate-400">اختر المعالم أدناه...</span>}
+                  {multiDestinations.map(d => (
+                    <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1">
+                      {d}
+                      <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-500">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => {
+              const isSelected = isDaily ? destination === city : multiDestinations.includes(city);
+              return (
                 <button
                   key={city}
                   type="button"
-                  onClick={() => handleDestinationChange(city)}
+                  onClick={() => isDaily ? setDestination(city) : handleMultiDestToggle(city)}
                   className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
-                    destination === city ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                    isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
                   }`}
                 >
-                  {city}
+                  {city} {isSelected && !isDaily && "✓"}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
           <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} />
@@ -2212,62 +2278,39 @@ function CreateTripModal({
         <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200 space-y-3">
           {isDaily ? (
             <>
-              <div className="flex items-center justify-between">
-                <div className="font-black text-blue-900 text-sm flex items-center gap-1.5">
-                  <span>📅</span>
-                  <span>جدول الرحلة اليومية: يومان في الأسبوع (مطلوب اختيار يومين)</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-black text-blue-900 text-sm flex items-center gap-1.5">
+                    <span>📅</span>
+                    <span>اختيار يومي الانطلاق للرحلة</span>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                    recurringDays.length === 2 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                  }`}>
+                    {recurringDays.length === 2 ? "✓ تم الاختيار" : "اختر يومين"}
+                  </span>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
-                  recurringDays.length === 2 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                }`}>
-                  {recurringDays.length === 2 ? "✓ تم اختيار يومين" : `يرجى اختيار يومين (${recurringDays.length}/2)`}
-                </span>
-              </div>
 
-              {/* Quick Preset Pairs */}
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[11px] font-bold text-slate-600">نماذج شائعة:</span>
-                {[
-                  ["الأحد", "الأربعاء"],
-                  ["السبت", "الثلاثاء"],
-                  ["الإثنين", "الخميس"],
-                  ["الجمعة", "السبت"],
-                ].map((pair, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setRecurringDays(pair)}
-                    className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer border ${
-                      recurringDays.includes(pair[0]) && recurringDays.includes(pair[1])
-                        ? "bg-[#003580] text-white border-[#003580]"
-                        : "bg-white text-blue-900 border-blue-200 hover:bg-blue-100"
-                    }`}
-                  >
-                    {pair[0]} و {pair[1]}
-                  </button>
-                ))}
-              </div>
-
-              {/* Individual Days Toggles */}
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 pt-1">
-                {allWeekDays.map((d) => {
-                  const isSel = recurringDays.includes(d);
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => toggleDailyDay(d)}
-                      className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${
-                        isSel
-                          ? "bg-blue-600 text-white border-blue-700 shadow-sm"
-                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>{isSel ? "✓" : "○"}</span>
-                      <span>{d}</span>
-                    </button>
-                  );
-                })}
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                  {allWeekDays.map((d) => {
+                    const isSel = recurringDays.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleDailyDay(d)}
+                        className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${
+                          isSel
+                            ? "bg-blue-600 text-white border-blue-700 shadow-md scale-105"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>{isSel ? "✓" : ""}</span>
+                        <span>{d}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           ) : (
@@ -2302,7 +2345,7 @@ function CreateTripModal({
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100">
-                <Field label="تاريخ الانطلاق المعتمد" type="date" value={startDate} onChange={setStartDate} />
+                <Field label="تاريخ الانطلاق المعتمد" type="date" value={startDate} onChange={handleStartDateChange} />
                 <Field label="تاريخ العودة والانتهاء" type="date" value={endDate} onChange={setEndDate} />
               </div>
             </>
@@ -2366,119 +2409,96 @@ function CreateTripModal({
           </div>
         </div>
 
-        {/* 4. Smart Guide Filter for Admin */}
-        <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="font-black text-amber-900 text-sm flex items-center gap-1.5">
-              <span>🧭</span>
-              <span>فلترة وتعيين المرشد السياحي الأنسب (حسب الخبرة بالمكان وأيام العمل)</span>
-            </div>
-            {selectedGuideObj && (
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black">
-                ✓ المعين: {selectedGuideObj.name}
-              </span>
-            )}
+        {/* 4. Simple Guide Assignment */}
+        <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-2">
+          <div className="font-black text-amber-900 text-sm flex items-center gap-1.5 mb-1">
+            <span>🧭</span>
+            <span>تعيين المرشد السياحي للرحلة</span>
           </div>
 
-          {/* Guide Filters Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-white p-2.5 rounded-xl border border-amber-200">
-            <div>
-              <label className="text-[10px] font-black text-slate-500 block mb-0.5">المكان السياحي المطلوب للخبرة:</label>
-              <input
-                type="text"
-                value={guideFilterDest}
-                onChange={(e) => setGuideFilterDest(e.target.value)}
-                placeholder="ابحث بالمنطقة..."
-                className="w-full h-8 px-2 rounded-lg border text-xs font-bold text-right"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-slate-500 block mb-0.5">الحد الأدنى لسنوات الخبرة:</label>
-              <select
-                value={guideFilterMinExp}
-                onChange={(e) => setGuideFilterMinExp(+e.target.value)}
-                className="w-full h-8 px-2 rounded-lg border text-xs font-bold text-right"
-              >
-                <option value={0}>جميع مستويات الخبرة</option>
-                <option value={3}>3+ سنوات خبرة</option>
-                <option value={5}>5+ سنوات خبرة</option>
-                <option value={7}>7+ سنوات خبرة معتمدة</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 pt-3">
-              <input
-                type="checkbox"
-                id="matchDays"
-                checked={guideFilterDaysMatch}
-                onChange={(e) => setGuideFilterDaysMatch(e.target.checked)}
-                className="w-4 h-4 rounded text-blue-600"
-              />
-              <label htmlFor="matchDays" className="text-[11px] font-black text-slate-700 cursor-pointer">
-                مطابقة أيام عمل المرشد مع موعد الرحلة
-              </label>
-            </div>
-          </div>
-
-          {/* Filtered Guide Cards */}
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {filteredSmartGuides.length === 0 ? (
-              <div className="p-4 bg-white rounded-xl text-center text-slate-500 text-xs">
-                لم يتم العثور على مرشدين يطابقون هذه الفلترة بالكامل. يمكنك تخفيف شروط البحث أعلاه.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {filteredGuidesList.length === 0 && (
+              <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
+                لا يوجد مرشدين متاحين للوجهة والأيام المحددة.
               </div>
-            ) : (
-              filteredSmartGuides.map((g) => {
-                const isAssigned = guideLic === g.licenseNumber;
-                return (
-                  <div
-                    key={g.id}
-                    className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 ${
-                      isAssigned
-                        ? "bg-emerald-50 border-emerald-500 shadow-sm"
-                        : "bg-white border-slate-200 hover:border-amber-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={g.avatar}
-                        alt={g.name}
-                        className="w-11 h-11 rounded-full object-cover border border-amber-300 shrink-0"
-                      />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-black text-xs text-slate-900">{g.name}</span>
-                          <span className="text-[10px] text-slate-500 font-mono">({g.licenseNumber})</span>
-                          <span className="text-amber-500 font-bold text-[10px]">⭐ {g.rating}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-600 font-semibold flex items-center gap-2 mt-0.5">
-                          <span>⏳ {g.experienceYears} سنوات خبرة</span>
-                          <span>·</span>
-                          <span>📍 {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}</span>
-                        </div>
-                        <div className="text-[10px] text-blue-700 font-bold mt-0.5">
-                          📅 متاح: {formatWorkingDays(g.workingDays)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setGuideLic(g.licenseNumber)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shrink-0 ${
-                        isAssigned
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-slate-100 hover:bg-[#003580] text-slate-800 hover:text-white"
-                      }`}
-                    >
-                      {isAssigned ? "✓ معيّن للرحلة" : "تعيين هذا المرشد"}
-                    </button>
-                  </div>
-                );
-              })
             )}
+            {filteredGuidesList.map((g) => (
+              <div
+                key={g.licenseNumber}
+                onClick={() => setGuideLic(g.licenseNumber)}
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                  guideLic === g.licenseNumber
+                    ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
+                    : "bg-white border-slate-200 hover:border-amber-300"
+                }`}
+              >
+                <img src={g.avatar} alt={g.name} className="w-10 h-10 rounded-full object-cover shadow-sm bg-slate-100" />
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-0.5">
+                    <div className="font-black text-xs text-slate-900">{g.name}</div>
+                    {guideLic === g.licenseNumber && <div className="text-amber-600 text-xs">✅</div>}
+                  </div>
+                  <div className="text-[9px] text-slate-500 font-bold mb-1">خبرة {g.experienceYears} سنوات | ⭐ {g.rating}</div>
+                  <div className="text-[9px] text-slate-500 leading-relaxed">
+                    <span className="text-amber-700 font-black">المناطق:</span> {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
+                    <br/>
+                    <span className="text-amber-700 font-black">متاح:</span> {g.workingDays.join("، ")}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+          
+          {selectedGuideObj && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
+              <img src={selectedGuideObj.avatar} alt={selectedGuideObj.name} className="w-8 h-8 rounded-full object-cover border border-emerald-300" />
+              <div>
+                <div className="text-xs font-black text-emerald-900">تم تعيين: {selectedGuideObj.name}</div>
+                <div className="text-[10px] text-emerald-700 font-semibold">تقييم: ⭐ {selectedGuideObj.rating} | متاح: {formatWorkingDays(selectedGuideObj.workingDays)}</div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Hotel Selection for Weekly Trips */}
+        {!isDaily && (
+          <div className="p-3.5 bg-sky-50/60 rounded-2xl border border-sky-200 space-y-2">
+            <div className="font-black text-sky-900 text-sm flex items-center gap-1.5 mb-1">
+              <span>🏨</span>
+              <span>تعيين فندق المبيت للرحلة</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+              {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).length === 0 && (
+                <div className="col-span-full text-center text-xs text-sky-700 py-3 font-bold bg-sky-100/50 rounded-xl">
+                  لا توجد فنادق مسجلة في وجهات الرحلة.
+                </div>
+              )}
+              {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).map((h) => (
+                <div
+                  key={h.id}
+                  onClick={() => setHotelId(h.id)}
+                  className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                    hotelId === h.id
+                      ? "bg-sky-50/50 border-sky-500 ring-1 ring-sky-500"
+                      : "bg-white border-slate-200 hover:border-sky-300"
+                  }`}
+                >
+                  <img src={h.hotel_photo_1} alt={h.name} className="w-10 h-10 rounded-xl object-cover shadow-sm bg-slate-100" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-0.5">
+                      <div className="font-black text-xs text-slate-900 truncate">{h.name}</div>
+                      {hotelId === h.id && <div className="text-sky-600 text-xs">✅</div>}
+                    </div>
+                    <div className="text-[9px] text-slate-500 font-bold mb-1">⭐ {h.rating_avg} ({h.stars} نجوم)</div>
+                    <div className="text-[9px] text-slate-500 leading-relaxed truncate">
+                      <span className="text-sky-700 font-black">المدينة:</span> {h.city} — {h.address}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 5. Photo Picker */}
         <div className="pt-2 border-t border-border">
@@ -2519,6 +2539,7 @@ function DailyTripEditModal({
   const [title, setTitle] = useState(trip.trip_title || trip.title || "");
   const [desc, setDesc] = useState(trip.description);
   const [destination, setDestination] = useState(trip.destination || "لبدة الكبرى");
+  const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.price_per_seat));
   const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
   const [guide, setGuide] = useState(trip.guide_license || "");
@@ -2530,6 +2551,15 @@ function DailyTripEditModal({
       : ["الأحد", "الأربعاء"]
   );
   const [photo, setPhoto] = useState(trip.photo || "");
+
+  const filteredGuidesList = useMemo(() => {
+    return TOUR_GUIDES_DATA.filter(g => {
+      const destMatch = g.operatingRegions.some((r: string) => destination.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(destination));
+      const daysMatch = recurringDays.some(d => g.workingDays.includes(d));
+      if (!destination) return true;
+      return destMatch && daysMatch;
+    });
+  }, [destination, recurringDays]);
   const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
@@ -2563,7 +2593,7 @@ function DailyTripEditModal({
             title,
             description: desc,
             destination,
-            destination_city: destination,
+            departure_city: departureCity,
             price_per_seat: +price,
             bus_capacity: busCapacity,
             max_capacity: busCapacity,
@@ -2577,7 +2607,20 @@ function DailyTripEditModal({
         }}
       >
         <Field label="عنوان الرحلة" value={title} onChange={setTitle} />
-        <Field label="الوجهة / المكان السياحي" value={destination} onChange={setDestination} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
+            <select
+              value={departureCity}
+              onChange={(e) => setDepartureCity(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right"
+            >
+              <option value="طرابلس">طرابلس</option>
+              <option value="بنغازي">بنغازي</option>
+            </select>
+          </div>
+          <Field label="الوجهة / المكان السياحي" value={destination} onChange={setDestination} />
+        </div>
         <Field label="الوصف" value={desc} onChange={setDesc} />
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
@@ -2629,15 +2672,39 @@ function DailyTripEditModal({
         </div>
 
         <div>
-          <label className="text-xs font-bold mb-1 block">المرشد السياحي المعين</label>
-          <select value={guide} onChange={(e) => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="">بدون مرشد</option>
-            {TOUR_GUIDES_DATA.map((g) => (
-              <option key={g.licenseNumber} value={g.licenseNumber}>
-                {g.name} ({g.licenseNumber}) — خبرة {g.experienceYears} سنوات — {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
-              </option>
+          <label className="text-xs font-bold mb-2 block">المرشد السياحي المعين</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {filteredGuidesList.length === 0 && (
+              <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
+                لا يوجد مرشدين متاحين للوجهة والأيام المحددة.
+              </div>
+            )}
+            {filteredGuidesList.map((g) => (
+              <div
+                key={g.licenseNumber}
+                onClick={() => setGuide(g.licenseNumber)}
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                  guide === g.licenseNumber
+                    ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
+                    : "bg-white border-slate-200 hover:border-amber-300"
+                }`}
+              >
+                <img src={g.avatar} alt={g.name} className="w-10 h-10 rounded-full object-cover shadow-sm bg-slate-100" />
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-0.5">
+                    <div className="font-black text-xs text-slate-900">{g.name}</div>
+                    {guide === g.licenseNumber && <div className="text-amber-600 text-xs">✅</div>}
+                  </div>
+                  <div className="text-[9px] text-slate-500 font-bold mb-1">خبرة {g.experienceYears} سنوات | ⭐ {g.rating}</div>
+                  <div className="text-[9px] text-slate-500 leading-relaxed">
+                    <span className="text-amber-700 font-black">المناطق:</span> {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
+                    <br/>
+                    <span className="text-amber-700 font-black">متاح:</span> {g.workingDays.join("، ")}
+                  </div>
+                </div>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
 
         <div className="pt-2 border-t border-border">
@@ -2664,25 +2731,51 @@ function WeeklyTripEditModal({
   trip,
   guides,
   vehicles,
+  hotels,
   onClose,
   onSave,
 }: {
   trip: WeeklyTrip;
   guides: Guide[];
   vehicles: Vehicle[];
+  hotels: Hotel[];
   onClose: () => void;
   onSave: (w: WeeklyTrip) => void;
 }) {
-  const [title, setTitle] = useState(trip.trip_title || trip.title || "");
-  const [destination, setDestination] = useState(trip.destination || "أوباري");
+  const [title, setTitle] = useState(trip.title);
+  const [multiDestinations, setMultiDestinations] = useState<string[]>(trip.destinations || (trip.destination ? trip.destination.split(" + ") : ["أوباري"]));
+  const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.seat_per_price));
+
+  const handleMultiDestToggle = (city: string) => {
+    setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
+  };
   const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
   const [weeklyDay, setWeeklyDay] = useState(trip.weekly_day || "الجمعة");
   const [startDate, setStartDate] = useState(trip.start_date || "2026-09-01");
   const [endDate, setEndDate] = useState(trip.end_date || "2026-09-06");
+
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+    const d = new Date(date);
+    if (!isNaN(d.getTime())) {
+      const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+      setWeeklyDay(days[d.getDay()]);
+    }
+  };
   const [guide, setGuide] = useState(trip.guide_license || "");
+  const [hotelId, setHotelId] = useState(trip.hotel_id || "");
   const [photo, setPhoto] = useState(trip.photo || "");
   const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+
+  const filteredGuidesList = useMemo(() => {
+    return TOUR_GUIDES_DATA.filter(g => {
+      const destMatch = multiDestinations.some(d => g.operatingRegions.some((r: string) => d.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(d)));
+      const daysMatch = g.workingDays.includes(weeklyDay);
+      if (multiDestinations.length === 0) return true;
+      return destMatch && daysMatch;
+    });
+  }, [multiDestinations, weeklyDay]);
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
@@ -2692,12 +2785,17 @@ function WeeklyTripEditModal({
         className="space-y-4 text-right text-xs"
         onSubmit={(e) => {
           e.preventDefault();
+          if (multiDestinations.length === 0) {
+            alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل!");
+            return;
+          }
           onSave({
             ...trip,
             trip_title: title,
             title,
-            destination,
-            destination_region: destination,
+            destinations: multiDestinations,
+            destination: multiDestinations.join(" + "),
+            departure_city: departureCity,
             seat_per_price: +price,
             bus_capacity: busCapacity,
             max_capacity: busCapacity,
@@ -2707,39 +2805,64 @@ function WeeklyTripEditModal({
             end_date: endDate,
             guide_license_number: guide,
             guide_license: guide,
+            hotel_id: hotelId,
             photo,
             vehicle_plates: selVehicles,
           });
         }}
       >
         <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
-        <Field label="الوجهة السياحية" value={destination} onChange={setDestination} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
+            <select
+              value={departureCity}
+              onChange={(e) => setDepartureCity(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right"
+            >
+              <option value="طرابلس">طرابلس</option>
+              <option value="بنغازي">بنغازي</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold mb-1 block">الوجهات السياحية (المعالم المستهدفة)</label>
+            <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-200 bg-white flex flex-wrap gap-1">
+              {multiDestinations.length === 0 && <span className="text-slate-400 text-[10px]">اختر من الأسفل...</span>}
+              {multiDestinations.map(d => (
+                <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1">
+                  {d}
+                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-500">×</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => (
+            <button
+              key={city}
+              type="button"
+              onClick={() => handleMultiDestToggle(city)}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
+                multiDestinations.includes(city) ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+              }`}
+            >
+              {city} {multiDestinations.includes(city) && "✓"}
+            </button>
+          ))}
+        </div>
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
         {/* 1 Day Selector */}
         <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
-          <div className="font-black text-amber-900 text-xs flex justify-between">
+          <div className="font-black text-amber-900 text-xs flex justify-between items-center">
             <span>🗓️ موعد الانطلاق (يوم واحد أسبوعياً):</span>
-            <span className="text-amber-800 font-black">كل {weeklyDay}</span>
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {allWeekDays.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setWeeklyDay(d)}
-                className={`py-1.5 rounded-lg text-xs font-black border transition ${
-                  weeklyDay === d ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
+            <span className="px-3 py-1 bg-amber-200/50 rounded-lg text-amber-900 font-black">يتم تحديده تلقائياً: كل {weeklyDay}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ الانطلاق" type="date" value={startDate} onChange={setStartDate} />
+          <Field label="تاريخ الانطلاق" type="date" value={startDate} onChange={handleStartDateChange} />
           <Field label="تاريخ العودة" type="date" value={endDate} onChange={setEndDate} />
         </div>
 
@@ -2769,15 +2892,77 @@ function WeeklyTripEditModal({
         </div>
 
         <div>
-          <label className="text-xs font-bold mb-1 block">المرشد السياحي</label>
-          <select value={guide} onChange={(e) => setGuide(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="">بدون مرشد</option>
-            {TOUR_GUIDES_DATA.map((g) => (
-              <option key={g.licenseNumber} value={g.licenseNumber}>
-                {g.name} ({g.licenseNumber}) — خبرة {g.experienceYears} سنوات — {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
-              </option>
+          <label className="text-xs font-bold mb-2 block">المرشد السياحي المعين</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {filteredGuidesList.length === 0 && (
+              <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
+                لا يوجد مرشدين متاحين للوجهة والأيام المحددة.
+              </div>
+            )}
+            {filteredGuidesList.map((g) => (
+              <div
+                key={g.licenseNumber}
+                onClick={() => setGuide(g.licenseNumber)}
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                  guide === g.licenseNumber
+                    ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
+                    : "bg-white border-slate-200 hover:border-amber-300"
+                }`}
+              >
+                <img src={g.avatar} alt={g.name} className="w-10 h-10 rounded-full object-cover shadow-sm bg-slate-100" />
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-0.5">
+                    <div className="font-black text-xs text-slate-900">{g.name}</div>
+                    {guide === g.licenseNumber && <div className="text-amber-600 text-xs">✅</div>}
+                  </div>
+                  <div className="text-[9px] text-slate-500 font-bold mb-1">خبرة {g.experienceYears} سنوات | ⭐ {g.rating}</div>
+                  <div className="text-[9px] text-slate-500 leading-relaxed">
+                    <span className="text-amber-700 font-black">المناطق:</span> {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
+                    <br/>
+                    <span className="text-amber-700 font-black">متاح:</span> {g.workingDays.join("، ")}
+                  </div>
+                </div>
+              </div>
             ))}
-          </select>
+          </div>
+        </div>
+
+        {/* Hotel Selection */}
+        <div className="p-3.5 bg-sky-50/60 rounded-2xl border border-sky-200 space-y-2">
+          <div className="font-black text-sky-900 text-sm flex items-center gap-1.5 mb-1">
+            <span>🏨</span>
+            <span>تعيين فندق المبيت للرحلة</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).length === 0 && (
+              <div className="col-span-full text-center text-xs text-sky-700 py-3 font-bold bg-sky-100/50 rounded-xl">
+                لا توجد فنادق مسجلة في وجهات الرحلة.
+              </div>
+            )}
+            {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).map((h) => (
+              <div
+                key={h.id}
+                onClick={() => setHotelId(h.id)}
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                  hotelId === h.id
+                    ? "bg-sky-50/50 border-sky-500 ring-1 ring-sky-500"
+                    : "bg-white border-slate-200 hover:border-sky-300"
+                }`}
+              >
+                <img src={h.hotel_photo_1} alt={h.name} className="w-10 h-10 rounded-xl object-cover shadow-sm bg-slate-100" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-0.5">
+                    <div className="font-black text-xs text-slate-900 truncate">{h.name}</div>
+                    {hotelId === h.id && <div className="text-sky-600 text-xs">✅</div>}
+                  </div>
+                  <div className="text-[9px] text-slate-500 font-bold mb-1">⭐ {h.rating_avg} ({h.stars} نجوم)</div>
+                  <div className="text-[9px] text-slate-500 leading-relaxed truncate">
+                    <span className="text-sky-700 font-black">المدينة:</span> {h.city} — {h.address}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="pt-2 border-t border-border">
@@ -2923,11 +3108,18 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
   const [phone, setPhone] = useState(hotel?.phone || "");
   const [stars, setStars] = useState(hotel?.stars ? String(hotel.stars) : "4");
   const [status, setStatus] = useState(hotel?.partnership_status || "نشط");
+  const [description, setDescription] = useState(hotel?.description || "");
+  const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
+  const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)");
   const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_city.jpg");
+  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/ai_city.jpg");
+  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/ai_city.jpg");
+  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/ai_ghadames.jpg");
+  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/ai_ghadames.jpg");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !city || !address) return alert("يرجى إدخال البيانات الأساسية");
+    if (!name || !city || !address) return alert("يرجى إدخال البيانات الأساسية للفندق");
     onSave({
       ...(hotel ? { id: hotel.id } : {}),
       name,
@@ -2936,40 +3128,69 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
       phone,
       stars: +stars,
       partnership_status: status,
+      description,
+      google_maps_url: mapsUrl,
+      working_hours: workingHours,
       hotel_photo_1: p1,
-      hotel_photo_2: p1,
-      hotel_photo_3: p1,
-      hotel_photo_4: p1,
-      hotel_photo_5: p1,
+      hotel_photo_2: p2 || p1,
+      hotel_photo_3: p3 || p1,
+      hotel_photo_4: p4 || p1,
+      hotel_photo_5: p5 || p1,
     });
   };
 
   return (
     <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
         <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-[11px] text-blue-900 font-semibold">
-          ℹ️ <b>دليل تعريفي استكشافي:</b> الفنادق للعرض والتعريف بالمنشأة فقط وليست للحجز المباشر للغرف عبر المنصة.
+          ℹ️ <b>دليل تعريفي استكشافي:</b> الفنادق للعرض والتعريف بالمنشأة ومميزاتها فقط دون حجز مباشر للغرف عبر المنصة.
         </div>
-        <Field label="اسم الفندق" value={name} onChange={setName} />
+        <Field label="اسم الفندق الرسمي" value={name} onChange={setName} placeholder="مثال: فندق الفندق الكبير طرابلس" />
         <div className="grid grid-cols-2 gap-2">
-          <Field label="المدينة" value={city} onChange={setCity} />
-          <Field label="النجوم (1-5)" type="number" value={stars} onChange={setStars} />
+          <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / غدامس..." />
+          <Field label="التصنيف بالنجوم (1-5)" type="number" value={stars} onChange={setStars} />
         </div>
-        <div className="mb-2">
-          <label className="text-xs font-bold block mb-1">حالة العرض بالدليل</label>
-          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
+        <div>
+          <label className="text-xs font-bold block mb-1">حالة العرض بالدليل السياحي</label>
+          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right outline-none focus:border-primary">
             <option value="نشط">نشط (ظاهر بالدليل)</option>
-            <option value="ملغي">ملغي / معلق</option>
+            <option value="معلق">معلق</option>
+            <option value="موقوف">موقوف</option>
           </select>
         </div>
-        <Field label="العنوان" value={address} onChange={setAddress} />
+        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع الرئيسي" />
         <LibyanPhoneField label="هاتف الاستعلام والتواصل المباشر" value={phone} onChange={setPhone} />
-        <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="الصورة الرئيسية للفندق (صورة واحدة للواجهة)" value={p1} onChange={setP1} />
+        <Field label="مواعيد وساعات العمل وتسجيل الوصول (Check-in / Check-out)" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 24 ساعة (تسجيل وصول 2:00 م - مغادرة 12:00 ظ)" />
+        
+        {/* Google Maps URL */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">📍 رابط موقع الفندق على خرائط جوجل (Google Maps URL)</label>
+          <div className="flex gap-2">
+            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="flex-1 h-10 px-3 rounded-xl border border-border text-xs outline-none focus:border-primary text-right" />
+            {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700">🗺️ فتح ↗</a>}
+          </div>
         </div>
+
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">نبذة ووصف الفندق والمميزات والخدمات</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="اكتب نبذة تعريفية عن الفندق وأجنحته والإطلالات والخدمات..." className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary" />
+        </div>
+
+        {/* 5 Photos Section */}
+        <div className="pt-2 border-t border-border space-y-2">
+          <label className="text-xs font-black text-foreground block">🖼️ الصور الخمسة للفندق (معرض الصور بالدليل):</label>
+          <div className="space-y-2">
+            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية)" value={p1} onChange={setP1} />
+            <ImageFilePicker label="الصورة 2 (الأجنحة والغرف)" value={p2} onChange={setP2} />
+            <ImageFilePicker label="الصورة 3 (الاستقبال والمطعم)" value={p3} onChange={setP3} />
+            <ImageFilePicker label="الصورة 4 (المرافق والخدمات)" value={p4} onChange={setP4} />
+            <ImageFilePicker label="الصورة 5 (الإطلالة والمسبح)" value={p5} onChange={setP5} />
+          </div>
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الفندق بالدليل</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الفندق بالدليل ✓</button>
         </div>
       </form>
     </ModalShell>
@@ -2978,15 +3199,22 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 
 function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
   const [name, setName] = useState(restaurant?.name || "");
-  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية وتراثية");
+  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية ومقهى وتراثية");
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
+  const [description, setDescription] = useState(restaurant?.description || "");
+  const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
+  const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "09:00 صباحاً — 12:00 ليلاً");
   const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_food.jpg");
+  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_ruins.jpg");
+  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_city.jpg");
+  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/ai_ruins.jpg");
+  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/ai_food.jpg");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة");
+    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة للمطعم/المقهى");
     onSave({
       ...(restaurant ? { id: restaurant.id } : {}),
       name,
@@ -2994,33 +3222,61 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
       city,
       address,
       phone,
+      description,
+      google_maps_url: mapsUrl,
+      working_hours: workingHours,
       facility_image_1: i1,
-      facility_image_2: i1,
-      facility_image_3: i1,
-      facility_image_4: i1,
-      facility_image_5: i1,
+      facility_image_2: i2 || i1,
+      facility_image_3: i3 || i1,
+      facility_image_4: i4 || i1,
+      facility_image_5: i5 || i1,
     });
   };
 
   return (
     <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
         <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-900 font-semibold">
-          ℹ️ <b>دليل تعريفي:</b> المطاعم للعرض والتعريف بنوع الطعام المقدم والتواصل المباشر مع المنشأة دون حجز مسبق.
+          ℹ️ <b>دليل تعريفي:</b> المطاعم والمقاهي للعرض والتعريف بنوع الطعام وساعات العمل والتواصل دون حجز مسبق.
         </div>
-        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} />
+        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} placeholder="مثال: مطعم و كافيه السراياء التراثي" />
         <div className="grid grid-cols-2 gap-2">
-          <Field label="نوع وتصنيف الطعام المقدم (مأكولات شعبية، بحرية...)" value={type} onChange={setType} />
+          <Field label="نوع وتصنيف الطعام والمنشأة (مأكولات شعبية، مقهى، بحرية...)" value={type} onChange={setType} />
           <Field label="المدينة" value={city} onChange={setCity} />
         </div>
-        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} />
-        <LibyanPhoneField label="هاتف التواصل والاستعلام" value={phone} onChange={setPhone} />
-        <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="الصورة الرئيسية للمطعم (صورة واحدة)" value={i1} onChange={setI1} />
+        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع - المعلم القريب" />
+        <LibyanPhoneField label="هاتف التواصل والتوصيل والاستعلام" value={phone} onChange={setPhone} />
+        <Field label="⏰ ساعات وفترات العمل اليومية" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 08:00 صباحاً — 12:00 ليلاً" />
+
+        {/* Google Maps URL */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">📍 رابط موقع المطعم/المقهى على خرائط جوجل (Google Maps URL)</label>
+          <div className="flex gap-2">
+            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="flex-1 h-10 px-3 rounded-xl border border-border text-xs outline-none focus:border-primary text-right" />
+            {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700">🗺️ فتح ↗</a>}
+          </div>
         </div>
+
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">نبذة ومميزات المطعم/المقهى والوجبات والمنيو</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="اكتب نبذة عن أصناف الوجبات والمشروبات والجلسات التراثية..." className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary" />
+        </div>
+
+        {/* 5 Photos Section */}
+        <div className="pt-2 border-t border-border space-y-2">
+          <label className="text-xs font-black text-foreground block">🖼️ الصور الخمسة للمطعم/المقهى (معرض الصور):</label>
+          <div className="space-y-2">
+            <ImageFilePicker label="الصورة 1 (الواجهة والمظهر)" value={i1} onChange={setI1} />
+            <ImageFilePicker label="الصورة 2 (الجلسات الداخلية والسيور)" value={i2} onChange={setI2} />
+            <ImageFilePicker label="الصورة 3 (الأطباق والوجبات الرئيسية)" value={i3} onChange={setI3} />
+            <ImageFilePicker label="الصورة 4 (المشروبات والمأكولات)" value={i4} onChange={setI4} />
+            <ImageFilePicker label="الصورة 5 (المنيو والأجواء الخارجية)" value={i5} onChange={setI5} />
+          </div>
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم بالدليل</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم/المقهى بالدليل ✓</button>
         </div>
       </form>
     </ModalShell>
@@ -3227,7 +3483,7 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
-      <input type="tel" value={value} onChange={e => handleChange(e.target.value)} placeholder="09..." className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
+      <input type="tel" pattern="^09\d{8}$" required title="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام" value={value} onChange={e => handleChange(e.target.value)} placeholder="09..." className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
       {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
