@@ -35,8 +35,6 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register/tourist', [AuthController::class, 'registerTourist']);
     Route::post('/register/guide', [AuthController::class, 'registerGuide']);
-    Route::post('/tourist/update-profile', [AuthController::class, 'updateTouristProfile']);
-    Route::post('/guide/update-profile', [AuthController::class, 'updateGuideProfile']);
 });
 
 // --- Public / Catalog Routes ---
@@ -62,6 +60,7 @@ Route::get('/dashboard/driver/{driverLicenseNumber}', [DashboardController::clas
 Route::get('/dashboard/transport/{contractNumber}', [DashboardController::class, 'transportDashboard']);
 Route::get('/dashboard/admin', [DashboardController::class, 'adminDashboard']);
 Route::put('/dashboard/admin/private-trips/{privateTripId}', [DashboardController::class, 'adminUpdatePrivateTrip']);
+Route::put('/dashboard/admin/guides/{licenseNumber}/verify', [DashboardController::class, 'adminVerifyGuide']);
 
 // --- Authenticated User Profile ---
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

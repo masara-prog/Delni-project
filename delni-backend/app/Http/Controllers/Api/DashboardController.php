@@ -127,4 +127,25 @@ class DashboardController extends Controller
             'trip' => $trip,
         ]);
     }
+
+    /**
+     * Admin: Verify or Reject a Tour Guide
+     */
+    public function adminVerifyGuide(Request $request, $licenseNumber)
+    {
+        $guide = TourGuide::where('license_number', $licenseNumber)->firstOrFail();
+        $validated = $request->validate([
+            'verification_status' => 'required|string',
+        ]);
+
+        $guide->update([
+            'verification_status' => $validated['verification_status'],
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تحديث حالة توثيق المرشد السياحي بنجاح',
+            'guide' => $guide,
+        ]);
+    }
 }
