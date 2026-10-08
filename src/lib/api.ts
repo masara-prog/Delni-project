@@ -112,6 +112,8 @@ export async function apiRegisterGuide(params: {
   phone_number: string;
   years_of_experience: number;
   certificate?: string;
+  certificate_name?: string;
+  digital_certificate_file?: string;
   bio?: string;
   speaks_english?: boolean;
   speaks_french?: boolean;
@@ -133,6 +135,8 @@ export async function apiRegisterGuide(params: {
       body: JSON.stringify({
         ...params,
         certificate: params.certificate || "ترخيص رسمي صادر من وزارة السياحة",
+        certificate_name: params.certificate_name,
+        digital_certificate_file: params.digital_certificate_file,
         years_of_experience: Math.max(2, params.years_of_experience || 2),
       }),
     });

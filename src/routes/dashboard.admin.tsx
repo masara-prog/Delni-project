@@ -2206,25 +2206,217 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
   );
 }
 
-function GuideVerificationModal({ guide, onClose, onVerify }: { guide: Guide; onClose: () => void; onVerify: (lic: string, status: "موثق" | "مرفوض") => void }) {
+function GuideVerificationModal({
+  guide,
+  onClose,
+  onVerify,
+}: {
+  guide: Guide;
+  onClose: () => void;
+  onVerify: (lic: string, status: "موثق" | "مرفوض") => void;
+}) {
+  const isImage =
+    guide.digital_certificate_file?.startsWith("data:image/") ||
+    /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(guide.digital_certificate_file || "");
+  const isPdf =
+    guide.digital_certificate_file?.startsWith("data:application/pdf") ||
+    /\.pdf$/i.test(guide.digital_certificate_file || "");
+
+  const handleOpenInNewTab = () => {
+    if (!guide.digital_certificate_file) return;
+    try {
+      if (guide.digital_certificate_file.startsWith("data:")) {
+        const parts = guide.digital_certificate_file.split(",");
+        const mime = parts[0].match(/:(.*?);/)?.[1] || (isPdf ? "application/pdf" : "image/jpeg");
+        const byteCharacters = atob(parts[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+      } else {
+        window.open(guide.digital_certificate_file, "_blank");
+      }
+    } catch {
+      window.open(guide.digital_certificate_file, "_blank");
+    }
+  };
+
   return (
-    <ModalShell title={`معاينة وثائق: ${guide.full_name}`} onClose={onClose}>
-      <div className="space-y-3 text-right">
-        <div className="p-3.5 rounded-xl bg-muted/30 text-xs space-y-1.5">
-          <div><b>اسم المرشد:</b> {guide.full_name}</div>
-          <div><b>رقم الترخيص:</b> {guide.license_number}</div>
-          {guide.email && <div><b>البريد الإلكتروني:</b> <span className="text-primary font-bold">{guide.email}</span></div>}
-          <div><b>الهاتف:</b> {guide.phone_number}</div>
-          <div><b>الخبرة:</b> {guide.years_of_experience} سنوات</div>
+    <ModalShell
+      title={`فحص ومراجعة وثائق المرشد: ${guide.full_name}`}
+      onClose={onClose}
+      maxWidth="max-w-2xl sm:max-w-3xl"
+    >
+      <div className="space-y-4 text-right">
+        {/* Guide Information Summary Card */}
+        <div className="p-4 rounded-2xl bg-slate-50 border border-border text-xs space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
+            <div>
+              <span className="font-bold text-muted-foreground">اسم المرشد: </span>
+              <span className="font-black text-foreground text-sm">{guide.full_name}</span>
+            </div>
+            <div>
+              <span className="font-bold text-muted-foreground">رقم الترخيص: </span>
+              <span className="font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
+                {guide.license_number}
+              </span>
+            </div>
+            <div>
+              <span className="font-bold text-muted-foreground">الحالة الحالية: </span>
+              <Badge tone={guide.verification_status === "موثق" ? "green" : guide.verification_status === "مرفوض" ? "red" : "sun"}>
+                {guide.verification_status || "بانتظار التوثيق"}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-muted-foreground">
+            {guide.email && (
+              <div>
+                <b>البريد الإلكتروني:</b> <span className="text-foreground font-bold">{guide.email}</span>
+              </div>
+            )}
+            <div>
+              <b>رقم الهاتف:</b> <span className="text-foreground font-bold">{guide.phone_number}</span>
+            </div>
+            <div>
+              <b>سنوات الخبرة:</b> <span className="text-foreground font-bold">{guide.years_of_experience} سنوات</span>
+            </div>
+            <div>
+              <b>السعر اليومي المقترح:</b>{" "}
+              <span className="text-emerald-700 font-bold">{guide.daily_rate || guide.price_per_day || 150} د.ل / اليوم</span>
+            </div>
+          </div>
+          {guide.bio && (
+            <div className="pt-1 text-muted-foreground border-t border-border/40">
+              <b>نبذة عن المرشد:</b> {guide.bio}
+            </div>
+          )}
         </div>
-        <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs space-y-1">
-          <div className="font-black text-primary">📄 الوثائق الرقمية:</div>
-          <p>{guide.certificate}</p>
-          {guide.digital_certificate_file && <a href={guide.digital_certificate_file} target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">🔗 فتح الملف الرقمي ↗</a>}
+
+        {/* Uploaded Document Review Section */}
+        <div className="p-4 rounded-2xl bg-white border border-border shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-black text-sm text-foreground flex items-center gap-2">
+              <span>📄</span>
+              <span>الملف والوثيقة المرفوعة من المرشد:</span>
+            </h4>
+            {guide.digital_certificate_file && (
+              <button
+                type="button"
+                onClick={handleOpenInNewTab}
+                className="text-xs text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>فتح الملف بالحجم الكامل في نافذة جديدة</span>
+                <span>↗</span>
+              </button>
+            )}
+          </div>
+
+          <div className="text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-xl">
+            <b>اسم المستند المرفق:</b> {guide.certificate || "وثيقة ترخيص"}
+          </div>
+
+          {/* Actual File Display */}
+          {guide.digital_certificate_file ? (
+            <div className="rounded-xl border border-border overflow-hidden bg-slate-900/5">
+              {isImage ? (
+                /* Display Uploaded Image */
+                <div className="p-3 flex flex-col items-center justify-center gap-2 bg-slate-100/50">
+                  <img
+                    src={guide.digital_certificate_file}
+                    alt="وثيقة المرشد المرفوعة"
+                    className="max-h-[420px] w-auto max-w-full rounded-lg object-contain shadow-md border bg-white"
+                  />
+                  <div className="text-[11px] text-muted-foreground font-medium pt-1">
+                    صورة المستند المرفقة من قبل المرشد (جاهزة للمراجعة)
+                  </div>
+                </div>
+              ) : isPdf ? (
+                /* Display Uploaded PDF */
+                <div className="flex flex-col">
+                  <iframe
+                    src={guide.digital_certificate_file}
+                    title="معاينة ملف PDF المرفوع"
+                    className="w-full h-[400px] border-0 bg-white"
+                  />
+                  <div className="p-2.5 bg-slate-100 border-t border-border flex justify-between items-center text-xs">
+                    <span className="font-bold text-foreground">ملف PDF مرفق من المرشد</span>
+                    <button
+                      type="button"
+                      onClick={handleOpenInNewTab}
+                      className="px-3 py-1.5 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition text-xs"
+                    >
+                      تكبير وقراءة الـ PDF ↗
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Fallback generic document link */
+                <div className="p-6 text-center space-y-2">
+                  <div className="text-3xl">📎</div>
+                  <div className="font-bold text-sm text-foreground">مستند مرفق بصيغة رقمية</div>
+                  <button
+                    type="button"
+                    onClick={handleOpenInNewTab}
+                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs"
+                  >
+                    عرض وتحميل المستند المرفق ↗
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* No file uploaded notice */
+            <div className="p-5 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 text-center space-y-2">
+              <div className="text-2xl">⚠️</div>
+              <div className="font-black text-amber-900 text-xs">
+                لم يقم هذا المرشد برفع ملف رقمي أثناء التسجيل
+              </div>
+              <p className="text-[11px] text-amber-800 max-w-md mx-auto">
+                قام المرشد بالتسجيل برقم الرخصة ({guide.license_number}) فقط دون إرفاق صورة أو مستند PDF من جهازه.
+              </p>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2 justify-end pt-2">
-          <button onClick={() => onVerify(guide.license_number, "مرفوض")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs">❌ رفض</button>
-          <button onClick={() => onVerify(guide.license_number, "موثق")} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow">✅ اعتماد وتوثيق</button>
+
+        {/* Admin Instructions and Actions */}
+        <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/60 text-xs text-blue-950 space-y-1">
+          <div className="font-black flex items-center gap-1.5">
+            <span>💡</span>
+            <span>ماذا تفعل كمسؤول للمنصة (أدمن)؟</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-blue-900">
+            راجع الوثيقة المرفوعة وتأكد من صحة رقم الترخيص والاسم. عند الضغط على <b>[قبول واعتماد المرشد]</b>، يتغير حسابه إلى 'موثق' فوراً في قاعدة البيانات ويصبح نشطاً في المنصة. عند الضغط على <b>[رفض الطلب]</b>، يُرفض الحساب.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2.5 justify-end pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 h-10 border border-border bg-white text-muted-foreground hover:bg-muted rounded-xl font-bold text-xs transition cursor-pointer"
+          >
+            إلغاء وإغلاق
+          </button>
+          <button
+            type="button"
+            onClick={() => onVerify(guide.license_number, "مرفوض")}
+            className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+          >
+            ❌ رفض الطلب
+          </button>
+          <button
+            type="button"
+            onClick={() => onVerify(guide.license_number, "موثق")}
+            className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+          >
+            ✅ قبول واعتماد المرشد
+          </button>
         </div>
       </div>
     </ModalShell>
@@ -3656,15 +3848,15 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
   );
 }
 
-function ModalShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function ModalShell({ title, children, onClose, maxWidth = "max-w-lg" }: { title: string; children: React.ReactNode; onClose: () => void; maxWidth?: string }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-3xl shadow-glow overflow-hidden my-6">
+      <div onClick={e => e.stopPropagation()} className={`w-full ${maxWidth} bg-white rounded-3xl shadow-glow overflow-hidden my-6`}>
         <div className="p-4 bg-gradient-sea text-white flex justify-between items-center">
           <h3 className="text-base font-black">{title}</h3>
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 grid place-items-center text-xs transition">✕</button>
         </div>
-        <div className="p-5 max-h-[80vh] overflow-y-auto">{children}</div>
+        <div className="p-5 max-h-[85vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

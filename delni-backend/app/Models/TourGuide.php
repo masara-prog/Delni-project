@@ -21,6 +21,8 @@ class TourGuide extends Model
         'phone_number',
         'years_of_experience',
         'certificate',
+        'certificate_name',
+        'digital_certificate_file',
         'bio',
         'speaks_english',
         'speaks_french',

@@ -96,6 +96,7 @@ function SignupPage() {
     speaksFrench: false,
     speaksItalian: false,
     certs: [] as string[],
+    certDataUrls: [] as string[],
     approvalStatus: "بانتظار الاعتماد والتوثيق من الإدارة",
   });
 
@@ -604,6 +605,9 @@ function SignupPage() {
                         speaks_english: guide.speaksEnglish,
                         speaks_french: guide.speaksFrench,
                         speaks_italian: guide.speaksItalian,
+                        certificate: guide.certs.length > 0 ? `ترخيص سياحي (${guide.certs.join('، ')})` : "ترخيص رسمي صادر من وزارة السياحة والآثار",
+                        certificate_name: guide.certs[0] || "ترخيص_سياحي.pdf",
+                        digital_certificate_file: guide.certDataUrls[0] || undefined,
                       });
                     } catch (err) {}
                     setSubmitted("guide");
@@ -727,7 +731,7 @@ function SignupPage() {
                       {guide.certs.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setGuide((g) => ({ ...g, certs: [] }))}
+                          onClick={() => setGuide((g) => ({ ...g, certs: [], certDataUrls: [] }))}
                           className="text-[11px] text-red-600 hover:text-red-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -745,9 +749,19 @@ function SignupPage() {
                           className="hidden"
                           onClick={(e) => (e.currentTarget.value = '')}
                           onChange={(e) => {
-                            const files = Array.from(e.target.files ?? []).map((f) => f.name);
-                            if (files.length > 0) {
-                              setGuide((g) => ({ ...g, certs: files }));
+                            const filesArr = Array.from(e.target.files ?? []);
+                            if (filesArr.length > 0) {
+                              setGuide((g) => ({ ...g, certs: filesArr.map(f => f.name), certDataUrls: [] }));
+                              filesArr.forEach((file) => {
+                                const reader = new FileReader();
+                                reader.onload = (loadEv) => {
+                                  const url = loadEv.target?.result as string;
+                                  if (url) {
+                                    setGuide((g) => ({ ...g, certDataUrls: [...g.certDataUrls, url] }));
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              });
                             }
                           }}
                         />
@@ -791,6 +805,7 @@ function SignupPage() {
                                   setGuide((g) => ({
                                     ...g,
                                     certs: g.certs.filter((_, idx) => idx !== i),
+                                    certDataUrls: g.certDataUrls.filter((_, idx) => idx !== i),
                                   }))
                                 }
                                 className="h-7 px-2.5 rounded-md bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 border border-red-200/60"
@@ -815,9 +830,19 @@ function SignupPage() {
                               className="hidden"
                               onClick={(e) => (e.currentTarget.value = '')}
                               onChange={(e) => {
-                                const files = Array.from(e.target.files ?? []).map((f) => f.name);
-                                if (files.length > 0) {
-                                  setGuide((g) => ({ ...g, certs: [...g.certs, ...files] }));
+                                const filesArr = Array.from(e.target.files ?? []);
+                                if (filesArr.length > 0) {
+                                  setGuide((g) => ({ ...g, certs: [...g.certs, ...filesArr.map(f => f.name)] }));
+                                  filesArr.forEach((file) => {
+                                    const reader = new FileReader();
+                                    reader.onload = (loadEv) => {
+                                      const url = loadEv.target?.result as string;
+                                      if (url) {
+                                        setGuide((g) => ({ ...g, certDataUrls: [...g.certDataUrls, url] }));
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  });
                                 }
                               }}
                             />
