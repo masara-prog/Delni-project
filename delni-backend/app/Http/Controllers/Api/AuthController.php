@@ -125,16 +125,32 @@ class AuthController extends Controller
      */
     public function registerTourist(Request $request)
     {
+        $messages = [
+            'email.unique' => 'البريد الإلكتروني المدخل مسجل مسبقاً، يرجى تسجيل الدخول أو استخدام بريد آخر.',
+            'phone_number.unique' => 'رقم الهاتف المدخل مسجل مسبقاً، يرجى تسجيل الدخول أو استخدام رقم آخر.',
+            'password.min' => 'يجب ألا تقل كلمة المرور عن 6 خانات.',
+            'full_name.required' => 'يرجى إدخال الاسم بالكامل.',
+            'email.required' => 'يرجى إدخال البريد الإلكتروني.',
+            'phone_number.required' => 'يرجى إدخال رقم الهاتف.',
+        ];
+
         $validated = $request->validate([
-            'tourist_id' => 'required|string|max:50|unique:tourists,tourist_id',
+            'tourist_id' => 'nullable|string|max:50',
             'full_name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:tourists,email',
             'phone_number' => 'required|string|max:20|unique:tourists,phone_number',
             'password' => 'required|string|min:6',
-        ]);
+        ], $messages);
+
+        $touristId = $validated['tourist_id'] ?? null;
+        if (!$touristId || Tourist::where('tourist_id', $touristId)->exists()) {
+            do {
+                $touristId = 'T-' . rand(100000, 999999);
+            } while (Tourist::where('tourist_id', $touristId)->exists());
+        }
 
         $tourist = Tourist::create([
-            'tourist_id' => $validated['tourist_id'],
+            'tourist_id' => $touristId,
             'full_name' => $validated['full_name'],
             'email' => $validated['email'],
             'phone_number' => $validated['phone_number'],
@@ -209,4 +225,79 @@ class AuthController extends Controller
             'token' => $token,
         ], 201);
     }
+
+    /**
+     * Update Tourist Profile
+     */
+    public function updateTouristProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'tourist_id' => 'required|string',
+            'full_name' => 'required|string|max:150',
+            'email' => 'required|email|max:100',
+            'phone_number' => 'required|string|max:20',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $tourist = Tourist::where('tourist_id', $validated['tourist_id'])
+            ->orWhere('email', $validated['email'])
+            ->first();
+
+        if (!$tourist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'لم يتم العثور على حساب السائح',
+            ], 404);
+        }
+
+        $tourist->full_name = $validated['full_name'];
+        $tourist->email = $validated['email'];
+        $tourist->phone_number = $validated['phone_number'];
+        if (!empty($validated['password'])) {
+            $tourist->password = bcrypt($validated['password']);
+        }
+        $tourist->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تحديث بيانات الملف الشخصي بنجاح',
+            'user' => $tourist,
+        ]);
+    }
+
+    /**
+     * Update Guide Profile
+     */
+    public function updateGuideProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'license_number' => 'required|string',
+            'full_name' => 'required|string|max:150',
+            'phone_number' => 'required|string|max:20',
+            'email' => 'nullable|email|max:100',
+            'bio' => 'nullable|string',
+            'certificate' => 'nullable|string',
+            'price_per_day' => 'nullable|numeric',
+        ]);
+
+        $guide = TourGuide::where('license_number', $validated['license_number'])->first();
+        if (!$guide) {
+            return response()->json(['status' => 'error', 'message' => 'المرشد غير موجود'], 404);
+        }
+
+        $guide->full_name = $validated['full_name'];
+        $guide->phone_number = $validated['phone_number'];
+        if (isset($validated['email'])) $guide->email = $validated['email'];
+        if (isset($validated['bio'])) $guide->bio = $validated['bio'];
+        if (isset($validated['certificate'])) $guide->certificate = $validated['certificate'];
+        if (isset($validated['price_per_day'])) $guide->price_per_day = $validated['price_per_day'];
+        $guide->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تحديث بيانات المرشد بنجاح',
+            'user' => $guide,
+        ]);
+    }
 }
+

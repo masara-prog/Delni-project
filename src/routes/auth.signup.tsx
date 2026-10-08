@@ -63,6 +63,7 @@ function SignupPage() {
   const [role, setRole] = useState<Role>("tourist");
   const [guideStep, setGuideStep] = useState<1 | 2>(1);
   const [submitted, setSubmitted] = useState<null | "tourist" | "guide">(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const [slideIdx, setSlideIdx] = useState(0);
 
   useEffect(() => {
@@ -154,11 +155,16 @@ function SignupPage() {
               </div>
               <h1 className="mt-4 text-2xl font-black text-[#0F172A]">تم إنشاء حسابك بنجاح! 🎉</h1>
               <p className="mt-2 text-sm text-[#5A6A85] leading-relaxed font-medium">
-                أهلاً بك في منصة دَلِّني. يمكنك الآن تسجيل الدخول وبدء استكشاف أجمل معالم ورحلات ليبيا.
+                أهلاً بك في منصة دَلِّني. تم تسجيل حسابك بنجاح وحفظ بياناتك في قاعدة البيانات!
               </p>
-              <Link to="/auth/login" className="mt-6 inline-flex px-8 h-13 items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black shadow-soft transition">
-                تسجيل الدخول الآن
-              </Link>
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link to="/dashboard/tourist" className="w-full sm:w-auto px-6 h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black shadow-soft transition text-xs sm:text-sm">
+                  الدخول للوحة تحكم السائح مباشرة 🚀
+                </Link>
+                <Link to="/auth/login" className="w-full sm:w-auto px-6 h-12 inline-flex items-center justify-center rounded-2xl bg-[#F3ECE1] hover:bg-[#E8DFD0] text-[#0F172A] font-black transition text-xs sm:text-sm">
+                  صفحة تسجيل الدخول
+                </Link>
+              </div>
             </>
           ) : (
             <>
@@ -316,18 +322,32 @@ function SignupPage() {
             })}
           </div>
 
+          {errorMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {role === "tourist" ? (
             <form className="space-y-3.5 text-right" onSubmit={async (e) => {
               e.preventDefault();
+              setErrorMsg("");
               try {
-                await apiRegisterTourist({
+                const res = await apiRegisterTourist({
                   full_name: tourist.fullName,
                   phone_number: tourist.phone,
                   email: tourist.email,
                   password: tourist.password,
                 });
-              } catch (err) {}
-              setSubmitted("tourist");
+                if (res && (res.status === "success" || res.token)) {
+                  setSubmitted("tourist");
+                } else {
+                  setErrorMsg(res?.message || "حدث خطأ أثناء التسجيل. يرجى التأكد من صحة البيانات وأن البريد ورقم الهاتف غير مسجلين مسبقاً.");
+                }
+              } catch (err: any) {
+                setErrorMsg("تعذر إتمام عملية التسجيل، يرجى التأكد من تشغيل الخادم والاتصال بالشبكة.");
+              }
             }}>
               <Field label="الاسم بالكامل" value={tourist.fullName} onChange={(v) => setTourist({ ...tourist, fullName: v })} placeholder="محمد أحمد" required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

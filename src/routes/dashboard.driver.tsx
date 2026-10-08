@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import type { Driver, Vehicle } from "@/lib/dbSchema";
+import { getStoredSession } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/driver")({
   head: () => ({
@@ -43,20 +44,56 @@ function DriverDashboard() {
   const [active, setActive] = useState("overview");
 
   // Driver details state according to DelniDB: drivers table
-  const [driverInfo, setDriverInfo] = useState<Driver>({
-    driver_license_number: "LB-88291",
-    full_name: "علي التارقي",
-    phone_number: "0912223344",
-    national_id_or_passport: "119900223344",
-    license_date_valid: "2029-12-10",
-    contract_number: "CN-2026-01",
-    assigned_vehicle_plate: "طرابلس 4517",
-    email: "ali@dalni.ly",
-    account_status: "نشط",
-    operational_status: "متاح",
-    experience_years: 8,
-    company_name: "شركة الصحراء للنقل السياحي",
+  const [driverInfo, setDriverInfo] = useState<Driver>(() => {
+    const session = getStoredSession();
+    if (session.user && (session.role === "driver" || session.user.driver_license_number)) {
+      const u = session.user;
+      return {
+        driver_license_number: u.driver_license_number || "DL-901",
+        full_name: u.full_name || u.name || "طارق عبد السلام الزاوي",
+        phone_number: u.phone_number || "0925556677",
+        national_id_or_passport: u.national_id_or_passport || "119900334455",
+        license_date_valid: u.license_date_valid || "2028-12-31",
+        contract_number: u.contract_number || "TC-501",
+        assigned_vehicle_plate: u.assigned_vehicle_plate || "TRIPOLI-4517",
+        email: u.email || "tariq@dalni.ly",
+        account_status: u.account_status || "نشط",
+        operational_status: u.operational_status || "متاح",
+        experience_years: u.experience_years || 8,
+        company_name: u.company_name || "شركة الصفوة لنقل الركاب والسياحة",
+      };
+    }
+    return {
+      driver_license_number: "DL-901",
+      full_name: "طارق عبد السلام الزاوي",
+      phone_number: "0925556677",
+      national_id_or_passport: "119900334455",
+      license_date_valid: "2028-12-31",
+      contract_number: "TC-501",
+      assigned_vehicle_plate: "TRIPOLI-4517",
+      email: "tariq@dalni.ly",
+      account_status: "نشط",
+      operational_status: "متاح",
+      experience_years: 8,
+      company_name: "شركة الصفوة لنقل الركاب والسياحة",
+    };
   });
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (session.user && (session.role === "driver" || session.user.driver_license_number)) {
+      const u = session.user;
+      setDriverInfo(prev => ({
+        ...prev,
+        driver_license_number: u.driver_license_number || prev.driver_license_number,
+        full_name: u.full_name || u.name || prev.full_name,
+        phone_number: u.phone_number || prev.phone_number,
+        email: u.email || prev.email,
+        assigned_vehicle_plate: u.assigned_vehicle_plate || prev.assigned_vehicle_plate,
+        company_name: u.company_name || prev.company_name,
+      }));
+    }
+  }, []);
 
   // Assigned Vehicle details according to DelniDB: vehicles table
   const [assignedVehicle, setAssignedVehicle] = useState<Vehicle>({

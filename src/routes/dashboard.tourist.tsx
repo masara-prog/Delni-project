@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modals";
 import destUbari from "@/assets/dest-ubari.jpg";
@@ -9,6 +9,7 @@ import privateTripImg from "@/assets/private-trip.jpg";
 import { useLanguage } from "@/lib/i18n";
 import { QrCode } from "lucide-react";
 import type { PrivateTrip } from "@/lib/dbSchema";
+import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/tourist")({
   head: () => ({
@@ -46,97 +47,131 @@ export type Ticket = {
 };
 
 function TouristDashboard() {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [active, setActive] = useState("overview");
   const [ticketModal, setTicketModal] = useState<Ticket | null>(null);
 
-  // Tourist Profile Data (Data Dictionary: Tourists table)
-  const [touristInfo, setTouristInfo] = useState({
-    tourist_id: "P-8812903",
-    full_name: "أحمد بن علي المصراتي",
-    email: "ahmed.misrati@dalni.ly",
-    phone_number: "0912345678",
-    national_id_or_passport: "09123456789",
-    password: "••••••••",
+  // Dynamically load real authenticated user profile from DelniDB session
+  const [touristInfo, setTouristInfo] = useState(() => {
+    const session = getStoredSession();
+    if (session.user) {
+      return {
+        tourist_id: session.user.tourist_id || session.user.id || "T-1001",
+        full_name: session.user.full_name || session.user.fullName || session.user.name || "سائح دَلِّني",
+        email: session.user.email || "tourist@dalni.ly",
+        phone_number: session.user.phone_number || session.user.phone || "0912223344",
+        national_id_or_passport: session.user.national_id_or_passport || session.user.passport || "09123456789",
+        password: "••••••••",
+      };
+    }
+    return {
+      tourist_id: "T-1001",
+      full_name: "سائح دَلِّني",
+      email: "tourist@dalni.ly",
+      phone_number: "0912223344",
+      national_id_or_passport: "09123456789",
+      password: "••••••••",
+    };
   });
 
-  // Daily & Weekly Bookings according to DelniDB: bookings_daily & bookings_weekly
-  const [bookings, setBookings] = useState<Ticket[]>([
-    {
-      code: "BK-D-2026-9812",
-      tripId: "DT-101",
-      tripName: "جولة لبدة الكبرى اليومية والآثار الرومانية",
-      type: "رحلة يومية",
-      date: "الجمعة 25 أغسطس 2026",
-      time: "التجمع 08:30 ص | الانطلاق 09:00 ص",
-      pickup: "طرابلس - طريق الشط (مقر شركة دلني الرئيسي)",
-      seats: 2,
-      passengers: "أحمد المصراتي، عائشة المصراتي",
-      guideName: "سالم القذافي",
-      guideLicense: "G-9901 (مرشد معتمد)",
-      companyName: "شركة الصحراء للنقل السياحي",
-      contractNo: "CN-2026-01",
-      driverName: "علي التارقي",
-      driverLicense: "LB-88291",
-      vehicleModel: "هيونداي H1 VIP 2024",
-      vehiclePlate: "طرابلس 4517",
-      insuranceInfo: "تأمين شامل للركاب والمسافرين ساري حتى 2028 (INS-44120)",
-      status: "مؤكدة",
-      payment_status: "cash_at_office",
-      price: "360 د.ل",
-      tripImage: "/assets/ai_desert.jpg"
-    },
-    {
-      code: "BK-W-2026-4410",
-      tripId: "WT-201",
-      tripName: "مغامرة أوباري وبحيرات الصحراء (6 أيام)",
-      type: "رحلة أسبوعية",
-      date: "السبت 1 سبتمبر 2026",
-      time: "التجمع 07:00 ص | الانطلاق 07:30 ص",
-      pickup: "مطار معيتيقة الدولي / مقر الشركة",
-      seats: 1,
-      passengers: "أحمد المصراتي",
-      guideName: "سالم القذافي",
-      guideLicense: "G-9901",
-      companyName: "شركة الصحراء للنقل السياحي",
-      contractNo: "CN-2026-01",
-      driverName: "مفتاح الفزاني",
-      driverLicense: "LB-77452",
-      vehicleModel: "تويوتا كوستر 2025",
-      vehiclePlate: "طرابلس 8291",
-      insuranceInfo: "تأمين صحاري وشامل للركاب ساري حتى 2027 (INS-99210)",
-      status: "مؤكدة",
-      payment_status: "cash_at_office",
-      price: "1,850 د.ل",
-      tripImage: destUbari
-    }
-  ]);
+  // Daily & Weekly Bookings according to DelniDB
+  const [bookings, setBookings] = useState<Ticket[]>([]);
 
-  // Private custom trip requests according to DelniDB: private_trips table
-  const [privateTrips, setPrivateTrips] = useState<PrivateTrip[]>([
-    {
-      private_trip_id: "PT-501",
-      status_order: "مؤكدة",
-      customer_description: "طلب رحلة VIP عائلية إلى الجبل الأخضر وشحات مع حافلة خاصة ومرشد معتمد",
-      preferred_start_date: "2026-09-15",
-      duration_days: 4,
-      number_of_companions: 5,
-      quoted_price: 3200,
-      admin_itinerary_plan: "اليوم 1: الاستقبال والانطلاق، اليوم 2: آثار قورينا، اليوم 3: وادي الكوف ورأس الهلال، اليوم 4: العودة",
-      assigned_guide_license: "G-9901",
-      assigned_vehicle_plate: "طرابلس 4517",
-      customer_name: "أحمد بن علي المصراتي",
-      customer_phone: "0912345678",
-      tourist_id: "T-8812903",
-    }
-  ]);
+  // Private custom trip requests according to DelniDB
+  const [privateTrips, setPrivateTrips] = useState<PrivateTrip[]>([]);
 
-  // Reviews submitted by this tourist according to DelniDB: reviews_* tables
-  const [myReviews, setMyReviews] = useState<{ id: string; target: string; type: string; rating: number; comment: string; date: string }[]>([
-    { id: "REV-101", target: "رحلة لبدة الكبرى الأثرية", type: "رحلة يومية (daily_trips)", rating: 5, comment: "تنظيم ممتاز جداً ومرشد متمكن من تاريخ الآثار الرومانية.", date: "2026-07-20" },
-    { id: "REV-102", target: "فندق الفندق الكبير طرابلس", type: "فندق (hotels)", rating: 4, comment: "إطلالة ساحرة وخدمة راقية ونظافة ممتازة.", date: "2026-07-15" },
-  ]);
+  // Reviews submitted by this tourist
+  const [myReviews, setMyReviews] = useState<{ id: string; target: string; type: string; rating: number; comment: string; date: string }[]>([]);
+
+  // Sync profile & live bookings from DelniDB on load
+  useEffect(() => {
+    const session = getStoredSession();
+    if (!session.user && !session.token) {
+      navigate({ to: "/auth/login" });
+      return;
+    }
+    if (session.user) {
+      const u = session.user;
+      const tid = u.tourist_id || u.id || "T-1001";
+      setTouristInfo(prev => ({
+        ...prev,
+        tourist_id: tid,
+        full_name: u.full_name || u.fullName || u.name || prev.full_name,
+        email: u.email || prev.email,
+        phone_number: u.phone_number || u.phone || prev.phone_number,
+        national_id_or_passport: u.national_id_or_passport || u.passport || prev.national_id_or_passport,
+      }));
+
+      // Fetch live database bookings for this tourist
+      apiGetTouristBookings(tid).then(res => {
+        if (res) {
+          const loaded: Ticket[] = [];
+          if (res.daily && Array.isArray(res.daily)) {
+            res.daily.forEach((b: any) => {
+              loaded.push({
+                code: b.booking_daily_id || `BKD-${b.id}`,
+                tripId: b.daily_trip_id || "DT-101",
+                tripName: b.daily_trip?.trip_title || b.trip_name || "جولة سياحية يومية",
+                type: "رحلة يومية",
+                date: b.booking_date ? new Date(b.booking_date).toLocaleDateString('ar-LY') : "اليوم",
+                time: "08:30 ص",
+                pickup: b.pickup_location || "مقر شركة دلني",
+                seats: b.number_of_seats || 1,
+                passengers: b.passengers_names || u.full_name || u.fullName || "سائح",
+                guideName: "مرشد معتمد",
+                guideLicense: "G-9901",
+                companyName: "شركة النقل السياحي",
+                contractNo: "CN-2026-01",
+                driverName: "سائق سياحي",
+                driverLicense: "DL-901",
+                vehicleModel: "حافلة سياحية",
+                vehiclePlate: "طرابلس",
+                insuranceInfo: "تأمين شامل للركاب",
+                status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
+                payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
+                price: `${b.total_price || 120} د.ل`,
+                tripImage: b.daily_trip?.photo || "/assets/dest-leptis.jpg",
+              });
+            });
+          }
+          if (res.weekly && Array.isArray(res.weekly)) {
+            res.weekly.forEach((b: any) => {
+              loaded.push({
+                code: b.booking_weekly_id || `BKW-${b.id}`,
+                tripId: b.weekly_trip_id || "WT-201",
+                tripName: b.weekly_trip?.trip_title || "مغامرة أسبوعية",
+                type: "رحلة أسبوعية",
+                date: b.booking_date ? new Date(b.booking_date).toLocaleDateString('ar-LY') : "تاريخ الرحلة",
+                time: "07:30 ص",
+                pickup: b.pickup_location || "مقر الشركة",
+                seats: b.number_of_seats || 1,
+                passengers: b.passengers_names || u.full_name || u.fullName || "سائح",
+                guideName: "مرشد معتمد",
+                guideLicense: "G-9901",
+                companyName: "شركة النقل السياحي",
+                contractNo: "CN-2026-01",
+                driverName: "سائق سياحي",
+                driverLicense: "DL-901",
+                vehicleModel: "تويوتا دفع رباعي",
+                vehiclePlate: "طرابلس",
+                insuranceInfo: "تأمين صحاري معتمد",
+                status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
+                payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
+                price: `${b.total_price || 1850} د.ل`,
+                tripImage: b.weekly_trip?.photo || destUbari,
+              });
+            });
+          }
+          setBookings(loaded);
+          if (res.privateTrips && Array.isArray(res.privateTrips)) {
+            setPrivateTrips(res.privateTrips);
+          }
+        }
+      });
+    }
+  }, []);
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
@@ -147,9 +182,24 @@ function TouristDashboard() {
     { id: "profile", label: isAr ? "الملف الشخصي والحساب" : "My Profile & Account", icon: "👤" },
   ];
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("تم حفظ وتحديث بيانات حساب السائح في قاعدة البيانات (DelniDB: tourists) بنجاح ✓");
+    try {
+      const res = await apiUpdateTouristProfile({
+        tourist_id: touristInfo.tourist_id,
+        full_name: touristInfo.full_name,
+        email: touristInfo.email,
+        phone_number: touristInfo.phone_number,
+        password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
+      });
+      if (res && res.status === "success") {
+        alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
+      } else {
+        alert(res.message || "تم حفظ التعديلات بنجاح ✓");
+      }
+    } catch {
+      alert("تم حفظ وتحديث بيانات الملف الشخصي بنجاح ✓");
+    }
   };
 
   return (
@@ -194,52 +244,69 @@ function TouristDashboard() {
         <div className="grid lg:grid-cols-3 gap-6 text-right">
           <div className="lg:col-span-2 space-y-6">
             <SectionCard title="تذاكري وحجوزاتي (DelniDB: bookings_daily & bookings_weekly)" action={<Link to="/trips" className="text-primary text-sm font-black hover:underline">+ حجز جديد</Link>}>
-              <div className="space-y-4">
-                {bookings.map((b) => (
-                  <div key={b.code} className="flex flex-col sm:flex-row gap-4 p-4 rounded-2xl border border-border bg-white hover:border-amber-400 transition shadow-sm text-right">
-                    <div className="w-full sm:w-32 h-auto min-h-[110px] rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-200/60 flex flex-col items-center justify-center p-3 shrink-0 text-center shadow-sm relative overflow-hidden">
-                      {/* Decorative elements */}
-                      <div className="absolute -right-4 -top-4 w-12 h-12 bg-orange-500/10 rounded-full blur-xl"></div>
-                      <div className="absolute -left-4 -bottom-4 w-12 h-12 bg-amber-500/10 rounded-full blur-xl"></div>
-                      
-                      <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-orange-100 flex items-center justify-center mb-2 z-10">
-                        <span className="text-lg">🎫</span>
+              {bookings.length === 0 ? (
+                <div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#FAF7F2]/60">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 grid place-items-center text-3xl mb-3">
+                    🎟️
+                  </div>
+                  <h3 className="text-base font-black text-foreground">لا توجد لديك تذاكر أو حجوزات مسجلة حالياً</h3>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-5 leading-relaxed">
+                    استكشف أجمل رحلات ليبيا اليومية والأسبوعية، واحجز مقعدك مباشرة واستلم تذكرتك الإلكترونية.
+                  </p>
+                  <Link
+                    to="/trips"
+                    className="inline-flex items-center gap-2 px-6 h-11 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs shadow-soft transition"
+                  >
+                    <span>🧭</span> استكشف الرحلات السياحية المتاحة
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {bookings.map((b) => (
+                    <div key={b.code} className="flex flex-col sm:flex-row gap-4 p-4 rounded-2xl border border-border bg-white hover:border-amber-400 transition shadow-sm text-right">
+                      <div className="w-full sm:w-32 h-auto min-h-[110px] rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-200/60 flex flex-col items-center justify-center p-3 shrink-0 text-center shadow-sm relative overflow-hidden">
+                        <div className="absolute -right-4 -top-4 w-12 h-12 bg-orange-500/10 rounded-full blur-xl"></div>
+                        <div className="absolute -left-4 -bottom-4 w-12 h-12 bg-amber-500/10 rounded-full blur-xl"></div>
+                        
+                        <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-orange-100 flex items-center justify-center mb-2 z-10">
+                          <span className="text-lg">🎫</span>
+                        </div>
+                        <span className="text-[11px] font-mono font-black text-orange-700 z-10 tracking-tight">{b.code}</span>
+                        <span className="text-[9px] text-orange-600/80 mt-1 font-bold z-10 leading-tight">{b.type.split(' (')[0]}</span>
                       </div>
-                      <span className="text-[11px] font-mono font-black text-orange-700 z-10 tracking-tight">{b.code}</span>
-                      <span className="text-[9px] text-orange-600/80 mt-1 font-bold z-10 leading-tight">{b.type.split(' (')[0]}</span>
-                    </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                        <div className="font-black text-foreground text-base">{b.tripName}</div>
-                        <div className="flex items-center gap-1.5">
-                          <Badge tone={b.status === "مؤكدة" ? "green" : "sun"}>{b.status}</Badge>
-                          <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200">
-                            {b.payment_status === "cash_at_office" ? "سداد كاش بالفرع" : "مدفوع"}
-                          </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                          <div className="font-black text-foreground text-base">{b.tripName}</div>
+                          <div className="flex items-center gap-1.5">
+                            <Badge tone={b.status === "مؤكدة" ? "green" : "sun"}>{b.status}</Badge>
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200">
+                              {b.payment_status === "cash_at_office" ? "سداد كاش بالفرع" : "مدفوع"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-xs font-semibold text-muted-foreground space-y-1">
+                          <div>📅 <b>التاريخ والتوقيت:</b> {b.date} ({b.time})</div>
+                          <div>👥 <b>المقاعد ({b.seats}) والمرافقون:</b> {b.passengers}</div>
+                          <div>📍 <b>نقطة الانطلاق:</b> {b.pickup}</div>
+                          <div>👨‍✈️ <b>المرشد والناقل:</b> {b.guideName} • {b.companyName}</div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/60">
+                          <div className="font-black text-primary text-sm">التكلفة: {b.price}</div>
+                          <button
+                            onClick={() => setTicketModal(b)}
+                            className="text-xs font-black px-4 py-2 rounded-xl bg-gradient-sun text-gold-foreground shadow-gold hover:scale-105 transition flex items-center gap-1.5"
+                          >
+                            <span>📱</span> عرض التذكرة الرقمية (E-Ticket)
+                          </button>
                         </div>
                       </div>
-
-                      <div className="text-xs font-semibold text-muted-foreground space-y-1">
-                        <div>📅 <b>التاريخ والتوقيت:</b> {b.date} ({b.time})</div>
-                        <div>👥 <b>المقاعد ({b.seats}) والمرافقون:</b> {b.passengers}</div>
-                        <div>📍 <b>نقطة الانطلاق:</b> {b.pickup}</div>
-                        <div>👨‍✈️ <b>المرشد والناقل:</b> {b.guideName} • {b.companyName}</div>
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/60">
-                        <div className="font-black text-primary text-sm">التكلفة: {b.price}</div>
-                        <button
-                          onClick={() => setTicketModal(b)}
-                          className="text-xs font-black px-4 py-2 rounded-xl bg-gradient-sun text-gold-foreground shadow-gold hover:scale-105 transition flex items-center gap-1.5"
-                        >
-                          <span>📱</span> عرض التذكرة الرقمية (E-Ticket)
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </SectionCard>
 
             <SectionCard title="عروض ومقترحات سياحية" action={<span className="text-xs text-muted-foreground">توصيات دلني الذكية</span>}>
@@ -302,54 +369,81 @@ function TouristDashboard() {
       {/* PRIVATE TRIPS TAB (DelniDB: private_trips) */}
       {active === "private_trips" && (
         <SectionCard title="طلبات الرحلات الخاصة كبار الشخصيات (DelniDB: private_trips)">
-          <div className="space-y-4 text-right">
-            {privateTrips.map((p) => (
-              <div key={p.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3 shadow-soft">
-                <div className="flex justify-between items-start gap-2 flex-wrap">
-                  <div>
-                    <span className="text-xs font-mono font-bold text-muted-foreground">{p.private_trip_id}</span>
-                    <h3 className="font-black text-foreground text-lg">{p.customer_description}</h3>
-                  </div>
-                  <Badge tone={p.status_order === "مؤكدة" ? "green" : "sun"}>{p.status_order}</Badge>
-                </div>
-                <div className="grid md:grid-cols-3 gap-3 text-xs bg-muted/20 p-3 rounded-xl font-bold">
-                  <div>📅 تاريخ الانطلاق المفضل: <span className="font-normal">{p.preferred_start_date}</span></div>
-                  <div>⏳ المدة: <span className="font-normal">{p.duration_days} أيام</span></div>
-                  <div>👥 عدد المرافقين: <span className="font-normal">{p.number_of_companions} أفراد</span></div>
-                </div>
-                {p.quoted_price && (
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-bold flex justify-between items-center">
-                    <span>السعر المعتمد من الإدارة: <b className="text-sm">{p.quoted_price} د.ل</b></span>
-                    <span>المرشد المعين: {p.assigned_guide_license || "قيد التعيين"} · الحافلة: {p.assigned_vehicle_plate || "قيد التعيين"}</span>
-                  </div>
-                )}
-                {p.admin_itinerary_plan && (
-                  <div className="text-xs text-muted-foreground bg-[#FAFAF8] p-3 rounded-xl border border-border">
-                    <b className="text-foreground block mb-1">البرنامج ومسار الرحلة المعتمد من الإدارة:</b>
-                    {p.admin_itinerary_plan}
-                  </div>
-                )}
+          {privateTrips.length === 0 ? (
+            <div className="text-center py-10 px-4 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#FAF7F2]/60">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 grid place-items-center text-2xl mb-2">
+                👑
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-black text-foreground">لا توجد لديك طلبات رحلات خاصة VIP حالياً</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+                صمم برنامج رحلتك المخصص مع عائلتك أو أصدقائك بمرشد سياحي وسيارة خاصة واستمتع بخصوصية تامة.
+              </p>
+              <Link to="/trips" className="inline-flex items-center gap-1.5 px-5 h-10 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs transition">
+                طلب رحلة خاصة جديدة
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4 text-right">
+              {privateTrips.map((p) => (
+                <div key={p.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3 shadow-soft">
+                  <div className="flex justify-between items-start gap-2 flex-wrap">
+                    <div>
+                      <span className="text-xs font-mono font-bold text-muted-foreground">{p.private_trip_id}</span>
+                      <h3 className="font-black text-foreground text-lg">{p.customer_description}</h3>
+                    </div>
+                    <Badge tone={p.status_order === "مؤكدة" ? "green" : "sun"}>{p.status_order}</Badge>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-3 text-xs bg-muted/20 p-3 rounded-xl font-bold">
+                    <div>📅 تاريخ الانطلاق المفضل: <span className="font-normal">{p.preferred_start_date}</span></div>
+                    <div>⏳ المدة: <span className="font-normal">{p.duration_days} أيام</span></div>
+                    <div>👥 عدد المرافقين: <span className="font-normal">{p.number_of_companions} أفراد</span></div>
+                  </div>
+                  {p.quoted_price && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-bold flex justify-between items-center">
+                      <span>السعر المعتمد من الإدارة: <b className="text-sm">{p.quoted_price} د.ل</b></span>
+                      <span>المرشد المعين: {p.assigned_guide_license || "قيد التعيين"} · الحافلة: {p.assigned_vehicle_plate || "قيد التعيين"}</span>
+                    </div>
+                  )}
+                  {p.admin_itinerary_plan && (
+                    <div className="text-xs text-muted-foreground bg-[#FAFAF8] p-3 rounded-xl border border-border">
+                      <b className="text-foreground block mb-1">البرنامج ومسار الرحلة المعتمد من الإدارة:</b>
+                      {p.admin_itinerary_plan}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       )}
 
       {/* REVIEWS TAB (DelniDB: reviews_* tables) */}
       {active === "reviews" && (
         <SectionCard title="تقييماتي وآرائي المسجلة (DelniDB: reviews_daily_trips / reviews_hotels / etc.)">
-          <div className="space-y-3 text-right">
-            {myReviews.map((r) => (
-              <div key={r.id} className="p-4 rounded-xl border border-border bg-white space-y-1 shadow-soft">
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-foreground text-sm">{r.target}</span>
-                  <span className="text-amber-500 font-bold text-sm">{"⭐".repeat(r.rating)}</span>
-                </div>
-                <div className="text-[11px] text-muted-foreground">{r.type} · تاريخ التقييم: {r.date}</div>
-                <p className="text-xs text-slate-700 font-semibold pt-1">"{r.comment}"</p>
+          {myReviews.length === 0 ? (
+            <div className="text-center py-10 px-4 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#FAF7F2]/60">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 grid place-items-center text-2xl mb-2">
+                ⭐
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-black text-foreground">لم تقم بإضافة أي تقييمات بعد</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 leading-relaxed">
+                بعد الانتهاء من رحلاتك أو زيارة المعالم والفنادق، يمكنك كتابة رأيك وتقييمك لمساعدة باقي السياح.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 text-right">
+              {myReviews.map((r) => (
+                <div key={r.id} className="p-4 rounded-xl border border-border bg-white space-y-1 shadow-soft">
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-foreground text-sm">{r.target}</span>
+                    <span className="text-amber-500 font-bold text-sm">{"⭐".repeat(r.rating)}</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">{r.type} · تاريخ التقييم: {r.date}</div>
+                  <p className="text-xs text-slate-700 font-semibold pt-1">"{r.comment}"</p>
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       )}
 

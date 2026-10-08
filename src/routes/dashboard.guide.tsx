@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin, Check } from "lucide-react";
 import type { TourGuide } from "@/lib/dbSchema";
+import { getStoredSession } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/guide")({
   head: () => ({
@@ -77,29 +78,75 @@ function GuideDashboard() {
   ];
 
   // Guide Profile Details according to DelniDB: tour_guides table
-  const [guideInfo, setGuideInfo] = useState<TourGuide>({
-    license_number: "G-9901",
-    full_name: "سالم القذافي",
-    phone_number: "0917778888",
-    years_of_experience: 7,
-    certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات أولية من الهلال الأحمر",
-    bio: "مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية. متخصص في الجولات الأثرية في لبدة وصبراتة وقورينا، بالإضافة إلى تنظيم رحلات السفاري في أوباري وغدامس.",
-    speaks_english: true,
-    speaks_french: false,
-    speaks_italian: true,
-    verification_status: "موثق",
-    email: "salem@dalni.ly",
-    gender: "male",
-    working_days: JSON.stringify(["sat", "sun", "mon", "tue", "wed", "thu"]),
-    operating_regions: JSON.stringify(["tripoli", "leptis", "sabratha"]),
-    primaryRegion: "طرابلس والساحل الغربي",
-    price_per_day: 150,
-    avatar: "/assets/ai_desert.jpg",
-    title: "خبير الإرشاد الأثري والصحراوي",
-    specialties: "آثار رومانية، سفاري الواحات، جولات تاريخية",
-    total_tours_completed: 48,
-    digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
+  const [guideInfo, setGuideInfo] = useState<TourGuide>(() => {
+    const session = getStoredSession();
+    if (session.user && session.role === "guide") {
+      const u = session.user;
+      return {
+        license_number: u.license_number || "G-9901",
+        full_name: u.full_name || u.name || "سالم القذافي",
+        phone_number: u.phone_number || "0917778888",
+        years_of_experience: u.years_of_experience || 7,
+        certificate: u.certificate || "ترخيص وزارة السياحة والآثار رقم 4421",
+        bio: u.bio || "مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية.",
+        speaks_english: u.speaks_english ?? true,
+        speaks_french: u.speaks_french ?? false,
+        speaks_italian: u.speaks_italian ?? true,
+        verification_status: u.verification_status || "موثق",
+        email: u.email || "salem@dalni.ly",
+        gender: u.gender || "male",
+        working_days: typeof u.working_days === 'string' ? u.working_days : JSON.stringify(["sat", "sun", "mon", "tue", "wed", "thu"]),
+        operating_regions: typeof u.operating_regions === 'string' ? u.operating_regions : JSON.stringify(["tripoli", "leptis", "sabratha"]),
+        primaryRegion: u.primaryRegion || "طرابلس والساحل الغربي",
+        price_per_day: u.price_per_day || 150,
+        avatar: u.avatar || "/assets/ai_desert.jpg",
+        title: u.title || "خبير الإرشاد الأثري والصحراوي",
+        specialties: u.specialties || "آثار رومانية، سفاري الواحات، جولات تاريخية",
+        total_tours_completed: u.total_tours_completed || 48,
+        digital_certificate_file: u.digital_certificate_file || "https://example.com/certificates/salem_license.pdf",
+      };
+    }
+    return {
+      license_number: "G-9901",
+      full_name: "سالم القذافي",
+      phone_number: "0917778888",
+      years_of_experience: 7,
+      certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعات أولية",
+      bio: "مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية.",
+      speaks_english: true,
+      speaks_french: false,
+      speaks_italian: true,
+      verification_status: "موثق",
+      email: "salem@dalni.ly",
+      gender: "male",
+      working_days: JSON.stringify(["sat", "sun", "mon", "tue", "wed", "thu"]),
+      operating_regions: JSON.stringify(["tripoli", "leptis", "sabratha"]),
+      primaryRegion: "طرابلس والساحل الغربي",
+      price_per_day: 150,
+      avatar: "/assets/ai_desert.jpg",
+      title: "خبير الإرشاد الأثري والصحراوي",
+      specialties: "آثار رومانية، سفاري الواحات، جولات تاريخية",
+      total_tours_completed: 48,
+      digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
+    };
   });
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (session.user && (session.role === "guide" || session.user.license_number)) {
+      const u = session.user;
+      setGuideInfo(prev => ({
+        ...prev,
+        license_number: u.license_number || prev.license_number,
+        full_name: u.full_name || u.name || prev.full_name,
+        phone_number: u.phone_number || prev.phone_number,
+        email: u.email || prev.email,
+        bio: u.bio || prev.bio,
+        certificate: u.certificate || prev.certificate,
+        verification_status: u.verification_status || prev.verification_status,
+      }));
+    }
+  }, []);
 
   // Assigned Trips State (DelniDB: daily_trips, weekly_trips, private_trips)
   const [assignedTrips, setAssignedTrips] = useState<AssignedTrip[]>([

@@ -72,7 +72,7 @@ export async function apiRegisterTourist(params: {
   phone_number: string;
   password: string;
 }): Promise<ApiResponse> {
-  const tourist_id = params.tourist_id || `T-${Date.now().toString().slice(-4)}`;
+  const tourist_id = params.tourist_id || `T-${Math.floor(100000 + Math.random() * 900000)}`;
   try {
     const res = await fetch(`${LARAVEL_API_URL}/auth/register/tourist`, {
       method: "POST",
@@ -88,22 +88,17 @@ export async function apiRegisterTourist(params: {
       localStorage.setItem("dalni_token", data.token);
       localStorage.setItem("dalni_role", "tourist");
       localStorage.setItem("dalni_user", JSON.stringify(data.user));
+      return data;
     }
-    return data;
-  } catch {
-    // Safe offline fallback
-    const mockUser = {
-      tourist_id,
-      full_name: params.full_name,
-      email: params.email,
-      phone_number: params.phone_number,
-    };
-    localStorage.setItem("dalni_user", JSON.stringify(mockUser));
-    localStorage.setItem("dalni_role", "tourist");
     return {
-      status: "success",
-      message: "تم إنشاء الحساب بنجاح (محلي)",
-      user: mockUser,
+      status: "error",
+      message: data.message || (data.errors ? Object.values(data.errors).flat().join(" · ") : "حدث خطأ أثناء التسجيل"),
+      ...data,
+    };
+  } catch (err: any) {
+    return {
+      status: "error",
+      message: "تعذر الاتصال بالخادم، يرجى التأكد من تشغيل الخادم والمحاولة مجدداً",
     };
   }
 }
@@ -190,6 +185,58 @@ export function getStoredSession() {
   } catch {}
   return { token, role, user };
 }
+
+/**
+ * Fetch tourist bookings from DelniDB API
+ */
+export async function apiGetTouristBookings(touristId: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/bookings/tourist/${touristId}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Update Tourist profile in DelniDB
+ */
+export async function apiUpdateTouristProfile(params: {
+  tourist_id: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  password?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/auth/tourist/update-profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (res.ok && data.user) {
+      localStorage.setItem("dalni_user", JSON.stringify(data.user));
+    }
+    return data;
+  } catch {
+    const mockUser = {
+      tourist_id: params.tourist_id,
+      full_name: params.full_name,
+      email: params.email,
+      phone_number: params.phone_number,
+    };
+    localStorage.setItem("dalni_user", JSON.stringify(mockUser));
+    return { status: "success", message: "تم تحديث الملف الشخصي", user: mockUser };
+  }
+}
+
 
 /**
  * Intelligent Tourism AI Chat (Python FastAPI Microservice)

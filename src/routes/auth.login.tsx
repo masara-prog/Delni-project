@@ -99,7 +99,7 @@ function LoginPage() {
       }
     }
 
-    // Connect to live Laravel API with safe local fallback
+    // Connect to live Laravel API
     try {
       const res = await apiLogin({ role, login: email, password });
       if (res && res.status === "success" && res.token) {
@@ -113,31 +113,13 @@ function LoginPage() {
           navigate({ to: "/dashboard/tourist" });
         }
         return;
+      } else {
+        setErrorMsg(res?.message || "بيانات تسجيل الدخول غير صحيحة، يرجى التأكد من صحة البريد وكلمة المرور");
+        return;
       }
     } catch {
-      // Fallback
-    }
-
-    const userName = email ? email.split("@")[0] : "المستخدم الحالي";
-
-    localStorage.setItem(
-      "dalni_user",
-      JSON.stringify({
-        fullName: userName,
-        email: email || "user@dalni.ly",
-        role: role,
-        loginTime: new Date().toISOString(),
-      })
-    );
-
-    if (role === "guide") {
-      navigate({ to: "/dashboard/guide" });
-    } else if (role === "transport") {
-      navigate({ to: "/dashboard/transport" });
-    } else if (role === "driver") {
-      navigate({ to: "/dashboard/driver" });
-    } else {
-      navigate({ to: "/dashboard/tourist" });
+      setErrorMsg("تعذر الاتصال بخادم المنصة. يرجى التأكد من تشغيل الخادم والمحاولة مجدداً.");
+      return;
     }
   };
 

@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Admin User (users table)
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@dalni.ly'],
             [
                 'name' => 'مدير النظام (الأدمن)',
@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 2. Demo Tourist (tourists table)
-        Tourist::firstOrCreate(
+        Tourist::updateOrCreate(
             ['email' => 'tourist@dalni.ly'],
             [
                 'tourist_id' => 'T-1001',
@@ -42,7 +42,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 3. Demo Tour Guide (tour_guides table)
-        TourGuide::firstOrCreate(
+        TourGuide::updateOrCreate(
             ['email' => 'salem@dalni.ly'],
             [
                 'license_number' => 'G-9901',
@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 4. Demo Transportation Company (transportation_companies table)
-        TransportationCompany::firstOrCreate(
+        TransportationCompany::updateOrCreate(
             ['contract_number' => 'TC-501'],
             [
                 'company_name' => 'شركة الصفوة لنقل الركاب والسياحة',
@@ -88,7 +88,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 5. Vehicles (Created BEFORE Drivers due to foreign key)
-        Vehicle::firstOrCreate(
+        Vehicle::updateOrCreate(
             ['plate_number' => 'TRIPOLI-4517'],
             [
                 'contract_number' => 'TC-501',
@@ -100,7 +100,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 6. Demo Driver (drivers table)
-        Driver::firstOrCreate(
+        Driver::updateOrCreate(
             ['driver_license_number' => 'DL-901'],
             [
                 'full_name' => 'طارق عبد السلام الزاوي',
@@ -116,7 +116,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 7. Daily Trips
-        DailyTrip::firstOrCreate(
+        DailyTrip::updateOrCreate(
             ['daily_trip_id' => 'DT-101'],
             [
                 'trip_title' => 'جولة لبدة الكبرى الأثرية المتكاملة',
@@ -133,7 +133,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        DailyTrip::firstOrCreate(
+        DailyTrip::updateOrCreate(
             ['daily_trip_id' => 'DT-102'],
             [
                 'trip_title' => 'رحلة مسرح صبراتة والساحل الغربي',
@@ -151,7 +151,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 8. Weekly Trips
-        WeeklyTrip::firstOrCreate(
+        WeeklyTrip::updateOrCreate(
             ['weekly_trip_id' => 'WT-201'],
             [
                 'trip_title' => 'مغامرة أوباري وبحيرات الصحراء الكبرى (6 أيام)',
@@ -170,7 +170,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 9. Tourist Places
-        PlaceTourist::firstOrCreate(
+        PlaceTourist::updateOrCreate(
             ['place_id' => 'PL-01'],
             [
                 'place_name' => 'لبدة الكبرى (Leptis Magna)',
@@ -185,7 +185,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        PlaceTourist::firstOrCreate(
+        PlaceTourist::updateOrCreate(
             ['place_id' => 'PL-02'],
             [
                 'place_name' => 'مسرح صبراتة الأثري',
@@ -200,7 +200,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        PlaceTourist::firstOrCreate(
+        PlaceTourist::updateOrCreate(
             ['place_id' => 'PL-03'],
             [
                 'place_name' => 'بحيرات أوباري وقبر عون',

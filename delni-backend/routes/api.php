@@ -35,6 +35,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register/tourist', [AuthController::class, 'registerTourist']);
     Route::post('/register/guide', [AuthController::class, 'registerGuide']);
+    Route::post('/tourist/update-profile', [AuthController::class, 'updateTouristProfile']);
+    Route::post('/guide/update-profile', [AuthController::class, 'updateGuideProfile']);
 });
 
 // --- Public / Catalog Routes ---

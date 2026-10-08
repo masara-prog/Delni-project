@@ -120,10 +120,12 @@ class BookingController extends Controller
     {
         $daily = BookingDaily::with('dailyTrip')->where('tourist_id', $touristId)->get();
         $weekly = BookingWeekly::with('weeklyTrip')->where('tourist_id', $touristId)->get();
+        $privateTrips = \App\Models\PrivateTrip::where('tourist_id', $touristId)->get();
 
         return response()->json([
             'daily' => $daily,
             'weekly' => $weekly,
+            'privateTrips' => $privateTrips,
         ]);
     }
 

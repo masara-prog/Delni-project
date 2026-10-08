@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import destUbari from "@/assets/dest-ubari.jpg";
 import destAcacus from "@/assets/dest-acacus.jpg";
@@ -7,6 +7,7 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
 import { useLanguage } from "@/lib/i18n";
 import type { TransportationCompany, Vehicle, Driver } from "@/lib/dbSchema";
+import { getStoredSession } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/transport")({
   head: () => ({
@@ -27,21 +28,58 @@ function TransportDashboard() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   // Profile state according to DelniDB: transportation_companies table
-  const [companyInfo, setCompanyInfo] = useState<TransportationCompany>({
-    contract_number: "CN-2026-01",
-    company_name: "شركة الصحراء للنقل السياحي",
-    phone_number: "0911234567",
-    address: "طرابلس - طريق الشط، بالقرب من الميناء",
-    city: "طرابلس",
-    total_vehicles: 12,
-    available_vehicles: 8,
-    verification_status: "موثق",
-    contract_date: "2025-01-10",
-    contract_start_date: "2025-01-10",
-    contract_end_date: "2028-01-10",
-    email: "sahara@dalni.ly",
-    password: "••••••••",
+  const [companyInfo, setCompanyInfo] = useState<TransportationCompany>(() => {
+    const session = getStoredSession();
+    if (session.user && (session.role === "transport" || session.user.contract_number)) {
+      const u = session.user;
+      return {
+        contract_number: u.contract_number || "TC-501",
+        company_name: u.company_name || u.name || "شركة النقل السياحي",
+        phone_number: u.phone_number || "0913334455",
+        address: u.address || "طرابلس - طريق الشط",
+        city: u.city || "طرابلس",
+        total_vehicles: u.total_vehicles || 12,
+        available_vehicles: u.available_vehicles || 8,
+        verification_status: u.verification_status || "موثق",
+        contract_date: u.contract_date || "2025-01-15",
+        contract_start_date: u.contract_start_date || "2025-01-15",
+        contract_end_date: u.contract_end_date || "2028-01-15",
+        email: u.email || "transport@dalni.ly",
+        password: "••••••••",
+      };
+    }
+    return {
+      contract_number: "TC-501",
+      company_name: "شركة الصفوة لنقل الركاب والسياحة",
+      phone_number: "0913334455",
+      address: "طرابلس - طريق الشط",
+      city: "طرابلس",
+      total_vehicles: 12,
+      available_vehicles: 8,
+      verification_status: "موثق",
+      contract_date: "2025-01-15",
+      contract_start_date: "2025-01-15",
+      contract_end_date: "2028-01-15",
+      email: "safwa@dalni.ly",
+      password: "••••••••",
+    };
   });
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (session.user && (session.role === "transport" || session.user.contract_number)) {
+      const u = session.user;
+      setCompanyInfo(prev => ({
+        ...prev,
+        contract_number: u.contract_number || prev.contract_number,
+        company_name: u.company_name || u.name || prev.company_name,
+        phone_number: u.phone_number || prev.phone_number,
+        email: u.email || prev.email,
+        address: u.address || prev.address,
+        city: u.city || prev.city,
+      }));
+    }
+  }, []);
 
   // Drivers state according to DelniDB: drivers table
   const [drivers, setDrivers] = useState<Driver[]>([
