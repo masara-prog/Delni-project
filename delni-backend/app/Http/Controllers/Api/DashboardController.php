@@ -32,12 +32,8 @@ class DashboardController extends Controller
             ->first();
 
         if (!$guide) {
-            $guide = TourGuide::first();
-        }
-
-        if (!$guide) {
             return response()->json([
-                'error' => 'لا توجد بيانات مرشد سياحي مسجلة في قاعدة البيانات',
+                'error' => 'لا توجد بيانات مرشد سياحي مسجلة في قاعدة البيانات لهذا الحساب',
             ], 404);
         }
 

@@ -93,8 +93,8 @@ function GuideDashboard() {
       license_number: u.license_number || "",
       full_name: u.full_name || u.name || "",
       phone_number: u.phone_number || "",
-      years_of_experience: Number(u.years_of_experience) || 2,
-      certificate: u.certificate || "ترخيص رسمي من وزارة السياحة",
+      years_of_experience: Number(u.years_of_experience) || 0,
+      certificate: u.certificate || "",
       bio: u.bio || "",
       speaks_english: Boolean(u.speaks_english),
       speaks_french: Boolean(u.speaks_french),
@@ -102,12 +102,12 @@ function GuideDashboard() {
       verification_status: u.verification_status || "بانتظار التوثيق",
       email: u.email || "",
       gender: u.gender || "male",
-      working_days: typeof u.working_days === 'string' ? u.working_days : JSON.stringify(["الأحد", "الأربعاء"]),
-      operating_regions: typeof u.operating_regions === 'string' ? u.operating_regions : JSON.stringify(["طرابلس"]),
-      primaryRegion: u.primaryRegion || "طرابلس",
-      price_per_day: Number(u.price_per_day) || 150,
-      avatar: u.avatar || "/assets/ai_desert.jpg",
-      title: u.title || "مرشد سياحي معتمد",
+      working_days: typeof u.working_days === 'string' ? u.working_days : JSON.stringify(u.working_days || []),
+      operating_regions: typeof u.operating_regions === 'string' ? u.operating_regions : JSON.stringify(u.operating_regions || []),
+      primaryRegion: u.primaryRegion || "",
+      price_per_day: Number(u.price_per_day) || 0,
+      avatar: u.avatar || "",
+      title: u.title || "",
       specialties: u.specialties || "",
       total_tours_completed: Number(u.total_tours_completed) || 0,
       digital_certificate_file: u.digital_certificate_file,
@@ -126,7 +126,11 @@ function GuideDashboard() {
     async function loadGuideData() {
       setIsLoading(true);
       const session = getStoredSession();
-      const lic = session.user?.license_number || session.user?.email || "A-1216";
+      const lic = session.user?.license_number || session.user?.email;
+      if (!lic) {
+        setIsLoading(false);
+        return;
+      }
 
       const data = await apiGetGuideDashboard(lic);
       if (data && data.guide) {
@@ -135,8 +139,8 @@ function GuideDashboard() {
           license_number: g.license_number || "",
           full_name: g.full_name || "",
           phone_number: g.phone_number || "",
-          years_of_experience: Number(g.years_of_experience) || 2,
-          certificate: g.certificate || "ترخيص سياحي معتمد",
+          years_of_experience: Number(g.years_of_experience) || 0,
+          certificate: g.certificate || "",
           bio: g.bio || "",
           speaks_english: Boolean(g.speaks_english),
           speaks_french: Boolean(g.speaks_french),
@@ -146,10 +150,10 @@ function GuideDashboard() {
           gender: g.gender || "male",
           working_days: typeof g.working_days === 'string' ? g.working_days : JSON.stringify(g.working_days || []),
           operating_regions: typeof g.operating_regions === 'string' ? g.operating_regions : JSON.stringify(g.operating_regions || []),
-          primaryRegion: g.primaryRegion || "طرابلس",
-          price_per_day: Number(g.price_per_day) || 150,
-          avatar: g.avatar || "/assets/ai_desert.jpg",
-          title: g.title || "مرشد سياحي معتمد",
+          primaryRegion: g.primaryRegion || "",
+          price_per_day: Number(g.price_per_day) || 0,
+          avatar: g.avatar || "",
+          title: g.title || "",
           specialties: g.specialties || "",
           total_tours_completed: Number(g.total_tours_completed) || 0,
           digital_certificate_file: g.digital_certificate_file,
@@ -161,11 +165,11 @@ function GuideDashboard() {
           data.daily_trips.forEach((d: any) => {
             realTrips.push({
               id: d.daily_trip_id || `DT-${d.id}`,
-              trip_name: d.title || "رحلة يومية",
+              trip_name: d.trip_title || d.title || "رحلة يومية",
               type: "يومية",
               date: d.recurring_days || "أسبوعياً",
               time_or_duration: "يوم كامل",
-              tourist_group_name: d.title,
+              tourist_group_name: d.trip_title || d.title || "رحلة يومية",
               seats_booked: d.bookings ? d.bookings.length : 0,
               status: "مقبولة",
               is_active_now: Boolean(d.is_active),
@@ -176,11 +180,11 @@ function GuideDashboard() {
           data.weekly_trips.forEach((w: any) => {
             realTrips.push({
               id: w.weekly_trip_id || `WT-${w.id}`,
-              trip_name: w.title || "رحلة أسبوعية",
+              trip_name: w.trip_title || w.title || "رحلة أسبوعية",
               type: "أسبوعية",
-              date: `${w.start_date || ""} - ${w.end_date || ""}`,
+              date: `${w.start_date ? new Date(w.start_date).toLocaleDateString('ar-LY') : ""} - ${w.end_date ? new Date(w.end_date).toLocaleDateString('ar-LY') : ""}`,
               time_or_duration: "6 أيام",
-              tourist_group_name: w.title,
+              tourist_group_name: w.trip_title || w.title || "رحلة أسبوعية",
               seats_booked: w.bookings ? w.bookings.length : 0,
               status: "مقبولة",
               is_active_now: Boolean(w.is_active),
@@ -217,7 +221,27 @@ function GuideDashboard() {
                   phone_number: b.tourist?.phone_number || "-",
                   nationality: "ليبي",
                   seats_count: Number(b.seats_booked) || 1,
-                  trip_name: d.title,
+                  trip_name: d.trip_title || d.title,
+                  payment_status: b.is_paid ? "paid" : "cash_at_office",
+                  attended: Boolean(b.attendance_status),
+                  passengers_names: b.notes || "",
+                });
+              });
+            }
+          });
+        }
+        if (data.weekly_trips && Array.isArray(data.weekly_trips)) {
+          data.weekly_trips.forEach((w: any) => {
+            if (w.bookings && Array.isArray(w.bookings)) {
+              w.bookings.forEach((b: any) => {
+                realTourists.push({
+                  booking_id: `BK-W-${b.booking_weekly_id || b.id}`,
+                  tourist_id: b.tourist_id,
+                  tourist_name: b.tourist?.full_name || `سائح (${b.tourist_id})`,
+                  phone_number: b.tourist?.phone_number || "-",
+                  nationality: "ليبي",
+                  seats_count: Number(b.seats_booked) || 1,
+                  trip_name: w.trip_title || w.title,
                   payment_status: b.is_paid ? "paid" : "cash_at_office",
                   attended: Boolean(b.attendance_status),
                   passengers_names: b.notes || "",
@@ -317,20 +341,22 @@ function GuideDashboard() {
                 <div className="text-sm opacity-80">أهلاً وسهلاً 👋</div>
                 <h1 className="text-2xl md:text-3xl font-black mt-1">{guideInfo.full_name}</h1>
                 <p className="mt-1 text-sm opacity-90 font-semibold">
-                  ترخيص المزاولة: {guideInfo.license_number} · إجمالي الجولات المنفذة: {guideInfo.total_tours_completed} رحلة
+                  ترخيص المزاولة: {guideInfo.license_number || "قيد المراجعة"} · إجمالي الجولات المنفذة: {guideInfo.total_tours_completed || 0} رحلة
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <span className="text-xs bg-black/15 px-2.5 py-0.5 rounded-full font-bold">
                     🗣️ اللغات: {[guideInfo.speaks_english && "الإنجليزية", guideInfo.speaks_french && "الفرنسية", guideInfo.speaks_italian && "الإيطالية"].filter(Boolean).join("، ") || "العربية فقط"}
                   </span>
-                  <span className="text-xs bg-black/15 px-2.5 py-0.5 rounded-full font-bold">
-                    📍 المنطقة الأساسية: {guideInfo.primaryRegion}
-                  </span>
+                  {guideInfo.primaryRegion && (
+                    <span className="text-xs bg-black/15 px-2.5 py-0.5 rounded-full font-bold">
+                      📍 المنطقة الأساسية: {guideInfo.primaryRegion}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={guideInfo.verification_status === "موثق" ? "green" : "sun"}>{guideInfo.verification_status}</Badge>
-                <Badge tone="sea">📜 {guideInfo.years_of_experience} سنوات خبرة</Badge>
+                <Badge tone="sea">📜 {guideInfo.years_of_experience || 0} سنوات خبرة</Badge>
               </div>
             </div>
           </div>
@@ -338,8 +364,8 @@ function GuideDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="الرحلة النشطة الحالية" value={activeTrip ? activeTrip.trip_name : "لا يوجد رحلة حالياً"} icon="🧭" tone="sea" />
             <StatCard label="الرحلات بانتظار القبول" value={assignedTrips.filter(t => t.status === "بانتظار القبول").length} icon="📥" tone="sun" />
-            <StatCard label="أجر اليوم الواحد للرحلات الخاصة" value={`${guideInfo.price_per_day || 150} د.ل / يوم`} icon="💰" tone="green" />
-            <StatCard label="إجمالي الجولات المكتملة" value={`${guideInfo.total_tours_completed} جولة`} icon="🏆" tone="clay" />
+            <StatCard label="أجر اليوم الواحد للرحلات الخاصة" value={guideInfo.price_per_day ? `${guideInfo.price_per_day} د.ل / يوم` : "غير محدد"} icon="💰" tone="green" />
+            <StatCard label="إجمالي الجولات المكتملة" value={`${guideInfo.total_tours_completed || 0} جولة`} icon="🏆" tone="clay" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
@@ -474,8 +500,9 @@ function GuideDashboard() {
               </div>
             ))}
           </div>
-        </SectionCard>
-      )}
+        )}
+      </SectionCard>
+    )}
 
       {/* ACTIVE TRIP TOURISTS & ATTENDANCE CHECK-IN (DelniDB: bookings_daily / bookings_weekly) */}
       {active === "active_tourists" && (
@@ -607,7 +634,7 @@ function GuideDashboard() {
             <div className="grid grid-cols-3 gap-3">
               <Field label="سنوات الخبرة (years_of_experience)" type="number" value={String(guideInfo.years_of_experience)} onChange={(v) => setGuideInfo({ ...guideInfo, years_of_experience: Number(v) })} />
               <Field label="رقم ترخيص الإرشاد (license_number)" value={guideInfo.license_number} onChange={(v) => setGuideInfo({ ...guideInfo, license_number: v })} />
-              <Field label="سعر اليوم بالدينار (price_per_day)" type="number" value={String(guideInfo.price_per_day || 150)} onChange={(v) => setGuideInfo({ ...guideInfo, price_per_day: Number(v) })} />
+              <Field label="سعر اليوم بالدينار (price_per_day)" type="number" value={guideInfo.price_per_day ? String(guideInfo.price_per_day) : ""} onChange={(v) => setGuideInfo({ ...guideInfo, price_per_day: Number(v) })} placeholder="0" />
             </div>
 
             {/* Languages (BIT columns in DelniDB) */}

@@ -35,10 +35,74 @@ export const Route = createFileRoute("/guides")({
 });
 
 import { TourGuide, TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { apiGetGuidesCatalog } from "@/lib/api";
 
 function GuidesPage() {
   const { language, dir } = useLanguage();
   const isAr = language === 'ar';
+
+  // Live Database Guides from DelniDB
+  const [dbGuides, setDbGuides] = useState<TourGuide[]>([]);
+
+  useEffect(() => {
+    async function fetchLiveGuides() {
+      const data = await apiGetGuidesCatalog();
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: TourGuide[] = data.map((g: any, idx: number) => {
+          let opRegions: string[] = [];
+          try {
+            opRegions = typeof g.operating_regions === 'string' ? JSON.parse(g.operating_regions) : (g.operating_regions || []);
+          } catch {
+            opRegions = [];
+          }
+
+          let wDays: string[] = [];
+          try {
+            wDays = typeof g.working_days === 'string' ? JSON.parse(g.working_days) : (g.working_days || []);
+          } catch {
+            wDays = [];
+          }
+
+          const langs: { code: string; nameAr: string; nameEn: string }[] = [
+            { code: "AR", nameAr: "العربية", nameEn: "Arabic" },
+          ];
+          if (g.speaks_english) langs.push({ code: "EN", nameAr: "الإنجليزية", nameEn: "English" });
+          if (g.speaks_french) langs.push({ code: "FR", nameAr: "الفرنسية", nameEn: "French" });
+          if (g.speaks_italian) langs.push({ code: "IT", nameAr: "الإيطالية", nameEn: "Italian" });
+
+          return {
+            id: g.license_number || `guide-${idx}`,
+            licenseNumber: g.license_number || `LIC-${idx}`,
+            name: g.full_name || "مرشد سياحي معتمد",
+            gender: g.gender === "female" ? "female" : "male",
+            avatar: g.avatar || (g.gender === "female" ? "/assets/guide-souad.jpg" : "/assets/guide-mohammed.jpg"),
+            title: g.title || (g.gender === "female" ? "مرشدة سياحية معتمدة" : "مرشد سياحي معتمد"),
+            experienceYears: Number(g.years_of_experience) || 0,
+            rating: 5.0,
+            reviewsCount: 12 + (Number(g.total_tours_completed) || 0) * 2,
+            pricePerDay: Number(g.price_per_day) || 150,
+            primaryRegion: g.primaryRegion || (opRegions[0] || "tripoli"),
+            operatingRegions: opRegions.length > 0 ? opRegions : ["tripoli"],
+            languages: langs,
+            bio: g.bio || "مرشد سياحي معتمد ومسجل في منصة دَلّني السياحية.",
+            phone: g.phone_number || "",
+            verified: g.verification_status === "موثق",
+            totalToursCompleted: Number(g.total_tours_completed) || 0,
+            specialties: g.specialties
+              ? (typeof g.specialties === 'string' ? g.specialties.split("، ") : g.specialties)
+              : ["جولات تاريخية", "إرشاد سياحي"],
+            workingDays: wDays.length > 0 ? wDays : ["طوال أيام الأسبوع"],
+          };
+        });
+        setDbGuides(mapped);
+      }
+    }
+    fetchLiveGuides();
+  }, []);
+
+  const guidesSource = useMemo(() => {
+    return dbGuides.length > 0 ? dbGuides : TOUR_GUIDES_DATA;
+  }, [dbGuides]);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,21 +163,23 @@ function GuidesPage() {
   };
 
   useEffect(() => {
+    if (guidesSource.length === 0) return;
     const timer = setInterval(() => {
-      setSpotlightIndex((prev) => (prev + 1) % TOUR_GUIDES_DATA.length);
+      setSpotlightIndex((prev) => (prev + 1) % guidesSource.length);
     }, 2000);
     return () => clearInterval(timer);
-  }, []);
+  }, [guidesSource]);
 
-  const currentSpotlightGuide = TOUR_GUIDES_DATA[spotlightIndex];
+  const currentSpotlightGuide = guidesSource[spotlightIndex] || guidesSource[0];
 
   function handleNextSpotlight() {
-    setSpotlightIndex((prev) => (prev + 1) % TOUR_GUIDES_DATA.length);
+    if (guidesSource.length === 0) return;
+    setSpotlightIndex((prev) => (prev + 1) % guidesSource.length);
   }
 
   // Filter Logic
   const filteredGuides = useMemo(() => {
-    return TOUR_GUIDES_DATA.filter((g) => {
+    return guidesSource.filter((g) => {
       // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
