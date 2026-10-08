@@ -63,6 +63,7 @@ Route::get('/dashboard/transport/{contractNumber}', [DashboardController::class,
 Route::get('/dashboard/admin', [DashboardController::class, 'adminDashboard']);
 Route::put('/dashboard/admin/private-trips/{privateTripId}', [DashboardController::class, 'adminUpdatePrivateTrip']);
 Route::put('/dashboard/admin/guides/{licenseNumber}/verify', [DashboardController::class, 'adminVerifyGuide']);
+Route::delete('/dashboard/admin/guides/{licenseNumber}', [DashboardController::class, 'adminDeleteGuide']);
 
 // --- Authenticated User Profile ---
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

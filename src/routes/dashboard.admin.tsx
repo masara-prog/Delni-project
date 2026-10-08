@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide } from "@/lib/api";
-import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide, apiDeleteGuide } from "@/lib/api";
+import { formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -73,9 +73,12 @@ type Driver = {
 type Guide = { 
   license_number: string; 
   full_name: string; 
+  title?: string;
+  avatar?: string;
   phone_number: string; 
   years_of_experience: number; 
   certificate: string; 
+  certificate_name?: string;
   digital_certificate_file?: string; 
   bio?: string; 
   speaks_english?: boolean; 
@@ -343,68 +346,7 @@ function AdminDashboard() {
     },
   ]);
 
-  const [guides, setGuides] = useState<Guide[]>([
-    {
-      license_number: "G-9901",
-      full_name: "سالم القذافي",
-      phone_number: "0917778888",
-      years_of_experience: 7,
-      certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعافات هلال أحمر",
-      digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
-      bio: "متخصص في الجولات الأثرية بالمنطقة الغربية والصحراء.",
-      speaks_english: true,
-      speaks_french: false,
-      speaks_italian: true,
-      verification_status: "موثق",
-      email: "salem@dalni.ly",
-      price_per_day: 150,
-      daily_rate: 150,
-      primaryRegion: "leptis",
-      operating_regions: "leptis,tripoli,sabratha",
-      working_days: "الأحد,الأربعاء,الجمعة",
-      total_tours_completed: 48,
-    },
-    {
-      license_number: "G-9902",
-      full_name: "خالد بن يونس",
-      phone_number: "0921112233",
-      years_of_experience: 4,
-      certificate: "شهادة بكالوريوس تاريخ وآثار - جامعة بنغازي، رخصة إرشاد محلي",
-      digital_certificate_file: "https://example.com/certificates/khaled_license.pdf",
-      bio: "خبير معالم شحات وسوسة والجبل الأخضر.",
-      speaks_english: true,
-      speaks_french: true,
-      speaks_italian: false,
-      verification_status: "بانتظار التوثيق",
-      email: "khaled@dalni.ly",
-      price_per_day: 140,
-      daily_rate: 140,
-      primaryRegion: "cyrene",
-      operating_regions: "cyrene,benghazi",
-      working_days: "السبت,الثلاثاء,الخميس",
-      total_tours_completed: 25,
-    },
-    {
-      license_number: "G-9903",
-      full_name: "سعاد الفيتوري",
-      phone_number: "0915554433",
-      years_of_experience: 2,
-      certificate: "شهادة دورات إرشاد سياحي غدامس",
-      digital_certificate_file: "https://example.com/certificates/suad_license.pdf",
-      bio: "مرشدة متخصصة في التراث الشعبي والواحات.",
-      speaks_english: false,
-      speaks_french: true,
-      speaks_italian: false,
-      verification_status: "بانتظار التوثيق",
-      email: "suad@dalni.ly",
-      price_per_day: 120,
-      daily_rate: 120,
-      primaryRegion: "ghadames",
-      operating_regions: "ghadames",
-      working_days: "الأحد,الاثنين",
-      total_tours_completed: 12,
-    },
-  ]);
+  const [guides, setGuides] = useState<Guide[]>([]);
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
   const [vehicles] = useState<Vehicle[]>([
@@ -815,17 +757,28 @@ function AdminDashboard() {
     } catch {}
   };
 
+  const handleDeleteGuide = async (lic: string) => {
+    if (!confirm(`هل أنت متأكد من حذف المرشد السياحي (رخصة: ${lic}) نهائياً من قاعدة البيانات؟`)) return;
+    setGuides(prev => prev.filter(g => g.license_number !== lic));
+    try {
+      await apiDeleteGuide(lic);
+    } catch {}
+  };
+
   // Fetch live guides and admin data from DelniDB
   useEffect(() => {
     async function fetchAdminData() {
       const res = await apiGetAdminDashboard();
-      if (res && res.guides && res.guides.length > 0) {
+      if (res && res.guides) {
         const dbGuides: Guide[] = res.guides.map((g: any) => ({
           license_number: g.license_number,
           full_name: g.full_name,
+          title: g.title || "",
+          avatar: g.avatar || "",
           phone_number: g.phone_number,
           years_of_experience: Number(g.years_of_experience) || 2,
           certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة",
+          certificate_name: g.certificate_name,
           digital_certificate_file: g.digital_certificate_file,
           bio: g.bio || "",
           speaks_english: Boolean(g.speaks_english),
@@ -1035,7 +988,7 @@ function AdminDashboard() {
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "📊" },
     { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌", badge: 3 },
     { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
-    { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: 2 },
+    { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: guides.filter(g => g.verification_status?.includes("بانتظار")).length || undefined },
     { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭" },
     { id: "bookings", label: isAr ? "سجل الحجوزات والدفع" : "Bookings & Payments", icon: "🎟️", badge: dailyBookings.length + weeklyBookings.length },
     { id: "offers", label: isAr ? "العروض الترويجية" : "Promotions & Offers", icon: "🎯" },

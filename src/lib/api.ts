@@ -254,6 +254,24 @@ export async function apiVerifyGuide(licenseNumber: string, status: string) {
 }
 
 /**
+ * Delete a Tour Guide from DelniDB
+ */
+export async function apiDeleteGuide(licenseNumber: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin/guides/${encodeURIComponent(licenseNumber)}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return null;
+}
+
+/**
  * Update Tourist profile in DelniDB
  */
 export async function apiUpdateTouristProfile(params: {

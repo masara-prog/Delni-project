@@ -226,4 +226,23 @@ class DashboardController extends Controller
             'guide' => $guide,
         ]);
     }
+
+    /**
+     * Admin: Delete a Tour Guide from DelniDB
+     */
+    public function adminDeleteGuide($licenseNumber)
+    {
+        $guide = TourGuide::where('license_number', $licenseNumber)->first();
+        if ($guide) {
+            $guide->delete();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'تم حذف المرشد السياحي بنجاح من قاعدة البيانات',
+            ]);
+        }
+        return response()->json([
+            'status' => 'error',
+            'message' => 'المرشد غير موجود',
+        ], 404);
+    }
 }
