@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { getStoredSession } from "@/lib/api";
+import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import type {
   TransportationCompany,
@@ -807,9 +807,44 @@ function AdminDashboard() {
     setShowAddCompany(false);
   };
   const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); setEditingCompany(null); };
-  const handleDeleteCompany = (contractNo: string) => { if (confirm("هل أنت متأكد من حذف شركة النقل هذه؟")) setCompanies(companies.filter(c => c.contract_number !== contractNo && c.id !== contractNo)); };
-  const handleVerifyGuide = (lic: string, status: "موثق" | "مرفوض") => { setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g)); setViewingGuide(null); };
-  const handleDeleteGuide = (lic: string) => { if (confirm("هل تريد حذف حساب هذا المرشد؟")) setGuides(guides.filter(g => g.license_number !== lic)); };
+  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
+    setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
+    setViewingGuide(null);
+    try {
+      await apiVerifyGuide(lic, status);
+    } catch {}
+  };
+
+  // Fetch live guides and admin data from DelniDB
+  useEffect(() => {
+    async function fetchAdminData() {
+      const res = await apiGetAdminDashboard();
+      if (res && res.guides && res.guides.length > 0) {
+        const dbGuides: Guide[] = res.guides.map((g: any) => ({
+          license_number: g.license_number,
+          full_name: g.full_name,
+          phone_number: g.phone_number,
+          years_of_experience: Number(g.years_of_experience) || 2,
+          certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة",
+          digital_certificate_file: g.digital_certificate_file,
+          bio: g.bio || "",
+          speaks_english: Boolean(g.speaks_english),
+          speaks_french: Boolean(g.speaks_french),
+          speaks_italian: Boolean(g.speaks_italian),
+          verification_status: g.verification_status || "بانتظار التوثيق",
+          email: g.email,
+          daily_rate: Number(g.price_per_day) || 150,
+          price_per_day: Number(g.price_per_day) || 150,
+          primaryRegion: g.primaryRegion || "tripoli",
+          operating_regions: g.operating_regions || "tripoli",
+          working_days: g.working_days || "الأحد,الأربعاء",
+          total_tours_completed: Number(g.total_tours_completed) || 0,
+        }));
+        setGuides(dbGuides);
+      }
+    }
+    fetchAdminData();
+  }, []);
   const handleCreateTrip = (type: "daily" | "weekly", data: any) => {
     if (type === "daily") setDailyTrips([...dailyTrips, { daily_trip_id: `DT-${100 + dailyTrips.length + 1}`, id: `DT-${100 + dailyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
     else setWeeklyTrips([...weeklyTrips, { weekly_trip_id: `WT-${200 + weeklyTrips.length + 1}`, id: `WT-${200 + weeklyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
@@ -1029,7 +1064,7 @@ function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label={isAr ? "شركات النقل" : "Transport Cos."} value={companies.length} hint={isAr ? `${companies.filter(c => c.status === "موثق").length} موثقة` : `${companies.filter(c => c.status === "موثق").length} Verified`} icon="🚌" tone="clay" />
         <StatCard label={isAr ? "السائقون المسجلون" : "Registered Drivers"} value={drivers.length} hint={isAr ? "مسجلون عبر شركات النقل" : "Registered via Transport Cos"} icon="🧑‍✈️" tone="sea" />
-        <StatCard label={isAr ? "طلبات اعتماد المرشدين" : "Guide Verification Requests"} value={guides.filter(g => g.verification_status === "بانتظار التوثيق").length} hint={isAr ? "وثائق بانتظار المراجعة" : "Pending documents review"} icon="🗺️" tone="sun" />
+        <StatCard label={isAr ? "طلبات اعتماد المرشدين" : "Guide Verification Requests"} value={guides.filter(g => g.verification_status?.includes("بانتظار")).length} hint={isAr ? "وثائق بانتظار المراجعة" : "Pending documents review"} icon="🗺️" tone="sun" />
         <StatCard label={isAr ? "الرحلات الخاصة VIP" : "VIP Custom Trips"} value={privateTrips.length} hint={isAr ? `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} طلبات جديدة` : `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} New Requests`} icon="👑" tone="green" />
       </div>
 
@@ -1039,13 +1074,14 @@ function AdminDashboard() {
           <div className="lg:col-span-2 space-y-6">
             <SectionCard title="أحدث طلبات توثيق المرشدين السياحيين الواردة" action={<button onClick={() => setActive("guides")} className="text-primary text-sm font-black hover:underline">عرض الكل</button>}>
               <div className="space-y-3">
-                {guides.filter(g => g.verification_status === "بانتظار التوثيق").map((g) => (
+                {guides.filter(g => g.verification_status?.includes("بانتظار")).map((g) => (
                   <div key={g.license_number} className="p-4 rounded-xl border border-border bg-white flex flex-wrap justify-between items-center gap-3">
                     <div>
                       <div className="font-black text-foreground text-sm">{g.full_name} ({g.license_number})</div>
+                      {g.email && <div className="text-xs text-primary font-bold mt-0.5">✉️ {g.email}</div>}
                       <div className="text-xs text-muted-foreground mt-0.5">📜 {g.certificate}</div>
                     </div>
-                    <button onClick={() => setViewingGuide(g)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">معاينة الوثائق والاعتماد 📄</button>
+                    <button onClick={() => setViewingGuide(g)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black cursor-pointer">معاينة الوثائق والاعتماد 📄</button>
                   </div>
                 ))}
               </div>
@@ -1148,6 +1184,7 @@ function AdminDashboard() {
                   <div>
                     <h3 className="font-black text-foreground text-base">{g.full_name}</h3>
                     <div className="text-xs text-muted-foreground">رقم الرخصة: {g.license_number}</div>
+                    {g.email && <div className="text-xs text-primary font-bold mt-0.5">✉️ {g.email}</div>}
                   </div>
                   <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>{g.verification_status}</Badge>
                 </div>
@@ -2173,8 +2210,10 @@ function GuideVerificationModal({ guide, onClose, onVerify }: { guide: Guide; on
   return (
     <ModalShell title={`معاينة وثائق: ${guide.full_name}`} onClose={onClose}>
       <div className="space-y-3 text-right">
-        <div className="p-3 rounded-xl bg-muted/30 text-xs space-y-1">
+        <div className="p-3.5 rounded-xl bg-muted/30 text-xs space-y-1.5">
+          <div><b>اسم المرشد:</b> {guide.full_name}</div>
           <div><b>رقم الترخيص:</b> {guide.license_number}</div>
+          {guide.email && <div><b>البريد الإلكتروني:</b> <span className="text-primary font-bold">{guide.email}</span></div>}
           <div><b>الهاتف:</b> {guide.phone_number}</div>
           <div><b>الخبرة:</b> {guide.years_of_experience} سنوات</div>
         </div>

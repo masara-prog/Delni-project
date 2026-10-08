@@ -211,6 +211,41 @@ export async function apiGetTouristBookings(touristId: string) {
 }
 
 /**
+ * Fetch Admin Dashboard data from DelniDB
+ */
+export async function apiGetAdminDashboard() {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Update Tour Guide verification status (Approve / Reject) in DelniDB
+ */
+export async function apiVerifyGuide(licenseNumber: string, status: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin/guides/${encodeURIComponent(licenseNumber)}/verify`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ verification_status: status }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return null;
+}
+
+/**
  * Update Tourist profile in DelniDB
  */
 export async function apiUpdateTouristProfile(params: {
