@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import destUbari from "@/assets/dest-ubari.jpg";
@@ -20,7 +20,15 @@ export const Route = createFileRoute("/dashboard/transport")({
 });
 
 function TransportDashboard() {
+  const navigate = useNavigate();
   const [active, setActive] = useState("overview");
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (!session.token || (session.role !== "transport" && session.role !== "admin")) {
+      navigate({ to: "/auth/login" });
+    }
+  }, [navigate]);
   const [showAddDriver, setShowAddDriver] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
 

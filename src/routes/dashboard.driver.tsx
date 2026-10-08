@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
@@ -39,9 +39,17 @@ type AssignedDriverTrip = {
 };
 
 function DriverDashboard() {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [active, setActive] = useState("overview");
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (!session.token || (session.role !== "driver" && session.role !== "admin")) {
+      navigate({ to: "/auth/login" });
+    }
+  }, [navigate]);
 
   // Driver details state according to DelniDB: drivers table
   const [driverInfo, setDriverInfo] = useState<Driver>(() => {

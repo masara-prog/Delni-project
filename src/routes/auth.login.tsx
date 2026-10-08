@@ -82,9 +82,12 @@ function LoginPage() {
     if (isLoginAsAdmin) {
       const cleanEmail = email.trim().toLowerCase();
       if ((cleanEmail === "admin@dalni.ly" || cleanEmail === "admin") && (password === "admin123" || password === "admin")) {
+        localStorage.setItem("dalni_token", "admin_session_token");
+        localStorage.setItem("dalni_role", "admin");
         localStorage.setItem(
           "dalni_user",
           JSON.stringify({
+            name: "مدير النظام",
             fullName: "مدير النظام (الأدمن)",
             email: "admin@dalni.ly",
             role: "admin",

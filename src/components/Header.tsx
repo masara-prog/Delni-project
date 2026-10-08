@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { NotificationBell } from "@/components/NotificationBell";
+import { getStoredSession, clearStoredSession } from "@/lib/api";
 import {
   Home,
   Plane,
@@ -12,16 +13,49 @@ import {
   Building2,
   Bus,
   UtensilsCrossed,
-  Flame,
+  LogOut,
+  LayoutDashboard,
 } from "lucide-react";
 
 interface HeaderProps {
   active?: "home" | "trips" | "guides" | "hotels" | "transport" | "restaurants" | "attractions" | "offers" | "support";
 }
 
+const ROLE_DASHBOARDS: Record<string, { path: string; labelAr: string; labelEn: string; icon: string }> = {
+  tourist: { path: "/dashboard/tourist", labelAr: "لوحة السائح", labelEn: "Tourist Panel", icon: "👤" },
+  guide: { path: "/dashboard/guide", labelAr: "لوحة المرشد", labelEn: "Guide Panel", icon: "🗺️" },
+  driver: { path: "/dashboard/driver", labelAr: "لوحة السائق", labelEn: "Driver Panel", icon: "🧑‍✈️" },
+  transport: { path: "/dashboard/transport", labelAr: "لوحة النقل", labelEn: "Transport Co.", icon: "🚐" },
+  admin: { path: "/dashboard/admin", labelAr: "لوحة الإدارة", labelEn: "Admin Panel", icon: "👑" },
+};
+
 export function Header({ active }: HeaderProps) {
   const { language, dir } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [session, setSession] = useState<{ token: string | null; role: string | null; user: any } | null>(null);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const s = getStoredSession();
+      if (s.token && s.user) {
+        setSession(s);
+      } else {
+        setSession(null);
+      }
+    };
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
+  }, []);
+
+  const handleLogout = () => {
+    clearStoredSession();
+    setSession(null);
+    window.location.href = "/";
+  };
+
+  const currentRole = session?.role && ROLE_DASHBOARDS[session.role] ? ROLE_DASHBOARDS[session.role] : null;
+  const userName = session?.user?.name || session?.user?.full_name || (language === 'ar' ? 'حسابي' : 'My Account');
 
   const navItems = [
     { key: "home", label: language === 'ar' ? 'الرئيسية' : 'Home', to: "/", icon: Home },
@@ -57,7 +91,7 @@ export function Header({ active }: HeaderProps) {
           </Link>
         </div>
 
-        {/* Desktop Pill Navigation Bar with pure white vector icons (Booking.com Style) */}
+        {/* Desktop Pill Navigation Bar with pure white vector icons */}
         <nav className="hidden lg:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs font-bold whitespace-nowrap">
           {navItems.map((item) => {
             const isActive = active === item.key;
@@ -87,13 +121,38 @@ export function Header({ active }: HeaderProps) {
           <div className="shrink-0 text-white">
             <NotificationBell />
           </div>
-          {/* Sign In Button in vibrant orange gradient */}
-          <Link
-            to="/auth/login"
-            className="h-10 px-4 sm:px-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white text-xs sm:text-sm font-black shadow-soft hover:scale-105 transition-all whitespace-nowrap shrink-0"
-          >
-            {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-          </Link>
+
+          {/* Dynamic Auth State: Dashboard + Logout if logged in, Sign In if guest */}
+          {session && currentRole ? (
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Link
+                to={currentRole.path}
+                className="h-10 px-3 sm:px-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1B5A78] to-[#13445C] hover:from-[#13445C] hover:to-[#0F3548] border border-white/20 text-white text-xs sm:text-sm font-black shadow-soft hover:scale-105 transition-all whitespace-nowrap"
+                title={language === 'ar' ? currentRole.labelAr : currentRole.labelEn}
+              >
+                <span className="text-sm sm:text-base">{currentRole.icon}</span>
+                <span className="max-w-[85px] sm:max-w-[120px] truncate">{userName}</span>
+                <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white/90 font-bold hidden md:inline-block">
+                  {language === 'ar' ? currentRole.labelAr : currentRole.labelEn}
+                </span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="h-10 w-10 inline-flex items-center justify-center rounded-xl bg-red-500/20 hover:bg-red-500/35 border border-red-400/30 text-red-200 hover:text-white transition-all shadow-soft"
+                title={language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+                aria-label="تسجيل الخروج"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth/login"
+              className="h-10 px-4 sm:px-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white text-xs sm:text-sm font-black shadow-soft hover:scale-105 transition-all whitespace-nowrap shrink-0"
+            >
+              {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -107,6 +166,37 @@ export function Header({ active }: HeaderProps) {
               </span>
               <LanguageToggle className="text-xs py-1 px-2.5 bg-white/10 border-white/20 text-white" />
             </div>
+
+            {/* Mobile Auth Status Card */}
+            {session && currentRole ? (
+              <div className="p-3 mb-2 rounded-xl bg-black/25 border border-white/15 flex items-center justify-between">
+                <Link
+                  to={currentRole.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 text-white font-bold text-sm"
+                >
+                  <span className="text-lg">{currentRole.icon}</span>
+                  <div>
+                    <div className="text-white font-black">{userName}</div>
+                    <div className="text-[11px] text-teal-200">{language === 'ar' ? currentRole.labelAr : currentRole.labelEn}</div>
+                  </div>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1.5 rounded-lg bg-red-500/30 hover:bg-red-500/50 text-red-100 text-xs font-bold transition"
+                >
+                  {language === 'ar' ? 'خروج' : 'Logout'}
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/auth/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full mb-2 h-11 flex items-center justify-center rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black text-sm shadow-soft"
+              >
+                {language === 'ar' ? 'تسجيل الدخول للمنصة' : 'Sign In'}
+              </Link>
+            )}
 
             {navItems.map((item) => {
               const isActive = active === item.key;

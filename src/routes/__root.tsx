@@ -271,7 +271,6 @@ function RootComponent() {
       <LanguageProvider>
         <Outlet />
         <FloatingChat />
-        <RoleDashboardsSidebar />
       </LanguageProvider>
     </QueryClientProvider>
   );

@@ -187,6 +187,15 @@ export function getStoredSession() {
 }
 
 /**
+ * Clear stored session (Logout)
+ */
+export function clearStoredSession() {
+  localStorage.removeItem("dalni_token");
+  localStorage.removeItem("dalni_role");
+  localStorage.removeItem("dalni_user");
+}
+
+/**
  * Fetch tourist bookings from DelniDB API
  */
 export async function apiGetTouristBookings(touristId: string) {

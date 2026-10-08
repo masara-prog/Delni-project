@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
@@ -66,9 +66,17 @@ const WEEKDAYS = [
 ];
 
 function GuideDashboard() {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [active, setActive] = useState("overview");
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (!session.token || (session.role !== "guide" && session.role !== "admin")) {
+      navigate({ to: "/auth/login" });
+    }
+  }, [navigate]);
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },

@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
+import { getStoredSession } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import type {
   TransportationCompany,
@@ -220,7 +221,15 @@ type FacilityOffer = OfferFacility & {
 
 /* ============ MAIN COMPONENT ============ */
 function AdminDashboard() {
+  const navigate = useNavigate();
   const [active, setActive] = useState("overview");
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (!session.token || session.role !== "admin") {
+      navigate({ to: "/auth/login" });
+    }
+  }, [navigate]);
 
   /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
   const [companies, setCompanies] = useState<Company[]>([
