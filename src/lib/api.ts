@@ -338,6 +338,52 @@ export async function apiGetGuidesCatalog() {
   }
 }
 
+/**
+ * Toggle Passenger Attendance
+ */
+export async function apiToggleAttendance(params: {
+  type: "daily" | "weekly";
+  booking_id: string;
+  attended: boolean;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/bookings/toggle-attendance`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch {
+    return { status: "error", message: "تعذر الاتصال بالخادم" };
+  }
+}
+
+/**
+ * Guide: Respond to an assigned trip (Accept / Reject)
+ */
+export async function apiGuideRespondTrip(licenseNumber: string, params: {
+  trip_id: string;
+  status: "مقبولة" | "مرفوضة";
+  rejection_reason?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/guide/${encodeURIComponent(licenseNumber)}/trip-response`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch {
+    return { status: "error", message: "تعذر الاتصال بالخادم" };
+  }
+}
+
 
 
 /**

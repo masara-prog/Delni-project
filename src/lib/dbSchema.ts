@@ -40,6 +40,7 @@ export interface TourGuide {
   specialties?: string | null; // NVARCHAR(MAX)
   total_tours_completed: number; // INT DEFAULT 0
   digital_certificate_file?: string; // Supporting document attachment
+  certificate_name?: string | null;
 }
 
 /* =========================================================

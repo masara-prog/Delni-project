@@ -76,12 +76,45 @@ class DashboardController extends Controller
             'gender' => 'nullable|string',
         ]);
 
+        // Security: If guide is already verified by admin, lock personal identity fields
+        if ($guide->verification_status === 'موثق') {
+            unset($validated['full_name'], $validated['gender'], $validated['email']);
+        }
+
         $guide->update(array_filter($validated, fn($v) => !is_null($v)));
 
         return response()->json([
             'status' => 'success',
             'message' => 'تم حفظ وتحديث ملف المرشد في قاعدة البيانات بنجاح',
             'guide' => $guide,
+        ]);
+    }
+
+    /**
+     * Tour Guide: Accept or Reject an Assigned Trip
+     */
+    public function guideRespondTrip(Request $request, $licenseNumber)
+    {
+        $validated = $request->validate([
+            'trip_id' => 'required|string',
+            'status' => 'required|in:مقبولة,مرفوضة',
+            'rejection_reason' => 'nullable|string',
+        ]);
+
+        if (str_starts_with($validated['trip_id'], 'PT-')) {
+            $trip = PrivateTrip::where('private_trip_id', $validated['trip_id'])->first();
+            if ($trip) {
+                $trip->status_order = $validated['status'] === 'مقبولة' ? 'مؤكدة' : 'مرفوضة';
+                if (!empty($validated['rejection_reason'])) {
+                    $trip->customer_requirements = ($trip->customer_requirements ? $trip->customer_requirements . ' | ' : '') . 'سبب اعتذار المرشد: ' . $validated['rejection_reason'];
+                }
+                $trip->save();
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم حفظ حالة الرحلة في قاعدة البيانات بنجاح',
         ]);
     }
 
