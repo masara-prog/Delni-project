@@ -82,6 +82,7 @@ function SignupPage() {
   const [guide, setGuide] = useState({
     licenseNumber: "",
     fullName: "",
+    title: "",
     gender: "male" as "male" | "female",
     avatar: "",
     phone: "",
@@ -476,7 +477,7 @@ function SignupPage() {
                     </div>
                   </div>
 
-                  {/* 2-Column: Full Name + License Number */}
+                  {/* 2-Column: Full Name + Professional Title */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <Field
                       label="الاسم بالكامل للمرشد"
@@ -486,16 +487,23 @@ function SignupPage() {
                       required
                     />
                     <Field
+                      label="المسمى المهني واللقب"
+                      value={guide.title}
+                      onChange={(v) => setGuide({ ...guide, title: v })}
+                      placeholder="مثال: خبير الآثار والتراث الروماني"
+                      required
+                    />
+                  </div>
+
+                  {/* 2-Column: License Number + Phone Number */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Field
                       label="رقم ترخيص مزاولة الإرشاد"
                       value={guide.licenseNumber}
                       onChange={(v) => setGuide({ ...guide, licenseNumber: v })}
                       placeholder="G-4421"
                       required
                     />
-                  </div>
-
-                  {/* 2-Column: Phone + Gender Segmented Toggle */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-end">
                     <Field
                       label="رقم الهاتف للتواصل"
                       type="tel"
@@ -504,37 +512,6 @@ function SignupPage() {
                       placeholder="0912345678"
                       required
                     />
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
-                        جنس المرشد <span className="text-red-500">*</span>
-                      </label>
-                      <div className="grid grid-cols-2 gap-1.5 h-11 p-1 bg-white rounded-xl border border-[#E2E8F0]">
-                        <button
-                          type="button"
-                          onClick={() => setGuide({ ...guide, gender: "male" })}
-                          className={`rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                            guide.gender === "male"
-                              ? "bg-[#1B5A78] text-white shadow-xs"
-                              : "text-[#718096] hover:text-[#0F172A]"
-                          }`}
-                        >
-                          <span>ذكر</span>
-                          <span>👨</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setGuide({ ...guide, gender: "female" })}
-                          className={`rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                            guide.gender === "female"
-                              ? "bg-[#1B5A78] text-white shadow-xs"
-                              : "text-[#718096] hover:text-[#0F172A]"
-                          }`}
-                        >
-                          <span>أنثى</span>
-                          <span>👩</span>
-                        </button>
-                      </div>
-                    </div>
                   </div>
 
                   {/* 2-Column: Daily Rate (Cost) + Years of Experience */}
@@ -557,6 +534,39 @@ function SignupPage() {
                       required
                       suffix="سنوات"
                     />
+                  </div>
+
+                  {/* Gender Segmented Toggle */}
+                  <div>
+                    <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
+                      جنس المرشد <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5 h-11 p-1 bg-white rounded-xl border border-[#E2E8F0]">
+                      <button
+                        type="button"
+                        onClick={() => setGuide({ ...guide, gender: "male" })}
+                        className={`rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                          guide.gender === "male"
+                            ? "bg-[#1B5A78] text-white shadow-xs"
+                            : "text-[#718096] hover:text-[#0F172A]"
+                        }`}
+                      >
+                        <span>ذكر</span>
+                        <span>👨</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGuide({ ...guide, gender: "female" })}
+                        className={`rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                          guide.gender === "female"
+                            ? "bg-[#1B5A78] text-white shadow-xs"
+                            : "text-[#718096] hover:text-[#0F172A]"
+                        }`}
+                      >
+                        <span>أنثى</span>
+                        <span>👩</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Bio Field - Compact 2 Rows */}
@@ -593,6 +603,8 @@ function SignupPage() {
                       await apiRegisterGuide({
                         license_number: guide.licenseNumber,
                         full_name: guide.fullName,
+                        title: guide.title || undefined,
+                        avatar: guide.avatar || undefined,
                         phone_number: guide.phone,
                         years_of_experience: Number(guide.years) || 2,
                         email: guide.email,

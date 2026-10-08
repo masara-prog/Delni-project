@@ -124,6 +124,8 @@ export async function apiRegisterGuide(params: {
   working_days?: string;
   operating_regions?: string;
   price_per_day?: number;
+  title?: string;
+  avatar?: string;
 }): Promise<ApiResponse> {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/auth/register/guide`, {
@@ -153,6 +155,8 @@ export async function apiRegisterGuide(params: {
     const mockUser = {
       license_number: params.license_number,
       full_name: params.full_name,
+      title: params.title,
+      avatar: params.avatar,
       email: params.email,
       phone_number: params.phone_number,
       verification_status: "بانتظار الاعتماد والتوثيق من الإدارة",

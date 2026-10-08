@@ -177,6 +177,7 @@ class AuthController extends Controller
             'price_per_day' => 'nullable|numeric|min:0',
             'title' => 'nullable|string|max:100',
             'specialties' => 'nullable|string',
+            'avatar' => 'nullable|string',
         ]);
 
         $guide = TourGuide::create([
@@ -200,6 +201,7 @@ class AuthController extends Controller
             'primaryRegion' => $validated['primaryRegion'] ?? null,
             'price_per_day' => $validated['price_per_day'] ?? null,
             'title' => $validated['title'] ?? null,
+            'avatar' => $validated['avatar'] ?? null,
             'specialties' => $validated['specialties'] ?? null,
             'total_tours_completed' => 0,
         ]);
