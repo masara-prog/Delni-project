@@ -285,6 +285,60 @@ export async function apiUpdateTouristProfile(params: {
   }
 }
 
+/**
+ * Get Tour Guide Dashboard data (profile, real assigned trips, real manifest)
+ */
+export async function apiGetGuideDashboard(licenseNumber: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/guide/${encodeURIComponent(licenseNumber)}`, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) throw new Error("API failed");
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Update Tour Guide profile & credentials in DelniDB
+ */
+export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/guide/${encodeURIComponent(licenseNumber)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (err) {
+    return { status: "error", message: "تعذر الاتصال بالخادم" };
+  }
+}
+
+/**
+ * Get Live Guides Catalog
+ */
+export async function apiGetGuidesCatalog() {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/guides`, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) throw new Error("API failed");
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+
 
 /**
  * Intelligent Tourism AI Chat (Python FastAPI Microservice)

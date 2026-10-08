@@ -56,6 +56,7 @@ Route::post('/bookings/toggle-attendance', [BookingController::class, 'toggleAtt
 
 // --- Dashboards Specific Data ---
 Route::get('/dashboard/guide/{licenseNumber}', [DashboardController::class, 'guideDashboard']);
+Route::put('/dashboard/guide/{licenseNumber}', [DashboardController::class, 'updateGuideProfile']);
 Route::get('/dashboard/driver/{driverLicenseNumber}', [DashboardController::class, 'driverDashboard']);
 Route::get('/dashboard/transport/{contractNumber}', [DashboardController::class, 'transportDashboard']);
 Route::get('/dashboard/admin', [DashboardController::class, 'adminDashboard']);

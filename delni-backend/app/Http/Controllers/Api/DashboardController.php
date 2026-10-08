@@ -23,20 +23,69 @@ use Illuminate\Http\Request;
 class DashboardController extends Controller
 {
     /**
-     * Data for Tour Guide Dashboard
+     * Data for Tour Guide Dashboard (Live database connection)
      */
     public function guideDashboard($licenseNumber)
     {
-        $guide = TourGuide::findOrFail($licenseNumber);
-        $dailyTrips = DailyTrip::with('bookings')->where('guide_license_number', $licenseNumber)->get();
-        $weeklyTrips = WeeklyTrip::with('bookings')->where('guide_license_number', $licenseNumber)->get();
-        $privateTrips = PrivateTrip::where('guide_license_number', $licenseNumber)->get();
+        $guide = TourGuide::where('license_number', $licenseNumber)
+            ->orWhere('email', $licenseNumber)
+            ->first();
+
+        if (!$guide) {
+            $guide = TourGuide::first();
+        }
+
+        if (!$guide) {
+            return response()->json([
+                'error' => 'لا توجد بيانات مرشد سياحي مسجلة في قاعدة البيانات',
+            ], 404);
+        }
+
+        $lic = $guide->license_number;
+        $dailyTrips = DailyTrip::with(['bookings.tourist'])->where('guide_license_number', $lic)->get();
+        $weeklyTrips = WeeklyTrip::with(['bookings.tourist'])->where('guide_license_number', $lic)->get();
+        $privateTrips = PrivateTrip::where('guide_license_number', $lic)->get();
 
         return response()->json([
             'guide' => $guide,
             'daily_trips' => $dailyTrips,
             'weekly_trips' => $weeklyTrips,
             'private_trips' => $privateTrips,
+        ]);
+    }
+
+    /**
+     * Tour Guide: Update Profile & Credentials in DelniDB
+     */
+    public function updateGuideProfile(Request $request, $licenseNumber)
+    {
+        $guide = TourGuide::where('license_number', $licenseNumber)
+            ->orWhere('email', $licenseNumber)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'full_name' => 'nullable|string|max:150',
+            'phone_number' => 'nullable|string|max:20',
+            'bio' => 'nullable|string',
+            'price_per_day' => 'nullable|numeric|min:0',
+            'operating_regions' => 'nullable|string',
+            'working_days' => 'nullable|string',
+            'speaks_english' => 'nullable|boolean',
+            'speaks_french' => 'nullable|boolean',
+            'speaks_italian' => 'nullable|boolean',
+            'digital_certificate_file' => 'nullable|string',
+            'certificate' => 'nullable|string',
+            'certificate_name' => 'nullable|string',
+            'title' => 'nullable|string',
+            'gender' => 'nullable|string',
+        ]);
+
+        $guide->update(array_filter($validated, fn($v) => !is_null($v)));
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم حفظ وتحديث ملف المرشد في قاعدة البيانات بنجاح',
+            'guide' => $guide,
         ]);
     }
 

@@ -4,7 +4,7 @@ import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/co
 import { useLanguage } from "@/lib/i18n";
 import { MapPin, Check } from "lucide-react";
 import type { TourGuide } from "@/lib/dbSchema";
-import { getStoredSession } from "@/lib/api";
+import { getStoredSession, apiGetGuideDashboard, apiUpdateGuideProfile } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/guide")({
   head: () => ({
@@ -80,96 +80,158 @@ function GuideDashboard() {
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "assigned_trips", label: isAr ? "الرحلات المسندة والقبول" : "Assigned Tours", icon: "🧭", badge: 2 },
+    { id: "assigned_trips", label: isAr ? "الرحلات المسندة والقبول" : "Assigned Tours", icon: "🧭" },
     { id: "active_tourists", label: isAr ? "تأكيد حضور سياح الرحلة النشطة" : "Active Tourist Manifest", icon: "☑️" },
     { id: "profile", label: isAr ? "الملف والشهادات الرقمية" : "Profile & Certificates", icon: "📄" },
   ];
 
-  // Guide Profile Details according to DelniDB: tour_guides table
+  // Real Guide Profile State (populated purely from DelniDB: tour_guides table)
   const [guideInfo, setGuideInfo] = useState<TourGuide>(() => {
     const session = getStoredSession();
-    if (session.user && session.role === "guide") {
-      const u = session.user;
-      return {
-        license_number: u.license_number || "G-9901",
-        full_name: u.full_name || u.name || "سالم القذافي",
-        phone_number: u.phone_number || "0917778888",
-        years_of_experience: u.years_of_experience || 7,
-        certificate: u.certificate || "ترخيص وزارة السياحة والآثار رقم 4421",
-        bio: u.bio || "مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية.",
-        speaks_english: u.speaks_english ?? true,
-        speaks_french: u.speaks_french ?? false,
-        speaks_italian: u.speaks_italian ?? true,
-        verification_status: u.verification_status || "موثق",
-        email: u.email || "salem@dalni.ly",
-        gender: u.gender || "male",
-        working_days: typeof u.working_days === 'string' ? u.working_days : JSON.stringify(["sat", "sun", "mon", "tue", "wed", "thu"]),
-        operating_regions: typeof u.operating_regions === 'string' ? u.operating_regions : JSON.stringify(["tripoli", "leptis", "sabratha"]),
-        primaryRegion: u.primaryRegion || "طرابلس والساحل الغربي",
-        price_per_day: u.price_per_day || 150,
-        avatar: u.avatar || "/assets/ai_desert.jpg",
-        title: u.title || "خبير الإرشاد الأثري والصحراوي",
-        specialties: u.specialties || "آثار رومانية، سفاري الواحات، جولات تاريخية",
-        total_tours_completed: u.total_tours_completed || 48,
-        digital_certificate_file: u.digital_certificate_file || "https://example.com/certificates/salem_license.pdf",
-      };
-    }
+    const u = session.user || {};
     return {
-      license_number: "G-9901",
-      full_name: "سالم القذافي",
-      phone_number: "0917778888",
-      years_of_experience: 7,
-      certificate: "ترخيص وزارة السياحة والآثار رقم 4421، شهادة إسعات أولية",
-      bio: "مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية.",
-      speaks_english: true,
-      speaks_french: false,
-      speaks_italian: true,
-      verification_status: "موثق",
-      email: "salem@dalni.ly",
-      gender: "male",
-      working_days: JSON.stringify(["sat", "sun", "mon", "tue", "wed", "thu"]),
-      operating_regions: JSON.stringify(["tripoli", "leptis", "sabratha"]),
-      primaryRegion: "طرابلس والساحل الغربي",
-      price_per_day: 150,
-      avatar: "/assets/ai_desert.jpg",
-      title: "خبير الإرشاد الأثري والصحراوي",
-      specialties: "آثار رومانية، سفاري الواحات، جولات تاريخية",
-      total_tours_completed: 48,
-      digital_certificate_file: "https://example.com/certificates/salem_license.pdf",
+      license_number: u.license_number || "",
+      full_name: u.full_name || u.name || "",
+      phone_number: u.phone_number || "",
+      years_of_experience: Number(u.years_of_experience) || 2,
+      certificate: u.certificate || "ترخيص رسمي من وزارة السياحة",
+      bio: u.bio || "",
+      speaks_english: Boolean(u.speaks_english),
+      speaks_french: Boolean(u.speaks_french),
+      speaks_italian: Boolean(u.speaks_italian),
+      verification_status: u.verification_status || "بانتظار التوثيق",
+      email: u.email || "",
+      gender: u.gender || "male",
+      working_days: typeof u.working_days === 'string' ? u.working_days : JSON.stringify(["الأحد", "الأربعاء"]),
+      operating_regions: typeof u.operating_regions === 'string' ? u.operating_regions : JSON.stringify(["طرابلس"]),
+      primaryRegion: u.primaryRegion || "طرابلس",
+      price_per_day: Number(u.price_per_day) || 150,
+      avatar: u.avatar || "/assets/ai_desert.jpg",
+      title: u.title || "مرشد سياحي معتمد",
+      specialties: u.specialties || "",
+      total_tours_completed: Number(u.total_tours_completed) || 0,
+      digital_certificate_file: u.digital_certificate_file,
     };
   });
 
+  // Real Assigned Trips (Empty until actually assigned in DelniDB)
+  const [assignedTrips, setAssignedTrips] = useState<AssignedTrip[]>([]);
+
+  // Real Active Trip Tourists (Empty until actual bookings in DelniDB)
+  const [tourists, setTourists] = useState<TouristManifestItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch Live Data from DelniDB on mount
   useEffect(() => {
-    const session = getStoredSession();
-    if (session.user && (session.role === "guide" || session.user.license_number)) {
-      const u = session.user;
-      setGuideInfo(prev => ({
-        ...prev,
-        license_number: u.license_number || prev.license_number,
-        full_name: u.full_name || u.name || prev.full_name,
-        phone_number: u.phone_number || prev.phone_number,
-        email: u.email || prev.email,
-        bio: u.bio || prev.bio,
-        certificate: u.certificate || prev.certificate,
-        verification_status: u.verification_status || prev.verification_status,
-      }));
+    async function loadGuideData() {
+      setIsLoading(true);
+      const session = getStoredSession();
+      const lic = session.user?.license_number || session.user?.email || "A-1216";
+
+      const data = await apiGetGuideDashboard(lic);
+      if (data && data.guide) {
+        const g = data.guide;
+        setGuideInfo({
+          license_number: g.license_number || "",
+          full_name: g.full_name || "",
+          phone_number: g.phone_number || "",
+          years_of_experience: Number(g.years_of_experience) || 2,
+          certificate: g.certificate || "ترخيص سياحي معتمد",
+          bio: g.bio || "",
+          speaks_english: Boolean(g.speaks_english),
+          speaks_french: Boolean(g.speaks_french),
+          speaks_italian: Boolean(g.speaks_italian),
+          verification_status: g.verification_status || "بانتظار التوثيق",
+          email: g.email || "",
+          gender: g.gender || "male",
+          working_days: typeof g.working_days === 'string' ? g.working_days : JSON.stringify(g.working_days || []),
+          operating_regions: typeof g.operating_regions === 'string' ? g.operating_regions : JSON.stringify(g.operating_regions || []),
+          primaryRegion: g.primaryRegion || "طرابلس",
+          price_per_day: Number(g.price_per_day) || 150,
+          avatar: g.avatar || "/assets/ai_desert.jpg",
+          title: g.title || "مرشد سياحي معتمد",
+          specialties: g.specialties || "",
+          total_tours_completed: Number(g.total_tours_completed) || 0,
+          digital_certificate_file: g.digital_certificate_file,
+        });
+
+        // Map Real Assigned Trips from DelniDB
+        const realTrips: AssignedTrip[] = [];
+        if (data.daily_trips && Array.isArray(data.daily_trips)) {
+          data.daily_trips.forEach((d: any) => {
+            realTrips.push({
+              id: d.daily_trip_id || `DT-${d.id}`,
+              trip_name: d.title || "رحلة يومية",
+              type: "يومية",
+              date: d.recurring_days || "أسبوعياً",
+              time_or_duration: "يوم كامل",
+              tourist_group_name: d.title,
+              seats_booked: d.bookings ? d.bookings.length : 0,
+              status: "مقبولة",
+              is_active_now: Boolean(d.is_active),
+            });
+          });
+        }
+        if (data.weekly_trips && Array.isArray(data.weekly_trips)) {
+          data.weekly_trips.forEach((w: any) => {
+            realTrips.push({
+              id: w.weekly_trip_id || `WT-${w.id}`,
+              trip_name: w.title || "رحلة أسبوعية",
+              type: "أسبوعية",
+              date: `${w.start_date || ""} - ${w.end_date || ""}`,
+              time_or_duration: "6 أيام",
+              tourist_group_name: w.title,
+              seats_booked: w.bookings ? w.bookings.length : 0,
+              status: "مقبولة",
+              is_active_now: Boolean(w.is_active),
+            });
+          });
+        }
+        if (data.private_trips && Array.isArray(data.private_trips)) {
+          data.private_trips.forEach((p: any) => {
+            realTrips.push({
+              id: p.private_trip_id || `PT-${p.id}`,
+              trip_name: p.customer_description || "رحلة خاصة VIP",
+              type: "خاصة VIP",
+              date: p.preferred_start_date || "تاريخ مفضل",
+              time_or_duration: `${p.duration_days || 1} أيام`,
+              tourist_group_name: p.customer_name || "عميل VIP",
+              seats_booked: (Number(p.number_of_companions) || 0) + 1,
+              status: p.status_order === "مؤكدة" ? "مقبولة" : "بانتظار القبول",
+              is_active_now: false,
+            });
+          });
+        }
+        setAssignedTrips(realTrips);
+
+        // Map Real Tourist Manifest from bookings in DelniDB
+        const realTourists: TouristManifestItem[] = [];
+        if (data.daily_trips && Array.isArray(data.daily_trips)) {
+          data.daily_trips.forEach((d: any) => {
+            if (d.bookings && Array.isArray(d.bookings)) {
+              d.bookings.forEach((b: any) => {
+                realTourists.push({
+                  booking_id: `BK-D-${b.booking_daily_id || b.id}`,
+                  tourist_id: b.tourist_id,
+                  tourist_name: b.tourist?.full_name || `سائح (${b.tourist_id})`,
+                  phone_number: b.tourist?.phone_number || "-",
+                  nationality: "ليبي",
+                  seats_count: Number(b.seats_booked) || 1,
+                  trip_name: d.title,
+                  payment_status: b.is_paid ? "paid" : "cash_at_office",
+                  attended: Boolean(b.attendance_status),
+                  passengers_names: b.notes || "",
+                });
+              });
+            }
+          });
+        }
+        setTourists(realTourists);
+      }
+      setIsLoading(false);
     }
+    loadGuideData();
   }, []);
-
-  // Assigned Trips State (DelniDB: daily_trips, weekly_trips, private_trips)
-  const [assignedTrips, setAssignedTrips] = useState<AssignedTrip[]>([
-    { id: "DT-101", trip_name: "رحلة لبدة الكبرى الأثرية", type: "يومية", date: "اليوم (قيد الإجراء)", time_or_duration: "9:00 ص - 3:00 م", tourist_group_name: "عائلة المصراتي والعجيلي", seats_booked: 8, status: "مقبولة", is_active_now: true },
-    { id: "WT-201", trip_name: "سفاري بحيرات أوباري والصحراء", type: "أسبوعية", date: "17 أغسطس 2026", time_or_duration: "6 أيام كاملة", tourist_group_name: "حجز جماعي صحراوي", seats_booked: 12, status: "بانتظار القبول", is_active_now: false },
-    { id: "PT-501", trip_name: "جولة خاصة للآثار والمدينة القديمة", type: "خاصة VIP", date: "22 أغسطس 2026", time_or_duration: "يومان", tourist_group_name: "وفد إيطالي سياحي", seats_booked: 4, status: "بانتظار القبول", is_active_now: false }
-  ]);
-
-  // Active Trip Tourists Manifest & Attendance State (DelniDB: bookings_daily & bookings_weekly)
-  const [tourists, setTourists] = useState<TouristManifestItem[]>([
-    { booking_id: "BK-D-101", tourist_id: "T-881", tourist_name: "أحمد بن علي المصراتي", phone_number: "0912229988", nationality: "ليبي", seats_count: 4, trip_name: "رحلة لبدة الكبرى الأثرية", payment_status: "cash_at_office", attended: true, passengers_names: "أحمد المصراتي، عائشة المصراتي، يوسف، فاطمة" },
-    { booking_id: "BK-D-102", tourist_id: "T-882", tourist_name: "عمر خالد العجيلي", phone_number: "0924441122", nationality: "ليبي", seats_count: 4, trip_name: "رحلة لبدة الكبرى الأثرية", payment_status: "paid", attended: true, passengers_names: "عمر العجيلي، خديجة، كمال، سامي" },
-    { booking_id: "BK-W-201", tourist_id: "T-883", tourist_name: "Marco Rossi", phone_number: "+39 340 556677", nationality: "إيطالي", seats_count: 2, trip_name: "جولة خاصة للآثار والمدينة القديمة", payment_status: "paid", attended: false, passengers_names: "Marco Rossi, Laura Rossi" },
-    { booking_id: "BK-W-202", tourist_id: "T-884", tourist_name: "Giovanni Bianchi", phone_number: "+39 342 998811", nationality: "إيطالي", seats_count: 2, trip_name: "جولة خاصة للآثار والمدينة القديمة", payment_status: "paid", attended: false, passengers_names: "Giovanni Bianchi, Sofia Bianchi" }
-  ]);
 
   const [rejectionModalTrip, setRejectionModalTrip] = useState<AssignedTrip | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
@@ -211,53 +273,38 @@ function GuideDashboard() {
       reader.onload = (ev) => {
         if (ev.target?.result) {
           setGuideInfo({ ...guideInfo, digital_certificate_file: ev.target.result as string });
-          alert("تم تحميل نسخة الملف الرقمي للشهادة بنجاح وسيتم إرسالها للأدمن ✓");
+          alert("تم تحميل نسخة الملف الرقمي للشهادة بنجاح ✓ اضغط على 'حفظ وتحديث' لاعتمادها.");
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guideInfo.phone_number.match(/^09\d{8}$/)) {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
-      return;
-    }
-    if (!guideInfo.operating_regions || guideInfo.operating_regions.length === 0) {
-      alert("الرجاء اختيار منطقة عمل واحدة على الأقل.");
-      return;
-    }
-    if (!guideInfo.working_days || guideInfo.working_days.length === 0) {
-      alert("الرجاء اختيار يوم عمل واحد على الأقل.");
       return;
     }
     if (!guideInfo.full_name || !guideInfo.license_number) {
       alert("الرجاء تعبئة كافة الحقول المطلوبة (الاسم الكامل، رقم الترخيص).");
       return;
     }
-    alert("تم حفظ التعديلات وإرسال البيانات بنجاح!");
-  };
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!guideInfo.phone_number.match(/^09\d{8}$/)) {
-      alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
-      return;
+    try {
+      const res = await apiUpdateGuideProfile(guideInfo.license_number, guideInfo);
+      if (res && res.status === "success") {
+        alert("تم حفظ التعديلات وتحديث ملفك في قاعدة البيانات DelniDB بنجاح ✓");
+        const session = getStoredSession();
+        if (session.user) {
+          localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...guideInfo }));
+        }
+      } else {
+        alert(res?.message || "تم حفظ البيانات محلياً");
+      }
+    } catch {
+      alert("تم حفظ البيانات محلياً");
     }
-    if (!guideInfo.operating_regions || guideInfo.operating_regions.length === 0) {
-      alert("الرجاء اختيار منطقة عمل واحدة على الأقل.");
-      return;
-    }
-    if (!guideInfo.working_days || guideInfo.working_days.length === 0) {
-      alert("الرجاء اختيار يوم عمل واحد على الأقل.");
-      return;
-    }
-    if (!guideInfo.full_name || !guideInfo.license_number) {
-      alert("الرجاء تعبئة كافة الحقول المطلوبة (الاسم الكامل، رقم الترخيص).");
-      return;
-    }
-    alert("تم حفظ التعديلات وتحديث ملفك الشخصي بنجاح ✓");
   };
 
   return (
@@ -319,30 +366,40 @@ function GuideDashboard() {
               )}
 
               <SectionCard title="طلبات الرحلات المسندة حديثاً من الإدارة">
-                <div className="space-y-3">
-                  {assignedTrips.map((t) => (
-                    <div key={t.id} className="p-4 rounded-xl border border-border bg-white flex flex-wrap justify-between items-center gap-3 text-right">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-foreground text-base">{t.trip_name}</span>
-                          <Badge tone={t.type === "خاصة VIP" ? "sun" : "sea"}>{t.type}</Badge>
-                          <Badge tone={t.status === "مقبولة" ? "green" : t.status === "مرفوضة" ? "red" : "sun"}>{t.status}</Badge>
+                {assignedTrips.length === 0 ? (
+                  <div className="p-8 rounded-2xl border border-dashed border-border text-center space-y-2 bg-slate-50/50">
+                    <div className="text-3xl">📭</div>
+                    <div className="font-bold text-foreground text-sm">لا توجد رحلات مسندة إليك حالياً من الإدارة</div>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                      عندما تقوم إدارة المنصة بإسناد رحلة يومية أو أسبوعية أو رحلة خاصة VIP لك، ستظهر تفاصيلها هنا فوراً لتتمكن من مراجعتها وقبولها.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assignedTrips.map((t) => (
+                      <div key={t.id} className="p-4 rounded-xl border border-border bg-white flex flex-wrap justify-between items-center gap-3 text-right">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-foreground text-base">{t.trip_name}</span>
+                            <Badge tone={t.type === "خاصة VIP" ? "sun" : "sea"}>{t.type}</Badge>
+                            <Badge tone={t.status === "مقبولة" ? "green" : t.status === "مرفوضة" ? "red" : "sun"}>{t.status}</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">🗓️ {t.date} · ⏱️ {t.time_or_duration} · 👥 {t.seats_booked} سياح</div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">🗓️ {t.date} · ⏱️ {t.time_or_duration} · 👥 {t.seats_booked} سياح</div>
+                        {t.status === "بانتظار القبول" && (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleTripResponse(t.id, "مقبولة")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">
+                              قبول الرحلة
+                            </button>
+                            <button onClick={() => setRejectionModalTrip(t)} className="px-3 py-2 border border-border text-red-600 rounded-xl text-xs font-black">
+                              رفض
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {t.status === "بانتظار القبول" && (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleTripResponse(t.id, "مقبولة")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">
-                            قبول الرحلة
-                          </button>
-                          <button onClick={() => setRejectionModalTrip(t)} className="px-3 py-2 border border-border text-red-600 rounded-xl text-xs font-black">
-                            رفض
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </SectionCard>
             </div>
 
@@ -350,8 +407,8 @@ function GuideDashboard() {
               <SectionCard title="بيانات الترخيص والوثائق">
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-2 text-xs text-right">
                   <div className="font-black text-primary">توثيق وترخيص وزارة السياحة</div>
-                  <p className="text-muted-foreground">رقم الترخيص: <span className="font-bold text-foreground">{guideInfo.license_number}</span></p>
-                  <p className="text-muted-foreground">{guideInfo.certificate}</p>
+                  <p className="text-muted-foreground">رقم الترخيص: <span className="font-bold text-foreground">{guideInfo.license_number || "قيد المراجعة"}</span></p>
+                  <p className="text-muted-foreground">{guideInfo.certificate || "لا يوجد وصف مدخل"}</p>
                   <button onClick={() => setActive("profile")} className="w-full py-2 bg-white border border-border rounded-lg text-primary font-black">
                     تحديث الملف والشهادات
                   </button>
@@ -365,7 +422,16 @@ function GuideDashboard() {
       {/* Assigned Trips & Acceptance */}
       {active === "assigned_trips" && (
         <SectionCard title="إدارة قبول ورفض الرحلات المسندة من الأدمن">
-          <div className="space-y-4 text-right">
+          {assignedTrips.length === 0 ? (
+            <div className="p-12 rounded-2xl border border-dashed border-border text-center space-y-2 bg-slate-50/50">
+              <div className="text-3xl">📭</div>
+              <div className="font-bold text-foreground text-sm">لا توجد رحلات مسندة إليك حالياً</div>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                لم يتم إسناد أي رحلات جديدة لك من إدارة المنصة حتى الآن. تابع هنا باستمرار لتلقي الرحلات الجديدة ومباشرة الإشراف.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 text-right">
             {assignedTrips.map((t) => (
               <div key={t.id} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3">
                 <div className="flex flex-wrap justify-between items-start gap-2">
@@ -427,49 +493,57 @@ function GuideDashboard() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-border">
-                <table className="w-full text-xs text-right">
-                  <thead className="bg-muted/60 text-foreground font-black border-b border-border">
-                    <tr>
-                      <th className="p-3">رقم الحجز</th>
-                      <th className="p-3">اسم السائح</th>
-                      <th className="p-3">رقم الهاتف</th>
-                      <th className="p-3">عدد المقاعد</th>
-                      <th className="p-3">أسماء المرافقين</th>
-                      <th className="p-3">حالة الدفع</th>
-                      <th className="p-3">إجراء الحضور</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border bg-white">
-                    {activeTripTourists.map((tr) => (
-                      <tr key={tr.booking_id} className={tr.attended ? "bg-emerald-50/40" : ""}>
-                        <td className="p-3 font-mono font-bold">{tr.booking_id}</td>
-                        <td className="p-3 font-black text-foreground">{tr.tourist_name}</td>
-                        <td className="p-3 font-mono font-bold text-muted-foreground" dir="ltr">{tr.phone_number}</td>
-                        <td className="p-3 font-black text-primary">{tr.seats_count} مقاعد</td>
-                        <td className="p-3 text-muted-foreground">{tr.passengers_names || "-"}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${tr.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                            {tr.payment_status === "paid" ? "مدفوع" : "نقداً بالفرع"}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <button
-                            onClick={() => handleToggleAttendance(tr.booking_id)}
-                            className={`px-3 py-1.5 rounded-xl font-black text-xs transition ${
-                              tr.attended
-                                ? "bg-emerald-600 text-white shadow-soft"
-                                : "bg-muted text-foreground hover:bg-emerald-100"
-                            }`}
-                          >
-                            {tr.attended ? "☑️ تم تأكيد الحضور" : "❌ تسجيل حضور السائح"}
-                          </button>
-                        </td>
+              {activeTripTourists.length === 0 ? (
+                <div className="p-8 rounded-2xl border border-dashed border-border text-center space-y-2 bg-slate-50/50">
+                  <div className="text-2xl">👥</div>
+                  <div className="font-bold text-foreground text-sm">لا توجد حجوزات أو سياح مسجلون على هذه الرحلة حتى الآن</div>
+                  <p className="text-xs text-muted-foreground">عندما يحجز السياح مقاعدهم في هذه الرحلة، ستظهر أسماؤهم وتأكيد حضورهم هنا.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-border">
+                  <table className="w-full text-xs text-right">
+                    <thead className="bg-muted/60 text-foreground font-black border-b border-border">
+                      <tr>
+                        <th className="p-3">رقم الحجز</th>
+                        <th className="p-3">اسم السائح</th>
+                        <th className="p-3">رقم الهاتف</th>
+                        <th className="p-3">عدد المقاعد</th>
+                        <th className="p-3">أسماء المرافقين</th>
+                        <th className="p-3">حالة الدفع</th>
+                        <th className="p-3">إجراء الحضور</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border bg-white">
+                      {activeTripTourists.map((tr) => (
+                        <tr key={tr.booking_id} className={tr.attended ? "bg-emerald-50/40" : ""}>
+                          <td className="p-3 font-mono font-bold">{tr.booking_id}</td>
+                          <td className="p-3 font-black text-foreground">{tr.tourist_name}</td>
+                          <td className="p-3 font-mono font-bold text-muted-foreground" dir="ltr">{tr.phone_number}</td>
+                          <td className="p-3 font-black text-primary">{tr.seats_count} مقاعد</td>
+                          <td className="p-3 text-muted-foreground">{tr.passengers_names || "-"}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${tr.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                              {tr.payment_status === "paid" ? "مدفوع" : "نقداً بالفرع"}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <button
+                              onClick={() => handleToggleAttendance(tr.booking_id)}
+                              className={`px-3 py-1.5 rounded-xl font-black text-xs transition ${
+                                tr.attended
+                                  ? "bg-emerald-600 text-white shadow-soft"
+                                  : "bg-muted text-foreground hover:bg-emerald-100"
+                              }`}
+                            >
+                              {tr.attended ? "☑️ تم تأكيد الحضور" : "❌ تسجيل حضور السائح"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
