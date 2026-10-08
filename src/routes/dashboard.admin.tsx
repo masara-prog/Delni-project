@@ -3,7 +3,6 @@ import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide, apiDeleteGuide } from "@/lib/api";
-import { formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -1129,33 +1128,77 @@ function AdminDashboard() {
       {/* GUIDES TAB */}
       {active === "guides" && (
         <SectionCard title="معاينة وثائق المرشدين واعتمادهم">
-          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right">📌 المرشد يرفع وثائقه من حسابه، وتصل للأدمن هنا للمراجعة والاعتماد.</div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
-            {guides.map((g) => (
-              <div key={g.license_number} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-black text-foreground text-base">{g.full_name}</h3>
-                    <div className="text-xs text-muted-foreground">رقم الرخصة: {g.license_number}</div>
-                    {g.email && <div className="text-xs text-primary font-bold mt-0.5">✉️ {g.email}</div>}
-                  </div>
-                  <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>{g.verification_status}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">{g.bio}</p>
-                <div className="text-xs space-y-1">
-                  <div className="font-bold text-foreground">📜 {g.certificate}</div>
-                  <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
-                  <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 mt-1 inline-block">
-                    💰 أجر المرشد اليومي: {g.daily_rate} د.ل / اليوم
-                  </div>
-                </div>
-                <div className="pt-2 flex gap-2">
-                  <button onClick={() => setViewingGuide(g)} className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow">معاينة الوثائق والاعتماد 📄</button>
-                  <button onClick={() => handleDeleteGuide(g.license_number)} className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
-                </div>
-              </div>
-            ))}
+          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right">
+            📌 يعرض هذا القسم فقط المرشدين الحقيقيين المسجلين في قاعدة بيانات دِلني (DelniDB).
           </div>
+          {guides.length === 0 ? (
+            <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
+              لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
+              {guides.map((g) => (
+                <div key={g.license_number} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          {g.avatar ? (
+                            <img src={g.avatar} alt={g.full_name} className="w-9 h-9 rounded-full object-cover border shrink-0" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-slate-100 grid place-items-center text-sm shrink-0 border">
+                              👤
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h3 className="font-black text-foreground text-sm truncate">{g.full_name}</h3>
+                            {g.title && <div className="text-[11px] text-primary font-bold truncate">{g.title}</div>}
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">رقم الرخصة: <span className="font-mono font-bold text-slate-800">{g.license_number}</span></div>
+                        {g.email && <div className="text-[11px] text-slate-600 font-semibold mt-0.5 truncate">✉️ {g.email}</div>}
+                        {g.phone_number && <div className="text-[11px] text-slate-600 font-semibold mt-0.5">📱 {g.phone_number}</div>}
+                      </div>
+                      <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
+                        {g.verification_status || "بانتظار التوثيق"}
+                      </Badge>
+                    </div>
+
+                    {g.bio && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{g.bio}</p>}
+
+                    <div className="text-xs space-y-1.5 pt-1 border-t border-slate-100">
+                      <div className="font-bold text-foreground truncate">📜 {g.certificate}</div>
+                      {g.certificate_name && (
+                        <div className="text-[11px] text-primary font-black bg-primary/5 px-2 py-0.5 rounded border border-primary/20 inline-flex items-center gap-1">
+                          <span>📎 ملف الشهادة المرفق:</span>
+                          <span className="underline">{g.certificate_name}</span>
+                        </div>
+                      )}
+                      <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
+                      <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block">
+                        💰 أجر المرشد اليومي: {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 flex gap-2 border-t border-slate-100">
+                    <button 
+                      onClick={() => setViewingGuide(g)} 
+                      className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
+                    >
+                      معاينة الوثائق والاعتماد 📄
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteGuide(g.license_number)} 
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-black transition cursor-pointer border border-red-200"
+                    >
+                      حذف
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       )}
 
@@ -2445,24 +2488,8 @@ function CreateTripModal({
   };
 
   const filteredGuidesList = useMemo(() => {
-    return TOUR_GUIDES_DATA.filter(g => {
-      let destMatch = false;
-      if (isDaily) {
-        destMatch = g.operatingRegions.some((r: string) => destination.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(destination));
-      } else {
-        destMatch = multiDestinations.some(d => g.operatingRegions.some((r: string) => d.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(d)));
-      }
-      let daysMatch = false;
-      if (isDaily) {
-        daysMatch = recurringDays.some(d => g.workingDays.includes(d));
-      } else {
-        daysMatch = g.workingDays.includes(weeklyDay);
-      }
-      if (isDaily && !destination) return true;
-      if (!isDaily && multiDestinations.length === 0) return true;
-      return destMatch && daysMatch;
-    });
-  }, [isDaily, destination, multiDestinations, recurringDays, weeklyDay]);
+    return guides.filter(g => g.verification_status !== "مرفوض");
+  }, [guides]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -2520,7 +2547,7 @@ function CreateTripModal({
     }
   };
 
-  const selectedGuideObj = TOUR_GUIDES_DATA.find((g) => g.licenseNumber === guideLic);
+  const selectedGuideObj = guides.find((g) => g.license_number === guideLic);
 
   return (
     <ModalShell
@@ -2760,30 +2787,33 @@ function CreateTripModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
-                لا يوجد مرشدين متاحين للوجهة والأيام المحددة.
+                لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
               </div>
             )}
             {filteredGuidesList.map((g) => (
               <div
-                key={g.licenseNumber}
-                onClick={() => setGuideLic(g.licenseNumber)}
+                key={g.license_number}
+                onClick={() => setGuideLic(g.license_number)}
                 className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guideLic === g.licenseNumber
+                  guideLic === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
                 }`}
               >
-                <img src={g.avatar} alt={g.name} className="w-10 h-10 rounded-full object-cover shadow-sm bg-slate-100" />
-                <div className="flex-1">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
+                  {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
+                </div>
+                <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-0.5">
-                    <div className="font-black text-xs text-slate-900">{g.name}</div>
-                    {guideLic === g.licenseNumber && <div className="text-amber-600 text-xs">✅</div>}
+                    <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
+                    {guideLic === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
                   </div>
-                  <div className="text-[9px] text-slate-500 font-bold mb-1">خبرة {g.experienceYears} سنوات | ⭐ {g.rating}</div>
-                  <div className="text-[9px] text-slate-500 leading-relaxed">
-                    <span className="text-amber-700 font-black">المناطق:</span> {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
-                    <br/>
-                    <span className="text-amber-700 font-black">متاح:</span> {g.workingDays.join("، ")}
+                  {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
+                  <div className="text-[9px] text-slate-500 font-bold">
+                    رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
+                  </div>
+                  <div className="text-[9px] text-emerald-700 font-black">
+                    {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
                   </div>
                 </div>
               </div>
@@ -2792,10 +2822,12 @@ function CreateTripModal({
           
           {selectedGuideObj && (
             <div className="flex items-center gap-2 mt-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
-              <img src={selectedGuideObj.avatar} alt={selectedGuideObj.name} className="w-8 h-8 rounded-full object-cover border border-emerald-300" />
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm overflow-hidden shrink-0 border border-emerald-300">
+                {selectedGuideObj.avatar ? <img src={selectedGuideObj.avatar} alt={selectedGuideObj.full_name} className="w-full h-full object-cover" /> : "👤"}
+              </div>
               <div>
-                <div className="text-xs font-black text-emerald-900">تم تعيين: {selectedGuideObj.name}</div>
-                <div className="text-[10px] text-emerald-700 font-semibold">تقييم: ⭐ {selectedGuideObj.rating} | متاح: {formatWorkingDays(selectedGuideObj.workingDays)}</div>
+                <div className="text-xs font-black text-emerald-900">تم تعيين: {selectedGuideObj.full_name} {selectedGuideObj.title && `(${selectedGuideObj.title})`}</div>
+                <div className="text-[10px] text-emerald-700 font-semibold">رقم الرخصة: {selectedGuideObj.license_number} | الأجر اليومي: {selectedGuideObj.daily_rate || selectedGuideObj.price_per_day || 150} د.ل</div>
               </div>
             </div>
           )}
@@ -2894,13 +2926,8 @@ function DailyTripEditModal({
   const [photo, setPhoto] = useState(trip.photo || "");
 
   const filteredGuidesList = useMemo(() => {
-    return TOUR_GUIDES_DATA.filter(g => {
-      const destMatch = g.operatingRegions.some((r: string) => destination.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(destination));
-      const daysMatch = recurringDays.some(d => g.workingDays.includes(d));
-      if (!destination) return true;
-      return destMatch && daysMatch;
-    });
-  }, [destination, recurringDays]);
+    return guides.filter(g => g.verification_status !== "مرفوض");
+  }, [guides]);
   const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
@@ -3017,30 +3044,33 @@ function DailyTripEditModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
-                لا يوجد مرشدين متاحين للوجهة والأيام المحددة.
+                لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
               </div>
             )}
             {filteredGuidesList.map((g) => (
               <div
-                key={g.licenseNumber}
-                onClick={() => setGuide(g.licenseNumber)}
+                key={g.license_number}
+                onClick={() => setGuide(g.license_number)}
                 className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guide === g.licenseNumber
+                  guide === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
                 }`}
               >
-                <img src={g.avatar} alt={g.name} className="w-10 h-10 rounded-full object-cover shadow-sm bg-slate-100" />
-                <div className="flex-1">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
+                  {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
+                </div>
+                <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-0.5">
-                    <div className="font-black text-xs text-slate-900">{g.name}</div>
-                    {guide === g.licenseNumber && <div className="text-amber-600 text-xs">✅</div>}
+                    <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
+                    {guide === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
                   </div>
-                  <div className="text-[9px] text-slate-500 font-bold mb-1">خبرة {g.experienceYears} سنوات | ⭐ {g.rating}</div>
-                  <div className="text-[9px] text-slate-500 leading-relaxed">
-                    <span className="text-amber-700 font-black">المناطق:</span> {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
-                    <br/>
-                    <span className="text-amber-700 font-black">متاح:</span> {g.workingDays.join("، ")}
+                  {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
+                  <div className="text-[9px] text-slate-500 font-bold">
+                    رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
+                  </div>
+                  <div className="text-[9px] text-emerald-700 font-black">
+                    {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
                   </div>
                 </div>
               </div>
@@ -3110,13 +3140,8 @@ function WeeklyTripEditModal({
   const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const filteredGuidesList = useMemo(() => {
-    return TOUR_GUIDES_DATA.filter(g => {
-      const destMatch = multiDestinations.some(d => g.operatingRegions.some((r: string) => d.includes(REGIONS_MAP[r] || r) || (REGIONS_MAP[r] || r).includes(d)));
-      const daysMatch = g.workingDays.includes(weeklyDay);
-      if (multiDestinations.length === 0) return true;
-      return destMatch && daysMatch;
-    });
-  }, [multiDestinations, weeklyDay]);
+    return guides.filter(g => g.verification_status !== "مرفوض");
+  }, [guides]);
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
@@ -3237,30 +3262,33 @@ function WeeklyTripEditModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
-                لا يوجد مرشدين متاحين للوجهة والأيام المحددة.
+                لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
               </div>
             )}
             {filteredGuidesList.map((g) => (
               <div
-                key={g.licenseNumber}
-                onClick={() => setGuide(g.licenseNumber)}
+                key={g.license_number}
+                onClick={() => setGuide(g.license_number)}
                 className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guide === g.licenseNumber
+                  guide === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
                 }`}
               >
-                <img src={g.avatar} alt={g.name} className="w-10 h-10 rounded-full object-cover shadow-sm bg-slate-100" />
-                <div className="flex-1">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
+                  {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
+                </div>
+                <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-0.5">
-                    <div className="font-black text-xs text-slate-900">{g.name}</div>
-                    {guide === g.licenseNumber && <div className="text-amber-600 text-xs">✅</div>}
+                    <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
+                    {guide === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
                   </div>
-                  <div className="text-[9px] text-slate-500 font-bold mb-1">خبرة {g.experienceYears} سنوات | ⭐ {g.rating}</div>
-                  <div className="text-[9px] text-slate-500 leading-relaxed">
-                    <span className="text-amber-700 font-black">المناطق:</span> {g.operatingRegions.map((r: string) => REGIONS_MAP[r] || r).join("، ")}
-                    <br/>
-                    <span className="text-amber-700 font-black">متاح:</span> {g.workingDays.join("، ")}
+                  {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
+                  <div className="text-[9px] text-slate-500 font-bold">
+                    رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
+                  </div>
+                  <div className="text-[9px] text-emerald-700 font-black">
+                    {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
                   </div>
                 </div>
               </div>
