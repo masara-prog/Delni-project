@@ -652,7 +652,17 @@ function GuideDashboard() {
                   <input type="file" accept=".pdf,image/*" className="hidden" onChange={handleFileUpload} />
                 </label>
                 {guideInfo.digital_certificate_file && (
-                  <span className="text-xs text-emerald-600 font-bold">✓ تم إرفاق ملف الشهادة الرقمية</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-emerald-600 font-bold">✓ تم إرفاق ملف الشهادة الرقمية</span>
+                    <button
+                      type="button"
+                      onClick={() => setGuideInfo({ ...guideInfo, digital_certificate_file: undefined })}
+                      className="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="إلغاء الملف المختار"
+                    >
+                      ✕ إلغاء الملف
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

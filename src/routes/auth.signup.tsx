@@ -10,7 +10,7 @@ import destAcacus from "@/assets/dest-acacus.jpg";
 import destTripoli from "@/assets/dest-tripoli.jpg";
 import { BackHome } from "@/components/BackHome";
 import { useLanguage } from "@/lib/i18n";
-import { MapPin, Award, FileText, Check, Camera, DollarSign } from "lucide-react";
+import { MapPin, Award, FileText, Check, Camera, DollarSign, X, Trash2, Plus } from "lucide-react";
 import { apiRegisterTourist, apiRegisterGuide } from "@/lib/api";
 
 export const Route = createFileRoute("/auth/signup")({
@@ -438,27 +438,41 @@ function SignupPage() {
                         </p>
                       </div>
                     </div>
-                    <label className="cursor-pointer shrink-0">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setGuide((g) => ({ ...g, avatar: reader.result as string }));
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                      <div className="h-9 px-3 rounded-lg border border-[#1B5A78]/30 bg-[#1B5A78]/5 hover:bg-[#1B5A78]/15 text-[#1B5A78] flex items-center gap-1.5 transition font-bold text-xs">
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>{guide.avatar ? "تغيير" : "رفع صورة"}</span>
-                      </div>
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer shrink-0">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onClick={(e) => (e.currentTarget.value = '')}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setGuide((g) => ({ ...g, avatar: reader.result as string }));
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        <div className="h-9 px-3 rounded-lg border border-[#1B5A78]/30 bg-[#1B5A78]/5 hover:bg-[#1B5A78]/15 text-[#1B5A78] flex items-center gap-1.5 transition font-bold text-xs">
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>{guide.avatar ? "تغيير" : "رفع صورة"}</span>
+                        </div>
+                      </label>
+                      {guide.avatar && (
+                        <button
+                          type="button"
+                          onClick={() => setGuide((g) => ({ ...g, avatar: "" }))}
+                          className="h-9 px-2.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          title="إلغاء الصورة المختارة"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>إلغاء</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* 2-Column: Full Name + License Number */}
@@ -704,37 +718,114 @@ function SignupPage() {
                     </div>
                   </div>
 
-                  {/* Certificate Upload */}
-                  <div>
-                    <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
-                      إرفاق صورة أو ملف الترخيص / الشهادة <span className="text-red-500">*</span>
-                    </label>
-                    <label className="block cursor-pointer">
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*,application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files ?? []).map((f) => f.name);
-                          setGuide((g) => ({ ...g, certs: [...g.certs, ...files] }));
-                        }}
-                      />
-                      <div className="p-2.5 rounded-xl border-2 border-dashed border-[#E2E8F0] bg-white hover:border-[#1B5A78] hover:bg-[#1B5A78]/5 transition flex items-center justify-center gap-2">
-                        <FileText className="w-3.5 h-3.5 text-[#1B5A78]" />
-                        <span className="font-bold text-xs text-[#0F172A]">
-                          {guide.certs.length > 0 ? `تم اختيار (${guide.certs.length}) ملفات (انقر للإضافة)` : "انقر لاختيار ملف الشهادة أو الترخيص (PDF أو صورة)"}
-                        </span>
-                      </div>
-                    </label>
-                    {guide.certs.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {guide.certs.map((c, i) => (
-                          <span key={i} className="text-[11px] text-[#0F172A] bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5 flex items-center gap-1">
-                            <FileText className="w-3 h-3 text-[#1B5A78]" />
-                            <span className="truncate max-w-[160px]">{c}</span>
+                  {/* Certificate Upload with Cancellation and Replacement */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#0F172A] text-right">
+                        إرفاق صورة أو ملف الترخيص / الشهادة <span className="text-red-500">*</span>
+                      </label>
+                      {guide.certs.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setGuide((g) => ({ ...g, certs: [] }))}
+                          className="text-[11px] text-red-600 hover:text-red-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>إلغاء وحذف الكل</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {guide.certs.length === 0 ? (
+                      <label className="block cursor-pointer">
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onClick={(e) => (e.currentTarget.value = '')}
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files ?? []).map((f) => f.name);
+                            if (files.length > 0) {
+                              setGuide((g) => ({ ...g, certs: files }));
+                            }
+                          }}
+                        />
+                        <div className="p-3.5 rounded-xl border-2 border-dashed border-[#CBD5E1] bg-white hover:border-[#1B5A78] hover:bg-[#1B5A78]/5 transition flex flex-col items-center justify-center gap-1.5 text-center group">
+                          <div className="w-9 h-9 rounded-full bg-[#1B5A78]/10 group-hover:bg-[#1B5A78]/20 text-[#1B5A78] grid place-items-center transition">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <span className="font-bold text-xs text-[#0F172A]">
+                            انقر هنا لاختيار ملف الشهادة أو الترخيص من جهازك
                           </span>
-                        ))}
+                          <span className="text-[10px] text-[#718096]">
+                            يدعم صور (JPG, PNG) أو مستندات PDF
+                          </span>
+                        </div>
+                      </label>
+                    ) : (
+                      <div className="space-y-2 p-2.5 rounded-xl border border-[#CBD5E1] bg-slate-50/70">
+                        <div className="flex flex-col gap-1.5">
+                          {guide.certs.map((c, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/30 transition"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 pr-1">
+                                <span className="w-6 h-6 rounded-md bg-[#1B5A78]/10 text-[#1B5A78] grid place-items-center shrink-0">
+                                  <FileText className="w-3.5 h-3.5" />
+                                </span>
+                                <div className="min-w-0 text-right">
+                                  <div className="text-xs font-bold text-[#0F172A] truncate max-w-[200px] sm:max-w-[260px]" title={c}>
+                                    {c}
+                                  </div>
+                                  <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                    <Check className="w-2.5 h-2.5" />
+                                    <span>جاهز للإرفاق</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setGuide((g) => ({
+                                    ...g,
+                                    certs: g.certs.filter((_, idx) => idx !== i),
+                                  }))
+                                }
+                                className="h-7 px-2.5 rounded-md bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 border border-red-200/60"
+                                title="إلغاء واختيار ملف آخر"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>إلغاء</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Button to add or replace files */}
+                        <div className="pt-1.5 flex items-center justify-between border-t border-[#E2E8F0]">
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#1B5A78]/30 hover:border-[#1B5A78] text-[#1B5A78] text-xs font-bold transition hover:bg-[#1B5A78]/5 shadow-2xs">
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>إضافة ملف إضافي</span>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*,application/pdf"
+                              className="hidden"
+                              onClick={(e) => (e.currentTarget.value = '')}
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files ?? []).map((f) => f.name);
+                                if (files.length > 0) {
+                                  setGuide((g) => ({ ...g, certs: [...g.certs, ...files] }));
+                                }
+                              }}
+                            />
+                          </label>
+                          <span className="text-[10px] text-[#718096]">
+                            يمكنك إلغاء أو استبدال أي ملف بحرية
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
