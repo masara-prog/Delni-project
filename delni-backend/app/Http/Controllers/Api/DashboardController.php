@@ -19,6 +19,7 @@ use App\Models\Hotel;
 use App\Models\RestaurantCafe;
 use App\Models\PlaceTourist;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -162,6 +163,7 @@ class DashboardController extends Controller
             ],
             'companies' => TransportationCompany::all(),
             'drivers' => Driver::with('assignedVehicle')->get(),
+            'vehicles' => Vehicle::with('company')->get(),
             'guides' => TourGuide::all(),
             'daily_trips' => DailyTrip::with('guide')->get(),
             'weekly_trips' => WeeklyTrip::with('guide')->get(),
@@ -234,7 +236,17 @@ class DashboardController extends Controller
     {
         $guide = TourGuide::where('license_number', $licenseNumber)->first();
         if ($guide) {
-            $guide->delete();
+            DB::transaction(function () use ($guide, $licenseNumber) {
+                // Detach guide from daily trips, weekly trips, and private trips to prevent foreign key errors
+                DailyTrip::where('guide_license_number', $licenseNumber)->update(['guide_license_number' => null]);
+                WeeklyTrip::where('guide_license_number', $licenseNumber)->update(['guide_license_number' => null]);
+                PrivateTrip::where('guide_license_number', $licenseNumber)->update(['guide_license_number' => null]);
+                
+                // Also clean up any reviews or tokens
+                $guide->tokens()->delete();
+                $guide->delete();
+            });
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'تم حذف المرشد السياحي بنجاح من قاعدة البيانات',

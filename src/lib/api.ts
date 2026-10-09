@@ -361,6 +361,59 @@ export async function apiDeleteGuide(licenseNumber: string) {
   return null;
 }
 
+/**
+ * Trip API functions
+ */
+export async function apiCreateDailyTrip(data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiDeleteDailyTrip(id: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiCreateWeeklyTrip(data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiDeleteWeeklyTrip(id: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 
 
 /**

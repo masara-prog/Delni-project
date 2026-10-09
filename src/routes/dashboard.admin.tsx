@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide, apiDeleteGuide } from "@/lib/api";
+import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide, apiDeleteGuide, apiCreateDailyTrip, apiDeleteDailyTrip, apiCreateWeeklyTrip, apiDeleteWeeklyTrip } from "@/lib/api";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -234,491 +234,37 @@ function AdminDashboard() {
   }, [navigate]);
 
   /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
-  const [companies, setCompanies] = useState<Company[]>([
-    {
-      id: "COM-001",
-      contract_number: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      name: "شركة الصحراء للنقل",
-      phone_number: "0911234567",
-      phone: "0911234567",
-      address: "طرابلس - طريق الشط",
-      city: "طرابلس",
-      email: "sahara@dalni.ly",
-      password: "password123",
-      pass: "password123",
-      total_vehicles: 12,
-      available_vehicles: 8,
-      available_cars: 8,
-      contract_date: "2025-01-10",
-      contract_start_date: "2025-01-10",
-      contract_end_date: "2027-01-10",
-      verification_status: "موثق",
-      status: "موثق",
-    },
-    {
-      id: "COM-002",
-      contract_number: "CN-2026-02",
-      company_name: "شركة ليبيا تور للنقل",
-      name: "شركة ليبيا تور للنقل",
-      phone_number: "0929876543",
-      phone: "0929876543",
-      address: "بنغازي - شارع دبي",
-      city: "بنغازي",
-      email: "lytour@dalni.ly",
-      password: "password456",
-      pass: "password456",
-      total_vehicles: 8,
-      available_vehicles: 5,
-      available_cars: 5,
-      contract_date: "2025-03-15",
-      contract_start_date: "2025-03-15",
-      contract_end_date: "2027-03-15",
-      verification_status: "موثق",
-      status: "موثق",
-    },
-    {
-      id: "COM-003",
-      contract_number: "CN-2026-03",
-      company_name: "شركة الوديان للنقل",
-      name: "شركة الوديان للنقل",
-      phone_number: "0914448888",
-      phone: "0914448888",
-      address: "طرابلس - قرقارش",
-      city: "طرابلس",
-      email: "wedan@dalni.ly",
-      password: "password789",
-      pass: "password789",
-      total_vehicles: 5,
-      available_vehicles: 3,
-      available_cars: 3,
-      contract_date: "2026-06-01",
-      contract_start_date: "2026-06-01",
-      contract_end_date: "2028-06-01",
-      verification_status: "بانتظار",
-      status: "بانتظار",
-    },
-  ]);
-
-  const [drivers, setDrivers] = useState<Driver[]>([
-    {
-      driver_license_number: "LB-88291",
-      full_name: "علي التارقي",
-      phone_number: "0912223344",
-      national_id_or_passport: "119900223344",
-      license_date_valid: "2029-12-10",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "طرابلس 4517",
-      email: "ali@dalni.ly",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 8,
-      company_name: "شركة الصحراء للنقل",
-    },
-    {
-      driver_license_number: "LB-77452",
-      full_name: "مفتاح الفزاني",
-      phone_number: "0923334455",
-      national_id_or_passport: "119850334455",
-      license_date_valid: "2028-05-14",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "طرابلس 8291",
-      email: "miftah@dalni.ly",
-      account_status: "نشط",
-      operational_status: "في رحلة",
-      experience_years: 6,
-      company_name: "شركة الصحراء للنقل",
-    },
-    {
-      driver_license_number: "LB-99381",
-      full_name: "أنور الترهوني",
-      phone_number: "0915556677",
-      national_id_or_passport: "119920112233",
-      license_date_valid: "2030-08-22",
-      contract_number: "CN-2026-02",
-      assigned_vehicle_plate: "بنغازي 3382",
-      email: "anwar@dalni.ly",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 9,
-      company_name: "شركة ليبيا تور للنقل",
-    },
-  ]);
-
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
-
-  /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
-  const [vehicles] = useState<Vehicle[]>([
-    {
-      plate_number: "طرابلس 4517",
-      contract_number: "CN-2026-01",
-      company_id: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      vehicle_type: "حافلة سياحية Mercedes Benz 50 مقعد",
-      seating_capacity: 50,
-      capacity: 50,
-      daily_rate: 650,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-    {
-      plate_number: "طرابلس 8291",
-      contract_number: "CN-2026-01",
-      company_id: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      vehicle_type: "ميني باص Toyota 25 مقعد",
-      seating_capacity: 25,
-      capacity: 25,
-      daily_rate: 450,
-      vehicle_status: "في رحلة",
-      status: "في رحلة",
-    },
-    {
-      plate_number: "بنغازي 3382",
-      contract_number: "CN-2026-02",
-      company_id: "CN-2026-02",
-      company_name: "شركة ليبيا تور للنقل",
-      vehicle_type: "حافلة فاخرة Scania 50 مقعد",
-      seating_capacity: 50,
-      capacity: 50,
-      daily_rate: 750,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-    {
-      plate_number: "طرابلس 1122",
-      contract_number: "CN-2026-01",
-      company_id: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      vehicle_type: "سيارة دفع رباعي Toyota Land Cruiser",
-      seating_capacity: 6,
-      capacity: 6,
-      daily_rate: 350,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-    {
-      plate_number: "سبها 9944",
-      contract_number: "CN-2026-03",
-      company_id: "CN-2026-03",
-      company_name: "شركة الوديان للنقل",
-      vehicle_type: "حافلة متوسطة Hyundai 25 مقعد",
-      seating_capacity: 25,
-      capacity: 25,
-      daily_rate: 400,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-  ]);
-
-  /* DelniDB daily_trips */
-  const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([
-    {
-      daily_trip_id: "DT-101",
-      id: "DT-101",
-      trip_title: "جولة لبدة الكبرى اليومية",
-      title: "جولة لبدة الكبرى اليومية",
-      description: "زيارة الآثار الرومانية والمتحف في الخمس",
-      price_per_seat: 120,
-      max_capacity: 50,
-      available_seats: 38,
-      bookings_count: 148,
-      rating_avg: 4.9,
-      guide_license_number: "G-9901",
-      guide_license: "G-9901",
-      vehicle_plates: ["طرابلس 4517"],
-      is_active: true,
-      photo: "/assets/ai_ruins.jpg",
-      departure_city: "طرابلس",
-      destination_city: "الخمس",
-      destination: "لبدة الكبرى",
-      recurring_days: "الأحد,الأربعاء",
-      bus_capacity: 50,
-    },
-    {
-      daily_trip_id: "DT-102",
-      id: "DT-102",
-      trip_title: "رحلة صبراتة الأثرية",
-      title: "رحلة صبراتة الأثرية",
-      description: "استكشاف المسرح الروماني والشاطئ",
-      price_per_seat: 100,
-      max_capacity: 25,
-      available_seats: 17,
-      bookings_count: 96,
-      rating_avg: 4.7,
-      guide_license_number: "G-9901",
-      guide_license: "G-9901",
-      vehicle_plates: ["طرابلس 8291"],
-      is_active: true,
-      photo: "",
-      departure_city: "طرابلس",
-      destination_city: "صبراتة",
-      destination: "صبراتة",
-      recurring_days: "السبت,الثلاثاء",
-      bus_capacity: 25,
-    },
-  ]);
-
-  /* DelniDB weekly_trips */
-  const [weeklyTrips, setWeeklyTrips] = useState<WeeklyTrip[]>([
-    {
-      weekly_trip_id: "WT-201",
-      id: "WT-201",
-      trip_title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)",
-      title: "مغامرة أوباري وبحيرات الصحراء (6 أيام)",
-      start_date: "2026-08-01",
-      end_date: "2026-08-07",
-      seat_per_price: 1850,
-      max_capacity: 25,
-      available_seats: 12,
-      bookings_count: 210,
-      rating_avg: 4.95,
-      trip_description: "استكشاف بحيرات أم الماء وقبرعون وتجربة التخييم الليلي",
-      guide_license_number: "G-9901",
-      guide_license: "G-9901",
-      vehicle_plates: ["طرابلس 8291"],
-      is_active: true,
-      photo: "/assets/ai_ghadames.jpg",
-      departure_city: "طرابلس",
-      destination_region: "أوباري",
-      destination: "أوباري",
-      weekly_day: "الجمعة",
-      bus_capacity: 25,
-    },
-    {
-      weekly_trip_id: "WT-202",
-      id: "WT-202",
-      trip_title: "جولة الواحات وغدامس التراثية (4 أيام)",
-      title: "جولة الواحات وغدامس التراثية (4 أيام)",
-      start_date: "2026-08-10",
-      end_date: "2026-08-14",
-      seat_per_price: 1400,
-      max_capacity: 50,
-      available_seats: 26,
-      bookings_count: 134,
-      rating_avg: 4.8,
-      trip_description: "زيارة المدينة القديمة في غدامس والمنازل التقليدية والواحة",
-      guide_license_number: "G-9903",
-      guide_license: "G-9903",
-      vehicle_plates: ["بنغازي 3382"],
-      is_active: true,
-      photo: "/assets/ai_ghadames.jpg",
-      departure_city: "طرابلس",
-      destination_region: "غدامس",
-      destination: "غدامس",
-      weekly_day: "الخميس",
-      bus_capacity: 50,
-    },
-  ]);
-
-  /* DelniDB private_trips */
-  const [privateTrips, setPrivateTrips] = useState<PrivateTripRequest[]>([
-    {
-      private_trip_id: "PT-501",
-      customer_name: "عائلة طارق بن عيسى",
-      customer_phone: "0918887766",
-      customer_description: "طلب رحلة خاصة لكبار الشخصيات إلى شحات ورأس الهلال مع إقامة في فنادق 5 نجوم",
-      preferred_start_date: "2026-08-05",
-      duration_days: 5,
-      number_of_companions: 6,
-      status_order: "قيد الدراسة",
-    },
-    {
-      private_trip_id: "PT-502",
-      customer_name: "مجموعة سياح إيطاليين",
-      customer_phone: "+39 320 112233",
-      customer_description: "جولة تصوير صحراوي خاصة ببحيرات أوباري والجبال",
-      preferred_start_date: "2026-08-12",
-      duration_days: 7,
-      number_of_companions: 4,
-      status_order: "مؤكدة",
-      quoted_price: 6500,
-      admin_itinerary_plan: "اليوم 1: طرابلس-سبها، اليوم 2-5: البحيرات والسفاري، اليوم 6-7: العودة",
-      guide_license_number: "G-9901",
-      assigned_guide: "G-9901",
-      assigned_guide_license: "G-9901",
-      assigned_vehicle: "طرابلس 8291",
-      assigned_vehicle_plate: "طرابلس 8291",
-    },
-  ]);
-
-  /* DelniDB bookings_daily & bookings_weekly */
-  const [dailyBookings, setDailyBookings] = useState<BookingDaily[]>([
-    {
-      booking_daily_id: "BKD-9001",
-      tourist_id: "T-1001",
-      daily_trip_id: "DT-101",
-      booking_date: "2026-08-01 10:00:00",
-      number_of_seats: 2,
-      total_price: 240,
-      booking_status: "مؤكدة",
-      payment_status: "paid",
-      attended: true,
-      passengers_names: "محمد سالم، مروان سالم",
-    },
-    {
-      booking_daily_id: "BKD-9002",
-      tourist_id: "T-1002",
-      daily_trip_id: "DT-102",
-      booking_date: "2026-08-02 14:30:00",
-      number_of_seats: 1,
-      total_price: 100,
-      booking_status: "بانتظار التأكيد",
-      payment_status: "unpaid",
-      attended: false,
-      passengers_names: "أحمد بن عثمان",
-    },
-  ]);
-
-  const [weeklyBookings, setWeeklyBookings] = useState<BookingWeekly[]>([
-    {
-      booking_weekly_id: "BKW-4001",
-      tourist_id: "T-1001",
-      weekly_trip_id: "WT-201",
-      booking_date: "2026-08-01 11:15:00",
-      number_of_seats: 2,
-      total_price: 3700,
-      booking_status: "مؤكدة",
-      payment_status: "paid",
-      attended: false,
-      passengers_names: "محمد سالم، عائشة سالم",
-    },
-  ]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([]);
+  const [weeklyTrips, setWeeklyTrips] = useState<WeeklyTrip[]>([]);
+  const [privateTrips, setPrivateTrips] = useState<PrivateTripRequest[]>([]);
+  const [dailyBookings, setDailyBookings] = useState<BookingDaily[]>([]);
+  const [weeklyBookings, setWeeklyBookings] = useState<BookingWeekly[]>([]);
 
   /* DelniDB hotels */
-  const [hotels, setHotels] = useState<Hotel[]>([
-    { id: "H-01", name: "فندق الفندق الكبير طرابلس", city: "طرابلس", address: "شارع الفتح - وسط المدينة", phone: "0213334455", stars: 5, bookings_count: 312, rating_avg: 4.85, partnership_status: "نشط", hotel_photo_1: "/assets/ai_city.jpg", hotel_photo_2: "/assets/ai_city.jpg", hotel_photo_3: "/assets/ai_city.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg", description: "فندق 5 نجوم فاخر مطل على الشاطئ ومحاط بالمعالم الأثرية والمدينة القديمة، يضم أجنحة ملكية ومطاعم متعددة.", google_maps_url: "https://maps.google.com/?q=32.897,13.181", working_hours: "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)" },
-    { id: "H-02", name: "فندق عين الفرس غدامس", city: "غدامس", address: "وسط غدامس القديمة", phone: "0472221100", stars: 4, bookings_count: 184, rating_avg: 4.75, partnership_status: "نشط", hotel_photo_1: "/assets/ai_ghadames.jpg", hotel_photo_2: "/assets/ai_ghadames.jpg", hotel_photo_3: "/assets/ai_ghadames.jpg", hotel_photo_4: "/assets/ai_ghadames.jpg", hotel_photo_5: "/assets/ai_ghadames.jpg", description: "فندق تراثي صحراوي مميز بمدينة غدامس القديمة يمتزج مع الطبيعة المعمارية التقليدية للواحة.", google_maps_url: "https://maps.google.com/?q=30.133,9.500", working_hours: "24 ساعة (استقبال متاح طوال اليوم)" },
-  ]);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
 
   /* DelniDB restaurants_cafes */
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([
-    { id: "R-01", name: "مطعم السراياء التراثي", type: "مأكولات شعبية ليبية", city: "طرابلس", address: "المدينة القديمة - زنقة المفتي", phone: "0919991122", rating_avg: 4.9, facility_image_1: "/assets/ai_ruins.jpg", facility_image_2: "/assets/ai_ruins.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg", description: "أشهر مطعم للمأكولات الشعبية الليبية في قلب طرابلس القديمة (كسكسي، بازين، رشتة، شربة طرابلسية).", google_maps_url: "https://maps.google.com/?q=32.895,13.180", working_hours: "09:00 صباحاً — 12:00 ليلاً" },
-    { id: "R-02", name: "مقهى ومطعم النخيل الصحراوي", type: "مشويات ومشروبات", city: "سبها", address: "طريق المطار", phone: "0928883344", rating_avg: 4.65, facility_image_1: "/assets/ai_food.jpg", facility_image_2: "/assets/ai_city.jpg", facility_image_3: "/assets/ai_ruins.jpg", facility_image_4: "/assets/ai_ruins.jpg", facility_image_5: "/assets/ai_ruins.jpg", description: "مقهى ومطعم عائلي مميز بوجبات المشويات والشاي الصحراوي في أجواء واحات سبها الساحرة.", google_maps_url: "https://maps.google.com/?q=27.037,14.428", working_hours: "10:00 صباحاً — 01:00 فجراً" },
-  ]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
   /* DelniDB places_tourist */
-  const [attractions, setAttractions] = useState<Attraction[]>([
-    {
-      place_id: "A-01",
-      id: "A-01",
-      place_name: "لبدة الكبرى (Leptis Magna)",
-      name: "لبدة الكبرى (Leptis Magna)",
-      city: "الخمس",
-      category: "آثار رومانية عالمية",
-      description: "واحدة من أروع وأكمل المدن الرومانية في حوض المتوسط.",
-      place_image: "/assets/ai_ruins.jpg",
-      visitors_count: 850,
-      latitude: 32.6381,
-      longitude: 14.2936,
-      google_maps_url: "https://maps.google.com/?q=32.6381,14.2936",
-      is_unesco: true,
-      unesco_year: 1982,
-    },
-    {
-      place_id: "A-02",
-      id: "A-02",
-      place_name: "بحيرة أم الماء - أوباري",
-      name: "بحيرة أم الماء - أوباري",
-      city: "أوباري",
-      category: "طبيعة وصحراء",
-      description: "بحيرة مالحة ساحرة محاطة بالكثبان الرملية العالية والنخيل.",
-      place_image: "/assets/ai_desert.jpg",
-      visitors_count: 620,
-      latitude: 26.5677,
-      longitude: 12.8791,
-      google_maps_url: "https://maps.google.com/?q=26.5677,12.8791",
-      is_unesco: false,
-    },
-  ]);
+  const [attractions, setAttractions] = useState<Attraction[]>([]);
 
-  const [reviews, setReviews] = useState<ItemReview[]>([
-    { id: "REV-1", target_type: "رحلة أسبوعية", target_name: "مغامرة أوباري وبحيرات الصحراء", tourist_name: "مها العزابي", stars_rating: 5, comment_text: "تنظيم مالي ممتاز جداً والمرشد سالم كان خلوقاً وعلى دراية بالصحراء.", created_at: "أمس" },
-    { id: "REV-2", target_type: "فندق", target_name: "فندق الفندق الكبير طرابلس", tourist_name: "طارق بن عيسى", stars_rating: 5, comment_text: "إقامة فاخرة ونظافة عالية وإطلالة رائعة على طريق الشط.", created_at: "قبل يومين" },
-    { id: "REV-3", target_type: "مطعم/مقهى", target_name: "مطعم السراياء التراثي", tourist_name: "Giovanni Rossi", stars_rating: 5, comment_text: "أفضل مأكولات شعبية ليبية في المدينة القديمة طرابلس!", created_at: "قبل 3 أيام" },
-  ]);
-
-  const [tickets, setTickets] = useState<SupportTicket[]>([
-    { id: "TK-101", user_name: "أحمد المصراتي", user_role: "سائح", subject: "استفسار عن تأكيد رحلة أوباري", message: "هل تشمل الرحلة وجبات الطعام اليومية والمبيت في الخيام؟", status: "جديد", created_at: "قبل 15 دقيقة" },
-    { id: "TK-102", user_name: "مفتاح الفزاني", user_role: "سائق", subject: "تغيير خط سير رحلة غدامس", message: "يرجى تعديل استراحة الطريق إلى منطقة جادو بدلاً من رقدالين.", status: "تم الرد", reply: "تمت الموافقة وتحديث خط السير بالتنسيق مع شركة النقل.", created_at: "قبل ساعتين" },
-  ]);
+  const [reviews, setReviews] = useState<ItemReview[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
   /* ---- CHATBOT STATE ---- */
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    {
-      id: "CS-1", user_name: "أحمد محمد", user_type: "سائح", last_message: "ما هي أفضل رحلة للصحراء؟", time: "منذ 5 دق", unread: true,
-      messages: [
-        { id: "m1", from: "user", text: "السلام عليكم، ما هي أفضل رحلة للصحراء؟", time: "10:30" },
-        { id: "m2", from: "bot", text: "وعليكم السلام! 🌟 أنصحك برحلة مغامرة أوباري وبحيرات الصحراء (6 أيام) - السعر 1850 د.ل للشخص وتشمل مرشد متخصص وإقامة في المخيمات الصحراوية الفاخرة. هل تريد معرفة المزيد؟", time: "10:30" },
-        { id: "m3", from: "user", text: "نعم! ما هي المواعيد المتاحة؟", time: "10:32" },
-        { id: "m4", from: "bot", text: "الرحلة القادمة تنطلق في 2026-08-10 وتنتهي 2026-08-16. تبقى 4 مقاعد فقط! يمكنك الحجز من صفحة الرحلات مباشرة. 🎒", time: "10:32" },
-      ]
-    },
-    {
-      id: "CS-2", user_name: "Laura Martinez", user_type: "زائر", last_message: "What trips do you offer?", time: "منذ 12 دق", unread: true,
-      messages: [
-        { id: "m1", from: "user", text: "Hello! What trips do you offer?", time: "10:18" },
-        { id: "m2", from: "bot", text: "Hello! 👋 Welcome to Dalni - Libya's premier tourism platform! We offer daily trips to historical sites like Leptis Magna, weekly desert adventures to Ubari lakes, and private VIP tours. Which interests you?", time: "10:18" },
-      ]
-    },
-  ]);
-  const [activeChatId, setActiveChatId] = useState<string | null>("CS-1");
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [botInput, setBotInput] = useState("");
 
   /* ---- DelniDB OFFERS STATE (offers_daily_trips, offers_weekly_trips, offers_facilities) ---- */
-  const [dailyOffers, setDailyOffers] = useState<DailyOffer[]>([
-    {
-      offer_daily_id: "DO-001",
-      id: "DO-001",
-      offer_title: "خصم بداية الموسم السياحي",
-      title_offer: "خصم بداية الموسم السياحي",
-      description: "احتفالاً ببداية الموسم، استمتع بخصم 25% على رحلة لبدة الكبرى",
-      percent_discount: 25,
-      offer_image_url: "/assets/ai_ruins.jpg",
-      url_image_offer: "/assets/ai_ruins.jpg",
-      daily_trip_id: "DT-101",
-      start_date: "2026-08-01",
-      date_start: "2026-08-01",
-      end_date: "2026-08-31",
-      date_end: "2026-08-31",
-      badge: "عرض الصيف",
-    },
-  ]);
-  const [weeklyOffers, setWeeklyOffers] = useState<WeeklyOffer[]>([
-    {
-      offer_weekly_id: "WO-001",
-      id: "WO-001",
-      offer_title: "عرض الصيف الساحر",
-      description: "خصم 15% على رحلة أوباري الصحراوية لأول 10 حاجزين",
-      discount_percentage: 15,
-      percent_discount: 15,
-      offer_image_url: "/assets/ai_desert.jpg",
-      weekly_trip_id: "WT-201",
-      start_date: "2026-08-01",
-      date_start: "2026-08-01",
-      end_date: "2026-09-15",
-      date_end: "2026-09-15",
-      badge: "خصم حصري",
-    },
-  ]);
-  const [facilityOffers, setFacilityOffers] = useState<FacilityOffer[]>([
-    {
-      facility_offer_id: "FO-001",
-      id: "FO-001",
-      offer_title: "عشاء ترحيبي مجاني",
-      title_offer: "عشاء ترحيبي مجاني",
-      description: "احصل على وجبة عشاء مجانية عند حجزك وجبة رئيسية من مطعم السراياء",
-      discount_percentage: 30,
-      percent_discount: 30,
-      offer_image_url: "/assets/ai_city.jpg",
-      facility_id: "R-01",
-      start_date: "2026-08-01",
-      date_start: "2026-08-01",
-      end_date: "2026-08-31",
-      date_end: "2026-08-31",
-      badge: "ضيافة خاصة",
-    },
-  ]);
+  const [dailyOffers, setDailyOffers] = useState<DailyOffer[]>([]);
+  const [weeklyOffers, setWeeklyOffers] = useState<WeeklyOffer[]>([]);
+  const [facilityOffers, setFacilityOffers] = useState<FacilityOffer[]>([]);
 
   /* ---- MODAL STATES ---- */
   const [showAddCompany, setShowAddCompany] = useState(false);
@@ -758,17 +304,22 @@ function AdminDashboard() {
 
   const handleDeleteGuide = async (lic: string) => {
     if (!confirm(`هل أنت متأكد من حذف المرشد السياحي (رخصة: ${lic}) نهائياً من قاعدة البيانات؟`)) return;
-    setGuides(prev => prev.filter(g => g.license_number !== lic));
     try {
-      await apiDeleteGuide(lic);
-    } catch {}
+      const res = await apiDeleteGuide(lic);
+      setGuides(prev => prev.filter(g => g.license_number !== lic));
+      alert(res.message || "تم حذف المرشد السياحي بنجاح من قاعدة البيانات");
+    } catch (err: any) {
+      alert("حدث خطأ أثناء حذف المرشد: " + (err.message || "فشلت العملية"));
+    }
   };
 
   // Fetch live guides and admin data from DelniDB
   useEffect(() => {
     async function fetchAdminData() {
       const res = await apiGetAdminDashboard();
-      if (res && res.guides) {
+      if (!res) return;
+
+      if (res.guides) {
         const dbGuides: Guide[] = res.guides.map((g: any) => ({
           license_number: g.license_number,
           full_name: g.full_name,
@@ -794,18 +345,222 @@ function AdminDashboard() {
         }));
         setGuides(dbGuides);
       }
+
+      if (res.daily_trips) {
+        const mappedDaily = res.daily_trips.map((d: any) => ({
+          id: d.daily_trip_id,
+          daily_trip_id: d.daily_trip_id,
+          title: d.trip_title,
+          trip_title: d.trip_title,
+          description: d.description || "",
+          price_per_seat: Number(d.price_per_seat) || 0,
+          departure_city: d.departure_city || "طرابلس",
+          destination: d.destination_city || "",
+          destination_city: d.destination_city || "",
+          max_capacity: d.max_capacity || 25,
+          available_seats: d.available_seats || d.max_capacity || 25,
+          bus_capacity: d.max_capacity || 25,
+          bookings_count: 0,
+          rating_avg: 5.0,
+          recurring_days: d.recurring_days || "السبت,الثلاثاء",
+          guide_license: d.guide_license_number || "",
+          guide_license_number: d.guide_license_number || "",
+          photo: d.photo || "/assets/ai_ruins.jpg",
+          is_active: d.is_active !== false,
+        }));
+        setDailyTrips(mappedDaily);
+      }
+
+      if (res.weekly_trips) {
+        const mappedWeekly = res.weekly_trips.map((w: any) => ({
+          id: w.weekly_trip_id,
+          weekly_trip_id: w.weekly_trip_id,
+          title: w.trip_title,
+          trip_title: w.trip_title,
+          description: w.trip_description || "",
+          trip_description: w.trip_description || "",
+          seat_per_price: Number(w.seat_per_price) || 0,
+          departure_city: w.departure_city || "طرابلس",
+          destination: w.destination_region || "",
+          destination_region: w.destination_region || "",
+          max_capacity: w.max_capacity || 25,
+          available_seats: w.available_seats || w.max_capacity || 25,
+          bus_capacity: w.max_capacity || 25,
+          bookings_count: 0,
+          rating_avg: 5.0,
+          start_date: w.start_date || "",
+          end_date: w.end_date || "",
+          weekly_day: "الجمعة",
+          guide_license: w.guide_license_number || "",
+          guide_license_number: w.guide_license_number || "",
+          photo: w.photo || "/assets/ai_ghadames.jpg",
+          is_active: w.is_active !== false,
+        }));
+        setWeeklyTrips(mappedWeekly);
+      }
+
+      if (res.companies && Array.isArray(res.companies)) {
+        setCompanies(res.companies.map((c: any) => ({
+          id: c.contract_number,
+          contract_number: c.contract_number,
+          name: c.company_name,
+          company_name: c.company_name,
+          phone: c.phone_number,
+          phone_number: c.phone_number,
+          address: c.address_details || "",
+          city: c.city || "طرابلس",
+          email: c.email || "",
+          status: c.verification_status || "موثق",
+          verification_status: c.verification_status || "موثق",
+        })));
+      }
+
+      if (res.drivers && Array.isArray(res.drivers)) {
+        setDrivers(res.drivers.map((d: any) => ({
+          driver_license_number: d.driver_license_number,
+          full_name: d.full_name,
+          phone_number: d.phone_number,
+          national_id_or_passport: d.national_id || "",
+          license_date_valid: d.license_expiry_date || "",
+          contract_number: d.contract_number,
+          assigned_vehicle_plate: d.assigned_vehicle_plate || "",
+          email: d.email || "",
+          account_status: d.account_status || "نشط",
+          operational_status: d.operational_status || "متاح",
+          experience_years: d.experience_years || 5,
+          company_name: d.company?.company_name || "",
+        })));
+      }
+
+      if (res.vehicles && Array.isArray(res.vehicles)) {
+        setVehicles(res.vehicles.map((v: any) => ({
+          plate_number: v.plate_number,
+          contract_number: v.contract_number,
+          company_id: v.contract_number,
+          company_name: v.company?.company_name || "",
+          vehicle_type: v.model_name || v.vehicle_type || "حافلة سياحية",
+          seating_capacity: v.passenger_capacity || 25,
+          capacity: v.passenger_capacity || 25,
+          daily_rate: Number(v.daily_rental_rate) || 500,
+          vehicle_status: v.vehicle_status || "جاهزة",
+          status: v.vehicle_status || "جاهزة",
+        })));
+      }
+
+      if (res.private_trips && Array.isArray(res.private_trips)) {
+        setPrivateTrips(res.private_trips);
+      }
+
+      if (res.daily_bookings && Array.isArray(res.daily_bookings)) {
+        setDailyBookings(res.daily_bookings);
+      }
+
+      if (res.weekly_bookings && Array.isArray(res.weekly_bookings)) {
+        setWeeklyBookings(res.weekly_bookings);
+      }
     }
     fetchAdminData();
   }, []);
-  const handleCreateTrip = (type: "daily" | "weekly", data: any) => {
-    if (type === "daily") setDailyTrips([...dailyTrips, { daily_trip_id: `DT-${100 + dailyTrips.length + 1}`, id: `DT-${100 + dailyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
-    else setWeeklyTrips([...weeklyTrips, { weekly_trip_id: `WT-${200 + weeklyTrips.length + 1}`, id: `WT-${200 + weeklyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
+
+  const handleCreateTrip = async (type: "daily" | "weekly", data: any) => {
+    try {
+      if (type === "daily") {
+        const payload = {
+          trip_title: data.trip_title || data.title,
+          description: data.description || "",
+          price_per_seat: Number(data.price_per_seat) || 100,
+          departure_city: data.departure_city || "طرابلس",
+          destination_city: data.destination || data.destination_city || "المعلم الأثري",
+          max_capacity: Number(data.max_capacity) || 25,
+          recurring_days: data.recurring_days || "السبت,الثلاثاء",
+          guide_license_number: data.guide_license_number || data.guide_license || null,
+          photo: data.photo || "/assets/dest-leptis.jpg",
+        };
+        const res = await apiCreateDailyTrip(payload);
+        const createdTrip = res.trip || {
+          ...data,
+          daily_trip_id: `DT-${Date.now().toString().slice(-4)}`,
+          id: `DT-${Date.now().toString().slice(-4)}`,
+        };
+        setDailyTrips(prev => [
+          {
+            ...createdTrip,
+            id: createdTrip.daily_trip_id,
+            title: createdTrip.trip_title,
+            bookings_count: 0,
+            rating_avg: 5.0,
+            is_active: true,
+          },
+          ...prev,
+        ]);
+        alert("تم حفظ الرحلة اليومية بنجاح في قاعدة البيانات!");
+      } else {
+        const payload = {
+          trip_title: data.trip_title || data.title,
+          trip_description: data.trip_description || data.description || "",
+          seat_per_price: Number(data.seat_per_price) || 1200,
+          departure_city: data.departure_city || "طرابلس",
+          destination_region: data.destination || data.destination_region || "الصحراء",
+          max_capacity: Number(data.max_capacity) || 25,
+          start_date: data.start_date || undefined,
+          end_date: data.end_date || undefined,
+          guide_license_number: data.guide_license_number || data.guide_license || null,
+          photo: data.photo || "/assets/dest-ubari.jpg",
+        };
+        const res = await apiCreateWeeklyTrip(payload);
+        const createdTrip = res.trip || {
+          ...data,
+          weekly_trip_id: `WT-${Date.now().toString().slice(-4)}`,
+          id: `WT-${Date.now().toString().slice(-4)}`,
+        };
+        setWeeklyTrips(prev => [
+          {
+            ...createdTrip,
+            id: createdTrip.weekly_trip_id,
+            title: createdTrip.trip_title,
+            bookings_count: 0,
+            rating_avg: 5.0,
+            is_active: true,
+          },
+          ...prev,
+        ]);
+        alert("تم حفظ الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
+      }
+    } catch (err: any) {
+      alert("حدث خطأ أثناء حفظ الرحلة: " + (err.message || "فشل الاتصال"));
+    }
     setShowAddTrip(null);
   };
-  const handleUpdateDailyTrip = (updated: DailyTrip) => { setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === (updated.daily_trip_id || updated.id) ? updated : d)); setEditingDailyTrip(null); };
-  const handleDeleteDailyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة اليومية؟")) setDailyTrips(dailyTrips.filter(d => (d.daily_trip_id || d.id) !== id)); };
-  const handleUpdateWeeklyTrip = (updated: WeeklyTrip) => { setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === (updated.weekly_trip_id || updated.id) ? updated : w)); setEditingWeeklyTrip(null); };
-  const handleDeleteWeeklyTrip = (id: string) => { if (confirm("هل تريد حذف الرحلة الأسبوعية؟")) setWeeklyTrips(weeklyTrips.filter(w => (w.weekly_trip_id || w.id) !== id)); };
+
+  const handleUpdateDailyTrip = (updated: DailyTrip) => {
+    setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === (updated.daily_trip_id || updated.id) ? updated : d));
+    setEditingDailyTrip(null);
+  };
+
+  const handleDeleteDailyTrip = async (id: string) => {
+    if (!confirm("هل تريد حذف هذه الرحلة اليومية نهائياً من قاعدة البيانات؟")) return;
+    setDailyTrips(prev => prev.filter(d => (d.daily_trip_id || d.id) !== id));
+    try {
+      await apiDeleteDailyTrip(id);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateWeeklyTrip = (updated: WeeklyTrip) => {
+    setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === (updated.weekly_trip_id || updated.id) ? updated : w));
+    setEditingWeeklyTrip(null);
+  };
+
+  const handleDeleteWeeklyTrip = async (id: string) => {
+    if (!confirm("هل تريد حذف هذه الرحلة الأسبوعية نهائياً من قاعدة البيانات؟")) return;
+    setWeeklyTrips(prev => prev.filter(w => (w.weekly_trip_id || w.id) !== id));
+    try {
+      await apiDeleteWeeklyTrip(id);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
   const handleSavePrivate = (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => {
     setPrivateTrips(privateTrips.map(p => p.private_trip_id === id ? { ...p, status_order: status, quoted_price: price, admin_itinerary_plan: plan, assigned_guide: guide, assigned_vehicle: vehicle } : p));
     setEvaluatingPrivateTrip(null);
@@ -2442,8 +2197,8 @@ function CreateTripModal({
   const [departureCity, setDepartureCity] = useState("طرابلس");
   const [price, setPrice] = useState(isDaily ? "120" : "1650");
   const [busCapacity, setBusCapacity] = useState<25 | 50>(isDaily ? 50 : 25);
-  const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "G-9901");
-  const [selVehicles, setSelVehicles] = useState<string[]>(isDaily ? ["طرابلس 4517"] : ["طرابلس 8291"]);
+  const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "");
+  const [selVehicles, setSelVehicles] = useState<string[]>(vehicles[0]?.plate_number ? [vehicles[0].plate_number] : []);
   const [startDate, setStartDate] = useState("2026-09-01");
   const [endDate, setEndDate] = useState("2026-09-06");
   const [photo, setPhoto] = useState(isDaily ? "/assets/ai_ruins.jpg" : "/assets/ai_ghadames.jpg");

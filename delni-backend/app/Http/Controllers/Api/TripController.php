@@ -84,4 +84,94 @@ class TripController extends Controller
             'trip' => $privateTrip,
         ], 201);
     }
+
+    public function storeDailyTrip(Request $request)
+    {
+        $validated = $request->validate([
+            'trip_title' => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'price_per_seat' => 'required|numeric|min:0',
+            'departure_city' => 'nullable|string|max:50',
+            'destination_city' => 'nullable|string|max:50',
+            'max_capacity' => 'nullable|integer',
+            'recurring_days' => 'nullable|string',
+            'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
+            'photo' => 'nullable|string',
+        ]);
+
+        $newId = 'DT-' . rand(100, 999);
+        $trip = DailyTrip::create([
+            'daily_trip_id' => $newId,
+            'trip_title' => $validated['trip_title'],
+            'description' => $validated['description'] ?? null,
+            'price_per_seat' => $validated['price_per_seat'],
+            'departure_city' => $validated['departure_city'] ?? 'طرابلس',
+            'destination_city' => $validated['destination_city'] ?? 'المعلم الأثري',
+            'max_capacity' => $validated['max_capacity'] ?? 25,
+            'available_seats' => $validated['max_capacity'] ?? 25,
+            'recurring_days' => $validated['recurring_days'] ?? 'السبت,الثلاثاء',
+            'guide_license_number' => $validated['guide_license_number'] ?? null,
+            'photo' => $validated['photo'] ?? '/assets/dest-leptis.jpg',
+            'is_active' => true,
+        ]);
+
+        return response()->json(['status' => 'success', 'trip' => $trip], 201);
+    }
+
+    public function deleteDailyTrip($id)
+    {
+        $trip = DailyTrip::where('daily_trip_id', $id)->first();
+        if ($trip) {
+            $trip->bookings()->delete();
+            $trip->delete();
+            return response()->json(['status' => 'success', 'message' => 'تم حذف الرحلة اليومية']);
+        }
+        return response()->json(['status' => 'error', 'message' => 'الرحلة غير موجودة'], 404);
+    }
+
+    public function storeWeeklyTrip(Request $request)
+    {
+        $validated = $request->validate([
+            'trip_title' => 'required|string|max:100',
+            'trip_description' => 'nullable|string',
+            'seat_per_price' => 'required|numeric|min:0',
+            'departure_city' => 'nullable|string|max:50',
+            'destination_region' => 'nullable|string|max:50',
+            'max_capacity' => 'nullable|integer',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
+            'photo' => 'nullable|string',
+        ]);
+
+        $newId = 'WT-' . rand(100, 999);
+        $trip = WeeklyTrip::create([
+            'weekly_trip_id' => $newId,
+            'trip_title' => $validated['trip_title'],
+            'trip_description' => $validated['trip_description'] ?? null,
+            'seat_per_price' => $validated['seat_per_price'],
+            'departure_city' => $validated['departure_city'] ?? 'طرابلس',
+            'destination_region' => $validated['destination_region'] ?? 'الصحراء',
+            'max_capacity' => $validated['max_capacity'] ?? 25,
+            'available_seats' => $validated['max_capacity'] ?? 25,
+            'start_date' => $validated['start_date'] ?? now()->addDays(7),
+            'end_date' => $validated['end_date'] ?? now()->addDays(13),
+            'guide_license_number' => $validated['guide_license_number'] ?? null,
+            'photo' => $validated['photo'] ?? '/assets/dest-ubari.jpg',
+            'is_active' => true,
+        ]);
+
+        return response()->json(['status' => 'success', 'trip' => $trip], 201);
+    }
+
+    public function deleteWeeklyTrip($id)
+    {
+        $trip = WeeklyTrip::where('weekly_trip_id', $id)->first();
+        if ($trip) {
+            $trip->bookings()->delete();
+            $trip->delete();
+            return response()->json(['status' => 'success', 'message' => 'تم حذف الرحلة الأسبوعية']);
+        }
+        return response()->json(['status' => 'error', 'message' => 'الرحلة غير موجودة'], 404);
+    }
 }
