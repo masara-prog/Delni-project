@@ -95,9 +95,17 @@ class TripController extends Controller
             'destination_city' => 'nullable|string|max:50',
             'max_capacity' => 'nullable|integer',
             'recurring_days' => 'nullable|string',
-            'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
+            'guide_license_number' => 'nullable|string',
             'photo' => 'nullable|string',
         ]);
+
+        $guideLic = !empty($validated['guide_license_number']) ? trim($validated['guide_license_number']) : null;
+        if ($guideLic) {
+            $guideExists = TourGuide::where('license_number', $guideLic)->exists();
+            if (!$guideExists) {
+                $guideLic = null;
+            }
+        }
 
         $newId = 'DT-' . rand(100, 999);
         $trip = DailyTrip::create([
@@ -110,7 +118,7 @@ class TripController extends Controller
             'max_capacity' => $validated['max_capacity'] ?? 25,
             'available_seats' => $validated['max_capacity'] ?? 25,
             'recurring_days' => $validated['recurring_days'] ?? 'السبت,الثلاثاء',
-            'guide_license_number' => $validated['guide_license_number'] ?? null,
+            'guide_license_number' => $guideLic,
             'photo' => $validated['photo'] ?? '/assets/dest-leptis.jpg',
             'is_active' => true,
         ]);
@@ -140,9 +148,17 @@ class TripController extends Controller
             'max_capacity' => 'nullable|integer',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
-            'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
+            'guide_license_number' => 'nullable|string',
             'photo' => 'nullable|string',
         ]);
+
+        $guideLic = !empty($validated['guide_license_number']) ? trim($validated['guide_license_number']) : null;
+        if ($guideLic) {
+            $guideExists = TourGuide::where('license_number', $guideLic)->exists();
+            if (!$guideExists) {
+                $guideLic = null;
+            }
+        }
 
         $newId = 'WT-' . rand(100, 999);
         $trip = WeeklyTrip::create([
@@ -156,7 +172,7 @@ class TripController extends Controller
             'available_seats' => $validated['max_capacity'] ?? 25,
             'start_date' => $validated['start_date'] ?? now()->addDays(7),
             'end_date' => $validated['end_date'] ?? now()->addDays(13),
-            'guide_license_number' => $validated['guide_license_number'] ?? null,
+            'guide_license_number' => $guideLic,
             'photo' => $validated['photo'] ?? '/assets/dest-ubari.jpg',
             'is_active' => true,
         ]);

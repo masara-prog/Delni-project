@@ -464,6 +464,7 @@ function AdminDashboard() {
 
   const handleCreateTrip = async (type: "daily" | "weekly", data: any) => {
     try {
+      const cleanGuideLic = data.guide_license_number?.trim() || data.guide_license?.trim() || null;
       if (type === "daily") {
         const payload = {
           trip_title: data.trip_title || data.title,
@@ -473,15 +474,16 @@ function AdminDashboard() {
           destination_city: data.destination || data.destination_city || "المعلم الأثري",
           max_capacity: Number(data.max_capacity) || 25,
           recurring_days: data.recurring_days || "السبت,الثلاثاء",
-          guide_license_number: data.guide_license_number || data.guide_license || null,
+          guide_license_number: cleanGuideLic,
           photo: data.photo || "/assets/dest-leptis.jpg",
         };
         const res = await apiCreateDailyTrip(payload);
-        const createdTrip = res.trip || {
-          ...data,
-          daily_trip_id: `DT-${Date.now().toString().slice(-4)}`,
-          id: `DT-${Date.now().toString().slice(-4)}`,
-        };
+        if (!res || res.status === "error" || res.errors || !res.trip) {
+          const errMsg = res?.message || (res?.errors ? Object.values(res.errors).flat().join(" - ") : "فشل في حفظ الرحلة في قاعدة البيانات");
+          alert("خطأ: " + errMsg);
+          return;
+        }
+        const createdTrip = res.trip;
         setDailyTrips(prev => [
           {
             ...createdTrip,
@@ -504,15 +506,16 @@ function AdminDashboard() {
           max_capacity: Number(data.max_capacity) || 25,
           start_date: data.start_date || undefined,
           end_date: data.end_date || undefined,
-          guide_license_number: data.guide_license_number || data.guide_license || null,
+          guide_license_number: cleanGuideLic,
           photo: data.photo || "/assets/dest-ubari.jpg",
         };
         const res = await apiCreateWeeklyTrip(payload);
-        const createdTrip = res.trip || {
-          ...data,
-          weekly_trip_id: `WT-${Date.now().toString().slice(-4)}`,
-          id: `WT-${Date.now().toString().slice(-4)}`,
-        };
+        if (!res || res.status === "error" || res.errors || !res.trip) {
+          const errMsg = res?.message || (res?.errors ? Object.values(res.errors).flat().join(" - ") : "فشل في حفظ الرحلة في قاعدة البيانات");
+          alert("خطأ: " + errMsg);
+          return;
+        }
+        const createdTrip = res.trip;
         setWeeklyTrips(prev => [
           {
             ...createdTrip,
@@ -526,10 +529,10 @@ function AdminDashboard() {
         ]);
         alert("تم حفظ الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
       }
+      setShowAddTrip(null);
     } catch (err: any) {
       alert("حدث خطأ أثناء حفظ الرحلة: " + (err.message || "فشل الاتصال"));
     }
-    setShowAddTrip(null);
   };
 
   const handleUpdateDailyTrip = (updated: DailyTrip) => {
@@ -2574,7 +2577,7 @@ function CreateTripModal({
             {filteredGuidesList.map((g) => (
               <div
                 key={g.license_number}
-                onClick={() => setGuideLic(g.license_number)}
+                onClick={() => setGuideLic(prev => prev === g.license_number ? "" : g.license_number)}
                 className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
                   guideLic === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
