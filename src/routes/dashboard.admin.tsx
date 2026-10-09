@@ -366,6 +366,7 @@ function AdminDashboard() {
           guide_license: d.guide_license_number || "",
           guide_license_number: d.guide_license_number || "",
           photo: d.photo || "/assets/ai_ruins.jpg",
+          activities: d.activities || "",
           is_active: d.is_active !== false,
         }));
         setDailyTrips(mappedDaily);
@@ -1031,6 +1032,11 @@ function AdminDashboard() {
                       {d.destination && (
                         <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-black">
                           📍 {d.destination}
+                        </span>
+                      )}
+                      {(d as any).activities && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black">
+                          🎯 {(d as any).activities}
                         </span>
                       )}
                     </div>
