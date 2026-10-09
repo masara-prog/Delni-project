@@ -21,7 +21,7 @@ interface HeaderProps {
   active?: "home" | "trips" | "guides" | "hotels" | "transport" | "restaurants" | "attractions" | "offers" | "support";
 }
 
-const ROLE_DASHBOARDS: Record<string, { path: string; labelAr: string; labelEn: string; icon: string }> = {
+export const ROLE_DASHBOARDS: Record<string, { path: string; labelAr: string; labelEn: string; icon: string }> = {
   tourist: { path: "/dashboard/tourist", labelAr: "لوحة السائح", labelEn: "Tourist Panel", icon: "👤" },
   guide: { path: "/dashboard/guide", labelAr: "لوحة المرشد", labelEn: "Guide Panel", icon: "🗺️" },
   driver: { path: "/dashboard/driver", labelAr: "لوحة السائق", labelEn: "Driver Panel", icon: "🧑‍✈️" },

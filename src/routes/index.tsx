@@ -154,6 +154,8 @@ function HomePage() {
 
 import { useLanguage } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { getStoredSession, clearStoredSession } from "@/lib/api";
+import { ROLE_DASHBOARDS } from "@/components/Header";
 
 /* ---------- Navbar ---------- */
 function Navbar() {
