@@ -158,6 +158,32 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 /* ---------- Navbar ---------- */
 function Navbar() {
   const { language } = useLanguage();
+  const [session, setSession] = useState<{ token: string | null; role: string | null; user: any } | null>(null);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const s = getStoredSession();
+      if (s.token && s.user) {
+        setSession(s);
+      } else {
+        setSession(null);
+      }
+    };
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
+  }, []);
+
+  const handleLogout = () => {
+    if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+      clearStoredSession();
+      setSession(null);
+      window.location.href = "/";
+    }
+  };
+
+  const currentRole = session?.role && ROLE_DASHBOARDS[session.role] ? ROLE_DASHBOARDS[session.role] : null;
+  const userName = session?.user?.name || session?.user?.full_name || (language === 'ar' ? 'حسابي' : 'My Account');
 
   return (
     <div className="absolute top-6 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12">
@@ -165,18 +191,43 @@ function Navbar() {
         <Logo size="xl" showText={false} />
       </Link>
       <div className="flex items-center gap-3">
-        <Link
-          to="/auth/login"
-          className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition-all shadow-md"
-        >
-          {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-        </Link>
-        <Link
-          to="/auth/signup"
-          className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/20"
-        >
-          {language === 'ar' ? 'إنشاء حساب' : 'Sign Up'}
-        </Link>
+        {session && currentRole ? (
+          <div className="flex items-center gap-2">
+            <Link
+              to={currentRole.path}
+              className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#1B5A78] to-[#13445C] hover:from-[#13445C] hover:to-[#0F3548] text-white text-xs sm:text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/25 flex items-center gap-2"
+            >
+              <span>{currentRole.icon}</span>
+              <span className="max-w-[120px] truncate">{userName}</span>
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-bold">
+                {language === 'ar' ? currentRole.labelAr : currentRole.labelEn}
+              </span>
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-2.5 rounded-full bg-red-500/20 hover:bg-red-500/40 border border-red-400/40 text-red-100 hover:text-white transition-all text-xs font-bold flex items-center gap-1 cursor-pointer"
+              title={language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+            >
+              <span>🚪</span>
+              <span className="hidden sm:inline">{language === 'ar' ? 'خروج' : 'Logout'}</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            <Link
+              to="/auth/login"
+              className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition-all shadow-md"
+            >
+              {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+            </Link>
+            <Link
+              to="/auth/signup"
+              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/20"
+            >
+              {language === 'ar' ? 'إنشاء حساب' : 'Sign Up'}
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

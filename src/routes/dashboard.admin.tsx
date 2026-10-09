@@ -2247,8 +2247,32 @@ function CreateTripModal({
   }, [guides]);
 
 
+  const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest("form");
+      if (!form) return;
+      const focusables = Array.from(
+        form.querySelectorAll<HTMLElement>("input:not([type='hidden']):not([type='file']), select, textarea, button[type='submit']")
+      ).filter(el => !el.hasAttribute("disabled") && el.offsetParent !== null);
+      const currentIndex = focusables.indexOf(e.target as HTMLElement);
+      if (currentIndex > -1 && currentIndex + 1 < focusables.length) {
+        focusables[currentIndex + 1].focus();
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim() || title.trim().length < 4) {
+      alert("يرجى إدخال عنوان واضح وشامل للرحلة (٤ أحرف على الأقل).");
+      return;
+    }
+    const numPrice = Number(price);
+    if (isNaN(numPrice) || numPrice <= 0) {
+      alert("يرجى إدخال سعر صحيح لمقعد الرحلة (أكبر من 0 د.ل).");
+      return;
+    }
     if (isDaily && recurringDays.length !== 2) {
       alert("تنبيه: الرحلات اليومية يجب أن تكون يومين بالضبط في الأسبوع (مثلاً: الأحد والأربعاء)!");
       return;
@@ -2265,8 +2289,8 @@ function CreateTripModal({
     const base = {
       daily_trip_id: `DT-${100 + Math.floor(Math.random() * 890 + 10)}`,
       weekly_trip_id: `WT-${200 + Math.floor(Math.random() * 790 + 10)}`,
-      trip_title: title,
-      title,
+      trip_title: title.trim(),
+      title: title.trim(),
       description: desc,
       max_capacity: busCapacity,
       available_seats: busCapacity,
@@ -2322,7 +2346,7 @@ function CreateTripModal({
             <span>البيانات الأساسية للرحلة</span>
           </div>
 
-          <Field label="عنوان الرحلة السياحية" value={title} onChange={setTitle} />
+          <Field label="عنوان الرحلة السياحية" value={title} onChange={setTitle} onKeyDown={handleEnterKeyNext} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
@@ -2330,6 +2354,7 @@ function CreateTripModal({
               <select
                 value={departureCity}
                 onChange={(e) => setDepartureCity(e.target.value)}
+                onKeyDown={handleEnterKeyNext}
                 className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
               >
                 <option value="طرابلس">طرابلس</option>
@@ -2345,6 +2370,7 @@ function CreateTripModal({
                   type="text"
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
+                  onKeyDown={handleEnterKeyNext}
                   className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
                   placeholder="مثال: لبدة الكبرى..."
                 />
@@ -2379,10 +2405,10 @@ function CreateTripModal({
             })}
           </div>
 
-          <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} />
+          <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} onKeyDown={handleEnterKeyNext} />
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="سعر المقعد الواحد (د.ل)" type="number" value={price} onChange={setPrice} />
+            <Field label="سعر المقعد الواحد (د.ل)" type="number" value={price} onChange={setPrice} onKeyDown={handleEnterKeyNext} />
             <div>
               <label className="text-xs font-bold mb-1 block">حالة تفعيل الرحلة</label>
               <select
@@ -3613,11 +3639,32 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Field({
+  label,
+  type = "text",
+  value,
+  onChange,
+  onKeyDown,
+  placeholder,
+}: {
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+}) {
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold" />
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+      />
     </div>
   );
 }

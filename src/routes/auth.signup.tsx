@@ -145,6 +145,113 @@ function SignupPage() {
     });
   };
 
+  // Handle Enter key to navigate to the next input field
+  const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest("form");
+      if (!form) return;
+      const focusables = Array.from(
+        form.querySelectorAll<HTMLElement>("input:not([type='hidden']):not([type='file']), select, textarea, button[type='submit']")
+      ).filter(el => !el.hasAttribute("disabled") && el.offsetParent !== null);
+      const currentIndex = focusables.indexOf(e.target as HTMLElement);
+      if (currentIndex > -1 && currentIndex + 1 < focusables.length) {
+        focusables[currentIndex + 1].focus();
+      }
+    }
+  };
+
+  const validateTouristForm = () => {
+    if (!tourist.fullName.trim() || tourist.fullName.trim().length < 3) {
+      setErrorMsg("يرجى إدخال الاسم بالكامل بشكل صحيح (٣ أحرف على الأقل).");
+      return false;
+    }
+    const cleanPhone = tourist.phone.trim();
+    if (!/^09\d{8}$/.test(cleanPhone)) {
+      setErrorMsg("رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678).");
+      return false;
+    }
+    const cleanPassport = tourist.passport.trim();
+    if (!cleanPassport || cleanPassport.length < 6) {
+      setErrorMsg("رقم جواز السفر / الرقم الوطني يجب أن يحتوي على 6 خانات على الأقل.");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(tourist.email.trim())) {
+      setErrorMsg("يرجى إدخال بريد إلكتروني صحيح ومعتمد.");
+      return false;
+    }
+    if (tourist.password.length < 8) {
+      setErrorMsg("كلمة المرور يجب أن لا تقل عن 8 خانات للحفاظ على أمان حسابك.");
+      return false;
+    }
+    return true;
+  };
+
+  const validateGuideStep1 = () => {
+    if (!guide.avatar) {
+      setErrorMsg("يرجى اختيار صورة شخصية رسمية للمرشد.");
+      return false;
+    }
+    if (!guide.fullName.trim() || guide.fullName.trim().length < 3) {
+      setErrorMsg("يرجى إدخال الاسم بالكامل للمرشد (٣ أحرف على الأقل).");
+      return false;
+    }
+    if (!guide.title.trim()) {
+      setErrorMsg("يرجى إدخال المسمى المهني واللقب للمرشد.");
+      return false;
+    }
+    if (!guide.licenseNumber.trim() || guide.licenseNumber.trim().length < 3) {
+      setErrorMsg("يرجى إدخال رقم ترخيص مزاولة الإرشاد المعتمد.");
+      return false;
+    }
+    const cleanPhone = guide.phone.trim();
+    if (!/^09\d{8}$/.test(cleanPhone)) {
+      setErrorMsg("رقم هاتف المرشد يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678).");
+      return false;
+    }
+    const price = Number(guide.pricePerDay);
+    if (isNaN(price) || price < 50) {
+      setErrorMsg("التكلفة اليومية للمرشد يجب أن تكون 50 د.ل على الأقل.");
+      return false;
+    }
+    const exp = Number(guide.years);
+    if (isNaN(exp) || exp < 1) {
+      setErrorMsg("سنوات الخبرة السياحية يجب أن تكون سنة واحدة على الأقل.");
+      return false;
+    }
+    if (!guide.bio.trim() || guide.bio.trim().length < 15) {
+      setErrorMsg("يرجى كتابة نبذة تعريفية وافية عن خبرتك السياحية (15 حرف على الأقل).");
+      return false;
+    }
+    return true;
+  };
+
+  const validateGuideStep2 = () => {
+    if (guide.operatingRegions.length === 0) {
+      setErrorMsg("يرجى تحديد وجهة أو منطقة إرشاد واحدة على الأقل.");
+      return false;
+    }
+    if (guide.workingDays.length === 0) {
+      setErrorMsg("يرجى تحديد يوم عمل واحد على الأقل في أسبوع المرشد.");
+      return false;
+    }
+    if (guide.certs.length === 0) {
+      setErrorMsg("يرجى إرفاق صورة أو مستند الترخيص الرسمي / الشهادة.");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(guide.email.trim())) {
+      setErrorMsg("يرجى إدخال بريد إلكتروني صحيح ومعتمد للمرشد.");
+      return false;
+    }
+    if (guide.password.length < 8) {
+      setErrorMsg("كلمة المرور يجب أن لا تقل عن 8 خانات للحفاظ على أمان حسابك.");
+      return false;
+    }
+    return true;
+  };
+
   if (submitted) {
     return (
       <div className="min-h-screen grid place-items-center bg-[#FAF7F2] p-6" dir={dir}>
@@ -335,6 +442,7 @@ function SignupPage() {
             <form className="space-y-3.5 text-right" onSubmit={async (e) => {
               e.preventDefault();
               setErrorMsg("");
+              if (!validateTouristForm()) return;
               try {
                 const res = await apiRegisterTourist({
                   tourist_id: tourist.passport.trim() || undefined,
@@ -353,13 +461,13 @@ function SignupPage() {
                 setErrorMsg("تعذر إتمام عملية التسجيل، يرجى التأكد من تشغيل الخادم والاتصال بالشبكة.");
               }
             }}>
-              <Field label="الاسم بالكامل" value={tourist.fullName} onChange={(v) => setTourist({ ...tourist, fullName: v })} placeholder="محمد أحمد" required />
+              <Field label="الاسم بالكامل" value={tourist.fullName} onChange={(v) => setTourist({ ...tourist, fullName: v })} onKeyDown={handleEnterKeyNext} placeholder="محمد أحمد" required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="رقم الهاتف للتواصل" type="tel" value={tourist.phone} onChange={(v) => setTourist({ ...tourist, phone: v })} placeholder="0912345678" required />
-                <Field label="رقم جواز السفر / الرقم الوطني" value={tourist.passport} onChange={(v) => setTourist({ ...tourist, passport: v })} placeholder="A12345678" required />
+                <Field label="رقم الهاتف للتواصل" type="tel" value={tourist.phone} onChange={(v) => setTourist({ ...tourist, phone: v })} onKeyDown={handleEnterKeyNext} placeholder="0912345678" required />
+                <Field label="رقم جواز السفر / الرقم الوطني" value={tourist.passport} onChange={(v) => setTourist({ ...tourist, passport: v })} onKeyDown={handleEnterKeyNext} placeholder="A12345678" required />
               </div>
-              <Field label="البريد الإلكتروني" type="email" value={tourist.email} onChange={(v) => setTourist({ ...tourist, email: v })} placeholder="example@dalni.ly" required />
-              <Field label="كلمة المرور" type="password" value={tourist.password} onChange={(v) => setTourist({ ...tourist, password: v })} placeholder="٨ أحرف على الأقل" required />
+              <Field label="البريد الإلكتروني" type="email" value={tourist.email} onChange={(v) => setTourist({ ...tourist, email: v })} onKeyDown={handleEnterKeyNext} placeholder="example@dalni.ly" required />
+              <Field label="كلمة المرور" type="password" value={tourist.password} onChange={(v) => setTourist({ ...tourist, password: v })} onKeyDown={handleEnterKeyNext} placeholder="٨ أحرف على الأقل" required />
 
               <div className="flex items-center justify-start gap-2 pt-0.5">
                 <label className="flex items-start gap-2 text-xs text-[#718096] font-semibold cursor-pointer select-none">
@@ -417,6 +525,8 @@ function SignupPage() {
                   className="space-y-3 text-right animate-in fade-in duration-200"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    setErrorMsg("");
+                    if (!validateGuideStep1()) return;
                     setGuideStep(2);
                   }}
                 >
@@ -485,6 +595,7 @@ function SignupPage() {
                       label="الاسم بالكامل للمرشد"
                       value={guide.fullName}
                       onChange={(v) => setGuide({ ...guide, fullName: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="أحمد محمد"
                       required
                     />
@@ -492,6 +603,7 @@ function SignupPage() {
                       label="المسمى المهني واللقب"
                       value={guide.title}
                       onChange={(v) => setGuide({ ...guide, title: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="مثال: خبير الآثار والتراث الروماني"
                       required
                     />
@@ -503,6 +615,7 @@ function SignupPage() {
                       label="رقم ترخيص مزاولة الإرشاد"
                       value={guide.licenseNumber}
                       onChange={(v) => setGuide({ ...guide, licenseNumber: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="G-4421"
                       required
                     />
@@ -511,6 +624,7 @@ function SignupPage() {
                       type="tel"
                       value={guide.phone}
                       onChange={(v) => setGuide({ ...guide, phone: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="0912345678"
                       required
                     />
@@ -523,6 +637,7 @@ function SignupPage() {
                       type="number"
                       value={guide.pricePerDay}
                       onChange={(v) => setGuide({ ...guide, pricePerDay: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="150"
                       required
                       suffix="د.ل / اليوم"
@@ -532,6 +647,7 @@ function SignupPage() {
                       type="number"
                       value={guide.years}
                       onChange={(v) => setGuide({ ...guide, years: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="5"
                       required
                       suffix="سنوات"
@@ -601,8 +717,10 @@ function SignupPage() {
                   className="space-y-3 text-right animate-in fade-in duration-200"
                   onSubmit={async (e) => {
                     e.preventDefault();
+                    setErrorMsg("");
+                    if (!validateGuideStep2()) return;
                     try {
-                      await apiRegisterGuide({
+                      const res = await apiRegisterGuide({
                         license_number: guide.licenseNumber,
                         full_name: guide.fullName,
                         title: guide.title || undefined,
@@ -623,6 +741,10 @@ function SignupPage() {
                         certificate_name: guide.certs[0] || "ترخيص_سياحي.pdf",
                         digital_certificate_file: guide.certDataUrls[0] || undefined,
                       });
+                      if (res && res.status === "error" && res.message) {
+                        setErrorMsg(res.message);
+                        return;
+                      }
                     } catch (err) {}
                     setSubmitted("guide");
                   }}
@@ -876,6 +998,7 @@ function SignupPage() {
                       type="email"
                       value={guide.email}
                       onChange={(v) => setGuide({ ...guide, email: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="guide@dalni.ly"
                       required
                     />
@@ -884,6 +1007,7 @@ function SignupPage() {
                       type="password"
                       value={guide.password}
                       onChange={(v) => setGuide({ ...guide, password: v })}
+                      onKeyDown={handleEnterKeyNext}
                       placeholder="٨ أحرف على الأقل"
                       required
                     />
@@ -930,6 +1054,7 @@ function Field({
   placeholder,
   value,
   onChange,
+  onKeyDown,
   required,
   suffix,
 }: {
@@ -938,6 +1063,7 @@ function Field({
   placeholder?: string;
   value: string;
   onChange: (v: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   required?: boolean;
   suffix?: string;
 }) {
@@ -953,6 +1079,7 @@ function Field({
           value={value}
           required={required}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           className={`w-full h-10 sm:h-11 px-3.5 rounded-xl border border-[#E2E8F0] bg-white focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 outline-none transition text-xs sm:text-sm font-semibold text-[#0F172A] text-right ${
             suffix ? "pl-16" : ""

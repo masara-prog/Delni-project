@@ -2311,9 +2311,111 @@ function TripsPage() {
     scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };
 
+  // Live Database Trips from DelniDB API
+  const [liveDbTrips, setLiveDbTrips] = useState<Trip[]>([]);
+
+  useEffect(() => {
+    const fetchDbTrips = async () => {
+      try {
+        const [resDaily, resWeekly] = await Promise.all([
+          fetch("http://127.0.0.1:8000/api/trips/daily").then(r => r.ok ? r.json() : []),
+          fetch("http://127.0.0.1:8000/api/trips/weekly").then(r => r.ok ? r.json() : []),
+        ]);
+
+        const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => ({
+          id: t.daily_trip_id || `DT-${t.id}`,
+          type: "daily" as const,
+          title: t.trip_title,
+          img: t.photo || heroImg,
+          description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
+          activities: t.activities ? (Array.isArray(t.activities) ? t.activities : [t.activities]) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
+          attractions: [
+            {
+              name: t.destination_city || "المعلم الأثري",
+              location: `${t.departure_city || 'طرابلس'} - ليبيا`,
+              description: t.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
+            }
+          ],
+          targetPersons: t.max_capacity || 25,
+          availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
+          daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "أسبوعياً",
+          departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
+          entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
+          guide: {
+            name: t.guide?.full_name || "مرشد سياحي معتمد",
+            title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
+            phone: t.guide?.phone_number || "0912345678",
+            cv: {
+              name: t.guide?.full_name || "مرشد سياحي معتمد",
+              title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
+              licenseNumber: t.guide?.license_number || t.guide_license_number || "G-2026",
+              experienceYears: t.guide?.years_of_experience || 3,
+              rating: 5.0,
+              pricePerDay: Number(t.guide?.price_per_day) || 150,
+              phone: t.guide?.phone_number || "0912345678",
+              bio: t.guide?.bio || "مرشد سياحي مرخص يقدم جولات سياحية نوعية واحترافية.",
+              specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
+            }
+          },
+          vehicle: {
+            model: t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : "حافلة ميني باص سياحي 25 راكب",
+            company: "شركة النقل السياحي المعتمدة",
+            driver: "سائق مرخص ومحترف",
+          },
+          accommodation: "رحلة يومية — عودة مساءً",
+          price: Number(t.price_per_seat) || 120,
+          rating: 5.0,
+          reviews: 1,
+        }));
+
+        const mappedWeekly: WeeklyTrip[] = (Array.isArray(resWeekly) ? resWeekly : []).map((t: any) => ({
+          id: t.weekly_trip_id || `WT-${t.id}`,
+          type: "weekly" as const,
+          title: t.trip_title,
+          img: t.photo || destUbari,
+          description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
+          startDate: t.start_date || "2026-10-15",
+          endDate: t.end_date || "2026-10-20",
+          targetPersons: t.max_capacity || 25,
+          availableSeats: t.max_capacity || 25,
+          seatPrice: Number(t.seat_per_price) || 1500,
+          cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
+          attractions: [
+            {
+              name: t.destination_region || "الواحات والآثار",
+              location: "ليبيا",
+              description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
+            }
+          ],
+          hotels: ["فندق مبيت معتمد"],
+          departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
+          entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
+          guide: {
+            name: t.guide?.full_name || "مرشد سياحي معتمد",
+            title: t.guide?.title || "مرشد معتمد",
+            phone: t.guide?.phone_number || "0912345678",
+          },
+          vehicle: {
+            model: "حافلة سياحية مجهزة للمسافات الطويلة",
+            company: "شركة النقل السياحي الدولية",
+            driver: "سائق خبير بالمسارات السياحية",
+          },
+          rating: 5.0,
+          reviews: 1,
+        }));
+
+        setLiveDbTrips([...mappedDaily, ...mappedWeekly]);
+      } catch (err) {
+        console.error("Failed to load live database trips:", err);
+      }
+    };
+
+    fetchDbTrips();
+  }, []);
+
   const allTrips = useMemo(
-    () => [...dailyTrips, ...weeklyTrips, ...privateTemplates],
-    []
+    () => [...liveDbTrips, ...dailyTrips, ...weeklyTrips, ...privateTemplates],
+    [liveDbTrips]
   );
 
   const gallerySectionRef = useRef<HTMLElement>(null);

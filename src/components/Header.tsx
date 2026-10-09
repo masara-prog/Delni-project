@@ -49,9 +49,11 @@ export function Header({ active }: HeaderProps) {
   }, []);
 
   const handleLogout = () => {
-    clearStoredSession();
-    setSession(null);
-    window.location.href = "/";
+    if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+      clearStoredSession();
+      setSession(null);
+      window.location.href = "/";
+    }
   };
 
   const currentRole = session?.role && ROLE_DASHBOARDS[session.role] ? ROLE_DASHBOARDS[session.role] : null;
