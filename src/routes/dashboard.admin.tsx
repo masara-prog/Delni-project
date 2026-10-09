@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide, apiDeleteGuide, apiCreateDailyTrip, apiDeleteDailyTrip, apiCreateWeeklyTrip, apiDeleteWeeklyTrip } from "@/lib/api";
+import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide, apiDeleteGuide, apiCreateDailyTrip, apiUpdateDailyTrip, apiDeleteDailyTrip, apiCreateWeeklyTrip, apiUpdateWeeklyTrip, apiDeleteWeeklyTrip } from "@/lib/api";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -476,6 +476,7 @@ function AdminDashboard() {
           recurring_days: data.recurring_days || "السبت,الثلاثاء",
           guide_license_number: cleanGuideLic,
           photo: data.photo || "/assets/dest-leptis.jpg",
+          activities: data.activities || null,
         };
         const res = await apiCreateDailyTrip(payload);
         if (!res || res.status === "error" || res.errors || !res.trip) {
@@ -535,8 +536,32 @@ function AdminDashboard() {
     }
   };
 
-  const handleUpdateDailyTrip = (updated: DailyTrip) => {
-    setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === (updated.daily_trip_id || updated.id) ? updated : d));
+  const handleUpdateDailyTrip = async (updated: DailyTrip) => {
+    const tripId = updated.daily_trip_id || updated.id;
+    try {
+      const payload = {
+        trip_title: updated.trip_title || updated.title,
+        description: updated.description || "",
+        price_per_seat: Number(updated.price_per_seat) || 100,
+        departure_city: updated.departure_city || "طرابلس",
+        destination_city: updated.destination || updated.destination_city || "المعلم الأثري",
+        max_capacity: Number(updated.max_capacity) || 25,
+        recurring_days: Array.isArray(updated.recurring_days) ? updated.recurring_days.join(",") : (updated.recurring_days || "السبت,الثلاثاء"),
+        guide_license_number: updated.guide_license_number || updated.guide_license || null,
+        photo: updated.photo || "/assets/dest-leptis.jpg",
+        activities: Array.isArray((updated as any).activities) ? (updated as any).activities.join(" • ") : ((updated as any).activities || null),
+      };
+      const res = await apiUpdateDailyTrip(tripId, payload);
+      if (res && res.status === "success") {
+        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...d, ...updated, ...res.trip } : d));
+        alert("تم تحديث الرحلة اليومية بنجاح في قاعدة البيانات!");
+      } else {
+        alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
+        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? updated : d));
+      }
+    } catch (err: any) {
+      alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
+    }
     setEditingDailyTrip(null);
   };
 
@@ -550,8 +575,32 @@ function AdminDashboard() {
     }
   };
 
-  const handleUpdateWeeklyTrip = (updated: WeeklyTrip) => {
-    setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === (updated.weekly_trip_id || updated.id) ? updated : w));
+  const handleUpdateWeeklyTrip = async (updated: WeeklyTrip) => {
+    const tripId = updated.weekly_trip_id || updated.id;
+    try {
+      const payload = {
+        trip_title: updated.trip_title || updated.title,
+        trip_description: updated.trip_description || updated.description || "",
+        seat_per_price: Number(updated.seat_per_price) || 1200,
+        departure_city: updated.departure_city || "طرابلس",
+        destination_region: updated.destination || updated.destination_region || "الصحراء",
+        max_capacity: Number(updated.max_capacity) || 25,
+        start_date: updated.start_date || undefined,
+        end_date: updated.end_date || undefined,
+        guide_license_number: updated.guide_license_number || updated.guide_license || null,
+        photo: updated.photo || "/assets/dest-ubari.jpg",
+      };
+      const res = await apiUpdateWeeklyTrip(tripId, payload);
+      if (res && res.status === "success") {
+        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? { ...w, ...updated, ...res.trip } : w));
+        alert("تم تحديث الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
+      } else {
+        alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
+        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? updated : w));
+      }
+    } catch (err: any) {
+      alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
+    }
     setEditingWeeklyTrip(null);
   };
 
@@ -2214,6 +2263,12 @@ function CreateTripModal({
   // Weekly Trips schedule: MUST be exactly 1 day in a week
   const [weeklyDay, setWeeklyDay] = useState<string>("الجمعة");
 
+  const [activities, setActivities] = useState(
+    isDaily
+      ? "جولة أثرية بمرشد موثق • شرح تاريخي مفصل • غداء طازج • جلسة تصوير احترافية"
+      : "إقامة فندقية ومخيمات صحراوية • جولات سيارات رباعية الدفع • استكشاف البحيرات • وجبات تقليدية كاملة"
+  );
+
   const handleStartDateChange = (date: string) => {
     setStartDate(date);
     if (!isDaily) {
@@ -2304,12 +2359,14 @@ function CreateTripModal({
       is_active: isActive,
       photo,
       departure_city: departureCity,
+      activities: activities.trim() || null,
     };
 
     if (isDaily) {
       onCreate("daily", {
         ...base,
         destination,
+        destination_city: destination,
         price_per_seat: +price,
         recurring_days: recurringDays.join(","),
         recurring_days_list: recurringDays,
@@ -2409,6 +2466,13 @@ function CreateTripModal({
           </div>
 
           <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} onKeyDown={handleEnterKeyNext} />
+          
+          <Field 
+            label="الأنشطة المتاحة ضمن الرحلة (افصل بينها بنقطة • أو فاصلة)" 
+            value={activities} 
+            onChange={setActivities} 
+            onKeyDown={handleEnterKeyNext} 
+          />
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="سعر المقعد الواحد (د.ل)" type="number" value={price} onChange={setPrice} onKeyDown={handleEnterKeyNext} />
@@ -2708,6 +2772,7 @@ function DailyTripEditModal({
       : ["الأحد", "الأربعاء"]
   );
   const [photo, setPhoto] = useState(trip.photo || "");
+  const [activities, setActivities] = useState((trip as any).activities || "جولة أثرية بمرشد موثق • شرح تاريخي مفصل • غداء طازج • جلسة تصوير");
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => g.verification_status !== "مرفوض");
@@ -2745,6 +2810,7 @@ function DailyTripEditModal({
             title,
             description: desc,
             destination,
+            destination_city: destination,
             departure_city: departureCity,
             price_per_seat: +price,
             bus_capacity: busCapacity,
@@ -2755,7 +2821,8 @@ function DailyTripEditModal({
             guide_license: guide,
             photo,
             vehicle_plates: selVehicles,
-          });
+            activities: activities.trim() || null,
+          } as any);
         }}
       >
         <Field label="عنوان الرحلة" value={title} onChange={setTitle} />
@@ -2774,6 +2841,7 @@ function DailyTripEditModal({
           <Field label="الوجهة / المكان السياحي" value={destination} onChange={setDestination} />
         </div>
         <Field label="الوصف" value={desc} onChange={setDesc} />
+        <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
         {/* 2 Days Selector */}

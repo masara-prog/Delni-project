@@ -377,6 +377,19 @@ export async function apiCreateDailyTrip(data: any) {
   }
 }
 
+export async function apiUpdateDailyTrip(id: string, data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function apiDeleteDailyTrip(id: string) {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
@@ -393,6 +406,19 @@ export async function apiCreateWeeklyTrip(data: any) {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
       method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiUpdateWeeklyTrip(id: string, data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly/${encodeURIComponent(id)}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(data),
     });
