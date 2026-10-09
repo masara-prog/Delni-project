@@ -67,12 +67,14 @@ export async function apiLogin(params: {
  */
 export async function apiRegisterTourist(params: {
   tourist_id?: string;
+  passport?: string;
   full_name: string;
   email: string;
   phone_number: string;
   password: string;
 }): Promise<ApiResponse> {
-  const tourist_id = params.tourist_id || `T-${Math.floor(100000 + Math.random() * 900000)}`;
+  // Use passport/national ID as tourist_id if available, otherwise generated ID
+  const tourist_id = params.tourist_id || params.passport || `T-${Math.floor(100000 + Math.random() * 900000)}`;
   try {
     const res = await fetch(`${LARAVEL_API_URL}/auth/register/tourist`, {
       method: "POST",
@@ -80,7 +82,13 @@ export async function apiRegisterTourist(params: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ ...params, tourist_id }),
+      body: JSON.stringify({
+        tourist_id,
+        full_name: params.full_name,
+        email: params.email,
+        phone_number: params.phone_number,
+        password: params.password,
+      }),
     });
 
     const data = await res.json();
@@ -100,6 +108,88 @@ export async function apiRegisterTourist(params: {
       status: "error",
       message: "تعذر الاتصال بالخادم، يرجى التأكد من تشغيل الخادم والمحاولة مجدداً",
     };
+  }
+}
+
+/**
+ * Update Tourist Profile in DelniDB
+ */
+export async function apiUpdateTouristProfile(params: {
+  tourist_id: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  password?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/auth/tourist/update-profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (res.ok && data.user) {
+      const stored = getStoredSession();
+      if (stored.user) {
+        localStorage.setItem("dalni_user", JSON.stringify({ ...stored.user, ...data.user }));
+      }
+    }
+    return data;
+  } catch {
+    return { status: "error", message: "تعذر الاتصال بالخادم لتحديث البيانات" };
+  }
+}
+
+/**
+ * Book a Daily Trip into DelniDB
+ */
+export async function apiBookDailyTrip(params: {
+  tourist_id: string;
+  daily_trip_id: string;
+  number_of_seats: number;
+  passengers_names?: string;
+  booking_notes?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/bookings/daily`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch {
+    return { status: "error", message: "تعذر إرسال الحجز للخادم" };
+  }
+}
+
+/**
+ * Book a Weekly Trip into DelniDB
+ */
+export async function apiBookWeeklyTrip(params: {
+  tourist_id: string;
+  weekly_trip_id: string;
+  number_of_seats: number;
+  passengers_names?: string;
+  booking_notes?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/bookings/weekly`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch {
+    return { status: "error", message: "تعذر إرسال الحجز للخادم" };
   }
 }
 
@@ -271,41 +361,7 @@ export async function apiDeleteGuide(licenseNumber: string) {
   return null;
 }
 
-/**
- * Update Tourist profile in DelniDB
- */
-export async function apiUpdateTouristProfile(params: {
-  tourist_id: string;
-  full_name: string;
-  email: string;
-  phone_number: string;
-  password?: string;
-}): Promise<ApiResponse> {
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/auth/tourist/update-profile`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(params),
-    });
-    const data = await res.json();
-    if (res.ok && data.user) {
-      localStorage.setItem("dalni_user", JSON.stringify(data.user));
-    }
-    return data;
-  } catch {
-    const mockUser = {
-      tourist_id: params.tourist_id,
-      full_name: params.full_name,
-      email: params.email,
-      phone_number: params.phone_number,
-    };
-    localStorage.setItem("dalni_user", JSON.stringify(mockUser));
-    return { status: "success", message: "تم تحديث الملف الشخصي", user: mockUser };
-  }
-}
+
 
 /**
  * Get Tour Guide Dashboard data (profile, real assigned trips, real manifest)

@@ -337,6 +337,8 @@ function SignupPage() {
               setErrorMsg("");
               try {
                 const res = await apiRegisterTourist({
+                  tourist_id: tourist.passport.trim() || undefined,
+                  passport: tourist.passport.trim(),
                   full_name: tourist.fullName,
                   phone_number: tourist.phone,
                   email: tourist.email,

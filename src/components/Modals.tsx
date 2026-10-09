@@ -26,6 +26,7 @@ import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getNearbyServices } from "@/lib/homeData";
 import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays } from "@/lib/guidesData";
 import { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem } from "@/lib/attractionsData";
+import { apiBookDailyTrip, apiBookWeeklyTrip, getStoredSession } from "@/lib/api";
 
 function resolveTripImage(title?: string, kind?: string | null, customImage?: string): string {
   if (customImage) return customImage;
@@ -206,10 +207,39 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
           </div>
           <form
             className="p-6 space-y-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               if (hasSeatError) return;
               if (!phone.match(/^09\d{8}$/)) return;
+
+              // Connect to real DelniDB
+              try {
+                const session = getStoredSession();
+                const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-${phone}`;
+                const nSeats = parseInt(seats, 10) || 1;
+                const isWeekly = item.id?.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
+
+                if (isWeekly) {
+                  await apiBookWeeklyTrip({
+                    tourist_id: touristId,
+                    weekly_trip_id: item.id || "WT-201",
+                    number_of_seats: nSeats,
+                    passengers_names: accountName || "سائح",
+                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
+                  });
+                } else {
+                  await apiBookDailyTrip({
+                    tourist_id: touristId,
+                    daily_trip_id: item.id || "DT-101",
+                    number_of_seats: nSeats,
+                    passengers_names: accountName || "سائح",
+                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
+                  });
+                }
+              } catch (err) {
+                console.error("Booking API error:", err);
+              }
+
               setStep("success");
             }}
           >
@@ -1052,11 +1082,39 @@ export function TripScheduleModal({
           </div>
           <form
             className="p-6 space-y-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const avail = selectedTrip ? (selectedTrip.seats - selectedTrip.taken) : 0;
               const n = parseInt(seats, 10);
               if (isNaN(n) || n < 1 || n > avail) return;
+
+              // Connect to real DelniDB
+              try {
+                const session = getStoredSession();
+                const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
+                const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
+
+                if (isWeekly) {
+                  await apiBookWeeklyTrip({
+                    tourist_id: touristId,
+                    weekly_trip_id: selectedTrip.id || "WT-201",
+                    number_of_seats: n,
+                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
+                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
+                  });
+                } else {
+                  await apiBookDailyTrip({
+                    tourist_id: touristId,
+                    daily_trip_id: selectedTrip.id || "DT-101",
+                    number_of_seats: n,
+                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
+                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
+                  });
+                }
+              } catch (err) {
+                console.error("TripScheduleModal Booking API error:", err);
+              }
+
               setStep("done");
             }}
           >
