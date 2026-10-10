@@ -294,6 +294,11 @@ function AdminDashboard() {
     setShowAddCompany(false);
   };
   const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); setEditingCompany(null); };
+  const handleDeleteCompany = (id: string) => {
+    if (confirm("هل أنت تأكد من رغبتك في حذف هذه الشركة؟")) {
+      setCompanies(prev => prev.filter(c => c.contract_number !== id && c.id !== id));
+    }
+  };
   const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
     setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
@@ -2259,7 +2264,9 @@ function CreateTripModal({
   const [selVehicles, setSelVehicles] = useState<string[]>(vehicles[0]?.plate_number ? [vehicles[0].plate_number] : []);
   const [startDate, setStartDate] = useState("2026-09-01");
   const [endDate, setEndDate] = useState("2026-09-06");
-  const [photo, setPhoto] = useState(isDaily ? "/assets/ai_ruins.jpg" : "/assets/ai_ghadames.jpg");
+  const [photo1, setPhoto1] = useState(isDaily ? "/assets/ai_ruins.jpg" : "/assets/ai_ghadames.jpg");
+  const [photo2, setPhoto2] = useState(isDaily ? "/assets/dest-leptis-arch.jpg" : "/assets/dest-ubari-gaberoun.jpg");
+  const [photo3, setPhoto3] = useState(isDaily ? "/assets/dest-leptis-forum.jpg" : "/assets/dest-sahara-dunes.jpg");
   const [isActive, setIsActive] = useState(true);
   const [hotelId, setHotelId] = useState("");
 
@@ -2350,6 +2357,10 @@ function CreateTripModal({
       return;
     }
 
+    const allPhotos = [photo1, photo2, photo3].filter(Boolean);
+    const mainPhoto = allPhotos[0] || photo1;
+    const galleryJson = JSON.stringify(allPhotos);
+
     const base = {
       daily_trip_id: `DT-${100 + Math.floor(Math.random() * 890 + 10)}`,
       weekly_trip_id: `WT-${200 + Math.floor(Math.random() * 790 + 10)}`,
@@ -2363,7 +2374,8 @@ function CreateTripModal({
       guide_license: guideLic,
       vehicle_plates: selVehicles,
       is_active: isActive,
-      photo,
+      photo: mainPhoto,
+      gallery: galleryJson,
       departure_city: departureCity,
       activities: activities.trim() || null,
     };
@@ -2727,9 +2739,14 @@ function CreateTripModal({
           </div>
         )}
 
-        {/* 5. Photo Picker */}
-        <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة الرحلة (للعرض والترويج)" value={photo} onChange={setPhoto} />
+        {/* 5. Photos Pickers (Multiple Photos for slideshow) */}
+        <div className="pt-3 border-t border-border space-y-2">
+          <div className="font-bold text-xs text-slate-800">📸 صور الرحلة المتاحة للعرض والأنيميشن في المنصة (أضف أكثر من صورة):</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <ImageFilePicker label="الصورة 1 (الغلاف الرئيسي)" value={photo1} onChange={setPhoto1} />
+            <ImageFilePicker label="الصورة 2 (معرض الصور)" value={photo2} onChange={setPhoto2} />
+            <ImageFilePicker label="الصورة 3 (معرض الصور)" value={photo3} onChange={setPhoto3} />
+          </div>
         </div>
 
         {/* 6. Form Actions */}
@@ -2763,13 +2780,29 @@ function DailyTripEditModal({
   onClose: () => void;
   onSave: (t: DailyTrip) => void;
 }) {
+  const parseGallery = (p?: string, g?: any) => {
+    if (g) {
+      try {
+        const parsed = typeof g === 'string' ? JSON.parse(g) : g;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    if (p) return p.includes(",") ? p.split(",") : [p];
+    return [];
+  };
+
+  const initialDailyPhotos = parseGallery(trip.photo, (trip as any).gallery);
+  const [photo1, setPhoto1] = useState(initialDailyPhotos[0] || trip.photo || "/assets/ai_ruins.jpg");
+  const [photo2, setPhoto2] = useState(initialDailyPhotos[1] || "/assets/dest-leptis-arch.jpg");
+  const [photo3, setPhoto3] = useState(initialDailyPhotos[2] || "/assets/dest-leptis-forum.jpg");
+
   const [title, setTitle] = useState(trip.trip_title || trip.title || "");
-  const [desc, setDesc] = useState(trip.description);
-  const [destination, setDestination] = useState(trip.destination || "لبدة الكبرى");
+  const [desc, setDesc] = useState(trip.description || "");
+  const [destination, setDestination] = useState(trip.destination_city || trip.destination || "لبدة الكبرى");
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.price_per_seat));
   const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
-  const [guide, setGuide] = useState(trip.guide_license || "");
+  const [guide, setGuide] = useState(trip.guide_license_number || trip.guide_license || "");
   const [recurringDays, setRecurringDays] = useState<string[]>(
     Array.isArray(trip.recurring_days)
       ? trip.recurring_days
@@ -2777,19 +2810,19 @@ function DailyTripEditModal({
       ? trip.recurring_days.split(",")
       : ["الأحد", "الأربعاء"]
   );
-  const [photo, setPhoto] = useState(trip.photo || "");
-  const [activities, setActivities] = useState((trip as any).activities || "جولة أثرية بمرشد موثق • شرح تاريخي مفصل • غداء طازج • جلسة تصوير");
+  const [activities, setActivities] = useState((trip as any).activities || "");
+  const [isActive, setIsActive] = useState(trip.is_active ?? true);
+  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => g.verification_status !== "مرفوض");
   }, [guides]);
-  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
   const toggleDailyDay = (day: string) => {
     if (recurringDays.includes(day)) {
-      if (recurringDays.length === 1) return;
+      if (recurringDays.length <= 1) return;
       setRecurringDays(recurringDays.filter((d) => d !== day));
     } else {
       if (recurringDays.length >= 2) {
@@ -2810,6 +2843,11 @@ function DailyTripEditModal({
             alert("يرجى اختيار يومين أسبوعياً للرحلة اليومية.");
             return;
           }
+
+          const allPhotos = [photo1, photo2, photo3].filter(Boolean);
+          const mainPhoto = allPhotos[0] || photo1;
+          const galleryJson = JSON.stringify(allPhotos);
+
           onSave({
             ...trip,
             trip_title: title,
@@ -2825,7 +2863,9 @@ function DailyTripEditModal({
             recurring_days: recurringDays.join(","),
             guide_license_number: guide,
             guide_license: guide,
-            photo,
+            is_active: isActive,
+            photo: mainPhoto,
+            gallery: galleryJson,
             vehicle_plates: selVehicles,
             activities: activities.trim() || null,
           } as any);
@@ -2848,13 +2888,27 @@ function DailyTripEditModal({
         </div>
         <Field label="الوصف" value={desc} onChange={setDesc} />
         <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
-        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+        
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">حالة التفعيل</label>
+            <select
+              value={isActive ? "true" : "false"}
+              onChange={(e) => setIsActive(e.target.value === "true")}
+              className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+            >
+              <option value="true">نشطة ومعروضة</option>
+              <option value="false">موقوفة مؤقتاً</option>
+            </select>
+          </div>
+        </div>
 
         {/* 2 Days Selector */}
         <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
           <div className="font-black text-blue-900 text-xs flex justify-between">
             <span>📅 جدول الأيام (يومان أسبوعياً):</span>
-            <span className="text-emerald-700">المختار: {recurringDays.join(" و ")}</span>
+            <span className="text-emerald-700 font-bold">المختار: {recurringDays.join(" و ")}</span>
           </div>
           <div className="grid grid-cols-7 gap-1">
             {allWeekDays.map((d) => (
@@ -2936,9 +2990,15 @@ function DailyTripEditModal({
           </div>
         </div>
 
-        <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة الرحلة اليومية" value={photo} onChange={setPhoto} />
+        <div className="pt-2 border-t border-border space-y-2">
+          <div className="font-bold text-xs text-slate-800">📸 صور الرحلة اليومية (أضف أكثر من صورة للأنيميشن):</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <ImageFilePicker label="الصورة 1 (الغلاف الرئيسي)" value={photo1} onChange={setPhoto1} />
+            <ImageFilePicker label="الصورة 2 (معرض الصور)" value={photo2} onChange={setPhoto2} />
+            <ImageFilePicker label="الصورة 3 (معرض الصور)" value={photo3} onChange={setPhoto3} />
+          </div>
         </div>
+
         <div className="pt-2 border-t border-border">
           <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
         </div>
@@ -2971,18 +3031,42 @@ function WeeklyTripEditModal({
   onClose: () => void;
   onSave: (w: WeeklyTrip) => void;
 }) {
-  const [title, setTitle] = useState(trip.title);
-  const [multiDestinations, setMultiDestinations] = useState<string[]>(trip.destinations || (trip.destination ? trip.destination.split(" + ") : ["أوباري"]));
+  const parseGallery = (p?: string, g?: any) => {
+    if (g) {
+      try {
+        const parsed = typeof g === 'string' ? JSON.parse(g) : g;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    if (p) return p.includes(",") ? p.split(",") : [p];
+    return [];
+  };
+
+  const initialWeeklyPhotos = parseGallery(trip.photo, (trip as any).gallery);
+  const [photo1, setPhoto1] = useState(initialWeeklyPhotos[0] || trip.photo || "/assets/ai_ghadames.jpg");
+  const [photo2, setPhoto2] = useState(initialWeeklyPhotos[1] || "/assets/dest-ubari-gaberoun.jpg");
+  const [photo3, setPhoto3] = useState(initialWeeklyPhotos[2] || "/assets/dest-sahara-dunes.jpg");
+
+  const [title, setTitle] = useState(trip.trip_title || trip.title || "");
+  const [desc, setDesc] = useState(trip.trip_description || trip.description || "");
+  const [multiDestinations, setMultiDestinations] = useState<string[]>(
+    trip.destinations || (trip.destination ? trip.destination.split(" + ") : [trip.destination_region || "أوباري"])
+  );
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.seat_per_price));
-
-  const handleMultiDestToggle = (city: string) => {
-    setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
-  };
   const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
   const [weeklyDay, setWeeklyDay] = useState(trip.weekly_day || "الجمعة");
   const [startDate, setStartDate] = useState(trip.start_date || "2026-09-01");
   const [endDate, setEndDate] = useState(trip.end_date || "2026-09-06");
+  const [guide, setGuide] = useState(trip.guide_license_number || trip.guide_license || "");
+  const [hotelId, setHotelId] = useState(trip.hotel_id || "");
+  const [activities, setActivities] = useState((trip as any).activities || "");
+  const [isActive, setIsActive] = useState(trip.is_active ?? true);
+  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+
+  const handleMultiDestToggle = (city: string) => {
+    setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
+  };
 
   const handleStartDateChange = (date: string) => {
     setStartDate(date);
@@ -2992,10 +3076,6 @@ function WeeklyTripEditModal({
       setWeeklyDay(days[d.getDay()]);
     }
   };
-  const [guide, setGuide] = useState(trip.guide_license || "");
-  const [hotelId, setHotelId] = useState(trip.hotel_id || "");
-  const [photo, setPhoto] = useState(trip.photo || "");
-  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => g.verification_status !== "مرفوض");
@@ -3013,12 +3093,20 @@ function WeeklyTripEditModal({
             alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل!");
             return;
           }
+
+          const allPhotos = [photo1, photo2, photo3].filter(Boolean);
+          const mainPhoto = allPhotos[0] || photo1;
+          const galleryJson = JSON.stringify(allPhotos);
+
           onSave({
             ...trip,
             trip_title: title,
             title,
+            trip_description: desc,
+            description: desc,
             destinations: multiDestinations,
             destination: multiDestinations.join(" + "),
+            destination_region: multiDestinations.join(" + "),
             departure_city: departureCity,
             seat_per_price: +price,
             bus_capacity: busCapacity,
@@ -3030,12 +3118,16 @@ function WeeklyTripEditModal({
             guide_license_number: guide,
             guide_license: guide,
             hotel_id: hotelId,
-            photo,
+            is_active: isActive,
+            photo: mainPhoto,
+            gallery: galleryJson,
             vehicle_plates: selVehicles,
-          });
+            activities: activities.trim() || null,
+          } as any);
         }}
       >
         <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
@@ -3061,6 +3153,7 @@ function WeeklyTripEditModal({
             </div>
           </div>
         </div>
+
         <div className="flex flex-wrap gap-1.5">
           {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => (
             <button
@@ -3075,13 +3168,45 @@ function WeeklyTripEditModal({
             </button>
           ))}
         </div>
-        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+
+        <Field label="وصف الرحلة وبرنامجها الأسبوعي" value={desc} onChange={setDesc} />
+
+        <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
+
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">حالة التفعيل</label>
+            <select
+              value={isActive ? "true" : "false"}
+              onChange={(e) => setIsActive(e.target.value === "true")}
+              className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+            >
+              <option value="true">نشطة ومعروضة</option>
+              <option value="false">موقوفة مؤقتاً</option>
+            </select>
+          </div>
+        </div>
 
         {/* 1 Day Selector */}
         <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
           <div className="font-black text-amber-900 text-xs flex justify-between items-center">
             <span>🗓️ موعد الانطلاق (يوم واحد أسبوعياً):</span>
             <span className="px-3 py-1 bg-amber-200/50 rounded-lg text-amber-900 font-black">يتم تحديده تلقائياً: كل {weeklyDay}</span>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {allWeekDays.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setWeeklyDay(d)}
+                className={`py-1.5 rounded-lg text-xs font-black border transition ${
+                  weeklyDay === d ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -3092,7 +3217,7 @@ function WeeklyTripEditModal({
 
         {/* Bus Capacity */}
         <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
-          <div className="font-black text-emerald-900 text-xs">🚍 سعة الحافلة (25 أو 50 راكب):</div>
+          <div className="font-black text-emerald-900 text-xs">🚌 سعة الحافلة (25 أو 50 راكب):</div>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -3192,9 +3317,15 @@ function WeeklyTripEditModal({
           </div>
         </div>
 
-        <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة الرحلة الأسبوعية (للعرض)" value={photo} onChange={setPhoto} />
+        <div className="pt-2 border-t border-border space-y-2">
+          <div className="font-bold text-xs text-slate-800">📸 صور الرحلة الأسبوعية (أضف أكثر من صورة للأنيميشن):</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <ImageFilePicker label="الصورة 1 (الغلاف الرئيسي)" value={photo1} onChange={setPhoto1} />
+            <ImageFilePicker label="الصورة 2 (معرض الصور)" value={photo2} onChange={setPhoto2} />
+            <ImageFilePicker label="الصورة 3 (معرض الصور)" value={photo3} onChange={setPhoto3} />
+          </div>
         </div>
+
         <div className="pt-2 border-t border-border">
           <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
         </div>
@@ -3204,7 +3335,7 @@ function WeeklyTripEditModal({
             إلغاء
           </button>
           <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
-            حفظ التغييرات
+            حفظ التعديلات
           </button>
         </div>
       </form>
