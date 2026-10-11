@@ -670,6 +670,66 @@ function AdminDashboard() {
       if (res.weekly_bookings && Array.isArray(res.weekly_bookings)) {
         setWeeklyBookings(res.weekly_bookings);
       }
+
+      if (res.hotels && Array.isArray(res.hotels)) {
+        setHotels(res.hotels.map((h: any) => ({
+          id: h.hotel_id || h.id,
+          name: h.hotel_name || h.name,
+          city: h.city,
+          address: h.address_details || h.address || "",
+          phone: h.phone_number || h.phone || "",
+          stars: Number(h.star_rating) || Number(h.stars) || 4,
+          bookings_count: 0,
+          rating_avg: 5.0,
+          partnership_status: h.partnership_status || "نشط",
+          hotel_photo_1: h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+          hotel_photo_2: h.hotel_photo_2 || "/assets/dest-harbor-coast.jpg",
+          hotel_photo_3: h.hotel_photo_3 || "/assets/cafe-libya.jpg",
+          hotel_photo_4: h.hotel_photo_4 || "",
+          hotel_photo_5: h.hotel_photo_5 || "",
+          google_maps_url: h.google_maps_url || "",
+        })));
+      }
+
+      if (res.restaurants && Array.isArray(res.restaurants)) {
+        setRestaurants(res.restaurants.map((r: any) => ({
+          id: r.facility_id || r.id,
+          name: r.facility_name || r.name,
+          type: r.facility_type || r.type || "مطعم",
+          city: r.city,
+          address: r.address_details || r.address || "",
+          phone: r.phone_number || r.phone || "",
+          rating_avg: 5.0,
+          facility_image_1: r.facility_image_1 || "/assets/restaurant-libya.jpg",
+          facility_image_2: r.facility_image_2 || "",
+          facility_image_3: r.facility_image_3 || "",
+          facility_image_4: r.facility_image_4 || "",
+          facility_image_5: r.facility_image_5 || "",
+          description: r.description || "",
+          working_hours: r.working_hours || "09:00 ص - 12:00 م",
+          google_maps_url: r.google_maps_url || "",
+        })));
+      }
+
+      if (res.places && Array.isArray(res.places)) {
+        setAttractions(res.places.map((p: any) => ({
+          id: p.place_id || p.id,
+          place_id: p.place_id || p.id,
+          name: p.place_name || p.name,
+          place_name: p.place_name || p.name,
+          city: p.city,
+          category: p.category || "معلم تاريخي",
+          description: p.description || "",
+          place_image: p.place_image || "/assets/dest-leptis-theater.jpg",
+          visitors_count: 0,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          google_maps_url: p.google_maps_url || "",
+          is_unesco: p.is_unesco,
+          unesco_year: p.unesco_year,
+          entry_fee: p.entry_fee || "مجاني",
+        })));
+      }
     }
   }, []);
 

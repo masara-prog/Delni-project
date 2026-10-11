@@ -901,19 +901,23 @@ export async function apiBookDailyTrip(params: {
   number_of_seats: number;
   passengers_names?: string;
   booking_notes?: string;
+  total_price?: number;
 }): Promise<ApiResponse> {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/bookings/daily`, {
+    const res = await fetch(`${BACKEND_API_URL}/bookings_daily`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
       },
       body: JSON.stringify(params),
     });
-    return await res.json();
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { status: "success", message: data.message || "تم تسجيل الحجز بنجاح في قاعدة البيانات", ...data };
+    }
+    return { status: "error", message: data.error || "تعذر إتمام الحجز" };
   } catch {
-    return { status: "error", message: "تعذر إرسال الحجز للخادم" };
+    return { status: "error", message: "تعذر إرسال الحجز لقاعدة بيانات DelniDB" };
   }
 }
 
@@ -926,19 +930,23 @@ export async function apiBookWeeklyTrip(params: {
   number_of_seats: number;
   passengers_names?: string;
   booking_notes?: string;
+  total_price?: number;
 }): Promise<ApiResponse> {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/bookings/weekly`, {
+    const res = await fetch(`${BACKEND_API_URL}/bookings_weekly`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
       },
       body: JSON.stringify(params),
     });
-    return await res.json();
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { status: "success", message: data.message || "تم تسجيل الحجز بنجاح في قاعدة البيانات", ...data };
+    }
+    return { status: "error", message: data.error || "تعذر إتمام الحجز" };
   } catch {
-    return { status: "error", message: "تعذر إرسال الحجز للخادم" };
+    return { status: "error", message: "تعذر إرسال الحجز لقاعدة بيانات DelniDB" };
   }
 }
 
@@ -1026,6 +1034,28 @@ export async function apiRegisterGuide(params: {
 
 export async function apiGetTouristBookings(touristId: string) {
   try {
+    const [resD, resW] = await Promise.all([
+      fetch(`${BACKEND_API_URL}/bookings_daily`).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(`${BACKEND_API_URL}/bookings_weekly`).then(r => r.ok ? r.json() : { data: [] }),
+    ]);
+    const dailyData = Array.isArray(resD.data) ? resD.data : [];
+    const weeklyData = Array.isArray(resW.data) ? resW.data : [];
+
+    const dailyFiltered = dailyData.filter((b: any) => !touristId || b.tourist_id === touristId || touristId.includes(b.tourist_id) || b.tourist_id.includes(touristId));
+    const weeklyFiltered = weeklyData.filter((b: any) => !touristId || b.tourist_id === touristId || touristId.includes(b.tourist_id) || b.tourist_id.includes(touristId));
+
+    if (dailyFiltered.length > 0 || weeklyFiltered.length > 0) {
+      return {
+        daily: dailyFiltered,
+        weekly: weeklyFiltered,
+        daily_bookings: dailyFiltered,
+        weekly_bookings: weeklyFiltered,
+        privateTrips: [],
+      };
+    }
+  } catch {}
+
+  try {
     const daily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
     const weekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
     const privateTrips = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
@@ -1045,6 +1075,16 @@ export async function apiGetTouristBookings(touristId: string) {
 
 export async function apiGetAdminDashboard(): Promise<any> {
   try {
+    const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success) {
+        return json;
+      }
+    }
+  } catch {}
+
+  try {
     const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
       headers: { Accept: "application/json" },
     });
@@ -1052,6 +1092,7 @@ export async function apiGetAdminDashboard(): Promise<any> {
       return await res.json();
     }
   } catch {}
+
   const guides = getAllGuides();
   const companies = getTransportCompanies();
   const vehicles = getVehicles();
@@ -1090,30 +1131,40 @@ export async function apiVerifyGuide(licenseNumber: string, status: "موثق" |
  */
 export async function apiDeleteGuide(licenseNumber: string) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin/guides/${encodeURIComponent(licenseNumber)}`, {
+    const res = await fetch(`${BACKEND_API_URL}/guides?license_number=${encodeURIComponent(licenseNumber)}`, {
       method: "DELETE",
-      headers: {
-        Accept: "application/json",
-      },
     });
-    if (res.ok) {
-      return await res.json();
-    }
+    if (res.ok) return await res.json();
   } catch {}
-  return null;
+  return deleteGuideAccount(licenseNumber);
 }
 
 /**
- * Trip API functions
+ * Trip API functions connecting to DelniDB
  */
+export async function apiGetDailyTrips(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/daily_trips`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch {}
+  return [];
+}
+
 export async function apiCreateDailyTrip(data: any) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
+    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    return await res.json();
+    const json = await res.json();
+    if (res.ok && json.success) {
+      return { status: "success", trip: { ...data, daily_trip_id: json.trip_id || data.daily_trip_id || data.id }, ...json };
+    }
+    return { status: "error", message: json.error || "فشل حفظ الرحلة" };
   } catch {
     return null;
   }
@@ -1121,37 +1172,52 @@ export async function apiCreateDailyTrip(data: any) {
 
 export async function apiUpdateDailyTrip(id: string, data: any) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(data),
+    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...data, daily_trip_id: id }),
     });
-    return await res.json();
-  } catch {
-    return null;
-  }
+    const json = await res.json();
+    if (res.ok && json.success) {
+      return { status: "success", ...json };
+    }
+  } catch {}
+  return null;
 }
 
 export async function apiDeleteDailyTrip(id: string) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${BACKEND_API_URL}/daily_trips?daily_trip_id=${encodeURIComponent(id)}`, {
       method: "DELETE",
-      headers: { Accept: "application/json" },
     });
-    return await res.json();
-  } catch {
-    return null;
-  }
+    if (res.ok) return await res.json();
+  } catch {}
+  return null;
+}
+
+export async function apiGetWeeklyTrips(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch {}
+  return [];
 }
 
 export async function apiCreateWeeklyTrip(data: any) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
+    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    return await res.json();
+    const json = await res.json();
+    if (res.ok && json.success) {
+      return { status: "success", trip: { ...data, weekly_trip_id: json.trip_id || data.weekly_trip_id || data.id }, ...json };
+    }
+    return { status: "error", message: json.error || "فشل حفظ الرحلة الأسبوعية" };
   } catch {
     return null;
   }
@@ -1159,27 +1225,49 @@ export async function apiCreateWeeklyTrip(data: any) {
 
 export async function apiUpdateWeeklyTrip(id: string, data: any) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(data),
+    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...data, weekly_trip_id: id }),
     });
-    return await res.json();
-  } catch {
-    return null;
-  }
+    const json = await res.json();
+    if (res.ok && json.success) {
+      return { status: "success", ...json };
+    }
+  } catch {}
+  return null;
 }
 
 export async function apiDeleteWeeklyTrip(id: string) {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${BACKEND_API_URL}/weekly_trips?weekly_trip_id=${encodeURIComponent(id)}`, {
       method: "DELETE",
-      headers: { Accept: "application/json" },
     });
-    return await res.json();
-  } catch {
-    return null;
-  }
+    if (res.ok) return await res.json();
+  } catch {}
+  return null;
+}
+
+export async function apiGetHotels(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/hotels`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch {}
+  return [];
+}
+
+export async function apiGetRestaurants(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/restaurants`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch {}
+  return [];
 }
 
 /**

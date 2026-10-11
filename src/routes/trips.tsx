@@ -66,6 +66,7 @@ import { GuideCVModal, GuideCVData } from "@/components/GuideCVModal";
 import { VehicleDetailsModal, VehicleData } from "@/components/VehicleDetailsModal";
 import { Footer } from "@/components/Footer";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
+import { apiGetDailyTrips, apiGetWeeklyTrips } from "@/lib/api";
 
 export const Route = createFileRoute("/trips")({
   head: () => ({
@@ -2318,8 +2319,8 @@ function TripsPage() {
     const fetchDbTrips = async () => {
       try {
         const [resDaily, resWeekly] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/trips/daily").then(r => r.ok ? r.json() : []),
-          fetch("http://127.0.0.1:8000/api/trips/weekly").then(r => r.ok ? r.json() : []),
+          apiGetDailyTrips(),
+          apiGetWeeklyTrips(),
         ]);
 
         const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => ({
@@ -2328,7 +2329,7 @@ function TripsPage() {
           title: t.trip_title,
           img: t.photo || heroImg,
           description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
-          activities: t.activities ? (Array.isArray(t.activities) ? t.activities : [t.activities]) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
+          activities: t.activities ? (Array.isArray(t.activities) ? t.activities : String(t.activities).split(',')) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
           attractions: [
             {
               name: t.destination_city || "المعلم الأثري",
@@ -2338,22 +2339,22 @@ function TripsPage() {
           ],
           targetPersons: t.max_capacity || 25,
           availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
-          daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "أسبوعياً",
+          daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "السبت,الثلاثاء",
           departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
           entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
           guide: {
-            name: t.guide?.full_name || "مرشد سياحي معتمد",
-            title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
-            phone: t.guide?.phone_number || "0912345678",
+            name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
+            title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
+            phone: t.guide_phone || t.guide?.phone_number || "0912233445",
             cv: {
-              name: t.guide?.full_name || "مرشد سياحي معتمد",
-              title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
-              licenseNumber: t.guide?.license_number || t.guide_license_number || "G-2026",
-              experienceYears: t.guide?.years_of_experience || 3,
+              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
+              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
+              licenseNumber: t.guide_license_number || t.guide?.license_number || "G-1001",
+              experienceYears: t.guide?.years_of_experience || 6,
               rating: 5.0,
-              pricePerDay: Number(t.guide?.price_per_day) || 150,
-              phone: t.guide?.phone_number || "0912345678",
-              bio: t.guide?.bio || "مرشد سياحي مرخص يقدم جولات سياحية نوعية واحترافية.",
+              pricePerDay: Number(t.guide?.price_per_day) || 180,
+              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+              bio: t.guide?.bio || "مرشد سياحي معتمد ومختص بآثار لبدة الكبرى وصبراتة والمدن التاريخية.",
               specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
             }
           },
@@ -2374,10 +2375,10 @@ function TripsPage() {
           title: t.trip_title,
           img: t.photo || destUbari,
           description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
-          startDate: t.start_date || "2026-10-15",
-          endDate: t.end_date || "2026-10-20",
-          targetPersons: t.max_capacity || 25,
-          availableSeats: t.max_capacity || 25,
+          startDate: t.start_date || "2026-10-25",
+          endDate: t.end_date || "2026-10-31",
+          targetPersons: t.max_capacity || 20,
+          availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 20),
           seatPrice: Number(t.seat_per_price) || 1500,
           cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
           attractions: [
@@ -2391,9 +2392,9 @@ function TripsPage() {
           departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
           entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
           guide: {
-            name: t.guide?.full_name || "مرشد سياحي معتمد",
-            title: t.guide?.title || "مرشد معتمد",
-            phone: t.guide?.phone_number || "0912345678",
+            name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
+            title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
+            phone: t.guide_phone || t.guide?.phone_number || "0912233445",
           },
           vehicle: {
             model: "حافلة سياحية مجهزة للمسافات الطويلة",
@@ -2414,7 +2415,7 @@ function TripsPage() {
   }, []);
 
   const allTrips = useMemo(
-    () => [...liveDbTrips, ...dailyTrips, ...weeklyTrips, ...privateTemplates],
+    () => (liveDbTrips.length > 0 ? liveDbTrips : [...dailyTrips, ...weeklyTrips]),
     [liveDbTrips]
   );
 

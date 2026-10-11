@@ -6,6 +6,7 @@ import { Icon } from "@/components/Icons";
 import { Footer } from "@/components/Footer";
 import { HotelDetailsModal, type HotelData } from "@/components/HotelDetailsModal";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
+import { apiGetHotels } from "@/lib/api";
 
 export const Route = createFileRoute("/hotels")({
   head: () => ({
@@ -1197,21 +1198,20 @@ function HotelsPage() {
   const [dbHotels, setDbHotels] = useState<HotelData[]>([]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("dalni_hotels");
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped: HotelData[] = data.map((item: any) => ({
+    const fetchHotels = async () => {
+      try {
+        const liveHotels = await apiGetHotels();
+        if (Array.isArray(liveHotels) && liveHotels.length > 0) {
+          const mapped: HotelData[] = liveHotels.map((item: any) => ({
             id: item.hotel_id || item.id,
             name: item.hotel_name || item.name,
             city: item.city,
             address: item.address_details || item.address,
-            mapsQuery: `${item.hotel_name || item.name}+${item.city}`,
+            mapsQuery: item.google_maps_url || `${item.hotel_name || item.name}+${item.city}`,
             phone: item.phone_number || item.phone,
-            stars: item.star_rating || item.stars || 4,
+            stars: Number(item.star_rating) || Number(item.stars) || 4,
             partnership_status: item.partnership_status || "نشط",
-            propertyType: "hotel",
+            propertyType: (item.property_type && item.property_type.includes("تراث")) ? "heritage" : "hotel",
             photos: [
               item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
               item.hotel_photo_2 || item.photos?.[1] || "/assets/dest-harbor-coast.jpg",
@@ -1219,16 +1219,43 @@ function HotelsPage() {
             ],
           }));
           setDbHotels(mapped);
+          return;
         }
-      }
-    } catch {}
+      } catch {}
+
+      try {
+        const stored = localStorage.getItem("dalni_hotels");
+        if (stored) {
+          const data = JSON.parse(stored);
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped: HotelData[] = data.map((item: any) => ({
+              id: item.hotel_id || item.id,
+              name: item.hotel_name || item.name,
+              city: item.city,
+              address: item.address_details || item.address,
+              mapsQuery: item.google_maps_url || `${item.hotel_name || item.name}+${item.city}`,
+              phone: item.phone_number || item.phone,
+              stars: item.star_rating || item.stars || 4,
+              partnership_status: item.partnership_status || "نشط",
+              propertyType: "hotel",
+              photos: [
+                item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
+                item.hotel_photo_2 || item.photos?.[1] || "/assets/dest-harbor-coast.jpg",
+                item.hotel_photo_3 || item.photos?.[2] || "/assets/cafe-libya.jpg",
+              ],
+            }));
+            setDbHotels(mapped);
+          }
+        }
+      } catch {}
+    };
+
+    fetchHotels();
   }, []);
 
   const hotels = useMemo(() => {
-    const defaultList = getHotels(language);
-    if (dbHotels.length === 0) return defaultList;
-    const dbIds = new Set(dbHotels.map((h) => h.id));
-    return [...dbHotels, ...defaultList.filter((h) => !dbIds.has(h.id))];
+    if (dbHotels.length > 0) return dbHotels;
+    return getHotels(language);
   }, [language, dbHotels]);
 
   const cities = useMemo(
