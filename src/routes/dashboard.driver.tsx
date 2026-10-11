@@ -163,23 +163,20 @@ function DriverDashboard() {
   ];
 
   // Notifications
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: "N-1", title: "تم تعيينك لرحلة جديدة", message: "قامت شركة الصحراء بتعيينك لسياقة حافلة طرابلس ← لبدة الكبرى اليوم الساعة 9:00 صباحاً.", trip_route: "طرابلس ← لبدة الكبرى", assigned_at: "قبل 20 دقيقة", is_read: false },
-    { id: "N-2", title: "تحديث جدول الأسبوع", message: "تمت إضافة مهمة قيادة لرحلة أوباري الصحراوية يوم 17 أغسطس.", trip_route: "طرابلس ← أوباري", assigned_at: "أمس", is_read: false }
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // Trips & Live Status
   const [activeTrip, setActiveTrip] = useState<AssignedDriverTrip>({
-    id: "TRP-101",
-    route: "طرابلس ← الخمس (لبدة الكبرى)",
-    company_name: "شركة الصحراء للنقل",
-    contract_number: "CN-2026-01",
-    plate_number: "طرابلس 4517",
+    id: `TRP-${driverInfo.driver_license_number || '101'}`,
+    route: driverInfo.assigned_vehicle_plate ? `جولة سياحية — حافلة ${driverInfo.assigned_vehicle_plate}` : "لا توجد رحلة مسندة حالياً",
+    company_name: driverInfo.company_name || "شركة النقل السياحي",
+    contract_number: driverInfo.contract_number || "",
+    plate_number: driverInfo.assigned_vehicle_plate || "غير محدد",
     date: "اليوم",
-    pickup_time: "9:00 ص",
-    pax_count: 12,
-    status: "قيد التنفيذ",
-    current_location: "طرابلس - طريق الشط (مقر الانطلاق)",
+    pickup_time: "09:00 ص",
+    pax_count: 0,
+    status: driverInfo.assigned_vehicle_plate ? "قيد التنفيذ" : "مجدولة",
+    current_location: "مقر الشركة",
     status_stage: "في الانتظار"
   });
 

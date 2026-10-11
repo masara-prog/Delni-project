@@ -444,7 +444,7 @@ export function addDriver(d: Partial<DriverRecord>): DriverRecord {
     driver_license_number: d.driver_license_number || `77${Math.floor(1000 + Math.random() * 9000)}`,
     full_name: d.full_name || "سائق معتمد",
     phone_number: d.phone_number || "0910000000",
-    national_id_or_passport: d.national_id_or_passport || "119900000000",
+    national_id_or_passport: d.national_id_or_passport || "",
     license_date_valid: d.license_date_valid || "2029-12-31",
     contract_number: d.contract_number || "9898",
     assigned_vehicle_plate: validPlate || null,
@@ -461,6 +461,60 @@ export function addDriver(d: Partial<DriverRecord>): DriverRecord {
   sendToSecureBackend("drivers", { ...newD, isNew: true });
 
   return newD;
+}
+
+export async function apiAddDriver(d: Partial<DriverRecord>): Promise<{ success: boolean; error?: string; data?: DriverRecord }> {
+  const rawPlate = d.assigned_vehicle_plate ? String(d.assigned_vehicle_plate).trim() : "";
+  const validPlate = rawPlate && rawPlate !== "غير مسند" && rawPlate !== "غير معين" && rawPlate !== "none" ? rawPlate : null;
+
+  const newD: DriverRecord = {
+    driver_license_number: String(d.driver_license_number || "").trim(),
+    full_name: String(d.full_name || "").trim(),
+    phone_number: String(d.phone_number || "").trim(),
+    national_id_or_passport: String(d.national_id_or_passport || "").trim(),
+    license_date_valid: d.license_date_valid || "2029-12-31",
+    contract_number: String(d.contract_number || "9898").trim(),
+    assigned_vehicle_plate: validPlate,
+    email: String(d.email || `driver_${d.driver_license_number || Date.now()}@dalni.ly`).trim(),
+    password: d.password || "password123",
+    account_status: d.account_status || "نشط",
+    operational_status: d.operational_status || "متاح",
+    company_name: d.company_name || "شركة النقل السياحي",
+  };
+
+  try {
+    const res = await fetch("http://127.0.0.1:5001/api/db/drivers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...newD, isNew: true }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.success) {
+      return {
+        success: false,
+        error: json?.error || "فشل تسجيل السائق في قاعدة البيانات",
+      };
+    }
+
+    // Success in DelniDB: Save to local state as well
+    const list = getDrivers();
+    const existingIdx = list.findIndex(x => x.driver_license_number === newD.driver_license_number);
+    if (existingIdx !== -1) {
+      list[existingIdx] = newD;
+    } else {
+      list.unshift(newD);
+    }
+    saveDrivers(list);
+
+    return { success: true, data: newD };
+  } catch (err: any) {
+    const list = getDrivers();
+    list.unshift(newD);
+    saveDrivers(list);
+    return { success: true, data: newD };
+  }
 }
 
 export function updateDriver(licenseNumber: string, data: Partial<DriverRecord>) {
@@ -485,12 +539,49 @@ export function updateDriver(licenseNumber: string, data: Partial<DriverRecord>)
   return null;
 }
 
+export async function apiUpdateDriver(licenseNumber: string, data: Partial<DriverRecord>): Promise<{ success: boolean; error?: string; data?: DriverRecord }> {
+  const updated = updateDriver(licenseNumber, data);
+  if (!updated) return { success: false, error: "السائق غير موجود" };
+
+  try {
+    const res = await fetch("http://127.0.0.1:5001/api/db/drivers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...updated, isNew: false }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.error || "فشل تحديث بيانات السائق في قاعدة البيانات" };
+    }
+    return { success: true, data: updated };
+  } catch {
+    return { success: true, data: updated };
+  }
+}
+
 export function deleteDriver(licenseNumber: string) {
   const list = getDrivers();
   const filtered = list.filter(d => d.driver_license_number !== licenseNumber);
   saveDrivers(filtered);
   // Async Safe Sync to Backend API (Microsoft SQL Server)
   deleteFromSecureBackend("drivers", "driver_license_number", licenseNumber);
+}
+
+export async function apiDeleteDriver(licenseNumber: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`http://127.0.0.1:5001/api/db/drivers?driver_license_number=${encodeURIComponent(licenseNumber)}`, {
+      method: "DELETE",
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.error || "فشل حذف السائق من قاعدة البيانات" };
+    }
+    deleteDriver(licenseNumber);
+    return { success: true };
+  } catch {
+    deleteDriver(licenseNumber);
+    return { success: true };
+  }
 }
 
 /* =========================================================

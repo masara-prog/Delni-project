@@ -21,7 +21,10 @@ import {
   deleteDriver,
   saveVehicles,
   saveDrivers,
-  saveTransportCompanies
+  saveTransportCompanies,
+  apiAddDriver,
+  apiUpdateDriver,
+  apiDeleteDriver
 } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/transport")({
@@ -59,17 +62,17 @@ function TransportDashboard() {
       const matched = companies.find(c => c.contract_number === u.contract_number || c.email === u.email);
       const data = matched || u;
       return {
-        contract_number: data.contract_number || "CN-2026-01",
+        contract_number: data.contract_number || "",
         company_name: data.company_name || data.name || "شركة النقل السياحي",
-        phone_number: data.phone_number || data.phone || "0911234567",
-        address: data.address || "طرابلس - طريق الشط",
+        phone_number: data.phone_number || data.phone || "",
+        address: data.address || "",
         city: data.city || "طرابلس",
-        total_vehicles: data.total_vehicles || 12,
-        available_vehicles: data.available_vehicles || data.available_cars || 8,
+        total_vehicles: Number(data.total_vehicles) || 0,
+        available_vehicles: Number(data.available_vehicles) || 0,
         verification_status: data.verification_status || data.status || "موثق",
-        contract_start_date: data.contract_start_date || "2025-01-15",
-        contract_end_date: data.contract_end_date || "2028-01-15",
-        email: data.email || "transport@dalni.ly",
+        contract_start_date: data.contract_start_date || "",
+        contract_end_date: data.contract_end_date || "",
+        email: data.email || "",
         password: "••••••••",
       };
     }
@@ -157,24 +160,59 @@ function TransportDashboard() {
   ];
 
   /* ---- HANDLERS DRIVERS ---- */
-  const handleAddDriver = (newDrv: Driver) => {
-    const saved = addDriver({
-      ...newDrv,
-      contract_number: companyInfo.contract_number,
-      company_name: companyInfo.company_name,
-    }) as Driver;
-    setDrivers([saved, ...drivers]);
-    setShowAddDriver(false);
+  const handleAddDriver = async (newDrv: Driver) => {
+    try {
+      const res = await apiAddDriver({
+        ...newDrv,
+        contract_number: companyInfo.contract_number,
+        company_name: companyInfo.company_name,
+      });
+      if (!res.success) {
+        alert("⚠️ " + (res.error || "فشل حفظ بيانات السائق في قاعدة البيانات"));
+        return;
+      }
+      
+      // Success! Fetch fresh drivers from DelniDB immediately
+      if (companyInfo.contract_number) {
+        const fresh = await fetch(`http://127.0.0.1:5001/api/db/drivers?contract_number=${encodeURIComponent(companyInfo.contract_number)}`);
+        const json = await fresh.json().catch(() => null);
+        if (json?.success && Array.isArray(json.data)) {
+          saveDrivers(json.data);
+          setDrivers(json.data);
+        } else if (res.data) {
+          setDrivers(prev => [res.data as unknown as Driver, ...prev.filter(x => x.driver_license_number !== res.data!.driver_license_number)]);
+        }
+      } else if (res.data) {
+        setDrivers(prev => [res.data as unknown as Driver, ...prev.filter(x => x.driver_license_number !== res.data!.driver_license_number)]);
+      }
+
+      setShowAddDriver(false);
+      alert(isAr ? "✅ تم إضافة السائق وتثبيته في قاعدة البيانات بنجاح، وهو متاح الآن للتعيين للمركبات." : "Driver added successfully to DelniDB.");
+    } catch (err: any) {
+      alert("⚠️ حدث خطأ أثناء إضافة السائق: " + (err.message || "فشلت العملية"));
+    }
   };
-  const handleUpdateDriver = (updated: Driver) => {
-    updateDriver(updated.driver_license_number, updated);
-    setDrivers(drivers.map(d => d.driver_license_number === updated.driver_license_number ? updated : d));
-    setEditingDriver(null);
+
+  const handleUpdateDriver = async (updated: Driver) => {
+    try {
+      const res = await apiUpdateDriver(updated.driver_license_number, updated);
+      if (!res.success) {
+        alert("⚠️ " + (res.error || "فشل تحديث بيانات السائق"));
+        return;
+      }
+      setDrivers(drivers.map(d => d.driver_license_number === updated.driver_license_number ? updated : d));
+      setEditingDriver(null);
+      alert(isAr ? "✅ تم تحديث بيانات السائق بنجاح في قاعدة البيانات." : "Driver updated successfully.");
+    } catch (err: any) {
+      alert("⚠️ حدث خطأ أثناء التحديث: " + (err.message || "فشلت العملية"));
+    }
   };
-  const handleDeleteDriver = (lic: string) => {
-    if (confirm("هل أنت متأكد من حذف حساب هذا السائق من الشركة؟")) {
-      deleteDriver(lic);
+
+  const handleDeleteDriver = async (lic: string) => {
+    if (confirm("هل أنت متأكد من حذف حساب هذا السائق نهائياً من قاعدة البيانات؟")) {
+      await apiDeleteDriver(lic);
       setDrivers(drivers.filter(d => d.driver_license_number !== lic));
+      alert(isAr ? "✅ تم حذف السائق بنجاح." : "Driver deleted successfully.");
     }
   };
 
@@ -830,7 +868,7 @@ function DriverModal({
   vehicles: Vehicle[];
   drivers?: Driver[];
   onClose: () => void;
-  onSave: (d: Driver) => void;
+  onSave: (d: Driver) => void | Promise<void>;
 }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
@@ -844,8 +882,9 @@ function DriverModal({
   const [pass, setPass] = useState(driver?.password || "");
   const [assignedPlate, setAssignedPlate] = useState(driver?.assigned_vehicle_plate || "");
   const [operationalStatus, setOperationalStatus] = useState<Driver["operational_status"]>(driver?.operational_status || "متاح");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim() || !nid.trim() || !email.trim() || !lic.trim()) {
       return alert(isAr ? "يرجى تعبئة كافة الحقول المطلوبة لضمان صحة البيانات" : "Please fill all required fields");
@@ -870,19 +909,24 @@ function DriverModal({
       return alert(isAr ? "يرجى إدخال بريد إلكتروني صحيح" : "Please enter a valid email address");
     }
 
-    onSave({
-      driver_license_number: lic.trim(),
-      full_name: name.trim(),
-      phone_number: phone.trim(),
-      license_date_valid: expire,
-      national_id_or_passport: nid.trim(),
-      email: email.trim(),
-      password: pass || "••••••••",
-      contract_number: contractNumber,
-      assigned_vehicle_plate: driver ? (assignedPlate.trim() || null) : null,
-      account_status: driver?.account_status || "نشط",
-      operational_status: operationalStatus,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        driver_license_number: lic.trim(),
+        full_name: name.trim(),
+        phone_number: phone.trim(),
+        license_date_valid: expire,
+        national_id_or_passport: nid.trim(),
+        email: email.trim(),
+        password: pass || "••••••••",
+        contract_number: contractNumber,
+        assigned_vehicle_plate: driver ? (assignedPlate.trim() || null) : null,
+        account_status: driver?.account_status || "نشط",
+        operational_status: operationalStatus,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -972,8 +1016,10 @@ function DriverModal({
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow cursor-pointer">{isAr ? "حفظ بيانات السائق" : "Save Driver Details"}</button>
+          <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 h-10 rounded-xl border font-black text-xs cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
+          <button type="submit" disabled={isSubmitting} className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow cursor-pointer disabled:opacity-50">
+            {isSubmitting ? (isAr ? "جاري الحفظ في DelniDB..." : "Saving to DelniDB...") : (isAr ? "حفظ بيانات السائق" : "Save Driver Details")}
+          </button>
         </div>
       </form>
     </ModalShell>

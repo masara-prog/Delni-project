@@ -583,14 +583,48 @@ const server = http.createServer(async (req, res) => {
       }
 
       const cleanLic = String(driver_license_number).trim();
+      const cleanPhone = String(phone_number).trim();
+      const cleanNid = String(national_id_or_passport || '').trim();
+      const cleanEmail = String(email || `driver_${cleanLic}@dalni.ly`).trim();
 
-      // Check duplicate primary key on creation
+      // 1. Check duplicate primary key on creation
       if (isNew) {
         const dupReq = db.request();
         dupReq.input('chk_lic', sql.NVarChar(50), cleanLic);
         const dupRes = await dupReq.query('SELECT 1 FROM drivers WHERE driver_license_number = @chk_lic');
         if (dupRes.recordset.length > 0) {
-          return sendJson(res, 409, { success: false, error: 'رقم رخصة القيادة مسجل مسبقاً لسائق آخر في قاعدة البيانات' });
+          return sendJson(res, 400, { success: false, error: 'رقم رخصة القيادة مسجل مسبقاً لسائق آخر في قاعدة البيانات' });
+        }
+      }
+
+      // 2. Check duplicate phone number
+      const phoneChk = db.request();
+      phoneChk.input('chk_phone', sql.NVarChar(20), cleanPhone);
+      phoneChk.input('chk_lic', sql.NVarChar(50), cleanLic);
+      const phoneRes = await phoneChk.query('SELECT 1 FROM drivers WHERE phone_number = @chk_phone AND driver_license_number <> @chk_lic');
+      if (phoneRes.recordset.length > 0) {
+        return sendJson(res, 400, { success: false, error: 'رقم هاتف السائق مسجل مسبقاً لسائق آخر في قاعدة البيانات' });
+      }
+
+      // 3. Check duplicate national ID if provided
+      if (cleanNid) {
+        const nidChk = db.request();
+        nidChk.input('chk_nid', sql.NVarChar(50), cleanNid);
+        nidChk.input('chk_lic', sql.NVarChar(50), cleanLic);
+        const nidRes = await nidChk.query('SELECT 1 FROM drivers WHERE national_id_or_passport = @chk_nid AND driver_license_number <> @chk_lic');
+        if (nidRes.recordset.length > 0) {
+          return sendJson(res, 400, { success: false, error: 'الرقم الوطني للسائق مسجل مسبقاً لسائق آخر في قاعدة البيانات' });
+        }
+      }
+
+      // 4. Check duplicate email if provided
+      if (cleanEmail) {
+        const emailChk = db.request();
+        emailChk.input('chk_email', sql.NVarChar(100), cleanEmail);
+        emailChk.input('chk_lic', sql.NVarChar(50), cleanLic);
+        const emailRes = await emailChk.query('SELECT 1 FROM drivers WHERE email = @chk_email AND driver_license_number <> @chk_lic');
+        if (emailRes.recordset.length > 0) {
+          return sendJson(res, 400, { success: false, error: 'البريد الإلكتروني مسجل مسبقاً لسائق آخر في قاعدة البيانات' });
         }
       }
 
@@ -624,53 +658,68 @@ const server = http.createServer(async (req, res) => {
       const shouldUpdatePass = rawPassword && rawPassword !== '••••••••' && rawPassword.length >= 4;
       const hashedPass = shouldUpdatePass ? hashPassword(rawPassword) : '';
 
-      const request = db.request();
-      request.input('driver_license_number', sql.NVarChar(50), cleanLic);
-      request.input('full_name', sql.NVarChar(150), String(full_name).trim());
-      request.input('phone_number', sql.NVarChar(20), String(phone_number).trim());
-      request.input('national_id_or_passport', sql.NVarChar(50), String(national_id_or_passport || '').trim());
-      request.input('license_date_valid', sql.Date, license_date_valid || '2029-12-31');
-      request.input('contract_number', sql.NVarChar(50), cleanContract);
-      request.input('assigned_vehicle_plate', sql.NVarChar(50), validPlate);
-      request.input('email', sql.NVarChar(100), String(email || `driver_${cleanLic}@dalni.ly`).trim());
-      request.input('default_password', sql.NVarChar(255), hashPassword('password123'));
-      request.input('hasNewPassword', sql.Bit, shouldUpdatePass ? 1 : 0);
-      request.input('hashedPassword', sql.NVarChar(255), hashedPass);
-      request.input('account_status', sql.NVarChar(50), String(account_status || 'نشط').trim());
-      request.input('operational_status', sql.NVarChar(50), String(operational_status || 'متاح').trim());
+      try {
+        const request = db.request();
+        request.input('driver_license_number', sql.NVarChar(50), cleanLic);
+        request.input('full_name', sql.NVarChar(150), String(full_name).trim());
+        request.input('phone_number', sql.NVarChar(20), cleanPhone);
+        request.input('national_id_or_passport', sql.NVarChar(50), cleanNid);
+        request.input('license_date_valid', sql.Date, license_date_valid || '2029-12-31');
+        request.input('contract_number', sql.NVarChar(50), cleanContract);
+        request.input('assigned_vehicle_plate', sql.NVarChar(50), validPlate);
+        request.input('email', sql.NVarChar(100), cleanEmail);
+        request.input('default_password', sql.NVarChar(255), hashPassword('password123'));
+        request.input('hasNewPassword', sql.Bit, shouldUpdatePass ? 1 : 0);
+        request.input('hashedPassword', sql.NVarChar(255), hashedPass);
+        request.input('account_status', sql.NVarChar(50), String(account_status || 'نشط').trim());
+        request.input('operational_status', sql.NVarChar(50), String(operational_status || 'متاح').trim());
 
-      await request.query(`
-        IF EXISTS (SELECT 1 FROM drivers WHERE driver_license_number = @driver_license_number)
-        BEGIN
-          UPDATE drivers
-          SET full_name = @full_name,
-              phone_number = @phone_number,
-              national_id_or_passport = @national_id_or_passport,
-              license_date_valid = @license_date_valid,
-              assigned_vehicle_plate = @assigned_vehicle_plate,
-              operational_status = @operational_status,
-              email = @email,
-              account_status = @account_status,
-              password = CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE password END
-          WHERE driver_license_number = @driver_license_number;
-        END
-        ELSE
-        BEGIN
-          INSERT INTO drivers
-          (driver_license_number, full_name, phone_number, national_id_or_passport, license_date_valid, contract_number, assigned_vehicle_plate, email, password, account_status, operational_status)
-          VALUES
-          (@driver_license_number, @full_name, @phone_number, @national_id_or_passport, @license_date_valid, @contract_number, @assigned_vehicle_plate, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @account_status, @operational_status);
-        END
+        await request.query(`
+          IF EXISTS (SELECT 1 FROM drivers WHERE driver_license_number = @driver_license_number)
+          BEGIN
+            UPDATE drivers
+            SET full_name = @full_name,
+                phone_number = @phone_number,
+                national_id_or_passport = @national_id_or_passport,
+                license_date_valid = @license_date_valid,
+                assigned_vehicle_plate = @assigned_vehicle_plate,
+                operational_status = @operational_status,
+                email = @email,
+                account_status = @account_status,
+                password = CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE password END
+            WHERE driver_license_number = @driver_license_number;
+          END
+          ELSE
+          BEGIN
+            INSERT INTO drivers
+            (driver_license_number, full_name, phone_number, national_id_or_passport, license_date_valid, contract_number, assigned_vehicle_plate, email, password, account_status, operational_status)
+            VALUES
+            (@driver_license_number, @full_name, @phone_number, @national_id_or_passport, @license_date_valid, @contract_number, @assigned_vehicle_plate, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @account_status, @operational_status);
+          END
 
-        IF @assigned_vehicle_plate IS NOT NULL
-        BEGIN
-          UPDATE drivers
-          SET assigned_vehicle_plate = NULL
-          WHERE assigned_vehicle_plate = @assigned_vehicle_plate AND driver_license_number <> @driver_license_number;
-        END
-      `);
+          IF @assigned_vehicle_plate IS NOT NULL
+          BEGIN
+            UPDATE drivers
+            SET assigned_vehicle_plate = NULL
+            WHERE assigned_vehicle_plate = @assigned_vehicle_plate AND driver_license_number <> @driver_license_number;
+          END
+        `);
 
-      return sendJson(res, 201, { success: true, message: 'تم حفظ السائق في DelniDB بنجاح' });
+        return sendJson(res, 201, { success: true, message: 'تم حفظ السائق في DelniDB بنجاح' });
+      } catch (sqlErr) {
+        console.error('[DelniDB Driver Insert Error]:', sqlErr.message);
+        let friendlyErr = 'فشل حفظ بيانات السائق في قاعدة البيانات';
+        if (sqlErr.message.includes('UQ__drivers__9DF00BEE') || sqlErr.message.includes('national_id_or_passport')) {
+          friendlyErr = 'الرقم الوطني للسائق مسجل مسبقاً لسائق آخر في قاعدة البيانات';
+        } else if (sqlErr.message.includes('UQ__drivers__A1936A6B') || sqlErr.message.includes('phone_number')) {
+          friendlyErr = 'رقم هاتف السائق مسجل مسبقاً لسائق آخر في قاعدة البيانات';
+        } else if (sqlErr.message.includes('UQ__drivers__AB6E6164') || sqlErr.message.includes('email')) {
+          friendlyErr = 'البريد الإلكتروني مسجل مسبقاً لسائق آخر في قاعدة البيانات';
+        } else if (sqlErr.message.includes('PK__drivers') || sqlErr.message.includes('driver_license_number')) {
+          friendlyErr = 'رقم رخصة القيادة مسجل مسبقاً لسائق آخر في قاعدة البيانات';
+        }
+        return sendJson(res, 400, { success: false, error: friendlyErr });
+      }
     }
 
     // 7.1 Drivers: DELETE
