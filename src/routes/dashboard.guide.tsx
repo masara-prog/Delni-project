@@ -352,7 +352,7 @@ function GuideDashboard() {
     try {
       const res = await apiUpdateGuideProfile(guideInfo.license_number, guideInfo);
       if (res && res.status === "success") {
-        alert("تم حفظ التعديلات وتحديث ملفك في قاعدة البيانات DelniDB بنجاح ✓");
+        alert("تم حفظ التعديلات وتحديث ملفك بنجاح ✓");
         const session = getStoredSession();
         if (session.user) {
           localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...guideInfo }));
@@ -410,6 +410,19 @@ function GuideDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Verification Status Banner if pending */}
+      {!isVerified && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-right flex items-start gap-3 text-amber-950 animate-in fade-in">
+          <span className="text-2xl shrink-0 mt-0.5">⏳</span>
+          <div>
+            <h3 className="font-bold text-sm text-amber-900">حسابك قيد المراجعة والتدقيق من قبل إدارة المنصة</h3>
+            <p className="text-xs text-amber-800 mt-1 leading-relaxed font-medium">
+              تم استلام وثائقك وبيانات ترخيص الإرشاد بنجاح. يقوم فريق إدارة دَلِّني حالياً بمراجعة رخصة الإرشاد السياحي واعتماد حسابك. فور الاعتماد سيصبح ملفك نشطاً في قائمة المرشدين العامة وستتمكن من استلام وإدارة الرحلات السياحية.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Overview Tab */}
       {active === "overview" && (
@@ -1043,7 +1056,7 @@ function GuideDashboard() {
               type="submit"
               className="px-6 h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <span>حفظ وتحديث الملف الشخصي في قاعدة البيانات ✓</span>
+              <span>حفظ وتحديث الملف الشخصي ✓</span>
             </button>
           </form>
         </SectionCard>

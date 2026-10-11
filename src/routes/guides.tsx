@@ -101,7 +101,9 @@ function GuidesPage() {
   }, []);
 
   const guidesSource = useMemo(() => {
-    return dbGuides.length > 0 ? dbGuides : TOUR_GUIDES_DATA;
+    if (dbGuides.length === 0) return TOUR_GUIDES_DATA;
+    const dbLicenses = new Set(dbGuides.map(g => g.licenseNumber));
+    return [...dbGuides, ...TOUR_GUIDES_DATA.filter(g => !dbLicenses.has(g.licenseNumber))];
   }, [dbGuides]);
 
   // Filters State

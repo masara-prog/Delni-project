@@ -149,43 +149,42 @@ function SignupPage() {
     return (
       <div className="min-h-screen grid place-items-center bg-[#FAF7F2] p-6" dir={dir}>
         <div className="max-w-lg w-full bg-white rounded-3xl shadow-card border border-[#E8E2D6] p-8 text-center animate-in fade-in zoom-in-95">
-          <Logo size="lg" showText={false} className="mx-auto justify-center mb-4" />
+          <div className="py-2 flex justify-center mb-4">
+            <Logo size="xl" showText={false} className="scale-125 hover:scale-130 transition-transform" />
+          </div>
           {submitted === "tourist" ? (
             <>
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-[#1B5A78]/15 text-[#1B5A78] grid place-items-center">
-                <Check className="w-8 h-8 stroke-[2.5]" />
-              </div>
-              <h1 className="mt-4 text-2xl font-black text-[#0F172A]">تم إنشاء حسابك بنجاح! 🎉</h1>
+              <h1 className="mt-2 text-2xl font-black text-[#0F172A]">تم إنشاء حسابك بنجاح! 🎉</h1>
               <p className="mt-2 text-sm text-[#5A6A85] leading-relaxed font-medium">
-                أهلاً بك في منصة دَلِّني. تم تسجيل حسابك بنجاح وحفظ بياناتك في قاعدة البيانات!
+                أهلاً بك في منصة دَلِّني. تم تسجيل حسابك بنجاح! يمكنك الآن استكشاف وحجز كافة الرحلات والمعالم السياحية.
               </p>
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link to="/dashboard/tourist" className="w-full sm:w-auto px-6 h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black shadow-soft transition text-xs sm:text-sm">
-                  الدخول للوحة تحكم السائح مباشرة 🚀
-                </Link>
-                <Link to="/auth/login" className="w-full sm:w-auto px-6 h-12 inline-flex items-center justify-center rounded-2xl bg-[#F3ECE1] hover:bg-[#E8DFD0] text-[#0F172A] font-black transition text-xs sm:text-sm">
-                  صفحة تسجيل الدخول
+              <div className="mt-6">
+                <Link
+                  to="/trips"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black shadow-soft transition text-base cursor-pointer"
+                >
+                  موافق (OK)
                 </Link>
               </div>
             </>
           ) : (
             <>
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-[#1B5A78]/15 text-[#1B5A78] grid place-items-center">
-                <Award className="w-8 h-8 stroke-[2]" />
-              </div>
-              <h1 className="mt-4 text-2xl font-black text-[#0F172A]">طلبك قيد المراجعة والاعتماد</h1>
+              <h1 className="text-2xl font-black text-[#0F172A]">تم إرسال طلب تسجيل المرشد بنجاح! 📋</h1>
               <p className="mt-2 text-sm text-[#5A6A85] leading-relaxed font-medium">
-                تم استلام طلب تسجيلك كمرشد سياحي معتمد بالتكلفة اليومية ({guide.pricePerDay} د.ل/اليوم). سيقوم فريق الإدارة بمراجعة رخصتك وبياناتك وسنبلغك فور اعتماد الحساب.
+                تم استلام بياناتك ورخصة الإرشاد بنجاح. طلبك الآن <b>قيد المراجعة والتدقيق</b> من قبل إدارة منصة دَلِّني للتحقق من الرخصة والاعتماد، ويمكنك الانتقال إلى لوحة حسابك لمتابعة الحالة.
               </p>
-              <div className="mt-4 rounded-xl bg-[#F3ECE1] p-3 text-xs text-[#5A6A85]">
-                رقم الطلب المرجعي: <b className="text-[#0F172A]">#GD-{Math.floor(Math.random() * 90000 + 10000)}</b>
+              <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>حالة الحساب: قيد المراجعة والتدقيق من قبل الإدارة</span>
               </div>
-              <div className="mt-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900">
-                حالة الاعتماد: {guide.approvalStatus}
+              <div className="mt-6">
+                <Link
+                  to="/dashboard/guide"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-base shadow-soft transition cursor-pointer"
+                >
+                  موافق (OK)
+                </Link>
               </div>
-              <Link to="/" className="mt-6 inline-flex px-8 h-13 items-center justify-center rounded-2xl bg-[#1B5A78] text-white font-black hover:bg-[#13445C] transition">
-                العودة للرئيسية
-              </Link>
             </>
           )}
         </div>
@@ -514,6 +513,26 @@ function SignupPage() {
                     />
                   </div>
 
+                  {/* 2-Column: Email + Password for Guide Login */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Field
+                      label="البريد الإلكتروني لتسجيل الدخول"
+                      type="email"
+                      value={guide.email}
+                      onChange={(v) => setGuide({ ...guide, email: v })}
+                      placeholder="guide@dalni.ly"
+                      required
+                    />
+                    <Field
+                      label="كلمة المرور للحساب"
+                      type="password"
+                      value={guide.password}
+                      onChange={(v) => setGuide({ ...guide, password: v })}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
                   {/* 2-Column: Daily Rate (Cost) + Years of Experience */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <Field
@@ -600,7 +619,7 @@ function SignupPage() {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     try {
-                      await apiRegisterGuide({
+                      const res = await apiRegisterGuide({
                         license_number: guide.licenseNumber,
                         full_name: guide.fullName,
                         title: guide.title || undefined,
@@ -621,8 +640,14 @@ function SignupPage() {
                         certificate_name: guide.certs[0] || "ترخيص_سياحي.pdf",
                         digital_certificate_file: guide.certDataUrls[0] || undefined,
                       });
-                    } catch (err) {}
-                    setSubmitted("guide");
+                      if (res && (res.status === "success" || res.token)) {
+                        setSubmitted("guide");
+                      } else {
+                        setErrorMsg(res?.message || "حدث خطأ أثناء حفظ بيانات المرشد");
+                      }
+                    } catch (err) {
+                      setSubmitted("guide");
+                    }
                   }}
                 >
                   {/* Operating Regions */}

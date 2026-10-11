@@ -193,7 +193,7 @@ function TouristDashboard() {
         password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
       });
       if (res && res.status === "success") {
-        alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
+        alert("تم حفظ وتحديث بيانات حسابك بنجاح ✓");
       } else {
         alert(res.message || "تم حفظ التعديلات بنجاح ✓");
       }
@@ -243,7 +243,7 @@ function TouristDashboard() {
       {(active === "overview" || active === "bookings") && (
         <div className="grid lg:grid-cols-3 gap-6 text-right">
           <div className="lg:col-span-2 space-y-6">
-            <SectionCard title="تذاكري وحجوزاتي (DelniDB: bookings_daily & bookings_weekly)" action={<Link to="/trips" className="text-primary text-sm font-black hover:underline">+ حجز جديد</Link>}>
+            <SectionCard title="تذاكري وحجوزاتي" action={<Link to="/trips" className="text-primary text-sm font-black hover:underline">+ حجز جديد</Link>}>
               {bookings.length === 0 ? (
                 <div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#FAF7F2]/60">
                   <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 grid place-items-center text-3xl mb-3">
@@ -366,9 +366,9 @@ function TouristDashboard() {
         </div>
       )}
 
-      {/* PRIVATE TRIPS TAB (DelniDB: private_trips) */}
+      {/* PRIVATE TRIPS TAB */}
       {active === "private_trips" && (
-        <SectionCard title="طلبات الرحلات الخاصة كبار الشخصيات (DelniDB: private_trips)">
+        <SectionCard title="طلبات الرحلات الخاصة كبار الشخصيات">
           {privateTrips.length === 0 ? (
             <div className="text-center py-10 px-4 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#FAF7F2]/60">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 grid place-items-center text-2xl mb-2">
@@ -417,9 +417,9 @@ function TouristDashboard() {
         </SectionCard>
       )}
 
-      {/* REVIEWS TAB (DelniDB: reviews_* tables) */}
+      {/* REVIEWS TAB */}
       {active === "reviews" && (
-        <SectionCard title="تقييماتي وآرائي المسجلة (DelniDB: reviews_daily_trips / reviews_hotels / etc.)">
+        <SectionCard title="تقييماتي وآرائي المسجلة">
           {myReviews.length === 0 ? (
             <div className="text-center py-10 px-4 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#FAF7F2]/60">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 grid place-items-center text-2xl mb-2">
@@ -474,9 +474,9 @@ function TouristDashboard() {
         </SectionCard>
       )}
 
-      {/* PROFILE EDIT TAB FOR TOURIST (DelniDB: tourists) */}
+      {/* PROFILE EDIT TAB FOR TOURIST */}
       {active === "profile" && (
-        <SectionCard title="تعديل الملف الشخصي وبيانات حساب السائح (DelniDB: tourists)">
+        <SectionCard title="تعديل الملف الشخصي وبيانات حساب السائح">
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
             <Field label="كود السائح بالمنصة (tourist_id)" value={touristInfo.tourist_id} onChange={() => {}} />
             <Field 
@@ -508,7 +508,7 @@ function TouristDashboard() {
             <Field label="كلمة المرور الحالية أو الجديدة" type="password" value={touristInfo.password} onChange={(v) => setTouristInfo({ ...touristInfo, password: v })} />
 
             <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow">
-              حفظ وتحديث الملف الشخصي في DelniDB ✓
+              حفظ وتحديث الملف الشخصي ✓
             </button>
           </form>
         </SectionCard>

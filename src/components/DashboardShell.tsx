@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/lib/i18n";
+import { clearStoredSession } from "@/lib/api";
 
 export type NavItem = { id: string; label: string; icon: string; badge?: string | number; group?: string };
 
@@ -68,6 +69,21 @@ export function DashboardShell({
                 <div className="text-[10px] text-muted-foreground mt-0.5">{roleLabel}</div>
               </div>
             </div>
+            <button
+              onClick={() => {
+                if (window.confirm("هل تريد تسجيل الخروج من المنصة بالكامل؟")) {
+                  clearStoredSession();
+                  window.location.href = "/";
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-500 text-red-600 hover:text-white border border-red-200 transition text-xs font-bold shadow-2xs cursor-pointer"
+              title={isAr ? "تسجيل الخروج من المنصة بالكامل" : "Sign Out"}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>{isAr ? "خروج" : "Logout"}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -162,7 +178,8 @@ export function DashboardShell({
 
             <button
               onClick={() => {
-                if (window.confirm("هل أنت متأكد من تسجيل الخروج؟")) {
+                if (window.confirm("هل أنت متأكد من تسجيل الخروج من المنصة بالكامل؟")) {
+                  clearStoredSession();
                   window.location.href = "/";
                 }
               }}

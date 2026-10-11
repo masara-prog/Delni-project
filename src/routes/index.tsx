@@ -26,6 +26,7 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import transportHero from "@/assets/transport-hero.jpg";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
+import { getStoredSession, clearStoredSession } from "@/lib/api";
 
 
 
@@ -158,6 +159,31 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 /* ---------- Navbar ---------- */
 function Navbar() {
   const { language } = useLanguage();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (session?.user) {
+      setCurrentUser(session.user);
+    }
+  }, []);
+
+  // Account name ONLY (strictly without role or badge)
+  const accountName = currentUser
+    ? (currentUser.company_name || currentUser.name || currentUser.full_name || currentUser.email || "حسابي")
+    : null;
+
+  const dashboardPath = currentUser
+    ? currentUser.role === "admin"
+      ? "/dashboard/admin"
+      : currentUser.role === "transport" || currentUser.contract_number
+      ? "/dashboard/transport"
+      : currentUser.role === "guide" || currentUser.license_number
+      ? "/dashboard/guide"
+      : currentUser.role === "driver"
+      ? "/dashboard/driver"
+      : "/trips"
+    : "/auth/login";
 
   return (
     <div className="absolute top-6 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12">
@@ -165,18 +191,47 @@ function Navbar() {
         <Logo size="xl" showText={false} />
       </Link>
       <div className="flex items-center gap-3">
-        <Link
-          to="/auth/login"
-          className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition-all shadow-md"
-        >
-          {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-        </Link>
-        <Link
-          to="/auth/signup"
-          className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/20"
-        >
-          {language === 'ar' ? 'إنشاء حساب' : 'Sign Up'}
-        </Link>
+        {accountName ? (
+          <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-xl transition-all">
+            <Link
+              to={dashboardPath}
+              className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Tajawal',sans-serif] tracking-wide shadow-md hover:scale-105 transition-all border border-white/25 antialiased"
+              title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+              <span className="leading-tight drop-shadow-sm">{accountName}</span>
+            </Link>
+            <button
+              onClick={() => {
+                clearStoredSession();
+                setCurrentUser(null);
+                window.location.reload();
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Tajawal',sans-serif] transition-all border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
+              title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout'}
+            >
+              <svg className="w-3.5 h-3.5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>{language === 'ar' ? 'خروج' : 'Logout'}</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            <Link
+              to="/auth/login"
+              className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition-all shadow-md"
+            >
+              {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+            </Link>
+            <Link
+              to="/auth/signup"
+              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/20"
+            >
+              {language === 'ar' ? 'إنشاء حساب' : 'Sign Up'}
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

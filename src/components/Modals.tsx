@@ -1331,21 +1331,23 @@ export function PrivateTripModal({
       alert(isAr ? "الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)" : "Please enter a valid Libyan phone number (e.g., 0912345678)");
       return;
     }
-    // Send to Python FastAPI & MySQL Backend
-    fetch("http://127.0.0.1:8000/api/trips/private", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+
+    // Save to local state
+    try {
+      const existing = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
+      existing.unshift({
+        request_id: `PV-${Date.now()}`,
         customer_name: customerName || "عميل دلّني VIP",
         customer_phone: phone,
         preferred_start_date: startDate || new Date().toISOString().split("T")[0],
         duration_days: durationDays,
         number_of_companions: parseInt(persons, 10) || 1,
-        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`
-      })
-    }).catch(() => {
-      // Offline fallback
-    });
+        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`,
+        status: "قيد المراجعة",
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
+    } catch {}
     setStep("done");
   };
 

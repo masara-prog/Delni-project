@@ -1303,41 +1303,6 @@ function RestaurantsPage() {
           setCustomRestaurants(mapped);
         }
       } catch {}
-
-      fetch("http://127.0.0.1:8000/api/restaurants")
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data) && data.length > 0) {
-            const mappedApi = data.map((item: any) =>
-              mapAdminRestaurantToPublic(
-                {
-                  id: item.facility_id,
-                  name: item.facility_name,
-                  type: item.facility_type,
-                  city: item.city,
-                  address: item.address_details,
-                  phone: item.phone_number,
-                  description: item.description,
-                  google_maps_url: item.google_maps_url,
-                  working_hours: item.working_hours,
-                  facility_image_1: item.facility_image_1,
-                  facility_image_2: item.facility_image_2,
-                  facility_image_3: item.facility_image_3,
-                  facility_image_4: item.facility_image_4,
-                  facility_image_5: item.facility_image_5,
-                },
-                isAr
-              )
-            );
-
-            setCustomRestaurants((prev) => {
-              const ids = new Set(prev.map((p) => p.id));
-              const newFromApi = mappedApi.filter((m: any) => !ids.has(m.id));
-              return [...prev, ...newFromApi];
-            });
-          }
-        })
-        .catch(() => {});
     };
 
     loadCustom();

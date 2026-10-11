@@ -2,7 +2,23 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { getStoredSession, apiGetAdminDashboard, apiVerifyGuide } from "@/lib/api";
+import { 
+  getStoredSession, 
+  apiGetAdminDashboard, 
+  apiVerifyGuide, 
+  getAllGuides, 
+  updateGuideVerification, 
+  deleteGuideAccount,
+  getTransportCompanies,
+  saveTransportCompanies,
+  addTransportCompany,
+  updateTransportCompany,
+  deleteTransportCompany,
+  getDrivers,
+  getVehicles,
+  sendToSecureBackend,
+  deleteFromSecureBackend
+} from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import type {
   TransportationCompany,
@@ -34,25 +50,25 @@ export const Route = createFileRoute("/dashboard/admin")({
 
 /* ============ TYPES ============ */
 type Company = { 
-  id: string; 
+  id?: string | null; 
   contract_number: string; 
   name: string; 
   company_name?: string;
   phone: string; 
   phone_number?: string;
   address: string; 
-  city?: string;
-  email: string; 
-  pass?: string; 
-  password?: string;
-  total_vehicles?: number; 
-  available_cars?: number; 
-  available_vehicles?: number; 
-  contract_date?: string; 
-  contract_start_date?: string; 
-  contract_end_date?: string; 
+  city?: string | null;
+  email?: string | null; 
+  pass?: string | null; 
+  password?: string | null; 
+  total_vehicles?: number | null; 
+  available_cars?: number | null; 
+  available_vehicles?: number | null; 
+  contract_start_date?: string | null; 
+  contract_end_date?: string | null; 
   status?: "موثق" | "بانتظار" | "مرفوض" | string;
-  verification_status?: "موثق" | "بانتظار التوثيق" | "بانتظار" | "مرفوض" | string;
+  verification_status?: "موثق" | "بانتظار التوثيق" | "بانتظار" | "مرفوض" | string | null;
+  google_maps_url?: string | null;
 };
 
 type Driver = { 
@@ -62,12 +78,11 @@ type Driver = {
   national_id_or_passport?: string; 
   license_date_valid?: string; 
   contract_number?: string; 
-  assigned_vehicle_plate?: string; 
+  assigned_vehicle_plate?: string | null; 
   email?: string; 
-  company_name?: string; 
-  account_status?: "نشط" | "معلق" | "موقوف" | string;
-  operational_status?: string;
-  experience_years?: number;
+  company_name?: string | null; 
+  account_status?: "نشط" | "معلق" | "موقوف" | string | null;
+  operational_status?: string | null;
 };
 
 type Guide = { 
@@ -93,15 +108,15 @@ type Guide = {
 
 type Vehicle = { 
   plate_number: string; 
-  company_id?: string; 
-  contract_number?: string;
-  company_name?: string; 
+  company_id?: string | null; 
+  contract_number?: string | null;
+  company_name?: string | null; 
   vehicle_type: string; 
-  capacity: number; 
-  seating_capacity?: number;
-  daily_rate?: number; 
-  status: "جاهزة" | "في رحلة" | "صيانة" | string; 
-  vehicle_status?: string;
+  capacity?: number | null; 
+  seating_capacity?: number | null;
+  daily_rate?: number | null; 
+  status?: "جاهزة" | "في رحلة" | "صيانة" | string | null; 
+  vehicle_status?: string | null;
 };
 
 type DailyTrip = { 
@@ -231,117 +246,131 @@ function AdminDashboard() {
     }
   }, [navigate]);
 
-  /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
-  const [companies, setCompanies] = useState<Company[]>([
-    {
-      id: "COM-001",
-      contract_number: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      name: "شركة الصحراء للنقل",
-      phone_number: "0911234567",
-      phone: "0911234567",
-      address: "طرابلس - طريق الشط",
-      city: "طرابلس",
-      email: "sahara@dalni.ly",
-      password: "password123",
-      pass: "password123",
-      total_vehicles: 12,
-      available_vehicles: 8,
-      available_cars: 8,
-      contract_date: "2025-01-10",
-      contract_start_date: "2025-01-10",
-      contract_end_date: "2027-01-10",
-      verification_status: "موثق",
-      status: "موثق",
-    },
-    {
-      id: "COM-002",
-      contract_number: "CN-2026-02",
-      company_name: "شركة ليبيا تور للنقل",
-      name: "شركة ليبيا تور للنقل",
-      phone_number: "0929876543",
-      phone: "0929876543",
-      address: "بنغازي - شارع دبي",
-      city: "بنغازي",
-      email: "lytour@dalni.ly",
-      password: "password456",
-      pass: "password456",
-      total_vehicles: 8,
-      available_vehicles: 5,
-      available_cars: 5,
-      contract_date: "2025-03-15",
-      contract_start_date: "2025-03-15",
-      contract_end_date: "2027-03-15",
-      verification_status: "موثق",
-      status: "موثق",
-    },
-    {
-      id: "COM-003",
-      contract_number: "CN-2026-03",
-      company_name: "شركة الوديان للنقل",
-      name: "شركة الوديان للنقل",
-      phone_number: "0914448888",
-      phone: "0914448888",
-      address: "طرابلس - قرقارش",
-      city: "طرابلس",
-      email: "wedan@dalni.ly",
-      password: "password789",
-      pass: "password789",
-      total_vehicles: 5,
-      available_vehicles: 3,
-      available_cars: 3,
-      contract_date: "2026-06-01",
-      contract_start_date: "2026-06-01",
-      contract_end_date: "2028-06-01",
-      verification_status: "بانتظار",
-      status: "بانتظار",
-    },
-  ]);
+  // Live synchronization with Microsoft SQL Server (DelniDB)
+  useEffect(() => {
+    let isMounted = true;
+    async function syncFromDb() {
+      try {
+        const compRes = await fetch("http://127.0.0.1:5001/api/db/companies", { signal: AbortSignal.timeout(3000) });
+        if (compRes.ok) {
+          const compData = await compRes.json();
+          if (compData.success && Array.isArray(compData.data) && isMounted) {
+            const mapped = compData.data.map((c: any) => ({
+              ...c,
+              name: c.company_name || c.name || "شركة نقل",
+              phone: c.phone_number || c.phone || "",
+              status: c.verification_status || c.status || "موثق",
+            }));
+            setCompanies(mapped);
+            saveTransportCompanies(compData.data);
+          }
+        }
+      } catch {}
 
-  const [drivers, setDrivers] = useState<Driver[]>([
-    {
-      driver_license_number: "LB-88291",
-      full_name: "علي التارقي",
-      phone_number: "0912223344",
-      national_id_or_passport: "119900223344",
-      license_date_valid: "2029-12-10",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "طرابلس 4517",
-      email: "ali@dalni.ly",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 8,
-      company_name: "شركة الصحراء للنقل",
-    },
-    {
-      driver_license_number: "LB-77452",
-      full_name: "مفتاح الفزاني",
-      phone_number: "0923334455",
-      national_id_or_passport: "119850334455",
-      license_date_valid: "2028-05-14",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "طرابلس 8291",
-      email: "miftah@dalni.ly",
-      account_status: "نشط",
-      operational_status: "في رحلة",
-      experience_years: 6,
-      company_name: "شركة الصحراء للنقل",
-    },
-    {
-      driver_license_number: "LB-99381",
-      full_name: "أنور الترهوني",
-      phone_number: "0915556677",
-      national_id_or_passport: "119920112233",
-      license_date_valid: "2030-08-22",
-      contract_number: "CN-2026-02",
-      assigned_vehicle_plate: "بنغازي 3382",
-      email: "anwar@dalni.ly",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 9,
-      company_name: "شركة ليبيا تور للنقل",
-    },
-  ]);
+      try {
+        const vehRes = await fetch("http://127.0.0.1:5001/api/db/vehicles", { signal: AbortSignal.timeout(3000) });
+        if (vehRes.ok) {
+          const vehData = await vehRes.json();
+          if (vehData.success && Array.isArray(vehData.data) && isMounted) {
+            setVehicles(vehData.data);
+          }
+        }
+      } catch {}
+
+      try {
+        const dRes = await fetch("http://127.0.0.1:5001/api/db/drivers", { signal: AbortSignal.timeout(3000) });
+        if (dRes.ok) {
+          const dData = await dRes.json();
+          if (dData.success && Array.isArray(dData.data) && isMounted) {
+            setDrivers(dData.data);
+          }
+        }
+      } catch {}
+
+      try {
+        const gRes = await fetch("http://127.0.0.1:5001/api/db/guides", { signal: AbortSignal.timeout(3000) });
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          if (gData.success && Array.isArray(gData.data) && gData.data.length > 0 && isMounted) {
+            const mapped = gData.data.map((g: any) => ({
+              ...g,
+              daily_rate: Number(g.price_per_day) || 150,
+              price_per_day: Number(g.price_per_day) || 150,
+              primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : "tripoli",
+            }));
+            setGuides(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const hRes = await fetch("http://127.0.0.1:5001/api/db/hotels", { signal: AbortSignal.timeout(3000) });
+        if (hRes.ok) {
+          const hData = await hRes.json();
+          if (hData.success && Array.isArray(hData.data) && hData.data.length > 0 && isMounted) {
+            const mapped = hData.data.map((h: any) => ({
+              ...h,
+              id: h.hotel_id || h.id,
+              name: h.hotel_name || h.name,
+              address: h.address_details || h.address,
+              phone: h.phone_number || h.phone,
+              stars: h.star_rating || h.stars,
+            }));
+            setHotels(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const rRes = await fetch("http://127.0.0.1:5001/api/db/restaurants", { signal: AbortSignal.timeout(3000) });
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if (rData.success && Array.isArray(rData.data) && rData.data.length > 0 && isMounted) {
+            const mapped = rData.data.map((r: any) => ({
+              ...r,
+              id: r.facility_id || r.id,
+              name: r.facility_name || r.name,
+              type: r.facility_type || r.type,
+              address: r.address_details || r.address,
+              phone: r.phone_number || r.phone,
+            }));
+            setRestaurants(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const pRes = await fetch("http://127.0.0.1:5001/api/db/places", { signal: AbortSignal.timeout(3000) });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData.success && Array.isArray(pData.data) && pData.data.length > 0 && isMounted) {
+            const mapped = pData.data.map((p: any) => ({
+              ...p,
+              id: p.place_id || p.id,
+              name: p.place_name || p.name,
+            }));
+            setAttractions(mapped);
+          }
+        }
+      } catch {}
+    }
+    syncFromDb();
+    return () => { isMounted = false; };
+  }, []);
+
+  /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
+  const [companies, setCompanies] = useState<Company[]>(() => {
+    return getTransportCompanies().map(c => ({
+      ...c,
+      name: c.company_name || c.name || "شركة نقل",
+      phone: c.phone_number || c.phone || "",
+      status: c.verification_status || c.status || "موثق",
+    }));
+  });
+
+  const [drivers, setDrivers] = useState<Driver[]>(() => {
+    return getDrivers();
+  });
 
   const [guides, setGuides] = useState<Guide[]>([
     {
@@ -407,68 +436,7 @@ function AdminDashboard() {
   ]);
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
-  const [vehicles] = useState<Vehicle[]>([
-    {
-      plate_number: "طرابلس 4517",
-      contract_number: "CN-2026-01",
-      company_id: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      vehicle_type: "حافلة سياحية Mercedes Benz 50 مقعد",
-      seating_capacity: 50,
-      capacity: 50,
-      daily_rate: 650,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-    {
-      plate_number: "طرابلس 8291",
-      contract_number: "CN-2026-01",
-      company_id: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      vehicle_type: "ميني باص Toyota 25 مقعد",
-      seating_capacity: 25,
-      capacity: 25,
-      daily_rate: 450,
-      vehicle_status: "في رحلة",
-      status: "في رحلة",
-    },
-    {
-      plate_number: "بنغازي 3382",
-      contract_number: "CN-2026-02",
-      company_id: "CN-2026-02",
-      company_name: "شركة ليبيا تور للنقل",
-      vehicle_type: "حافلة فاخرة Scania 50 مقعد",
-      seating_capacity: 50,
-      capacity: 50,
-      daily_rate: 750,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-    {
-      plate_number: "طرابلس 1122",
-      contract_number: "CN-2026-01",
-      company_id: "CN-2026-01",
-      company_name: "شركة الصحراء للنقل",
-      vehicle_type: "سيارة دفع رباعي Toyota Land Cruiser",
-      seating_capacity: 6,
-      capacity: 6,
-      daily_rate: 350,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-    {
-      plate_number: "سبها 9944",
-      contract_number: "CN-2026-03",
-      company_id: "CN-2026-03",
-      company_name: "شركة الوديان للنقل",
-      vehicle_type: "حافلة متوسطة Hyundai 25 مقعد",
-      seating_capacity: 25,
-      capacity: 25,
-      daily_rate: 400,
-      vehicle_status: "جاهزة",
-      status: "جاهزة",
-    },
-  ]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => getVehicles());
 
   /* DelniDB daily_trips */
   const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([
@@ -507,7 +475,7 @@ function AdminDashboard() {
       rating_avg: 4.7,
       guide_license_number: "G-9901",
       guide_license: "G-9901",
-      vehicle_plates: ["طرابلس 8291"],
+      vehicle_plates: [],
       is_active: true,
       photo: "",
       departure_city: "طرابلس",
@@ -535,7 +503,7 @@ function AdminDashboard() {
       trip_description: "استكشاف بحيرات أم الماء وقبرعون وتجربة التخييم الليلي",
       guide_license_number: "G-9901",
       guide_license: "G-9901",
-      vehicle_plates: ["طرابلس 8291"],
+      vehicle_plates: [],
       is_active: true,
       photo: "/assets/ai_ghadames.jpg",
       departure_city: "طرابلس",
@@ -559,7 +527,7 @@ function AdminDashboard() {
       trip_description: "زيارة المدينة القديمة في غدامس والمنازل التقليدية والواحة",
       guide_license_number: "G-9903",
       guide_license: "G-9903",
-      vehicle_plates: ["بنغازي 3382"],
+      vehicle_plates: [],
       is_active: true,
       photo: "/assets/ai_ghadames.jpg",
       departure_city: "طرابلس",
@@ -596,8 +564,8 @@ function AdminDashboard() {
       guide_license_number: "G-9901",
       assigned_guide: "G-9901",
       assigned_guide_license: "G-9901",
-      assigned_vehicle: "طرابلس 8291",
-      assigned_vehicle_plate: "طرابلس 8291",
+      assigned_vehicle: "",
+      assigned_vehicle_plate: "",
     },
   ]);
 
@@ -803,48 +771,95 @@ function AdminDashboard() {
 
   /* ---- HANDLERS ---- */
   const handleAddCompany = (c: any) => {
-    setCompanies([...companies, { contract_number: c.contract_number, status: c.status || "موثق", contract_end_date: c.contract_end_date || "", available_cars: c.available_cars || 0, ...c }]);
+    const saved = addTransportCompany(c);
+    const mapped: Company = {
+      ...saved,
+      name: saved.company_name || saved.name || "شركة نقل",
+      phone: saved.phone_number || saved.phone || "",
+      status: saved.verification_status || saved.status || "موثق",
+    };
+    setCompanies([mapped, ...companies]);
     setShowAddCompany(false);
   };
-  const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); setEditingCompany(null); };
-  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
-    setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
+  const handleUpdateCompany = (updated: Company) => { 
+    updateTransportCompany(updated.contract_number, updated);
+    setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); 
+    setEditingCompany(null); 
+  };
+  const handleDeleteCompany = (contractNumber: string) => {
+    if (confirm("هل تريد حذف شركة النقل؟")) {
+      deleteTransportCompany(contractNumber);
+      setCompanies(companies.filter(c => c.contract_number !== contractNumber));
+    }
+  };
+  const handleVerifyGuide = (lic: string, status: "موثق" | "مرفوض") => {
+    setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
-    try {
-      await apiVerifyGuide(lic, status);
-    } catch {}
+    updateGuideVerification(lic, status);
+    const targetGuide = guides.find(g => g.license_number === lic);
+    sendToSecureBackend("guides", {
+      license_number: lic,
+      full_name: targetGuide?.full_name || "مرشد سياحي",
+      phone_number: targetGuide?.phone_number || "0910000000",
+      verification_status: status,
+    });
   };
 
-  // Fetch live guides and admin data from DelniDB
+  const handleDeleteGuide = (lic: string) => {
+    if (confirm("هل تريد حذف حساب هذا المرشد؟")) {
+      setGuides(prev => prev.filter(g => g.license_number !== lic));
+      deleteGuideAccount(lic);
+      deleteFromSecureBackend("guides", "license_number", lic);
+    }
+  };
+
+  // Load registered guides from local storage
   useEffect(() => {
-    async function fetchAdminData() {
-      const res = await apiGetAdminDashboard();
-      if (res && res.guides && res.guides.length > 0) {
-        const dbGuides: Guide[] = res.guides.map((g: any) => ({
+    const loadedGuides = getAllGuides();
+    if (loadedGuides.length > 0) {
+      setGuides(prev => {
+        const customLicenses = new Set(loadedGuides.map(g => g.license_number));
+        const mapped: Guide[] = loadedGuides.map((g: any) => ({
           license_number: g.license_number,
           full_name: g.full_name,
           phone_number: g.phone_number,
           years_of_experience: Number(g.years_of_experience) || 2,
-          certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة",
+          certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
           digital_certificate_file: g.digital_certificate_file,
           bio: g.bio || "",
           speaks_english: Boolean(g.speaks_english),
           speaks_french: Boolean(g.speaks_french),
           speaks_italian: Boolean(g.speaks_italian),
-          verification_status: g.verification_status || "بانتظار التوثيق",
+          verification_status: g.verification_status || "قيد المراجعة",
           email: g.email,
           daily_rate: Number(g.price_per_day) || 150,
           price_per_day: Number(g.price_per_day) || 150,
-          primaryRegion: g.primaryRegion || "tripoli",
+          primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : (g.primaryRegion || "tripoli"),
           operating_regions: g.operating_regions || "tripoli",
           working_days: g.working_days || "الأحد,الأربعاء",
           total_tours_completed: Number(g.total_tours_completed) || 0,
         }));
-        setGuides(dbGuides);
-      }
+        return [...mapped, ...prev.filter(x => !customLicenses.has(x.license_number))];
+      });
     }
-    fetchAdminData();
   }, []);
+
+  useEffect(() => {
+    const loadedCompanies = getTransportCompanies();
+    if (loadedCompanies && loadedCompanies.length > 0) {
+      setCompanies(loadedCompanies.map(c => ({
+        ...c,
+        name: c.company_name || c.name || "شركة نقل",
+        phone: c.phone_number || c.phone || "",
+        status: c.verification_status || c.status || "موثق",
+      })));
+    }
+
+    const loadedDrivers = getDrivers();
+    if (loadedDrivers && loadedDrivers.length > 0) {
+      setDrivers(loadedDrivers);
+    }
+  }, [active]);
   const handleCreateTrip = (type: "daily" | "weekly", data: any) => {
     if (type === "daily") setDailyTrips([...dailyTrips, { daily_trip_id: `DT-${100 + dailyTrips.length + 1}`, id: `DT-${100 + dailyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
     else setWeeklyTrips([...weeklyTrips, { weekly_trip_id: `WT-${200 + weeklyTrips.length + 1}`, id: `WT-${200 + weeklyTrips.length + 1}`, bookings_count: 0, rating_avg: 5.0, ...data, is_active: true }]);
@@ -878,62 +893,75 @@ function AdminDashboard() {
         });
       }
     } catch {}
-
-    fetch("http://127.0.0.1:8000/api/hotels")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((item: any) => ({
-            id: item.hotel_id,
-            name: item.hotel_name,
-            city: item.city,
-            address: item.address_details,
-            phone: item.phone_number,
-            stars: item.star_rating,
-            bookings_count: 0,
-            rating_avg: 5.0,
-            partnership_status: item.partnership_status || "نشط",
-            hotel_photo_1: item.hotel_photo_1 || "/assets/ai_city.jpg",
-            hotel_photo_2: item.hotel_photo_2 || "/assets/ai_city.jpg",
-            hotel_photo_3: item.hotel_photo_3 || "/assets/ai_city.jpg",
-            hotel_photo_4: item.hotel_photo_4 || "/assets/ai_city.jpg",
-            hotel_photo_5: item.hotel_photo_5 || "/assets/ai_city.jpg",
-          }));
-          setHotels((prev) => {
-            const ids = new Set(mapped.map((m) => m.id));
-            return [...mapped, ...prev.filter((x) => !ids.has(x.id))];
-          });
-        }
-      })
-      .catch(() => {});
   }, []);
 
   const handleAddHotel = (h: any) => {
-    const hotelId = `HTL-00${hotels.length + 1}`;
+    const hotelId = h.hotel_id || h.id || `HTL-00${hotels.length + 1}`;
     const newHotelObj = { id: hotelId, bookings_count: 0, rating_avg: 5.0, ...h };
     setHotels((prev) => [...prev, newHotelObj]);
     setShowAddHotel(false);
 
-    fetch("http://127.0.0.1:8000/api/hotels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        hotel_id: hotelId,
-        hotel_name: h.name,
-        city: h.city || "طرابلس",
-        address_details: h.address || "العنوان الرئيسي",
-        phone_number: h.phone || "0910000000",
-        star_rating: parseInt(h.stars, 10) || 4,
-        partnership_status: "نشط",
-        property_type: "فندق",
-        hotel_photo_1: h.hotel_photo_1 || "/assets/ai_city.jpg",
-      }),
-    }).catch(() => {});
+    try {
+      const storedHotels = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...storedHotels]));
+    } catch {}
+
+    sendToSecureBackend("hotels", {
+      hotel_id: hotelId,
+      hotel_name: newHotelObj.name || newHotelObj.hotel_name,
+      city: newHotelObj.city,
+      address_details: newHotelObj.address || newHotelObj.address_details,
+      phone_number: newHotelObj.phone || newHotelObj.phone_number,
+      star_rating: newHotelObj.stars || newHotelObj.star_rating,
+      partnership_status: newHotelObj.partnership_status || "نشط",
+      hotel_photo_1: newHotelObj.hotel_photo_1,
+      hotel_photo_2: newHotelObj.hotel_photo_2,
+      hotel_photo_3: newHotelObj.hotel_photo_3,
+      hotel_photo_4: newHotelObj.hotel_photo_4,
+      hotel_photo_5: newHotelObj.hotel_photo_5,
+      verification_status: newHotelObj.verification_status || "موثق",
+      property_type: newHotelObj.property_type || "فندق",
+    });
   };
-  const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => x.id === h.id ? h : x)); setEditingHotel(null); };
-  const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => h.id !== id)); };
+  const handleUpdateHotel = (h: Hotel) => {
+    setHotels(hotels.map(x => x.id === h.id ? h : x));
+    setEditingHotel(null);
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      const updated = stored.map((item: any) => item.id === h.id ? { ...item, ...h } : item);
+      localStorage.setItem("dalni_hotels", JSON.stringify(updated));
+    } catch {}
+
+    sendToSecureBackend("hotels", {
+      hotel_id: h.id || (h as any).hotel_id,
+      hotel_name: h.name || (h as any).hotel_name,
+      city: h.city,
+      address_details: h.address || (h as any).address_details,
+      phone_number: h.phone || (h as any).phone_number,
+      star_rating: h.stars || (h as any).star_rating,
+      partnership_status: h.partnership_status,
+      hotel_photo_1: h.hotel_photo_1,
+      hotel_photo_2: h.hotel_photo_2,
+      hotel_photo_3: h.hotel_photo_3,
+      hotel_photo_4: h.hotel_photo_4,
+      hotel_photo_5: h.hotel_photo_5,
+      verification_status: (h as any).verification_status,
+      property_type: (h as any).property_type,
+    });
+  };
+  const handleDeleteHotel = (id: string) => {
+    if (confirm("هل تريد حذف الفندق؟")) {
+      setHotels(hotels.filter(h => h.id !== id));
+      try {
+        const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+        localStorage.setItem("dalni_hotels", JSON.stringify(stored.filter((item: any) => item.id !== id)));
+      } catch {}
+      deleteFromSecureBackend("hotels", "hotel_id", id);
+    }
+  };
   const handleAddRestaurant = (r: any) => {
-    const newRest = { id: `R-0${restaurants.length + 1}`, rating_avg: 5.0, ...r };
+    const facilityId = r.facility_id || r.id || `R-0${restaurants.length + 1}`;
+    const newRest = { id: facilityId, rating_avg: 5.0, ...r };
     setRestaurants((prev) => [newRest, ...prev]);
     setShowAddRestaurant(false);
 
@@ -942,22 +970,23 @@ function AdminDashboard() {
       localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests]));
     } catch {}
 
-    fetch("http://127.0.0.1:8000/api/restaurants", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        facility_id: newRest.id,
-        facility_name: r.name,
-        facility_type: r.type || "مأكولات شعبية",
-        city: r.city || "طرابلس",
-        address_details: r.address || "العنوان الرئيسي",
-        phone_number: r.phone || "0910000000",
-        description: r.description || "",
-        google_maps_url: r.google_maps_url || "",
-        working_hours: r.working_hours || "",
-        facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
-      }),
-    }).catch(() => {});
+    sendToSecureBackend("restaurants", {
+      facility_id: facilityId,
+      facility_name: newRest.name || newRest.facility_name,
+      facility_type: newRest.type || newRest.facility_type,
+      city: newRest.city,
+      address_details: newRest.address || newRest.address_details,
+      phone_number: newRest.phone || newRest.phone_number,
+      description: newRest.description,
+      facility_image_1: newRest.facility_image_1,
+      facility_image_2: newRest.facility_image_2,
+      facility_image_3: newRest.facility_image_3,
+      facility_image_4: newRest.facility_image_4,
+      facility_image_5: newRest.facility_image_5,
+      verification_status: newRest.verification_status || "موثق",
+      working_hours: newRest.working_hours,
+      features: newRest.features,
+    });
   };
   const handleUpdateRestaurant = (r: Restaurant) => {
     setRestaurants(restaurants.map(x => x.id === r.id ? r : x));
@@ -967,6 +996,24 @@ function AdminDashboard() {
       const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
       localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
     } catch {}
+
+    sendToSecureBackend("restaurants", {
+      facility_id: r.id || (r as any).facility_id,
+      facility_name: r.name || (r as any).facility_name,
+      facility_type: r.type || (r as any).facility_type,
+      city: r.city,
+      address_details: r.address || (r as any).address_details,
+      phone_number: r.phone || (r as any).phone_number,
+      description: r.description,
+      facility_image_1: r.facility_image_1,
+      facility_image_2: r.facility_image_2,
+      facility_image_3: r.facility_image_3,
+      facility_image_4: r.facility_image_4,
+      facility_image_5: r.facility_image_5,
+      verification_status: (r as any).verification_status,
+      working_hours: r.working_hours,
+      features: (r as any).features,
+    });
   };
   const handleDeleteRestaurant = (id: string) => {
     if (confirm("هل تريد حذف المطعم؟")) {
@@ -975,11 +1022,55 @@ function AdminDashboard() {
         const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
         localStorage.setItem("dalni_restaurants", JSON.stringify(storedRests.filter((r: any) => r.id !== id)));
       } catch {}
+      deleteFromSecureBackend("restaurants", "facility_id", id);
     }
   };
-  const handleAddAttraction = (a: any) => { setAttractions([...attractions, { id: `A-0${attractions.length + 1}`, visitors_count: 0, ...a }]); setShowAddAttraction(false); };
-  const handleUpdateAttraction = (a: Attraction) => { setAttractions(attractions.map(x => x.id === a.id ? a : x)); setEditingAttraction(null); };
-  const handleDeleteAttraction = (id: string) => { if (confirm("هل تريد حذف المعلم السياحي؟")) setAttractions(attractions.filter(a => a.id !== id)); };
+  const handleAddAttraction = (a: any) => { 
+    const placeId = a.place_id || a.id || `A-0${attractions.length + 1}`;
+    const newPlace = { id: placeId, place_id: placeId, visitors_count: 0, ...a };
+    setAttractions([...attractions, newPlace]); 
+    setShowAddAttraction(false); 
+    sendToSecureBackend("places", {
+      place_id: placeId,
+      place_name: newPlace.name || newPlace.place_name,
+      description: newPlace.description,
+      city: newPlace.city,
+      longitude: newPlace.longitude,
+      latitude: newPlace.latitude,
+      category: newPlace.category,
+      place_image: newPlace.place_image,
+      is_unesco: newPlace.is_unesco,
+      unesco_year: newPlace.unesco_year,
+      entry_fee: newPlace.entry_fee,
+      google_maps_url: newPlace.google_maps_url,
+      gallery: newPlace.gallery,
+    });
+  };
+  const handleUpdateAttraction = (a: Attraction) => { 
+    setAttractions(attractions.map(x => x.id === a.id ? a : x)); 
+    setEditingAttraction(null); 
+    sendToSecureBackend("places", {
+      place_id: a.id || (a as any).place_id,
+      place_name: a.name || (a as any).place_name,
+      description: a.description,
+      city: a.city,
+      longitude: a.longitude,
+      latitude: a.latitude,
+      category: a.category,
+      place_image: a.place_image,
+      is_unesco: a.is_unesco,
+      unesco_year: a.unesco_year,
+      entry_fee: (a as any).entry_fee,
+      google_maps_url: a.google_maps_url,
+      gallery: (a as any).gallery,
+    });
+  };
+  const handleDeleteAttraction = (id: string) => { 
+    if (confirm("هل تريد حذف المعلم السياحي؟")) {
+      setAttractions(attractions.filter(a => a.id !== id)); 
+      deleteFromSecureBackend("places", "place_id", id);
+    }
+  };
   const handleReplyTicket = (ticketId: string, reply: string) => { setTickets(tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" } : t)); };
   // Offers
   const handleAddDailyOffer = (o: any) => { const newId = `DO-${String(dailyOffers.length + 1).padStart(3, "0")}`; setDailyOffers([...dailyOffers, { ...o, offer_daily_id: newId, id: newId }]); setShowAddDailyOffer(false); };
@@ -1125,16 +1216,42 @@ function AdminDashboard() {
           <div className="overflow-x-auto text-right">
             <table className="w-full text-sm">
               <thead><tr className="text-right text-xs text-muted-foreground border-b border-border">
-                <th className="pb-3 font-bold">رقم العقد</th><th className="pb-3 font-bold">اسم الشركة</th><th className="pb-3 font-bold">الهاتف</th><th className="pb-3 font-bold">الأسطول</th><th className="pb-3 font-bold">الحالة</th><th className="pb-3 font-bold">إجراءات</th>
+                <th className="pb-3 font-bold">رقم العقد</th>
+                <th className="pb-3 font-bold">اسم الشركة</th>
+                <th className="pb-3 font-bold">المدينة ونقطة الانطلاق</th>
+                <th className="pb-3 font-bold">الموقع (Google Maps)</th>
+                <th className="pb-3 font-bold">الهاتف</th>
+                <th className="pb-3 font-bold">الأسطول</th>
+                <th className="pb-3 font-bold">الحالة</th>
+                <th className="pb-3 font-bold">إجراءات</th>
               </tr></thead>
               <tbody className="divide-y divide-border">
                 {companies.map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id || c.contract_number}>
                     <td className="py-3 font-mono text-xs font-bold">{c.contract_number}</td>
-                    <td className="py-3 font-bold text-foreground">{c.name}</td>
-                    <td className="py-3 text-muted-foreground">{c.phone}</td>
+                    <td className="py-3 font-bold text-foreground">{c.name || c.company_name}</td>
+                    <td className="py-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${c.city === "بنغازي" ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-blue-50 text-blue-800 border border-blue-200"}`}>
+                        📍 {c.city || "طرابلس"}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      {c.address && (c.address.startsWith("http") || c.address.includes("maps")) ? (
+                        <a
+                          href={c.address.startsWith("http") ? c.address : `https://${c.address}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition"
+                        >
+                          🗺️ الخريطة ↗
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{c.address || "غير محدد"}</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-muted-foreground">{c.phone || c.phone_number}</td>
                     <td className="py-3 font-bold">{c.total_vehicles} مركبة</td>
-                    <td className="py-3"><Badge tone={c.status === "موثق" ? "green" : "sun"}>{c.status}</Badge></td>
+                    <td className="py-3"><Badge tone={c.status === "موثق" || c.verification_status === "موثق" ? "green" : "sun"}>{c.status || c.verification_status || "موثق"}</Badge></td>
                     <td className="py-3 flex gap-2">
                       <button onClick={() => setEditingCompany(c)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
                       <button onClick={() => handleDeleteCompany(c.contract_number || c.id || "")} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
@@ -1336,12 +1453,12 @@ function AdminDashboard() {
             <span className="text-2xl">🎟️</span>
             <div>
               <span className="font-black block text-sm mb-0.5">سجل الحجوزات الميدانية (حجوزات الرحلات اليومية والأسبوعية):</span>
-              متابعة مباشرة لمدفوعات السياح وحالة الحضور والتأكيد وفق جداول قاعدة بيانات DelniDB (bookings_daily و bookings_weekly).
+              متابعة مباشرة لمدفوعات السياح وحالة الحضور والتأكيد لجميع الرحلات اليومية والأسبوعية.
             </div>
           </div>
 
           {/* Daily Trips Bookings */}
-          <SectionCard title="🎟️ حجوزات الرحلات اليومية (bookings_daily)">
+          <SectionCard title="🎟️ حجوزات الرحلات اليومية">
             <div className="overflow-x-auto text-right">
               <table className="w-full text-sm">
                 <thead>
@@ -1403,7 +1520,7 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Trips Bookings */}
-          <SectionCard title="🗓️ حجوزات الرحلات الأسبوعية (bookings_weekly)">
+          <SectionCard title="🗓️ حجوزات الرحلات الأسبوعية">
             <div className="overflow-x-auto text-right">
               <table className="w-full text-sm">
                 <thead>
@@ -1982,7 +2099,7 @@ function AdminDashboard() {
       )}
 
       {/* ===== MODALS ===== */}
-      {showAddCompany && <AddCompanyModal onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
+      {showAddCompany && <AddCompanyModal companies={companies} onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
       {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
       {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
       {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
@@ -2145,64 +2262,557 @@ function AddPrivateTripModal({ onClose, onAdd, guides }: { onClose: () => void; 
   );
 }
 
-function AddCompanyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: any) => void }) {
-  const [contractNo] = useState(`CN-2026-${Math.floor(10 + Math.random() * 90)}`);
-  const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [address, setAddress] = useState("");
-  const [email, setEmail] = useState(""); const [pass, setPass] = useState(""); const [vehiclesCount, setVehiclesCount] = useState(5);
-  const [availableCars, setAvailableCars] = useState(0);
-  const [contractEndDate, setContractEndDate] = useState("");
-  const [companyStatus, setCompanyStatus] = useState("موثق");
+function LocationMapPickerModal({
+  initialCity = "طرابلس",
+  currentUrl = "",
+  onSelect,
+  onClose,
+}: {
+  initialCity?: string;
+  currentUrl?: string;
+  onSelect: (url: string) => void;
+  onClose: () => void;
+}) {
+  const defaultCoords = initialCity === "بنغازي" 
+    ? { lat: 32.1194, lng: 20.0868 } 
+    : { lat: 32.8872, lng: 13.1913 };
+    
+  let initLat = defaultCoords.lat;
+  let initLng = defaultCoords.lng;
+  if (currentUrl) {
+    const match = currentUrl.match(/q=([0-9.-]+),([0-9.-]+)/) || currentUrl.match(/@([0-9.-]+),([0-9.-]+)/);
+    if (match) {
+      initLat = parseFloat(match[1]);
+      initLng = parseFloat(match[2]);
+    }
+  }
+
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({ lat: initLat, lng: initLng });
+  const [manualInput, setManualInput] = useState(currentUrl);
+
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data && e.data.type === "DELNI_MAP_PICK") {
+        const lat = Number(e.data.lat);
+        const lng = Number(e.data.lng);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          setSelectedCoords({ lat, lng });
+          setManualInput(`https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`);
+        }
+      }
+    };
+    window.addEventListener("message", handleMsg);
+    return () => window.removeEventListener("message", handleMsg);
+  }, []);
+
+  const generatedUrl = `https://maps.google.com/?q=${selectedCoords.lat.toFixed(6)},${selectedCoords.lng.toFixed(6)}`;
+
+  const mapHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>html, body, #map { height: 100%; margin: 0; padding: 0; font-family: sans-serif; }</style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map').setView([${initLat}, ${initLng}], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+    var marker = L.marker([${initLat}, ${initLng}], { draggable: true }).addTo(map);
+    marker.bindPopup("مقر شركة النقل").openPopup();
+    function send(lat, lng) {
+      window.parent.postMessage({ type: 'DELNI_MAP_PICK', lat: lat, lng: lng }, '*');
+    }
+    map.on('click', function(e) {
+      marker.setLatLng(e.latlng);
+      send(e.latlng.lat, e.latlng.lng);
+    });
+    marker.on('dragend', function(e) {
+      var p = e.target.getLatLng();
+      send(p.lat, p.lng);
+    });
+  </script>
+</body>
+</html>`;
+
   return (
-    <ModalShell title="إضافة شركة نقل سياحي جديدة" onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onAdd({ contract_number: contractNo, name, phone, address, email, pass, total_vehicles: vehiclesCount, available_cars: availableCars, contract_date: new Date().toISOString().split("T")[0], contract_end_date: contractEndDate, status: companyStatus }); }}>
-        <Field label="رقم العقد (تلقائي)" value={contractNo} onChange={() => {}} />
-        <Field label="اسم شركة النقل" value={name} onChange={setName} />
-        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
-        <Field label="العنوان" value={address} onChange={setAddress} />
-        <Field label="البريد الإلكتروني" type="email" value={email} onChange={setEmail} />
-        <Field label="كلمة المرور" type="password" value={pass} onChange={setPass} />
-        <Field label="عدد مركبات الأسطول" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(Number(v))} />
-        <Field label="عدد السيارات المتاحة" type="number" value={String(availableCars)} onChange={v => setAvailableCars(Number(v))} />
-        <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
-        <div className="mb-2">
-          <label className="text-xs font-bold block mb-1">حالة اعتماد الشركة</label>
-          <select value={companyStatus} onChange={e => setCompanyStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="موثق">موثق</option>
-            <option value="بانتظار">بانتظار</option>
-            <option value="مرفوض">مرفوض</option>
-          </select>
+    <ModalShell title={`🗺️ تحديد مقر الشركة على الخريطة (${initialCity})`} onClose={onClose}>
+      <div className="space-y-3 text-right">
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed font-semibold">
+          📍 انقر في أي مكان داخل الخريطة أو اسحب العلامة لتحديد المقر بدقة، وسيتولد الرابط تلقائياً.
         </div>
+
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(initialCity + ' ليبيا')}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition flex items-center gap-1 cursor-pointer"
+          >
+            ↗️ فتح خرائط Google في نافذة جديدة
+          </a>
+          <span className="text-[11px] font-mono text-muted-foreground font-bold">
+            الإحداثيات: {selectedCoords.lat.toFixed(5)}, {selectedCoords.lng.toFixed(5)}
+          </span>
+        </div>
+
+        <div className="w-full h-72 rounded-xl overflow-hidden border border-border shadow-inner relative bg-slate-100">
+          <iframe
+            title="Interactive Map Picker"
+            srcDoc={mapHtml}
+            className="w-full h-full border-0"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">رابط خرائط Google المعتمد:</label>
+          <input
+            type="text"
+            value={manualInput || generatedUrl}
+            onChange={(e) => setManualInput(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border text-xs font-mono text-left bg-slate-50 focus:bg-white outline-none"
+            placeholder="https://maps.google.com/?q=..."
+          />
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الشركة</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onSelect(manualInput.trim() || generatedUrl);
+              onClose();
+            }}
+            className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer"
+          >
+            ✓ اعتماد وتثبيت هذا الموقع
+          </button>
         </div>
-      </form>
+      </div>
     </ModalShell>
   );
 }
 
+function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Company[]; onClose: () => void; onAdd: (c: any) => void }) {
+  const [contractNo, setContractNo] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("طرابلس");
+  const [address, setAddress] = useState("");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [vehiclesCount, setVehiclesCount] = useState<number | string>(5);
+  const [availableCars, setAvailableCars] = useState<number | string>(3);
+  const [contractEndDate, setContractEndDate] = useState("");
+  const [companyStatus, setCompanyStatus] = useState("موثق");
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    const cleanContract = contractNo.trim();
+    if (!cleanContract) {
+      setErrorMsg("يرجى إدخال رقم العقد المطابق للعقد الورقي (حقل إلزامي).");
+      return;
+    }
+    if (!/^\d+$/.test(cleanContract)) {
+      setErrorMsg("رقم عقد شركة النقل يجب أن يتكون من أرقام فقط.");
+      return;
+    }
+    if (companies.some(c => c.contract_number === cleanContract)) {
+      setErrorMsg("رقم عقد شركة النقل هذا مسجل مسبقاً لشركة أخرى في المنصة.");
+      return;
+    }
+
+    if (!name.trim()) {
+      setErrorMsg("يرجى إدخال اسم شركة النقل السياحي (حقل إلزامي).");
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMsg("يرجى إدخال رقم هاتف الشركة (حقل إلزامي).");
+      return;
+    }
+    const cleanPhone = phone.replace(/[\s-]/g, "");
+    if (cleanPhone.length < 9) {
+      setErrorMsg("رقم الهاتف غير مكتمل، يرجى إدخال رقم هاتف ليبي صحيح لا يقل عن 9 أرقام.");
+      return;
+    }
+    if (!address.trim()) {
+      setErrorMsg("يرجى تحديد موقع مقر شركة النقل على خرائط Google Maps (حقل إلزامي).");
+      return;
+    }
+    const cleanAddress = address.trim();
+    if (!cleanAddress.startsWith("http://") && !cleanAddress.startsWith("https://") && !cleanAddress.includes("maps.app.goo.gl") && !cleanAddress.includes("google.com/maps") && !cleanAddress.includes("maps.google.com")) {
+      setErrorMsg("يرجى إدخال أو تحديد رابط خرائط Google Maps صحيح لمقر الشركة.");
+      return;
+    }
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setErrorMsg("يرجى إدخال بريد إلكتروني رسمي وصحيح للشركة (مثال: info@company.ly).");
+      return;
+    }
+    if (!pass.trim() || pass.trim().length < 6) {
+      setErrorMsg("كلمة المرور مطلوبة ويجب ألا تقل عن 6 خانات لتأمين حساب الشركة.");
+      return;
+    }
+    const totalV = Number(vehiclesCount);
+    const availC = Number(availableCars);
+    if (isNaN(totalV) || totalV <= 0) {
+      setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
+      return;
+    }
+    if (isNaN(availC) || availC < 0) {
+      setErrorMsg("عدد السيارات المتاحة حالياً يجب أن يكون صفراً أو أكثر.");
+      return;
+    }
+    if (availC > totalV) {
+      setErrorMsg("عدد السيارات المتاحة حالياً لا يمكن أن يتجاوز إجمالي عدد مركبات الأسطول.");
+      return;
+    }
+    if (!contractEndDate.trim()) {
+      setErrorMsg("يرجى تحديد تاريخ انتهاء التعاقد المعتمد.");
+      return;
+    }
+
+    onAdd({
+      contract_number: cleanContract,
+      name: name.trim(),
+      company_name: name.trim(),
+      phone: phone.trim(),
+      phone_number: phone.trim(),
+      city: city.trim(),
+      address: cleanAddress,
+      google_maps_url: cleanAddress,
+      email: email.trim(),
+      pass: pass.trim(),
+      password: pass.trim(),
+      total_vehicles: totalV,
+      available_cars: availC,
+      available_vehicles: availC,
+      contract_start_date: new Date().toISOString().split("T")[0],
+      contract_end_date: contractEndDate.trim(),
+      status: companyStatus,
+      verification_status: companyStatus,
+    });
+  };
+
+  return (
+    <>
+      <ModalShell title="إضافة شركة نقل سياحي جديدة (كافة الحقول إلزامية)" onClose={onClose}>
+        <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2 animate-in fade-in">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">رقم العقد (أرقام فقط - مطابق للورقي) *</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={contractNo}
+              onChange={(e) => setContractNo(e.target.value.replace(/\D/g, ""))}
+              placeholder="أرقام فقط (مثال: 123445)"
+              required
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+            />
+          </div>
+          <Field label="اسم شركة النقل *" value={name} onChange={setName} placeholder="شركة السهم الذهبي للنقل" required />
+          <LibyanPhoneField label="الهاتف *" value={phone} onChange={setPhone} />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-bold block mb-1">المدينة *</label>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white focus:border-primary outline-none"
+              >
+                <option value="طرابلس">طرابلس</option>
+                <option value="بنغازي">بنغازي</option>
+              </select>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-bold text-foreground">موقع مقر الشركة (خرائط Google) *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowMapPicker(true)}
+                  className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 transition"
+                >
+                  🗺️ تحديد من الخريطة
+                </button>
+              </div>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="https://maps.google.com/?q=... أو اختر من الخريطة"
+                required
+                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+              />
+              <div className="flex justify-between items-center mt-1">
+                {address && (address.startsWith("http") || address.includes("maps")) ? (
+                  <a
+                    href={address.startsWith("http") ? address : `https://${address}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5"
+                  >
+                    📍 معاينة الرابط في Google Maps ↗
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    انقر "تحديد من الخريطة" لاختيار الموقع بالدقة
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Field label="البريد الإلكتروني للشركة *" type="email" value={email} onChange={setEmail} placeholder="transport@company.ly" required />
+          <Field label="كلمة المرور *" type="password" value={pass} onChange={setPass} placeholder="6 خانات على الأقل" required />
+          
+          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-right">
+            <p className="text-[10px] text-amber-800 font-bold mb-1">
+              * <b>عدد مركبات الأسطول:</b> إجمالي المركبات التي تملكها الشركة (يجب أن يكون 1 على الأقل).
+            </p>
+            <p className="text-[10px] text-amber-800 font-bold">
+              * <b>عدد السيارات المتاحة:</b> المركبات الجاهزة حالياً للتشغيل (لا تتجاوز الأسطول).
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="عدد مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+            <Field label="عدد السيارات المتاحة *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
+            <div>
+              <label className="text-xs font-bold block mb-1">حالة الشركة *</label>
+              <select value={companyStatus} onChange={e => setCompanyStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white">
+                <option value="موثق">موثق</option>
+                <option value="بانتظار">بانتظار</option>
+                <option value="مرفوض">مرفوض</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer">إلغاء</button>
+            <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer">حفظ واعتماد الشركة ✓</button>
+          </div>
+        </form>
+      </ModalShell>
+
+      {showMapPicker && (
+        <LocationMapPickerModal
+          initialCity={city}
+          currentUrl={address}
+          onSelect={(url) => setAddress(url)}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
+    </>
+  );
+}
+
 function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; onClose: () => void; onUpdate: (c: Company) => void }) {
+  const [contractNo, setContractNo] = useState(company.contract_number || "");
   const [name, setName] = useState(company.company_name || company.name || "");
   const [phone, setPhone] = useState(company.phone_number || company.phone || "");
-  const [address, setAddress] = useState(company.address || "");
+  const [city, setCity] = useState(company.city === "بنغازي" ? "بنغازي" : "طرابلس");
+  const [address, setAddress] = useState(company.google_maps_url || company.address || "");
+  const [email, setEmail] = useState(company.email || "");
+  const [vehiclesCount, setVehiclesCount] = useState<number | string>(company.total_vehicles ?? 5);
+  const [availableCars, setAvailableCars] = useState<number | string>(company.available_vehicles ?? company.available_cars ?? 0);
+  const [contractStartDate, setContractStartDate] = useState(company.contract_start_date || "2026-01-01");
+  const [contractEndDate, setContractEndDate] = useState(company.contract_end_date || "2028-01-01");
   const [status, setStatus] = useState(company.verification_status || company.status || "موثق");
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!name.trim()) {
+      setErrorMsg("يرجى إدخال اسم شركة النقل.");
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMsg("يرجى إدخال رقم هاتف الشركة.");
+      return;
+    }
+    const cleanPhone = phone.replace(/[\s-]/g, "");
+    if (cleanPhone.length < 9) {
+      setErrorMsg("رقم الهاتف غير مكتمل، يرجى إدخال رقم هاتف ليبي صحيح.");
+      return;
+    }
+    if (!address.trim()) {
+      setErrorMsg("يرجى تحديد رابط موقع مقر شركة النقل على خرائط Google Maps.");
+      return;
+    }
+    const cleanAddress = address.trim();
+    if (!cleanAddress.startsWith("http://") && !cleanAddress.startsWith("https://") && !cleanAddress.includes("maps.app.goo.gl") && !cleanAddress.includes("google.com/maps") && !cleanAddress.includes("maps.google.com")) {
+      setErrorMsg("يرجى إدخال رابط Google Maps صالح لمقر الشركة.");
+      return;
+    }
+    const totalV = Number(vehiclesCount);
+    const availC = Number(availableCars);
+    if (isNaN(totalV) || totalV <= 0) {
+      setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
+      return;
+    }
+    if (isNaN(availC) || availC < 0) {
+      setErrorMsg("عدد السيارات المتاحة حالياً يجب أن يكون صفراً أو أكثر.");
+      return;
+    }
+    if (availC > totalV) {
+      setErrorMsg("عدد السيارات المتاحة لا يمكن أن يتجاوز إجمالي مركبات الأسطول.");
+      return;
+    }
+
+    onUpdate({
+      ...company,
+      contract_number: contractNo.trim(),
+      company_name: name.trim(),
+      name: name.trim(),
+      phone_number: phone.trim(),
+      phone: phone.trim(),
+      city: city.trim(),
+      address: cleanAddress,
+      google_maps_url: cleanAddress,
+      email: email.trim(),
+      total_vehicles: totalV,
+      available_vehicles: availC,
+      available_cars: availC,
+      contract_start_date: contractStartDate,
+      contract_end_date: contractEndDate,
+      verification_status: status,
+      status: status,
+    });
+  };
+
   return (
-    <ModalShell title={`تعديل شركة: ${company.company_name || company.name || ""}`} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={(e) => { e.preventDefault(); onUpdate({ ...company, name, phone, address, status }); }}>
-        <Field label="اسم الشركة" value={name} onChange={setName} />
-        <LibyanPhoneField label="الهاتف" value={phone} onChange={setPhone} />
-        <Field label="العنوان" value={address} onChange={setAddress} />
-        <div><label className="text-xs font-bold mb-1 block">الحالة</label>
-          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-            <option value="موثق">موثق</option><option value="بانتظار">بانتظار</option><option value="مرفوض">مرفوض</option>
-          </select>
-        </div>
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ التعديلات</button>
-        </div>
-      </form>
-    </ModalShell>
+    <>
+      <ModalShell title={`تعديل بيانات شركة: ${company.company_name || company.name || ""}`} onClose={onClose}>
+        <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="رقم العقد (المعرف)" value={contractNo} onChange={setContractNo} required />
+            <Field label="اسم شركة النقل *" value={name} onChange={setName} required />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <LibyanPhoneField label="الهاتف *" value={phone} onChange={setPhone} />
+            <Field label="البريد الإلكتروني" type="email" value={email} onChange={setEmail} placeholder="company@dalni.ly" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-bold block mb-1">المدينة *</label>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white focus:border-primary outline-none"
+              >
+                <option value="طرابلس">طرابلس</option>
+                <option value="بنغازي">بنغازي</option>
+              </select>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-bold text-foreground">موقع مقر الشركة (خرائط Google) *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowMapPicker(true)}
+                  className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 transition"
+                >
+                  🗺️ تحديد من الخريطة
+                </button>
+              </div>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="https://maps.google.com/?q=... أو اختر من الخريطة"
+                required
+                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+              />
+              <div className="flex justify-between items-center mt-1">
+                {address && (address.startsWith("http") || address.includes("maps")) && (
+                  <a
+                    href={address.startsWith("http") ? address : `https://${address}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5"
+                  >
+                    📍 معاينة الرابط في Google Maps ↗
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="إجمالي مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+            <Field label="السيارات المتاحة للتشغيل *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="تاريخ بدء التعاقد" type="date" value={contractStartDate} onChange={setContractStartDate} />
+            <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold mb-1 block">حالة الشركة *</label>
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value as any)}
+              className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white"
+            >
+              <option value="موثق">موثق</option>
+              <option value="بانتظار">بانتظار</option>
+              <option value="مرفوض">مرفوض</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer">إلغاء</button>
+            <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer">حفظ وتحديث في قاعدة البيانات ✓</button>
+          </div>
+        </form>
+      </ModalShell>
+
+      {showMapPicker && (
+        <LocationMapPickerModal
+          initialCity={city}
+          currentUrl={address}
+          onSelect={(url) => setAddress(url)}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -2390,7 +3000,7 @@ function GuideVerificationModal({
             <span>ماذا تفعل كمسؤول للمنصة (أدمن)؟</span>
           </div>
           <p className="text-[11px] leading-relaxed text-blue-900">
-            راجع الوثيقة المرفوعة وتأكد من صحة رقم الترخيص والاسم. عند الضغط على <b>[قبول واعتماد المرشد]</b>، يتغير حسابه إلى 'موثق' فوراً في قاعدة البيانات ويصبح نشطاً في المنصة. عند الضغط على <b>[رفض الطلب]</b>، يُرفض الحساب.
+            راجع الوثيقة المرفوعة وتأكد من صحة رقم الترخيص والاسم. عند الضغط على <b>[قبول واعتماد المرشد]</b>، يتغير حسابه إلى 'موثق' فوراً ويصبح معتمداً ومتاحاً في قائمة المرشدين العامة. عند الضغط على <b>[رفض الطلب]</b>، يُرفض الحساب.
           </p>
         </div>
 
@@ -3877,11 +4487,11 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Field({ label, type = "text", value, onChange, placeholder, required }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean }) {
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold" />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required={required} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold" />
     </div>
   );
 }
