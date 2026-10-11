@@ -35,11 +35,20 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register/tourist', [AuthController::class, 'registerTourist']);
     Route::post('/register/guide', [AuthController::class, 'registerGuide']);
+    Route::post('/tourist/update-profile', [AuthController::class, 'updateTouristProfile']);
 });
 
 // --- Public / Catalog Routes ---
 Route::get('/trips/daily', [TripController::class, 'dailyTrips']);
+Route::post('/trips/daily', [TripController::class, 'storeDailyTrip']);
+Route::put('/trips/daily/{id}', [TripController::class, 'updateDailyTrip']);
+Route::post('/trips/daily/{id}', [TripController::class, 'updateDailyTrip']);
+Route::delete('/trips/daily/{id}', [TripController::class, 'deleteDailyTrip']);
 Route::get('/trips/weekly', [TripController::class, 'weeklyTrips']);
+Route::post('/trips/weekly', [TripController::class, 'storeWeeklyTrip']);
+Route::put('/trips/weekly/{id}', [TripController::class, 'updateWeeklyTrip']);
+Route::post('/trips/weekly/{id}', [TripController::class, 'updateWeeklyTrip']);
+Route::delete('/trips/weekly/{id}', [TripController::class, 'deleteWeeklyTrip']);
 Route::post('/trips/private/request', [TripController::class, 'requestPrivateTrip']);
 
 Route::get('/places', [TripController::class, 'places']);
@@ -63,6 +72,7 @@ Route::get('/dashboard/transport/{contractNumber}', [DashboardController::class,
 Route::get('/dashboard/admin', [DashboardController::class, 'adminDashboard']);
 Route::put('/dashboard/admin/private-trips/{privateTripId}', [DashboardController::class, 'adminUpdatePrivateTrip']);
 Route::put('/dashboard/admin/guides/{licenseNumber}/verify', [DashboardController::class, 'adminVerifyGuide']);
+Route::delete('/dashboard/admin/guides/{licenseNumber}', [DashboardController::class, 'adminDeleteGuide']);
 
 // --- Authenticated User Profile ---
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

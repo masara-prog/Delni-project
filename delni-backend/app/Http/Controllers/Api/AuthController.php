@@ -152,6 +152,40 @@ class AuthController extends Controller
     }
 
     /**
+     * Update Tourist Profile in DelniDB
+     */
+    public function updateTouristProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'tourist_id' => 'required|string|exists:tourists,tourist_id',
+            'full_name' => 'required|string|max:100',
+            'email' => 'required|email|max:100',
+            'phone_number' => 'required|string|max:20',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $tourist = Tourist::where('tourist_id', $validated['tourist_id'])->firstOrFail();
+
+        $updateData = [
+            'full_name' => $validated['full_name'],
+            'email' => $validated['email'],
+            'phone_number' => $validated['phone_number'],
+        ];
+
+        if (!empty($validated['password'])) {
+            $updateData['password'] = bcrypt($validated['password']);
+        }
+
+        $tourist->update($updateData);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تحديث بيانات ملف السائح في قاعدة البيانات بنجاح',
+            'user' => $tourist,
+        ]);
+    }
+
+    /**
      * Register a new Tour Guide
      */
     public function registerGuide(Request $request)

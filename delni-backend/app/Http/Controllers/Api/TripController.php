@@ -84,4 +84,205 @@ class TripController extends Controller
             'trip' => $privateTrip,
         ], 201);
     }
+
+    public function storeDailyTrip(Request $request)
+    {
+        $validated = $request->validate([
+            'trip_title' => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'price_per_seat' => 'required|numeric|min:0',
+            'departure_city' => 'nullable|string|max:50',
+            'destination_city' => 'nullable|string|max:50',
+            'max_capacity' => 'nullable|integer',
+            'recurring_days' => 'nullable|string',
+            'guide_license_number' => 'nullable|string',
+            'photo' => 'nullable|string',
+        ]);
+
+        $guideLic = !empty($validated['guide_license_number']) ? trim($validated['guide_license_number']) : null;
+        if ($guideLic) {
+            $guideExists = TourGuide::where('license_number', $guideLic)->exists();
+            if (!$guideExists) {
+                $guideLic = null;
+            }
+        }
+
+        $newId = 'DT-' . rand(100, 999);
+        $trip = DailyTrip::create([
+            'daily_trip_id' => $newId,
+            'trip_title' => $validated['trip_title'],
+            'description' => $validated['description'] ?? null,
+            'price_per_seat' => $validated['price_per_seat'],
+            'departure_city' => $validated['departure_city'] ?? 'طرابلس',
+            'destination_city' => $validated['destination_city'] ?? 'المعلم الأثري',
+            'max_capacity' => $validated['max_capacity'] ?? 25,
+            'available_seats' => $validated['max_capacity'] ?? 25,
+            'recurring_days' => $validated['recurring_days'] ?? 'السبت,الثلاثاء',
+            'guide_license_number' => $guideLic,
+            'photo' => $validated['photo'] ?? '/assets/dest-leptis.jpg',
+            'activities' => $request->input('activities', null),
+            'is_active' => true,
+        ]);
+
+        return response()->json(['status' => 'success', 'trip' => $trip], 201);
+    }
+
+    public function updateDailyTrip(Request $request, $id)
+    {
+        $trip = DailyTrip::where('daily_trip_id', $id)->first();
+        if (!$trip) {
+            return response()->json(['status' => 'error', 'message' => 'الرحلة اليومية غير موجودة'], 404);
+        }
+
+        $validated = $request->validate([
+            'trip_title' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+            'price_per_seat' => 'nullable|numeric|min:0',
+            'departure_city' => 'nullable|string|max:50',
+            'destination_city' => 'nullable|string|max:50',
+            'max_capacity' => 'nullable|integer',
+            'recurring_days' => 'nullable|string',
+            'guide_license_number' => 'nullable|string',
+            'photo' => 'nullable|string',
+            'activities' => 'nullable|string',
+        ]);
+
+        $guideLic = $trip->guide_license_number;
+        if ($request->has('guide_license_number')) {
+            $inputLic = trim($request->input('guide_license_number') ?? '');
+            if (!empty($inputLic)) {
+                $guideExists = TourGuide::where('license_number', $inputLic)->exists();
+                $guideLic = $guideExists ? $inputLic : null;
+            } else {
+                $guideLic = null;
+            }
+        }
+
+        $trip->update([
+            'trip_title' => $validated['trip_title'] ?? $trip->trip_title,
+            'description' => $validated['description'] ?? $trip->description,
+            'price_per_seat' => $validated['price_per_seat'] ?? $trip->price_per_seat,
+            'departure_city' => $validated['departure_city'] ?? $trip->departure_city,
+            'destination_city' => $validated['destination_city'] ?? $trip->destination_city,
+            'max_capacity' => $validated['max_capacity'] ?? $trip->max_capacity,
+            'recurring_days' => $validated['recurring_days'] ?? $trip->recurring_days,
+            'guide_license_number' => $guideLic,
+            'photo' => $validated['photo'] ?? $trip->photo,
+            'activities' => $request->has('activities') ? $request->input('activities') : $trip->activities,
+        ]);
+
+        return response()->json(['status' => 'success', 'message' => 'تم تحديث بيانات الرحلة اليومية بنجاح', 'trip' => $trip]);
+    }
+
+    public function deleteDailyTrip($id)
+    {
+        $trip = DailyTrip::where('daily_trip_id', $id)->first();
+        if ($trip) {
+            $trip->bookings()->delete();
+            $trip->delete();
+            return response()->json(['status' => 'success', 'message' => 'تم حذف الرحلة اليومية']);
+        }
+        return response()->json(['status' => 'error', 'message' => 'الرحلة غير موجودة'], 404);
+    }
+
+    public function storeWeeklyTrip(Request $request)
+    {
+        $validated = $request->validate([
+            'trip_title' => 'required|string|max:100',
+            'trip_description' => 'nullable|string',
+            'seat_per_price' => 'required|numeric|min:0',
+            'departure_city' => 'nullable|string|max:50',
+            'destination_region' => 'nullable|string|max:50',
+            'max_capacity' => 'nullable|integer',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'guide_license_number' => 'nullable|string',
+            'photo' => 'nullable|string',
+        ]);
+
+        $guideLic = !empty($validated['guide_license_number']) ? trim($validated['guide_license_number']) : null;
+        if ($guideLic) {
+            $guideExists = TourGuide::where('license_number', $guideLic)->exists();
+            if (!$guideExists) {
+                $guideLic = null;
+            }
+        }
+
+        $newId = 'WT-' . rand(100, 999);
+        $trip = WeeklyTrip::create([
+            'weekly_trip_id' => $newId,
+            'trip_title' => $validated['trip_title'],
+            'trip_description' => $validated['trip_description'] ?? null,
+            'seat_per_price' => $validated['seat_per_price'],
+            'departure_city' => $validated['departure_city'] ?? 'طرابلس',
+            'destination_region' => $validated['destination_region'] ?? 'الصحراء',
+            'max_capacity' => $validated['max_capacity'] ?? 25,
+            'available_seats' => $validated['max_capacity'] ?? 25,
+            'start_date' => $validated['start_date'] ?? now()->addDays(7),
+            'end_date' => $validated['end_date'] ?? now()->addDays(13),
+            'guide_license_number' => $guideLic,
+            'photo' => $validated['photo'] ?? '/assets/dest-ubari.jpg',
+            'is_active' => true,
+        ]);
+
+        return response()->json(['status' => 'success', 'trip' => $trip], 201);
+    }
+
+    public function updateWeeklyTrip(Request $request, $id)
+    {
+        $trip = WeeklyTrip::where('weekly_trip_id', $id)->first();
+        if (!$trip) {
+            return response()->json(['status' => 'error', 'message' => 'الرحلة الأسبوعية غير موجودة'], 404);
+        }
+
+        $validated = $request->validate([
+            'trip_title' => 'nullable|string|max:100',
+            'trip_description' => 'nullable|string',
+            'seat_per_price' => 'nullable|numeric|min:0',
+            'departure_city' => 'nullable|string|max:50',
+            'destination_region' => 'nullable|string|max:50',
+            'max_capacity' => 'nullable|integer',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'guide_license_number' => 'nullable|string',
+            'photo' => 'nullable|string',
+        ]);
+
+        $guideLic = $trip->guide_license_number;
+        if ($request->has('guide_license_number')) {
+            $inputLic = trim($request->input('guide_license_number') ?? '');
+            if (!empty($inputLic)) {
+                $guideExists = TourGuide::where('license_number', $inputLic)->exists();
+                $guideLic = $guideExists ? $inputLic : null;
+            } else {
+                $guideLic = null;
+            }
+        }
+
+        $trip->update([
+            'trip_title' => $validated['trip_title'] ?? $trip->trip_title,
+            'trip_description' => $validated['trip_description'] ?? $trip->trip_description,
+            'seat_per_price' => $validated['seat_per_price'] ?? $trip->seat_per_price,
+            'departure_city' => $validated['departure_city'] ?? $trip->departure_city,
+            'destination_region' => $validated['destination_region'] ?? $trip->destination_region,
+            'max_capacity' => $validated['max_capacity'] ?? $trip->max_capacity,
+            'start_date' => $validated['start_date'] ?? $trip->start_date,
+            'end_date' => $validated['end_date'] ?? $trip->end_date,
+            'guide_license_number' => $guideLic,
+            'photo' => $validated['photo'] ?? $trip->photo,
+        ]);
+
+        return response()->json(['status' => 'success', 'message' => 'تم تحديث بيانات الرحلة الأسبوعية بنجاح', 'trip' => $trip]);
+    }
+
+    public function deleteWeeklyTrip($id)
+    {
+        $trip = WeeklyTrip::where('weekly_trip_id', $id)->first();
+        if ($trip) {
+            $trip->bookings()->delete();
+            $trip->delete();
+            return response()->json(['status' => 'success', 'message' => 'تم حذف الرحلة الأسبوعية']);
+        }
+        return response()->json(['status' => 'error', 'message' => 'الرحلة غير موجودة'], 404);
+    }
 }

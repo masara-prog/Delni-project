@@ -50,7 +50,16 @@ export function DashboardShell({
               </div>
             </Link>
           </div>
+
           <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold text-slate-700 hover:text-primary hover:border-primary transition shadow-2xs"
+              title={isAr ? "الرجوع للصفحة الرئيسية للمنصة" : "Back to Home"}
+            >
+              <span>🏠</span>
+              <span>{isAr ? "الرئيسية" : "Home"}</span>
+            </Link>
             <Link to="/support" className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition">
               💬 {isAr ? "الدعم" : "Support"}
             </Link>
@@ -71,8 +80,11 @@ export function DashboardShell({
             </div>
             <button
               onClick={() => {
-                if (window.confirm("هل تريد تسجيل الخروج من المنصة بالكامل؟")) {
+                if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
                   clearStoredSession();
+                  localStorage.removeItem("dalni_token");
+                  localStorage.removeItem("dalni_role");
+                  localStorage.removeItem("dalni_user");
                   window.location.href = "/";
                 }
               }}
@@ -178,12 +190,15 @@ export function DashboardShell({
 
             <button
               onClick={() => {
-                if (window.confirm("هل أنت متأكد من تسجيل الخروج من المنصة بالكامل؟")) {
+                if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
                   clearStoredSession();
+                  localStorage.removeItem("dalni_token");
+                  localStorage.removeItem("dalni_role");
+                  localStorage.removeItem("dalni_user");
                   window.location.href = "/";
                 }
               }}
-              className="w-full mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:bg-red-500/10 text-red-400 group"
+              className="w-full mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:bg-red-500/10 text-red-400 group cursor-pointer"
             >
               <span className="w-8 h-8 rounded-lg grid place-items-center text-base flex-shrink-0 transition-all bg-white/5 group-hover:bg-red-500/20">
                 🚪

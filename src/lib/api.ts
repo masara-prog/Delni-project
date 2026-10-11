@@ -706,14 +706,17 @@ export function clearStoredSession() {
    ========================================================= */
 export async function apiRegisterTourist(params: {
   tourist_id?: string;
+  passport?: string;
   full_name: string;
   email: string;
   phone_number: string;
   password?: string;
 }): Promise<ApiResponse> {
-  const tourist_id = params.tourist_id || `T-${Math.floor(100000 + Math.random() * 900000)}`;
+  // Use passport/national ID as tourist_id if available, otherwise generated ID
+  const tourist_id = params.tourist_id || params.passport || `T-${Math.floor(100000 + Math.random() * 900000)}`;
   const user = {
     tourist_id,
+    passport: params.passport || tourist_id,
     full_name: params.full_name,
     email: params.email,
     phone_number: params.phone_number,
@@ -730,6 +733,25 @@ export async function apiRegisterTourist(params: {
   localStorage.setItem(STORAGE_KEYS.TOKEN, `tourist-token-${Date.now()}`);
   localStorage.setItem(STORAGE_KEYS.ROLE, "tourist");
   localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+  localStorage.setItem("dalni_user", JSON.stringify(user));
+
+  // Sync with Laravel API if running
+  try {
+    fetch(`${LARAVEL_API_URL}/auth/register/tourist`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        tourist_id,
+        full_name: params.full_name,
+        email: params.email,
+        phone_number: params.phone_number,
+        password: params.password,
+      }),
+    }).catch(() => {});
+  } catch {}
 
   // Async Safe Sync to Backend API (Microsoft SQL Server)
   sendToSecureBackend("tourists", {
@@ -743,6 +765,95 @@ export async function apiRegisterTourist(params: {
   return { status: "success", message: "تم إنشاء حساب السائح بنجاح", user, token: "tourist_token" };
 }
 
+/**
+ * Update Tourist Profile in DelniDB
+ */
+export async function apiUpdateTouristProfile(params: {
+  tourist_id: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  password?: string;
+}): Promise<ApiResponse> {
+  const current = getStoredSession().user || {};
+  const updated = { ...current, ...params };
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
+  localStorage.setItem("dalni_user", JSON.stringify(updated));
+
+  // Async Safe Sync to SQL Server bridge
+  sendToSecureBackend("tourists", params);
+
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/auth/tourist/update-profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch {}
+
+  return { status: "success", message: "تم تحديث الملف الشخصي بنجاح", user: updated };
+}
+
+/**
+ * Book a Daily Trip into DelniDB
+ */
+export async function apiBookDailyTrip(params: {
+  tourist_id: string;
+  daily_trip_id: string;
+  number_of_seats: number;
+  passengers_names?: string;
+  booking_notes?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/bookings/daily`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch {
+    return { status: "error", message: "تعذر إرسال الحجز للخادم" };
+  }
+}
+
+/**
+ * Book a Weekly Trip into DelniDB
+ */
+export async function apiBookWeeklyTrip(params: {
+  tourist_id: string;
+  weekly_trip_id: string;
+  number_of_seats: number;
+  passengers_names?: string;
+  booking_notes?: string;
+}): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/bookings/weekly`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch {
+    return { status: "error", message: "تعذر إرسال الحجز للخادم" };
+  }
+}
+
+/**
+ * Register a new Tour Guide
+ */
 export async function apiRegisterGuide(params: {
   license_number: string;
   full_name: string;
@@ -841,7 +952,15 @@ export async function apiGetTouristBookings(touristId: string) {
   }
 }
 
-export async function apiGetAdminDashboard() {
+export async function apiGetAdminDashboard(): Promise<any> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
   const guides = getAllGuides();
   const companies = getTransportCompanies();
   const vehicles = getVehicles();
@@ -851,6 +970,11 @@ export async function apiGetAdminDashboard() {
     companies,
     vehicles,
     drivers,
+    daily_trips: [],
+    weekly_trips: [],
+    private_trips: [],
+    daily_bookings: [],
+    weekly_bookings: [],
     stats: {
       total_guides: guides.length,
       pending_guides: guides.filter((g) => g.verification_status === "قيد المراجعة").length,
@@ -870,19 +994,106 @@ export async function apiVerifyGuide(licenseNumber: string, status: "موثق" |
   };
 }
 
-export async function apiUpdateTouristProfile(params: {
-  tourist_id: string;
-  full_name: string;
-  email: string;
-  phone_number: string;
-  password?: string;
-}): Promise<ApiResponse> {
-  const current = getStoredSession().user || {};
-  const updated = { ...current, ...params };
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
-  return { status: "success", message: "تم تحديث الملف الشخصي بنجاح", user: updated };
+/**
+ * Delete a Tour Guide from DelniDB
+ */
+export async function apiDeleteGuide(licenseNumber: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin/guides/${encodeURIComponent(licenseNumber)}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return null;
 }
 
+/**
+ * Trip API functions
+ */
+export async function apiCreateDailyTrip(data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiUpdateDailyTrip(id: string, data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiDeleteDailyTrip(id: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiCreateWeeklyTrip(data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiUpdateWeeklyTrip(id: string, data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiDeleteWeeklyTrip(id: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get Tour Guide Dashboard data (profile, real assigned trips, real manifest)
+ */
 export async function apiGetGuideDashboard(licenseNumber: string) {
   const guides = getAllGuides();
   const guide = guides.find((g) => g.license_number === licenseNumber);

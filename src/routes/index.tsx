@@ -155,25 +155,43 @@ function HomePage() {
 
 import { useLanguage } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { ROLE_DASHBOARDS } from "@/components/Header";
 
 /* ---------- Navbar ---------- */
 function Navbar() {
   const { language } = useLanguage();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [session, setSession] = useState<{ token: string | null; role: string | null; user: any } | null>(null);
 
   useEffect(() => {
-    const session = getStoredSession();
-    if (session?.user) {
-      setCurrentUser(session.user);
-    }
+    const checkAuth = () => {
+      const s = getStoredSession();
+      if (s?.user) {
+        setSession(s);
+      } else {
+        setSession(null);
+      }
+    };
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
   }, []);
 
+  const handleLogout = () => {
+    if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+      clearStoredSession();
+      setSession(null);
+      window.location.href = "/";
+    }
+  };
+
+  const currentUser = session?.user;
   // Account name ONLY (strictly without role or badge)
   const accountName = currentUser
-    ? (currentUser.company_name || currentUser.name || currentUser.full_name || currentUser.email || "حسابي")
+    ? (currentUser.company_name || currentUser.name || currentUser.full_name || currentUser.email || (language === 'ar' ? 'حسابي' : 'My Account'))
     : null;
 
-  const dashboardPath = currentUser
+  const currentRole = session?.role && ROLE_DASHBOARDS[session.role] ? ROLE_DASHBOARDS[session.role] : null;
+  const dashboardPath = currentRole?.path || (currentUser
     ? currentUser.role === "admin"
       ? "/dashboard/admin"
       : currentUser.role === "transport" || currentUser.contract_number
@@ -183,7 +201,7 @@ function Navbar() {
       : currentUser.role === "driver"
       ? "/dashboard/driver"
       : "/trips"
-    : "/auth/login";
+    : "/auth/login");
 
   return (
     <div className="absolute top-6 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12">
@@ -202,11 +220,7 @@ function Navbar() {
               <span className="leading-tight drop-shadow-sm">{accountName}</span>
             </Link>
             <button
-              onClick={() => {
-                clearStoredSession();
-                setCurrentUser(null);
-                window.location.reload();
-              }}
+              onClick={handleLogout}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Tajawal',sans-serif] transition-all border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
               title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout'}
             >
