@@ -74,7 +74,7 @@ import { BookingModal, DetailsModal, useModalPair, type DetailsItem, type Bookab
 type ModalsCtx = { 
   openDetails: (i: DetailsItem) => void; 
   openBooking: (i: BookableItem) => void;
-  openSchedule: (kind: "daily" | "weekly", customSchedules?: any[], customTitle?: string, customImage?: string) => void;
+  openSchedule: (kind: "daily" | "weekly", customSchedules?: any[], customTitle?: string, customImage?: string, customPrice?: number, customTripId?: string) => void;
   openPrivate: () => void;
 };
 const ModalsContext = createContext<ModalsCtx | null>(null);
@@ -88,16 +88,20 @@ function HomePage() {
   const [customSchedules, setCustomSchedules] = useState<any[] | undefined>(undefined);
   const [customTitle, setCustomTitle] = useState<string | undefined>(undefined);
   const [customImage, setCustomImage] = useState<string | undefined>(undefined);
+  const [customPrice, setCustomPrice] = useState<number | undefined>(undefined);
+  const [customTripId, setCustomTripId] = useState<string | undefined>(undefined);
   const [privateOpen, setPrivateOpen] = useState(false);
 
   return (
     <ModalsContext.Provider value={{ 
       openDetails: modals.openDetails, 
       openBooking: modals.openBooking,
-      openSchedule: (kind, schedules, title, image) => {
+      openSchedule: (kind: "daily" | "weekly", schedules?: any[], title?: string, image?: string, price?: number, tripId?: string) => {
         setCustomSchedules(schedules);
         setCustomTitle(title);
         setCustomImage(image);
+        setCustomPrice(price);
+        setCustomTripId(tripId);
         setScheduleKind(kind);
       },
       openPrivate: () => setPrivateOpen(true)
@@ -116,16 +120,14 @@ function HomePage() {
         modals.bookFromDetails((title, subtitle) => {
           if (subtitle && (subtitle.includes("خاصة") || subtitle.includes("Private"))) {
             setPrivateOpen(true);
-          } else if (item?.schedules && item.schedules.length > 0) {
-            setCustomSchedules(item.schedules);
-            setCustomTitle(item.title);
-            setCustomImage(item.image);
-            setScheduleKind(subtitle && subtitle.includes("أسبوعية") ? "weekly" : "daily");
           } else {
-            setCustomSchedules(undefined);
-            setCustomTitle(undefined);
-            setCustomImage(undefined);
-            setScheduleKind(subtitle && subtitle.includes("أسبوعية") ? "weekly" : "daily");
+            const isWeekly = subtitle && subtitle.includes("أسبوعية");
+            setCustomSchedules(item?.schedules && item.schedules.length > 0 ? item.schedules : undefined);
+            setCustomTitle(item?.title || title);
+            setCustomImage(item?.image);
+            setCustomPrice(typeof item?.price === "number" ? item.price : undefined);
+            setCustomTripId((item as any)?.refId);
+            setScheduleKind(isWeekly ? "weekly" : "daily");
           }
         });
       }} />
@@ -137,8 +139,12 @@ function HomePage() {
           setCustomSchedules(undefined);
           setCustomTitle(undefined);
           setCustomImage(undefined);
+          setCustomPrice(undefined);
+          setCustomTripId(undefined);
         }} 
         kind={scheduleKind} 
+        tripId={customTripId}
+        customPrice={customPrice}
         customSchedules={customSchedules}
         customTitle={customTitle}
         customImage={customImage}

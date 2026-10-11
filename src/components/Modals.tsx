@@ -102,6 +102,11 @@ export function Modal({ open, onClose, children, size = "md" }: { open: boolean;
 }
 
 export type BookableItem = {
+  id?: string;
+  trip_id?: string;
+  daily_trip_id?: string;
+  weekly_trip_id?: string;
+  refId?: string;
   title: string;
   subtitle?: string;
   image?: string;
@@ -111,6 +116,7 @@ export type BookableItem = {
   departure?: string;
   details?: string;
   price?: number | string;
+  seatPrice?: number | string;
   currency?: string;
   availableSeats?: number;
   totalSeats?: number;
@@ -164,7 +170,9 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
   const isSeatTooLow = isNaN(numSeats) || numSeats < 1;
   const hasSeatError = isSeatExceeded || isSeatTooLow;
 
-  const unit = typeof item.price === "number" ? item.price : Number(String(item.price ?? "0").replace(/[^\d]/g, ""));
+  const itemAny = item as any;
+  const rawPrice = item.price !== undefined ? item.price : itemAny.seatPrice;
+  const unit = typeof rawPrice === "number" ? rawPrice : Number(String(rawPrice ?? "0").replace(/[^\d.]/g, ""));
   const total = unit * (hasSeatError ? 0 : numSeats);
   const tripImage = item.image || item.img || resolveTripImage(item.title, item.subtitle);
   const slideshowImages = item.images || item.gallery || [tripImage];
@@ -217,14 +225,15 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 const session = getStoredSession();
                 const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-${phone}`;
                 const nSeats = parseInt(seats, 10) || 1;
-                const itemAny = item as any;
-                const itemId = itemAny.id || itemAny.trip_id || "";
-                const isWeekly = itemId.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
+                const itemId = itemAny.daily_trip_id || itemAny.weekly_trip_id || itemAny.id || itemAny.trip_id || itemAny.refId || "";
+                const isWeekly = itemId.startsWith("w") || itemId.startsWith("WT") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
 
                 if (isWeekly) {
                   await apiBookWeeklyTrip({
                     tourist_id: touristId,
-                    weekly_trip_id: itemId || "WT-201",
+                    weekly_trip_id: itemId || "WT-220",
+                    trip_title: item.title,
+                    seat_per_price: unit,
                     number_of_seats: nSeats,
                     passengers_names: accountName || "سائح",
                     booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
@@ -232,7 +241,9 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 } else {
                   await apiBookDailyTrip({
                     tourist_id: touristId,
-                    daily_trip_id: itemId || "DT-101",
+                    daily_trip_id: itemId || "DT-366",
+                    trip_title: item.title,
+                    price_per_seat: unit,
                     number_of_seats: nSeats,
                     passengers_names: accountName || "سائح",
                     booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
@@ -929,30 +940,39 @@ export function useModalPair() {
 
 export type ScheduledTrip = {
   id: string;
+  tripId?: string;
   date: string;
   time: string;
   seats: number;
   taken: number;
   guide: string;
   price: number;
+  tripTitle?: string;
+  kind?: string;
 };
 
 export function TripScheduleModal({
   open,
   onClose,
   kind,
+  tripId,
+  tripTitle,
   customTitle,
   customPrice,
   customImage,
   customSchedules,
+  trip,
 }: {
   open: boolean;
   onClose: () => void;
   kind: "daily" | "weekly" | null;
+  tripId?: string;
+  tripTitle?: string;
   customTitle?: string;
   customPrice?: number;
   customImage?: string;
   customSchedules?: ScheduledTrip[];
+  trip?: any;
 }) {
   const { language, dir } = useLanguage();
   const isAr = language === 'ar';
@@ -965,7 +985,7 @@ export function TripScheduleModal({
     if (open) { setSelected(null); setSeats("1"); setPhone(""); setStep("pick"); }
   }, [open]);
 
-  if (!kind && !customSchedules) return null;
+  if (!kind && !customSchedules && !trip) return null;
 
   const defaultDaily: ScheduledTrip[] = [
     { id: "d1", date: isAr ? "الأربعاء 23 يوليو 2026" : "Wed 23 Jul 2026", time: isAr ? "08:00 ص" : "08:00 AM", seats: 20, taken: 14, guide: isAr ? "خالد الورفلي" : "Khaled Al-Warfali", price: 180 },
@@ -977,11 +997,43 @@ export function TripScheduleModal({
     { id: "w2", date: isAr ? "السبت 2 أغسطس 2026" : "Sat 2 Aug 2026", time: isAr ? "انطلاق صباحي" : "Morning Departure", seats: 12, taken: 4, guide: isAr ? "أحمد الفيتوري" : "Ahmed Al-Fitouri", price: 2400 },
   ];
 
-  const schedules = customSchedules || (kind === "daily" ? defaultDaily : defaultWeekly);
+  let schedules: ScheduledTrip[];
+  if (customSchedules && customSchedules.length > 0) {
+    schedules = customSchedules;
+  } else if (trip || tripId || customPrice !== undefined || customTitle) {
+    const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId || (kind === "weekly" ? "WT-220" : "DT-366");
+    const realPrice = customPrice !== undefined
+      ? customPrice
+      : (trip?.type === "daily" ? trip.price : (trip?.seatPrice ?? (trip?.price ?? (kind === "weekly" ? 1200 : 120))));
+    const realTitle = customTitle || tripTitle || trip?.title || (kind === "daily" ? "رحلة يومية" : "رحلة أسبوعية");
+    const realGuide = trip?.guide?.name || "مرشد سياحي معتمد";
+    const realSeats = trip?.targetPersons || trip?.max_capacity || 25;
+    const realAvail = trip?.availableSeats !== undefined ? trip.availableSeats : realSeats;
+    const realDate = trip?.daysOfWeek || (trip?.startDate ? `${trip.startDate} إلى ${trip.endDate}` : (isAr ? "الموعد القادم المتاح" : "Upcoming Scheduled Date"));
+    const realTime = kind === "weekly" ? (isAr ? "انطلاق صباحي 07:00 ص" : "Morning 07:00 AM") : (isAr ? "08:00 ص" : "08:00 AM");
+
+    schedules = [
+      {
+        id: realId,
+        tripId: realId,
+        date: realDate,
+        time: realTime,
+        seats: realSeats,
+        taken: Math.max(0, realSeats - realAvail),
+        guide: realGuide,
+        price: Number(realPrice) || (kind === "weekly" ? 1200 : 120),
+        tripTitle: realTitle,
+        kind: kind || "daily",
+      }
+    ];
+  } else {
+    schedules = kind === "daily" ? defaultDaily : defaultWeekly;
+  }
+
   const selectedTrip = schedules.find((s) => s.id === selected);
   const total = selectedTrip ? selectedTrip.price * (parseInt(seats) || 1) : 0;
 
-  const kindLabel = customTitle || (kind === "daily" ? (isAr ? "الرحلات اليومية" : "Daily Trips") : (isAr ? "الرحلات الأسبوعية" : "Weekly Trips"));
+  const kindLabel = customTitle || tripTitle || (kind === "daily" ? (isAr ? "الرحلات اليومية" : "Daily Trips") : (isAr ? "الرحلات الأسبوعية" : "Weekly Trips"));
   const kindIcon = kind === "daily" ? "☀️" : "🗓️";
   const slideshowImages = resolveTripGallery(kindLabel, kind, customImage);
 
@@ -1094,12 +1146,16 @@ export function TripScheduleModal({
               try {
                 const session = getStoredSession();
                 const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
-                const isWeekly = (selectedTrip as any).kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
+                const isWeekly = (selectedTrip as any).kind === "weekly" || selectedTrip.id?.startsWith("w") || selectedTrip.id?.startsWith("WT") || kindLabel.includes("أسبوع");
+                const targetTripId = (selectedTrip as any).tripId || selectedTrip.id || tripId || (isWeekly ? "WT-220" : "DT-366");
+                const targetTitle = (selectedTrip as any).tripTitle || customTitle || tripTitle || kindLabel;
 
                 if (isWeekly) {
                   await apiBookWeeklyTrip({
                     tourist_id: touristId,
-                    weekly_trip_id: selectedTrip.id || "WT-201",
+                    weekly_trip_id: targetTripId,
+                    trip_title: targetTitle,
+                    seat_per_price: selectedTrip.price,
                     number_of_seats: n,
                     passengers_names: session.user?.full_name || session.user?.name || "سائح",
                     booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
@@ -1107,7 +1163,9 @@ export function TripScheduleModal({
                 } else {
                   await apiBookDailyTrip({
                     tourist_id: touristId,
-                    daily_trip_id: selectedTrip.id || "DT-101",
+                    daily_trip_id: targetTripId,
+                    trip_title: targetTitle,
+                    price_per_seat: selectedTrip.price,
                     number_of_seats: n,
                     passengers_names: session.user?.full_name || session.user?.name || "سائح",
                     booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,

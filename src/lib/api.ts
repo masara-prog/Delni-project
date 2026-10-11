@@ -150,6 +150,8 @@ export async function apiBookDailyTrip(params: {
   tourist_id: string;
   daily_trip_id: string;
   number_of_seats: number;
+  trip_title?: string;
+  price_per_seat?: number;
   passengers_names?: string;
   booking_notes?: string;
 }): Promise<ApiResponse> {
@@ -175,6 +177,8 @@ export async function apiBookWeeklyTrip(params: {
   tourist_id: string;
   weekly_trip_id: string;
   number_of_seats: number;
+  trip_title?: string;
+  seat_per_price?: number;
   passengers_names?: string;
   booking_notes?: string;
 }): Promise<ApiResponse> {

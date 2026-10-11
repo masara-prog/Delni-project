@@ -674,7 +674,7 @@ function AdminDashboard() {
   }, []);
 
   const handleAddHotel = (h: any) => {
-    const hotelId = `HTL-00${hotels.length + 1}`;
+    const hotelId = h.id || `HTL-${Math.floor(100 + Math.random() * 900)}`;
     const newHotelObj = { id: hotelId, bookings_count: 0, rating_avg: 5.0, ...h };
     setHotels((prev) => [...prev, newHotelObj]);
     setShowAddHotel(false);
@@ -689,9 +689,15 @@ function AdminDashboard() {
         address_details: h.address || "العنوان الرئيسي",
         phone_number: h.phone || "0910000000",
         star_rating: parseInt(h.stars, 10) || 4,
-        partnership_status: "نشط",
+        partnership_status: h.partnership_status || "نشط",
+        contract_date: h.contract_end_date || h.contract_date || "2027-12-31",
+        contract_end_date: h.contract_end_date || h.contract_date || "2027-12-31",
         property_type: "فندق",
         hotel_photo_1: h.hotel_photo_1 || "/assets/ai_city.jpg",
+        hotel_photo_2: h.hotel_photo_2 || h.hotel_photo_1 || "/assets/ai_city.jpg",
+        hotel_photo_3: h.hotel_photo_3 || h.hotel_photo_1 || "/assets/ai_city.jpg",
+        hotel_photo_4: h.hotel_photo_4 || h.hotel_photo_1 || "/assets/ai_city.jpg",
+        hotel_photo_5: h.hotel_photo_5 || h.hotel_photo_1 || "/assets/ai_city.jpg",
       }),
     }).catch(() => {});
   };
@@ -3460,12 +3466,14 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
 }
 
 function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: Hotel; onClose: () => void; onSave: (h: any) => void }) {
+  const [hotelId] = useState(hotel?.id || `HTL-${Math.floor(100 + Math.random() * 900)}`);
   const [name, setName] = useState(hotel?.name || "");
   const [city, setCity] = useState(hotel?.city || "طرابلس");
   const [address, setAddress] = useState(hotel?.address || "");
   const [phone, setPhone] = useState(hotel?.phone || "");
   const [stars, setStars] = useState(hotel?.stars ? String(hotel.stars) : "4");
   const [status, setStatus] = useState(hotel?.partnership_status || "نشط");
+  const [contractEndDate, setContractEndDate] = useState((hotel as any)?.contract_end_date || (hotel as any)?.contract_date || "2027-12-31");
   const [description, setDescription] = useState(hotel?.description || "");
   const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
   const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)");
@@ -3479,13 +3487,15 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
     e.preventDefault();
     if (!name || !city || !address) return alert("يرجى إدخال البيانات الأساسية للفندق");
     onSave({
-      ...(hotel ? { id: hotel.id } : {}),
+      id: hotelId,
       name,
       city,
       address,
       phone,
       stars: +stars,
       partnership_status: status,
+      contract_date: contractEndDate,
+      contract_end_date: contractEndDate,
       description,
       google_maps_url: mapsUrl,
       working_hours: workingHours,
@@ -3503,18 +3513,39 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
         <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-[11px] text-blue-900 font-semibold">
           ℹ️ <b>دليل تعريفي استكشافي:</b> الفنادق للعرض والتعريف بالمنشأة ومميزاتها فقط دون حجز مباشر للغرف عبر المنصة.
         </div>
+
+        {/* معرّف الفندق التلقائي - مضبب ومعطل */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-bold text-slate-700">معرّف الفندق (Hotel ID)</label>
+            <span className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-black">
+              🔒 يُنشأ تلقائياً في قاعدة البيانات
+            </span>
+          </div>
+          <input
+            type="text"
+            value={hotelId}
+            disabled
+            readOnly
+            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100/90 text-slate-400 font-mono font-bold text-xs text-right cursor-not-allowed select-none opacity-80 backdrop-blur-sm"
+          />
+        </div>
+
         <Field label="اسم الفندق الرسمي" value={name} onChange={setName} placeholder="مثال: فندق الفندق الكبير طرابلس" />
         <div className="grid grid-cols-2 gap-2">
           <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / غدامس..." />
           <Field label="التصنيف بالنجوم (1-5)" type="number" value={stars} onChange={setStars} />
         </div>
-        <div>
-          <label className="text-xs font-bold block mb-1">حالة العرض بالدليل السياحي</label>
-          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right outline-none focus:border-primary">
-            <option value="نشط">نشط (ظاهر بالدليل)</option>
-            <option value="معلق">معلق</option>
-            <option value="موقوف">موقوف</option>
-          </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-bold block mb-1">حالة العرض بالدليل السياحي</label>
+            <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right outline-none focus:border-primary">
+              <option value="نشط">نشط (ظاهر بالدليل)</option>
+              <option value="معلق">معلق</option>
+              <option value="موقوف">موقوف</option>
+            </select>
+          </div>
+          <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
         </div>
         <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع الرئيسي" />
         <LibyanPhoneField label="هاتف الاستعلام والتواصل المباشر" value={phone} onChange={setPhone} />

@@ -115,6 +115,7 @@ export type DailyTrip = {
   price: number;
   rating: number;
   reviews: number;
+  schedules?: any[];
 };
 
 export type WeeklyTrip = {
@@ -146,6 +147,7 @@ export type WeeklyTrip = {
   };
   rating: number;
   reviews: number;
+  schedules?: any[];
 };
 
 export type PrivateTemplate = {
@@ -2292,6 +2294,9 @@ function TripsPage() {
 
   const modals = useModalPair();
   const [scheduleKind, setScheduleKind] = useState<"daily" | "weekly" | null>(null);
+  const [scheduleTripId, setScheduleTripId] = useState<string | undefined>(undefined);
+  const [scheduleTripPrice, setScheduleTripPrice] = useState<number | undefined>(undefined);
+  const [scheduleTripObj, setScheduleTripObj] = useState<Trip | null>(null);
   const [scheduleTripTitle, setScheduleTripTitle] = useState<string | undefined>(undefined);
   const [scheduleTripImage, setScheduleTripImage] = useState<string | undefined>(undefined);
   const [customSchedules, setCustomSchedules] = useState<any[] | undefined>(undefined);
@@ -2322,87 +2327,127 @@ function TripsPage() {
           fetch("http://127.0.0.1:8000/api/trips/weekly").then(r => r.ok ? r.json() : []),
         ]);
 
-        const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => ({
-          id: t.daily_trip_id || `DT-${t.id}`,
-          type: "daily" as const,
-          title: t.trip_title,
-          img: t.photo || heroImg,
-          description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
-          activities: t.activities ? (Array.isArray(t.activities) ? t.activities : [t.activities]) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
-          attractions: [
-            {
-              name: t.destination_city || "المعلم الأثري",
-              location: `${t.departure_city || 'طرابلس'} - ليبيا`,
-              description: t.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
-            }
-          ],
-          targetPersons: t.max_capacity || 25,
-          availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
-          daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "أسبوعياً",
-          departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
-          entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
-          guide: {
-            name: t.guide?.full_name || "مرشد سياحي معتمد",
-            title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
-            phone: t.guide?.phone_number || "0912345678",
-            cv: {
+        const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => {
+          const dPrice = Number(t.price_per_seat) || 120;
+          const dId = t.daily_trip_id || `DT-${t.id}`;
+          const dSeats = t.max_capacity || 25;
+          const dAvail = t.available_seats !== undefined ? t.available_seats : dSeats;
+          return {
+            id: dId,
+            type: "daily" as const,
+            title: t.trip_title,
+            img: t.photo || heroImg,
+            description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
+            activities: t.activities ? (Array.isArray(t.activities) ? t.activities : [t.activities]) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
+            attractions: [
+              {
+                name: t.destination_city || "المعلم الأثري",
+                location: `${t.departure_city || 'طرابلس'} - ليبيا`,
+                description: t.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
+              }
+            ],
+            targetPersons: dSeats,
+            availableSeats: dAvail,
+            daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "أسبوعياً",
+            departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
+            entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
+            guide: {
               name: t.guide?.full_name || "مرشد سياحي معتمد",
               title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
-              licenseNumber: t.guide?.license_number || t.guide_license_number || "G-2026",
-              experienceYears: t.guide?.years_of_experience || 3,
-              rating: 5.0,
-              pricePerDay: Number(t.guide?.price_per_day) || 150,
               phone: t.guide?.phone_number || "0912345678",
-              bio: t.guide?.bio || "مرشد سياحي مرخص يقدم جولات سياحية نوعية واحترافية.",
-              specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
-            }
-          },
-          vehicle: {
-            model: t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : "حافلة ميني باص سياحي 25 راكب",
-            company: "شركة النقل السياحي المعتمدة",
-            driver: "سائق مرخص ومحترف",
-          },
-          accommodation: "رحلة يومية — عودة مساءً",
-          price: Number(t.price_per_seat) || 120,
-          rating: 5.0,
-          reviews: 1,
-        }));
+              cv: {
+                name: t.guide?.full_name || "مرشد سياحي معتمد",
+                title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
+                licenseNumber: t.guide?.license_number || t.guide_license_number || "G-2026",
+                experienceYears: t.guide?.years_of_experience || 3,
+                rating: 5.0,
+                pricePerDay: Number(t.guide?.price_per_day) || 150,
+                phone: t.guide?.phone_number || "0912345678",
+                bio: t.guide?.bio || "مرشد سياحي مرخص يقدم جولات سياحية نوعية واحترافية.",
+                specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
+              }
+            },
+            vehicle: {
+              model: t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : "حافلة ميني باص سياحي 25 راكب",
+              company: "شركة النقل السياحي المعتمدة",
+              driver: "سائق مرخص ومحترف",
+            },
+            accommodation: "رحلة يومية — عودة مساءً",
+            price: dPrice,
+            rating: 5.0,
+            reviews: 1,
+            schedules: [
+              {
+                id: dId,
+                tripId: dId,
+                date: t.recurring_days ? `أيام: ${t.recurring_days}` : "كل سبت وثلاثاء",
+                time: "08:00 ص",
+                seats: dSeats,
+                taken: Math.max(0, dSeats - dAvail),
+                guide: t.guide?.full_name || "مرشد سياحي معتمد",
+                price: dPrice,
+                kind: "daily",
+                tripTitle: t.trip_title,
+              }
+            ],
+          };
+        });
 
-        const mappedWeekly: WeeklyTrip[] = (Array.isArray(resWeekly) ? resWeekly : []).map((t: any) => ({
-          id: t.weekly_trip_id || `WT-${t.id}`,
-          type: "weekly" as const,
-          title: t.trip_title,
-          img: t.photo || destUbari,
-          description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
-          startDate: t.start_date || "2026-10-15",
-          endDate: t.end_date || "2026-10-20",
-          targetPersons: t.max_capacity || 25,
-          availableSeats: t.max_capacity || 25,
-          seatPrice: Number(t.seat_per_price) || 1500,
-          cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
-          attractions: [
-            {
-              name: t.destination_region || "الواحات والآثار",
-              location: "ليبيا",
-              description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
-            }
-          ],
-          hotels: ["فندق مبيت معتمد"],
-          departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
-          entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
-          guide: {
-            name: t.guide?.full_name || "مرشد سياحي معتمد",
-            title: t.guide?.title || "مرشد معتمد",
-            phone: t.guide?.phone_number || "0912345678",
-          },
-          vehicle: {
-            model: "حافلة سياحية مجهزة للمسافات الطويلة",
-            company: "شركة النقل السياحي الدولية",
-            driver: "سائق خبير بالمسارات السياحية",
-          },
-          rating: 5.0,
-          reviews: 1,
-        }));
+        const mappedWeekly: WeeklyTrip[] = (Array.isArray(resWeekly) ? resWeekly : []).map((t: any) => {
+          const wPrice = Number(t.seat_per_price) || 1500;
+          const wId = t.weekly_trip_id || `WT-${t.id}`;
+          const wSeats = t.max_capacity || 25;
+          const wAvail = t.available_seats !== undefined ? t.available_seats : wSeats;
+          return {
+            id: wId,
+            type: "weekly" as const,
+            title: t.trip_title,
+            img: t.photo || destUbari,
+            description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
+            startDate: t.start_date || "2026-10-15",
+            endDate: t.end_date || "2026-10-20",
+            targetPersons: wSeats,
+            availableSeats: wAvail,
+            seatPrice: wPrice,
+            cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
+            attractions: [
+              {
+                name: t.destination_region || "الواحات والآثار",
+                location: "ليبيا",
+                description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
+              }
+            ],
+            hotels: ["فندق مبيت معتمد"],
+            departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
+            entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
+            guide: {
+              name: t.guide?.full_name || "مرشد سياحي معتمد",
+              title: t.guide?.title || "مرشد معتمد",
+              phone: t.guide?.phone_number || "0912345678",
+            },
+            vehicle: {
+              model: "حافلة سياحية مجهزة للمسافات الطويلة",
+              company: "شركة النقل السياحي الدولية",
+              driver: "سائق خبير بالمسارات السياحية",
+            },
+            rating: 5.0,
+            reviews: 1,
+            schedules: [
+              {
+                id: wId,
+                tripId: wId,
+                date: t.start_date && t.end_date ? `${t.start_date} إلى ${t.end_date}` : "انطلاق أسبوعي دوري",
+                time: "انطلاق صباحي 07:00 ص",
+                seats: wSeats,
+                taken: Math.max(0, wSeats - wAvail),
+                guide: t.guide?.full_name || "فريق دَلِّني المتخصص",
+                price: wPrice,
+                kind: "weekly",
+                tripTitle: t.trip_title,
+              }
+            ],
+          };
+        });
 
         setLiveDbTrips([...mappedDaily, ...mappedWeekly]);
       } catch (err) {
@@ -2503,8 +2548,11 @@ function TripsPage() {
               return;
             }
             setScheduleKind(activeTripDetails.type);
+            setScheduleTripId(activeTripDetails.id);
             setScheduleTripTitle(activeTripDetails.title);
             setScheduleTripImage(activeTripDetails.img);
+            setScheduleTripPrice(activeTripDetails.type === "daily" ? activeTripDetails.price : activeTripDetails.seatPrice);
+            setScheduleTripObj(activeTripDetails);
             setCustomSchedules((activeTripDetails as any).schedules);
           }}
           onOpenGuideCV={(cvData) => setSelectedGuideCV(cvData)}
@@ -2532,13 +2580,20 @@ function TripsPage() {
           open={!!scheduleKind}
           onClose={() => {
             setScheduleKind(null);
+            setScheduleTripId(undefined);
             setScheduleTripTitle(undefined);
             setScheduleTripImage(undefined);
+            setScheduleTripPrice(undefined);
+            setScheduleTripObj(null);
             setCustomSchedules(undefined);
           }}
           kind={scheduleKind}
+          tripId={scheduleTripId}
+          tripTitle={scheduleTripTitle}
           customTitle={scheduleTripTitle}
           customImage={scheduleTripImage}
+          customPrice={scheduleTripPrice}
+          trip={scheduleTripObj}
           customSchedules={customSchedules}
         />
 
@@ -2782,17 +2837,25 @@ function TripsPage() {
           window.scrollTo({ top: 0, behavior: "instant" });
         }}
         onBook={(offer) => {
+          const matchingTrip = allTrips.find(t => t.id === offer.id || t.title === offer.title);
+          const offerPrice = Number(String(offer.price).replace(/,/g, ""));
           if (offer.schedules && offer.schedules.length > 0) {
             setScheduleKind(offer.kind);
+            setScheduleTripId(matchingTrip?.id || offer.id);
             setScheduleTripTitle(offer.title);
             setScheduleTripImage(offer.img);
+            setScheduleTripPrice(offerPrice);
+            setScheduleTripObj(matchingTrip || null);
             setCustomSchedules(offer.schedules);
           } else {
             modals.openBooking({
+              id: matchingTrip?.id || offer.id,
+              daily_trip_id: offer.kind === "daily" ? (matchingTrip?.id || offer.id) : undefined,
+              weekly_trip_id: offer.kind === "weekly" ? (matchingTrip?.id || offer.id) : undefined,
               title: offer.title,
               subtitle: offer.sub,
               image: offer.img,
-              price: Number(offer.price.replace(/,/g, "")),
+              price: offerPrice,
             });
           }
         }}
@@ -2868,8 +2931,11 @@ function TripsPage() {
                       return;
                     }
                     setScheduleKind(t.type);
+                    setScheduleTripId(t.id);
                     setScheduleTripTitle(t.title);
                     setScheduleTripImage(t.img);
+                    setScheduleTripPrice(t.type === "daily" ? t.price : t.seatPrice);
+                    setScheduleTripObj(t);
                     setCustomSchedules((t as any).schedules);
                   }}
                 />
@@ -2974,10 +3040,15 @@ function TripsPage() {
             if (subtitle && (subtitle.includes("خاصة") || subtitle.includes("Private"))) {
               setPrivateOpen(true);
             } else {
-              setScheduleKind(subtitle && subtitle.includes("أسبوعية") ? "weekly" : "daily");
+              const isW = subtitle && subtitle.includes("أسبوعية");
+              const matched = allTrips.find(tr => tr.title === title || tr.id === (item as any)?.refId);
+              setScheduleKind(isW ? "weekly" : "daily");
+              setScheduleTripId((item as any)?.refId || matched?.id);
               setScheduleTripTitle(item?.title || title);
               setScheduleTripImage(item?.image);
-              setCustomSchedules(item?.schedules);
+              setScheduleTripPrice(typeof item?.price === "number" ? item.price : (matched ? (matched.type === "daily" ? matched.price : (matched.type === "weekly" ? matched.seatPrice : undefined)) : undefined));
+              setScheduleTripObj(matched || null);
+              setCustomSchedules(item?.schedules || (matched as any)?.schedules);
             }
           });
         }}
@@ -2993,13 +3064,20 @@ function TripsPage() {
         open={!!scheduleKind}
         onClose={() => {
           setScheduleKind(null);
+          setScheduleTripId(undefined);
           setScheduleTripTitle(undefined);
           setScheduleTripImage(undefined);
+          setScheduleTripPrice(undefined);
+          setScheduleTripObj(null);
           setCustomSchedules(undefined);
         }}
         kind={scheduleKind}
+        tripId={scheduleTripId}
+        tripTitle={scheduleTripTitle}
         customTitle={scheduleTripTitle}
         customImage={scheduleTripImage}
+        customPrice={scheduleTripPrice}
+        trip={scheduleTripObj}
         customSchedules={customSchedules}
       />
 

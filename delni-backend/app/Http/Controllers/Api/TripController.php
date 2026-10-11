@@ -95,17 +95,9 @@ class TripController extends Controller
             'destination_city' => 'nullable|string|max:50',
             'max_capacity' => 'nullable|integer',
             'recurring_days' => 'nullable|string',
-            'guide_license_number' => 'nullable|string',
+            'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
             'photo' => 'nullable|string',
         ]);
-
-        $guideLic = !empty($validated['guide_license_number']) ? trim($validated['guide_license_number']) : null;
-        if ($guideLic) {
-            $guideExists = TourGuide::where('license_number', $guideLic)->exists();
-            if (!$guideExists) {
-                $guideLic = null;
-            }
-        }
 
         $newId = 'DT-' . rand(100, 999);
         $trip = DailyTrip::create([
@@ -118,60 +110,12 @@ class TripController extends Controller
             'max_capacity' => $validated['max_capacity'] ?? 25,
             'available_seats' => $validated['max_capacity'] ?? 25,
             'recurring_days' => $validated['recurring_days'] ?? 'السبت,الثلاثاء',
-            'guide_license_number' => $guideLic,
+            'guide_license_number' => $validated['guide_license_number'] ?? null,
             'photo' => $validated['photo'] ?? '/assets/dest-leptis.jpg',
-            'activities' => $request->input('activities', null),
             'is_active' => true,
         ]);
 
         return response()->json(['status' => 'success', 'trip' => $trip], 201);
-    }
-
-    public function updateDailyTrip(Request $request, $id)
-    {
-        $trip = DailyTrip::where('daily_trip_id', $id)->first();
-        if (!$trip) {
-            return response()->json(['status' => 'error', 'message' => 'الرحلة اليومية غير موجودة'], 404);
-        }
-
-        $validated = $request->validate([
-            'trip_title' => 'nullable|string|max:100',
-            'description' => 'nullable|string',
-            'price_per_seat' => 'nullable|numeric|min:0',
-            'departure_city' => 'nullable|string|max:50',
-            'destination_city' => 'nullable|string|max:50',
-            'max_capacity' => 'nullable|integer',
-            'recurring_days' => 'nullable|string',
-            'guide_license_number' => 'nullable|string',
-            'photo' => 'nullable|string',
-            'activities' => 'nullable|string',
-        ]);
-
-        $guideLic = $trip->guide_license_number;
-        if ($request->has('guide_license_number')) {
-            $inputLic = trim($request->input('guide_license_number') ?? '');
-            if (!empty($inputLic)) {
-                $guideExists = TourGuide::where('license_number', $inputLic)->exists();
-                $guideLic = $guideExists ? $inputLic : null;
-            } else {
-                $guideLic = null;
-            }
-        }
-
-        $trip->update([
-            'trip_title' => $validated['trip_title'] ?? $trip->trip_title,
-            'description' => $validated['description'] ?? $trip->description,
-            'price_per_seat' => $validated['price_per_seat'] ?? $trip->price_per_seat,
-            'departure_city' => $validated['departure_city'] ?? $trip->departure_city,
-            'destination_city' => $validated['destination_city'] ?? $trip->destination_city,
-            'max_capacity' => $validated['max_capacity'] ?? $trip->max_capacity,
-            'recurring_days' => $validated['recurring_days'] ?? $trip->recurring_days,
-            'guide_license_number' => $guideLic,
-            'photo' => $validated['photo'] ?? $trip->photo,
-            'activities' => $request->has('activities') ? $request->input('activities') : $trip->activities,
-        ]);
-
-        return response()->json(['status' => 'success', 'message' => 'تم تحديث بيانات الرحلة اليومية بنجاح', 'trip' => $trip]);
     }
 
     public function deleteDailyTrip($id)
@@ -196,17 +140,9 @@ class TripController extends Controller
             'max_capacity' => 'nullable|integer',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
-            'guide_license_number' => 'nullable|string',
+            'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
             'photo' => 'nullable|string',
         ]);
-
-        $guideLic = !empty($validated['guide_license_number']) ? trim($validated['guide_license_number']) : null;
-        if ($guideLic) {
-            $guideExists = TourGuide::where('license_number', $guideLic)->exists();
-            if (!$guideExists) {
-                $guideLic = null;
-            }
-        }
 
         $newId = 'WT-' . rand(100, 999);
         $trip = WeeklyTrip::create([
@@ -220,59 +156,12 @@ class TripController extends Controller
             'available_seats' => $validated['max_capacity'] ?? 25,
             'start_date' => $validated['start_date'] ?? now()->addDays(7),
             'end_date' => $validated['end_date'] ?? now()->addDays(13),
-            'guide_license_number' => $guideLic,
+            'guide_license_number' => $validated['guide_license_number'] ?? null,
             'photo' => $validated['photo'] ?? '/assets/dest-ubari.jpg',
             'is_active' => true,
         ]);
 
         return response()->json(['status' => 'success', 'trip' => $trip], 201);
-    }
-
-    public function updateWeeklyTrip(Request $request, $id)
-    {
-        $trip = WeeklyTrip::where('weekly_trip_id', $id)->first();
-        if (!$trip) {
-            return response()->json(['status' => 'error', 'message' => 'الرحلة الأسبوعية غير موجودة'], 404);
-        }
-
-        $validated = $request->validate([
-            'trip_title' => 'nullable|string|max:100',
-            'trip_description' => 'nullable|string',
-            'seat_per_price' => 'nullable|numeric|min:0',
-            'departure_city' => 'nullable|string|max:50',
-            'destination_region' => 'nullable|string|max:50',
-            'max_capacity' => 'nullable|integer',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'guide_license_number' => 'nullable|string',
-            'photo' => 'nullable|string',
-        ]);
-
-        $guideLic = $trip->guide_license_number;
-        if ($request->has('guide_license_number')) {
-            $inputLic = trim($request->input('guide_license_number') ?? '');
-            if (!empty($inputLic)) {
-                $guideExists = TourGuide::where('license_number', $inputLic)->exists();
-                $guideLic = $guideExists ? $inputLic : null;
-            } else {
-                $guideLic = null;
-            }
-        }
-
-        $trip->update([
-            'trip_title' => $validated['trip_title'] ?? $trip->trip_title,
-            'trip_description' => $validated['trip_description'] ?? $trip->trip_description,
-            'seat_per_price' => $validated['seat_per_price'] ?? $trip->seat_per_price,
-            'departure_city' => $validated['departure_city'] ?? $trip->departure_city,
-            'destination_region' => $validated['destination_region'] ?? $trip->destination_region,
-            'max_capacity' => $validated['max_capacity'] ?? $trip->max_capacity,
-            'start_date' => $validated['start_date'] ?? $trip->start_date,
-            'end_date' => $validated['end_date'] ?? $trip->end_date,
-            'guide_license_number' => $guideLic,
-            'photo' => $validated['photo'] ?? $trip->photo,
-        ]);
-
-        return response()->json(['status' => 'success', 'message' => 'تم تحديث بيانات الرحلة الأسبوعية بنجاح', 'trip' => $trip]);
     }
 
     public function deleteWeeklyTrip($id)
@@ -284,5 +173,58 @@ class TripController extends Controller
             return response()->json(['status' => 'success', 'message' => 'تم حذف الرحلة الأسبوعية']);
         }
         return response()->json(['status' => 'error', 'message' => 'الرحلة غير موجودة'], 404);
+    }
+
+    public function storeHotel(Request $request)
+    {
+        $validated = $request->validate([
+            'hotel_id' => 'required|string|max:50',
+            'hotel_name' => 'required|string|max:100',
+            'city' => 'nullable|string|max:50',
+            'address_details' => 'nullable|string|max:255',
+            'phone_number' => 'nullable|string|max:20',
+            'star_rating' => 'nullable|integer',
+            'partnership_status' => 'nullable|string|max:20',
+            'contract_date' => 'nullable|date',
+            'contract_end_date' => 'nullable|date',
+            'property_type' => 'nullable|string|max:50',
+            'hotel_photo_1' => 'nullable|string',
+            'hotel_photo_2' => 'nullable|string',
+            'hotel_photo_3' => 'nullable|string',
+            'hotel_photo_4' => 'nullable|string',
+            'hotel_photo_5' => 'nullable|string',
+        ]);
+
+        $hotel = \App\Models\Hotel::updateOrCreate(
+            ['hotel_id' => $validated['hotel_id']],
+            [
+                'hotel_name' => $validated['hotel_name'],
+                'city' => $validated['city'] ?? 'طرابلس',
+                'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
+                'phone_number' => $validated['phone_number'] ?? '0910000000',
+                'star_rating' => $validated['star_rating'] ?? 4,
+                'partnership_status' => $validated['partnership_status'] ?? 'نشط',
+                'contract_date' => $validated['contract_date'] ?? null,
+                'contract_end_date' => $validated['contract_end_date'] ?? $validated['contract_date'] ?? null,
+                'property_type' => $validated['property_type'] ?? 'فندق',
+                'hotel_photo_1' => $validated['hotel_photo_1'] ?? '/assets/ai_city.jpg',
+                'hotel_photo_2' => $validated['hotel_photo_2'] ?? null,
+                'hotel_photo_3' => $validated['hotel_photo_3'] ?? null,
+                'hotel_photo_4' => $validated['hotel_photo_4'] ?? null,
+                'hotel_photo_5' => $validated['hotel_photo_5'] ?? null,
+            ]
+        );
+
+        return response()->json(['status' => 'success', 'hotel' => $hotel], 201);
+    }
+
+    public function deleteHotel($id)
+    {
+        $hotel = \App\Models\Hotel::where('hotel_id', $id)->first();
+        if ($hotel) {
+            $hotel->delete();
+            return response()->json(['status' => 'success', 'message' => 'تم حذف الفندق بنجاح']);
+        }
+        return response()->json(['status' => 'error', 'message' => 'الفندق غير موجود'], 404);
     }
 }
