@@ -53,6 +53,11 @@ import {
   Calendar,
   Heart,
   X,
+  CheckCircle2,
+  Award,
+  Sparkles,
+  Star,
+  Eye,
 } from "lucide-react";
 
 export const Route = createFileRoute("/attractions")({
@@ -144,20 +149,38 @@ export function AttractionsPage() {
     return ["all", ...rawCities];
   }, [isAr]);
 
-  // UNESCO World Heritage Sites count & items
+  // UNESCO World Heritage Sites & minimalist showcase state
   const unescoSites = useMemo(() => LIBYAN_ATTRACTIONS.filter((a) => a.isUnesco), []);
-  const [unescoDeckIndex, setUnescoDeckIndex] = useState(0);
+  const [unescoIndex, setUnescoIndex] = useState(0);
+  const [isUnescoAutoPlay, setIsUnescoAutoPlay] = useState(true);
 
-  // Auto-rotate 3D cards deck every 5 seconds
+  // Gentle 6s auto-play rotation
   useEffect(() => {
-    if (unescoSites.length === 0) return;
+    if (!isUnescoAutoPlay || unescoSites.length === 0) return;
     const timer = setInterval(() => {
-      setUnescoDeckIndex((prev) => (prev + 1) % unescoSites.length);
-    }, 2000);
+      setUnescoIndex((prev) => (prev + 1) % unescoSites.length);
+    }, 5000);
     return () => clearInterval(timer);
-  }, [unescoSites.length]);
+  }, [isUnescoAutoPlay, unescoSites.length]);
 
-  const activeUnescoSite = unescoSites[unescoDeckIndex] || unescoSites[0];
+  const activeUnescoSite = unescoSites[unescoIndex] || unescoSites[0];
+
+  const handlePrevUnesco = () => {
+    setUnescoIndex((prev) => (prev - 1 + unescoSites.length) % unescoSites.length);
+  };
+
+  const handleNextUnesco = () => {
+    setUnescoIndex((prev) => (prev + 1) % unescoSites.length);
+  };
+
+  const getUnescoShortName = (site: (typeof unescoSites)[0], isArabic: boolean) => {
+    if (site.id.includes("leptis")) return isArabic ? "لبدة الكبرى" : "Leptis Magna";
+    if (site.id.includes("sabratha")) return isArabic ? "آثار صبراتة" : "Sabratha";
+    if (site.id.includes("cyrene")) return isArabic ? "قورينا (شحات)" : "Cyrene";
+    if (site.id.includes("ghadames")) return isArabic ? "غدامس القديمة" : "Old Ghadames";
+    if (site.id.includes("acacus") || site.id.includes("akakus")) return isArabic ? "تادرارت أكاكوس" : "Tadrart Acacus";
+    return isArabic ? site.name.split(" ")[0] : site.cityEn;
+  };
 
   // Filtered & Sorted items
   const filteredAttractions = useMemo(() => {
@@ -208,11 +231,11 @@ export function AttractionsPage() {
       image: att.img,
       description: isAr ? att.description : att.descriptionEn,
       bookable: true,
-      bookLabel: isAr ? "إنشاء رحلة خاصة لهذا المعلم 🧭" : "Create Private Trip 🧭",
+      bookLabel: isAr ? "ذهاب برحلة خاصة لهذا المعلم 🧭" : "Book Private Tour to this Site 🧭",
       info: [
         { label: isAr ? "المدينة والمنطقة" : "City & Region", value: `${isAr ? att.city : att.cityEn} (${isAr ? att.region : att.regionEn})` },
-        { label: isAr ? "نظام الانطلاق والرحلات" : "Tour Access", value: isAr ? "عبر تصميم رحلة خاصة مخصصة بالكامل" : "Via Fully Customized Private Tour" },
-        { label: isAr ? "رسوم الدخول التقديرية" : "Estimated Entry Fee", value: isAr ? att.entryFee : att.entryFeeEn },
+        { label: isAr ? "رسوم الدخول" : "Entry Fee", value: isAr ? "مجاني للجميع (بدون تذاكر)" : "Free for Everyone (No Tickets)" },
+        { label: isAr ? "أفضل موسم للزيارة" : "Best Season", value: isAr ? att.bestSeason : att.bestSeasonEn },
         { label: isAr ? "موقع التراث العالمي لليونسكو" : "UNESCO Status", value: att.isUnesco ? (isAr ? `مسجل باليونسكو عام ${att.unescoYear}` : `Inscribed UNESCO ${att.unescoYear}`) : (isAr ? "معلم وطني طبيعي/تاريخي" : "National Heritage Site") },
       ],
       features: isAr ? att.highlights : att.highlightsEn,
@@ -338,146 +361,204 @@ export function AttractionsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-10">
-        {/* ── UNESCO World Heritage Showcase (Left Aligned Title & Button, Booking.com Blue Theme) ── */}
-        <section className="bg-white rounded-[32px] p-6 sm:p-10 text-[#0F172A] shadow-md relative overflow-hidden border border-blue-100">
-          {/* Header Row Aligned to Left */}
-          <div className="border-b border-blue-100 pb-5 mb-8 flex flex-col items-start text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#003580]/10 text-[#003580] border border-[#003580]/20 text-xs font-black mb-2">
-              <span>🏛️</span>
-              <span>{isAr ? "مواقع التراث العالمي لليونسكو في ليبيا" : "UNESCO World Heritage Sites"}</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#003580]">
-              {isAr ? "معالم خالدة مسجلة في قائمة اليونسكو" : "UNESCO World Heritage Masterpieces"}
-            </h2>
-          </div>
+        {/* ── UNESCO World Heritage Showcase (Vibrant Pro, No Prev/Next Buttons, 5s Auto-Rotation, Expanded Width) ── */}
+        <div className="max-w-6xl mx-auto">
+          <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#F8FAFC] to-blue-50/30 border border-blue-900/15 p-6 sm:p-9 shadow-[0_20px_50px_-12px_rgba(0,53,128,0.15)] overflow-hidden text-[#0F172A]">
+            {/* Dynamic Ambient Royal Blue & Vibrant Orange Glows */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-blue-500/10 via-indigo-500/5 to-transparent rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-orange-500/10 via-amber-500/5 to-transparent rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
 
-          {/* UNESCO Showcase Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            {/* Column 1 (Right in RTL): Stacked Cards Deck */}
-            <div className="lg:col-span-5 relative flex flex-col items-center justify-center min-h-[440px] sm:min-h-[480px]">
-              <div className="relative w-64 h-[380px] sm:w-[300px] sm:h-[440px] flex items-center justify-center">
+            {/* Header Banner - Royal Blue & Vibrant Orange Vibrancy */}
+            <div className="text-center mb-7 relative z-10">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black border border-[#003580]/20 shadow-2xs mb-2.5">
+                <span>🏛️</span>
+                <span>{isAr ? "التراث العالمي لليونسكو في ليبيا" : "UNESCO World Heritage in Libya"}</span>
+                <span className="w-2 h-2 rounded-full bg-[#EA580C] animate-pulse" />
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#003580] tracking-tight">
+                {isAr ? "اكتشف كنوز ليبيا التاريخية" : "Discover Libya's Ancient Treasures"}
+              </h2>
+
+              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-xl mx-auto font-medium">
+                {isAr
+                  ? "مواقع أثرية استثنائية مدرجة على قائمة التراث العالمي لليونسكو تتغير تلقائياً كل 5 ثوانٍ"
+                  : "Exceptional archaeological landmarks inscribed on UNESCO list - auto-rotating every 5 seconds"}
+              </p>
+
+              {/* City Navigation Pills: Royal Blue Inactive & Vibrant Orange Active */}
+              <div className="flex items-center justify-center gap-2 flex-wrap mt-4">
                 {unescoSites.map((site, idx) => {
-                  const total = unescoSites.length;
-                  const offset = (idx - unescoDeckIndex + total) % total;
-
-                  let transform = "";
-                  let opacity = 0;
-                  let zIndex = 0;
-                  let pointerEvents: "auto" | "none" = "none";
-
-                  if (offset === 0) {
-                    transform = "translateY(0px) translateX(0px) scale(1) rotate(0deg)";
-                    opacity = 1;
-                    zIndex = 30;
-                    pointerEvents = "auto";
-                  } else if (offset === 1) {
-                    transform = "translateY(14px) translateX(-20px) scale(0.92) rotate(-6deg)";
-                    opacity = 0.92;
-                    zIndex = 20;
-                    pointerEvents = "auto";
-                  } else if (offset === 2) {
-                    transform = "translateY(24px) translateX(20px) scale(0.85) rotate(6deg)";
-                    opacity = 0.75;
-                    zIndex = 10;
-                    pointerEvents = "auto";
-                  } else {
-                    transform = "translateY(36px) translateX(0px) scale(0.78) rotate(0deg)";
-                    opacity = 0;
-                    zIndex = 0;
-                    pointerEvents = "none";
-                  }
-
+                  const isActive = unescoIndex === idx;
                   return (
-                    <div
+                    <button
                       key={site.id}
-                      onClick={() => setUnescoDeckIndex(idx)}
-                      style={{ transform, opacity, zIndex, pointerEvents }}
-                      className="absolute inset-0 rounded-[36px] overflow-hidden border-4 border-white shadow-2xl bg-stone-900 cursor-pointer transition-all duration-300 ease-out group select-none"
+                      type="button"
+                      onClick={() => setUnescoIndex(idx)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
+                        isActive
+                          ? "bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#C2410C] text-white shadow-md shadow-orange-500/30 scale-105 font-black ring-2 ring-orange-300/50"
+                          : "bg-white hover:bg-blue-50/70 text-[#003580] border border-blue-900/15 shadow-2xs hover:border-[#003580]/40 font-bold"
+                      }`}
                     >
-                      <img
-                        src={site.img}
-                        alt={isAr ? site.name : site.nameEn}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300 brightness-[1.02] contrast-[1.02]"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+                      <span>{isActive ? "📍" : "🏛️"}</span>
+                      <span>{getUnescoShortName(site, isAr)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-                      <div className="absolute bottom-4 right-4 left-4 bg-black/50 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 text-white shadow-md">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="px-2.5 py-0.5 rounded-full bg-[#003580] text-white font-black text-[10px]">
-                            {isAr ? site.city : site.cityEn}
-                          </span>
-                          <span className="text-[10px] text-blue-200 font-bold">
-                            🏛️ {site.unescoYear || "1982"}
-                          </span>
-                        </div>
-                        <div className="text-sm font-black text-white truncate">
-                          {isAr ? site.name : site.nameEn}
-                        </div>
-                      </div>
-                    </div>
+            {/* Main Showcase Grid: Exactly Equal Heights (lg:h-[395px] for both columns) */}
+            <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-stretch z-10">
+              
+              {/* Column 1: Structured Details & Action Controls (Matched Height Flush with Photo) */}
+              <div className="lg:col-span-5 p-5 sm:p-6 rounded-3xl bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-md flex flex-col justify-between text-right lg:h-[395px]">
+                {/* All Text Content Grouped at Top */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-black border border-emerald-200/80 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span>{isAr ? "مفتوح ومتاح للزيارة" : "Open for Visitors"}</span>
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-400">
+                      • {activeUnescoSite.region}
+                    </span>
+                  </div>
+
+                  <h3 className="text-xl sm:text-2xl font-black text-[#003580] tracking-tight leading-snug">
+                    {isAr ? activeUnescoSite.name : activeUnescoSite.nameEn}
+                  </h3>
+
+                  <p className="text-xs text-slate-600 leading-relaxed font-normal line-clamp-3">
+                    {isAr ? activeUnescoSite.description : activeUnescoSite.descriptionEn}
+                  </p>
+                </div>
+
+                {/* Structured Specifications Grid (Compact, High-Contrast & Clean) */}
+                <div className="grid grid-cols-2 gap-2 my-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 shadow-2xs">
+                    <span className="text-[10px] text-[#003580] font-bold block mb-0.5">
+                      📍 {isAr ? "الموقع" : "Location"}
+                    </span>
+                    <strong className="text-slate-900 font-black text-xs block truncate">
+                      {isAr ? activeUnescoSite.city : activeUnescoSite.cityEn}
+                    </strong>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-orange-50/60 border border-orange-100 shadow-2xs">
+                    <span className="text-[10px] text-[#EA580C] font-bold block mb-0.5">
+                      📅 {isAr ? "أفضل وقت للزيارة" : "Best Season"}
+                    </span>
+                    <strong className="text-slate-900 font-black text-xs block truncate">
+                      {isAr ? activeUnescoSite.bestSeason : activeUnescoSite.bestSeasonEn}
+                    </strong>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100 shadow-2xs">
+                    <span className="text-[10px] text-emerald-700 font-bold block mb-0.5">
+                      🎟️ {isAr ? "الدخول" : "Entry"}
+                    </span>
+                    <strong className="text-emerald-800 font-black text-xs block truncate">
+                      {isAr ? "معلومات الزيارة / مجاني" : "Free Access"}
+                    </strong>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-100 shadow-2xs">
+                    <span className="text-[10px] text-amber-800 font-bold block mb-0.5">
+                      🛡️ {isAr ? "الحالة" : "Status"}
+                    </span>
+                    <strong className="text-slate-900 font-black text-xs block truncate">
+                      {isAr ? "معلم أثري محمي" : "Protected Site"}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Single Re-centered Full-Width Action Button (Fills the Bottom Space Completely) */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrivateTripDest(isAr ? activeUnescoSite.name : activeUnescoSite.nameEn);
+                      setPrivateTripModalOpen(true);
+                    }}
+                    className="w-full h-12 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#C2410C] hover:from-[#C2410C] hover:to-[#D96B27] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2 group active:scale-[0.99]"
+                  >
+                    <span className="text-base">🧭</span>
+                    <span>{isAr ? "ذهاب برحلة خاصة لهذا المعلم" : "Book Custom Private Tour to this Site"}</span>
+                    <span className="text-sm group-hover:translate-x-1 transition-transform">➔</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Column 2: BIG Photographic Display (Equal Height Flush with Details) */}
+              <div className="lg:col-span-7 relative h-72 sm:h-80 lg:h-[395px] rounded-3xl overflow-hidden shadow-lg group border border-slate-200/90">
+                <img
+                  key={activeUnescoSite.id}
+                  src={activeUnescoSite.img}
+                  alt={isAr ? activeUnescoSite.name : activeUnescoSite.nameEn}
+                  className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
+
+                {/* Top Badges on Photo */}
+                <div className="absolute top-3.5 right-3.5 z-10 pointer-events-none flex items-center gap-2">
+                  <span className="px-3.5 py-1.5 rounded-full bg-[#003580]/90 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[11px] font-black flex items-center gap-1.5 shadow-md">
+                    <span>🏛️</span>
+                    <span>{isAr ? `مسجل في اليونسكو • ${activeUnescoSite.unescoYear || 1982}` : `UNESCO Inscribed ${activeUnescoSite.unescoYear}`}</span>
+                  </span>
+                </div>
+
+                {/* Bottom Caption on Photo */}
+                <div className="absolute bottom-4 inset-x-4 flex items-center justify-between text-white pointer-events-none">
+                  <div>
+                    <h4 className="font-black text-base sm:text-lg text-white drop-shadow">
+                      {isAr ? activeUnescoSite.name : activeUnescoSite.nameEn}
+                    </h4>
+                    <p className="text-xs text-slate-200 mt-0.5 flex items-center gap-1 font-medium">
+                      <span className="text-[#EA580C]">📍</span>
+                      <span>{isAr ? activeUnescoSite.city : activeUnescoSite.cityEn} • ليبيا</span>
+                    </p>
+                  </div>
+
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/25 font-bold text-white shadow-xs">
+                    {activeUnescoSite.category}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sleek Dynamic 5s Auto-Play Indicator Strip (No Prev/Next buttons as requested!) */}
+            <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-center gap-3">
+              <span className="text-xs font-mono font-black text-[#003580]">
+                {(unescoIndex + 1).toString().padStart(2, "0")} / {unescoSites.length.toString().padStart(2, "0")}
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                {unescoSites.map((site, i) => {
+                  const isActive = unescoIndex === i;
+                  return (
+                    <button
+                      key={site.id}
+                      type="button"
+                      onClick={() => setUnescoIndex(i)}
+                      className={`h-2 rounded-full transition-all duration-500 cursor-pointer ${
+                        isActive
+                          ? "w-8 bg-gradient-to-r from-[#D96B27] to-[#EA580C] shadow-sm shadow-orange-500/30"
+                          : "w-2 bg-blue-200 hover:bg-[#EA580C]/50"
+                      }`}
+                      title={site.name}
+                    />
                   );
                 })}
               </div>
 
-              {/* Bottom Progress Indicator Dots */}
-              <div className="flex items-center gap-2 mt-6 z-30">
-                {unescoSites.map((site, idx) => (
-                  <button
-                    key={site.id}
-                    type="button"
-                    onClick={() => setUnescoDeckIndex(idx)}
-                    className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                      unescoDeckIndex === idx
-                        ? "w-8 bg-[#003580] shadow-xs"
-                        : "w-2 bg-[#E8E2D6] hover:bg-stone-400"
-                    }`}
-                    title={isAr ? site.city : site.cityEn}
-                  />
-                ))}
-              </div>
+              <span className="text-[11px] font-bold text-slate-400">
+                {isAr ? "دوران تلقائي كل 5 ثوانٍ" : "Auto-rotates every 5s"}
+              </span>
             </div>
-
-            {/* Column 2 (Left in RTL): Information Aligned to Left */}
-            <div className="lg:col-span-7 space-y-6 flex flex-col items-start text-left">
-              {/* Badges Row */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3.5 py-1.5 rounded-xl bg-[#003580]/10 text-[#003580] font-black text-xs border border-[#003580]/20 shadow-xs">
-                  📜 {isAr ? `مسجل باليونسكو عام ${activeUnescoSite.unescoYear || "1982"}` : `UNESCO ${activeUnescoSite.unescoYear || "1982"}`}
-                </span>
-                <span className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-[#1B5A78] font-bold text-xs border border-blue-200 shadow-xs">
-                  📍 {isAr ? activeUnescoSite.city : activeUnescoSite.cityEn} — {isAr ? activeUnescoSite.region : activeUnescoSite.regionEn}
-                </span>
-              </div>
-
-              {/* Main City Title */}
-              <h3 className="text-3xl sm:text-4xl font-black text-[#003580] leading-tight transition-all duration-300">
-                {isAr ? activeUnescoSite.name : activeUnescoSite.nameEn}
-              </h3>
-
-              {/* Simple & Elegant Overview / النبذة */}
-              <div className="bg-[#F0F4F8] p-5 rounded-2xl border border-blue-100 shadow-xs space-y-2 w-full text-right">
-                <div className="text-xs font-black text-[#003580]">
-                  {isAr ? "💡 نبذة عن المدينة المعلم:" : "Overview:"}
-                </div>
-                <p className="text-sm text-[#334155] leading-relaxed font-semibold">
-                  "{isAr ? activeUnescoSite.description : activeUnescoSite.descriptionEn}"
-                </p>
-              </div>
-
-              {/* Book Private Trip Action Button Aligned to Left in Orange */}
-              <div className="pt-2 flex justify-start w-full">
-                <button
-                  type="button"
-                  onClick={() => setPrivateTripModalOpen(true)}
-                  className="px-8 py-4 rounded-2xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-sm shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer flex items-center gap-3 border border-orange-400/30"
-                >
-                  <span>{isAr ? "حجز رحلة خاصة لهذه المدينة" : "Book Private Tour to this City"}</span>
-                  <span className="text-lg">🧭</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         {/* ── Custom Private Trips System Notice ── */}
         <section className="bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">
@@ -739,21 +820,21 @@ function LandmarkDetailsModal({
   const photo = city.img || heroImg;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-xl animate-fade-in" dir={dir}>
-      <div className="bg-slate-950/95 rounded-3xl max-w-5xl w-full overflow-hidden shadow-2xl border border-white/20 max-h-[92vh] flex flex-col relative text-slate-100 backdrop-blur-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-md animate-fade-in" dir={dir}>
+      <div className="bg-white rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative text-slate-900 animate-in fade-in zoom-in-95 duration-200">
         
         {/* 1. Single Elegant Hero Photo Showcase */}
-        <div className="relative h-72 sm:h-96 md:h-[430px] w-full overflow-hidden bg-slate-950 shrink-0 group">
+        <div className="relative h-64 sm:h-80 md:h-[370px] w-full overflow-hidden bg-slate-900 shrink-0 group">
           <img
             src={photo}
             alt={city.name}
             className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-black/60 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/25 pointer-events-none" />
 
           {/* Floating Top Controls */}
           <div className="absolute top-4 right-4 left-4 z-30 flex items-center justify-between">
-            <span className="bg-black/70 backdrop-blur-md text-white text-xs font-black px-3.5 py-1.5 rounded-full border border-white/20 shadow-xl flex items-center gap-1.5">
+            <span className="bg-white/95 backdrop-blur-md text-[#003580] text-xs font-black px-3.5 py-1.5 rounded-full border border-blue-100 shadow-md flex items-center gap-1.5">
               <span>🏛️</span>
               <span>{isAr ? "معلم سياحي موثق" : "Verified Landmark"}</span>
             </span>
@@ -761,7 +842,7 @@ function LandmarkDetailsModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md text-white hover:bg-white hover:text-slate-950 flex items-center justify-center transition cursor-pointer shadow-2xl border border-white/20"
+              className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md text-slate-700 hover:text-black hover:bg-white flex items-center justify-center transition cursor-pointer shadow-md border border-slate-200"
               title={isAr ? "إغلاق" : "Close"}
             >
               <X className="w-5 h-5" />
@@ -772,35 +853,35 @@ function LandmarkDetailsModal({
           <div className="absolute bottom-4 right-4 left-4 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-white">
             <div className="drop-shadow-lg space-y-1">
               <div className="text-xl sm:text-3xl font-black text-white">{isAr ? city.name : city.nameEn}</div>
-              <div className="text-xs sm:text-sm text-amber-300 font-bold flex items-center gap-2">
+              <div className="text-xs sm:text-sm text-amber-300 font-bold flex items-center gap-2 drop-shadow">
                 <span>✨</span>
                 <span>{isAr ? city.subtitle : city.subtitleEn}</span>
               </div>
             </div>
-            <div className="px-3.5 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-xs font-bold text-slate-200">
+            <div className="px-3.5 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-xs font-bold text-slate-100">
               📍 {city.region}
             </div>
           </div>
         </div>
 
         {/* 2. Scrollable Body Content Below Showcase */}
-        <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-right">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-right bg-[#FAFBFD]">
           
           {/* Header Section: City Title + Region Badges + Rating */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-xl bg-[#003580] text-white font-black text-xs shadow-md border border-blue-400/30">
+              <span className="px-3 py-1 rounded-xl bg-[#003580] text-white font-black text-xs shadow-xs">
                 📍 {city.region}
               </span>
-              <span className="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 font-black text-xs border border-amber-400/30 shadow-xs">
+              <span className="px-3 py-1 rounded-xl bg-amber-50 text-[#D96B27] font-black text-xs border border-amber-200 shadow-xs">
                 🏛️ {isAr ? city.categoryTag : city.categoryTagEn}
               </span>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 text-amber-300 border border-white/10 text-xs font-black">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-black">
                 <span className="bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md font-black text-[11px]">
                   {city.rating}
                 </span>
                 <span>{city.ratingLabel}</span>
-                <span className="text-slate-400 font-medium text-[11px]">({city.reviewsCount} تقييم)</span>
+                <span className="text-slate-500 font-medium text-[11px]">({city.reviewsCount} تقييم)</span>
               </div>
             </div>
 
@@ -809,7 +890,7 @@ function LandmarkDetailsModal({
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city.mapQuery || city.name)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-amber-300 font-black text-xs border border-white/15 shadow-md flex items-center gap-1.5 transition cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#003580] font-black text-xs border border-blue-200 shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <span>🗺️</span>
               <span>{isAr ? "عرض الموقع في خرائط Google ↗" : "View Map ↗"}</span>
@@ -817,7 +898,7 @@ function LandmarkDetailsModal({
           </div>
 
           {/* Interactive Modal Tab Switcher */}
-          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-200/70 border border-slate-300/60">
             {[
               { id: "history", label: isAr ? "📖 نبذة وتاريخ المعلم" : "History & Heritage", icon: "🏛️" },
               { id: "highlights", label: isAr ? "✨ أبرز ٤ محطات وتجارب" : "Top 4 Highlights", icon: "⭐" },
@@ -829,8 +910,8 @@ function LandmarkDetailsModal({
                 onClick={() => setActiveModalTab(tab.id as any)}
                 className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeModalTab === tab.id
-                    ? "bg-gradient-to-r from-[#003580] to-blue-600 text-white shadow-md border border-blue-400/30"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? "bg-[#003580] text-white shadow-md"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -842,28 +923,28 @@ function LandmarkDetailsModal({
           {/* Tab 1: Detailed City Overview & History */}
           {activeModalTab === "history" && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-2">
-                <h4 className="text-sm font-black text-amber-400 flex items-center gap-2">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+                <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
                   <span>📖</span>
                   <span>{isAr ? "عن المعلم وأهميته التاريخية:" : "About the Landmark & Heritage:"}</span>
                 </h4>
-                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
                   {isAr ? city.description : city.descriptionEn}
                 </p>
               </div>
 
               {/* VIP Offer Card */}
               {showPromo && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-blue-900/40 to-slate-900 border border-amber-400/30 flex items-center justify-between gap-3 text-xs relative shadow-lg">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-100/50 border border-amber-300 shadow-xs flex items-center justify-between gap-3 text-xs relative">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-lg shrink-0 shadow-md">
+                    <div className="w-10 h-10 rounded-2xl bg-[#D96B27] text-white flex items-center justify-center font-black text-lg shrink-0 shadow-xs">
                       🎁
                     </div>
                     <div>
-                      <span className="font-black text-xs sm:text-sm block text-amber-300">
+                      <span className="font-black text-xs sm:text-sm block text-amber-950">
                         {isAr ? `عروض ترويجية حصرية للفنادق والمطاعم في ${city.shortName}` : `Exclusive Hotel & Dining Offers in ${city.shortNameEn}`}
                       </span>
-                      <span className="text-slate-300 text-[11px] sm:text-xs">
+                      <span className="text-amber-800 text-[11px] sm:text-xs font-medium">
                         {isAr ? "خصم 20% على الإقامة والمأكولات بالتعاون مع حجز الفنادق والمطاعم لعملاء دلّني." : "20% discount on stays and local restaurants for Dallani travelers."}
                       </span>
                     </div>
@@ -871,7 +952,7 @@ function LandmarkDetailsModal({
                   <button
                     type="button"
                     onClick={() => setShowPromo(false)}
-                    className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-xs cursor-pointer transition shrink-0"
+                    className="w-7 h-7 rounded-full bg-amber-200/60 hover:bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-xs cursor-pointer transition shrink-0"
                     title={isAr ? "إغلاق العرض" : "Dismiss"}
                   >
                     ✕
@@ -885,11 +966,11 @@ function LandmarkDetailsModal({
           {activeModalTab === "highlights" && (
             <div className="space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-amber-400 flex items-center gap-2">
+                <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
                   <span>✨</span>
                   <span>{isAr ? "أبرز المعالم والمحطات الرئيسية (٤ محطات):" : "Top 4 Highlights & Stations:"}</span>
                 </h4>
-                <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                   {isAr ? "معالم موثقة 100%" : "Verified 100%"}
                 </span>
               </div>
@@ -900,20 +981,20 @@ function LandmarkDetailsModal({
                   return (
                     <div
                       key={idx}
-                      className="group relative p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-400/50 shadow-md transition-all duration-300 flex items-center gap-3.5"
+                      className="group relative p-4 rounded-2xl bg-white hover:bg-blue-50/40 border-2 border-slate-100 hover:border-blue-200 shadow-xs transition-all duration-300 flex items-center gap-3.5"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#003580] to-blue-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-[#003580] text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                         <span>{icons[idx % icons.length]}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-black text-amber-300 uppercase tracking-wider">
+                        <div className="text-[10px] font-black text-[#D96B27] uppercase tracking-wider">
                           <span>{isAr ? `المعلم ${idx + 1}` : `Station #${idx + 1}`}</span>
                         </div>
-                        <span className="text-xs sm:text-sm font-black text-white leading-snug block truncate mt-0.5 group-hover:text-amber-300 transition-colors">
+                        <span className="text-xs sm:text-sm font-black text-slate-800 leading-snug block truncate mt-0.5 group-hover:text-[#003580] transition-colors">
                           {hl}
                         </span>
                       </div>
-                      <div className="w-6 h-6 rounded-full bg-white/10 text-emerald-400 flex items-center justify-center text-[10px] font-black shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center text-[11px] font-black shrink-0">
                         ✓
                       </div>
                     </div>
@@ -926,14 +1007,14 @@ function LandmarkDetailsModal({
           {/* Tab 3: Custom Private Tours */}
           {activeModalTab === "trips" && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-900 border border-amber-400/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/60 via-white to-amber-50/40 border border-blue-200/80 space-y-3 shadow-xs">
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md">
+                  <span className="px-3 py-1 rounded-full bg-[#003580] text-white font-black text-xs shadow-xs">
                     🧭 {isAr ? "رحلات خاصة مخصصة بالكامل" : "Custom Private Tours"}
                   </span>
-                  <span className="text-xs font-bold text-amber-200">{isAr ? "سيارة خاصة + مرشد معتمد" : "Private Vehicle + Guide"}</span>
+                  <span className="text-xs font-bold text-slate-700">{isAr ? "سيارة خاصة + مرشد معتمد" : "Private Vehicle + Guide"}</span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-200 font-semibold leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-700 font-semibold leading-relaxed">
                   {isAr 
                     ? "يمكنك إنشاء وتصميم رحلتك الخاصة لزيارة هذا المعلم بكامل الخصوصية والراحة، مع اختيار وسيلة النقل المناسبة والمرشد السياحي المرافق وتحديد وقت ومكان الانطلاق المناسب لك."
                     : "You can create and customize your own private tour to this landmark with full privacy and flexibility, choosing your vehicle, certified guide, and departure time."}
@@ -945,11 +1026,11 @@ function LandmarkDetailsModal({
         </div>
 
         {/* Modal Footer Action Button: ONLY Private Trip Creation */}
-        <div className="p-4 bg-slate-900/90 border-t border-white/10 flex items-center justify-center shrink-0">
+        <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-center shrink-0">
           <button
             type="button"
             onClick={onBookPrivate}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-[#D96B27] hover:from-amber-400 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/20 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-900/15 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
           >
             <span>🧭</span>
             <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>

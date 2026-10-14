@@ -71,6 +71,18 @@ export function VehicleDetailsModal({ open, onClose, vehicle }: VehicleDetailsMo
                 <span className="text-[#718096]">طراز الحافلة/السيارة:</span>
                 <span className="font-black text-[#0F172A]">{vehicle.model}</span>
               </div>
+              {vehicle.licensePlate && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#718096]">رقم اللوحة المعدنية:</span>
+                  <span className="font-black text-slate-800 bg-white px-2 py-0.5 rounded-lg border border-slate-200">{vehicle.licensePlate}</span>
+                </div>
+              )}
+              {vehicle.seats && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#718096]">سعة الركاب المعتمدة:</span>
+                  <span className="font-black text-sky-700">{vehicle.seats} راكب</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-[#718096]">السائق الكابتن المكلف:</span>
                 <span className="font-black text-[#D96B27] flex items-center gap-1">
@@ -78,6 +90,15 @@ export function VehicleDetailsModal({ open, onClose, vehicle }: VehicleDetailsMo
                   <span>{vehicle.driver}</span>
                 </span>
               </div>
+              {vehicle.phone && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#718096]">رقم هاتف السائق:</span>
+                  <a href={`tel:${vehicle.phone}`} className="font-black text-emerald-700 hover:underline flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>{vehicle.phone}</span>
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>

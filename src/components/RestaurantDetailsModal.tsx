@@ -63,7 +63,7 @@ export function RestaurantDetailsModal({
     if (!open || !autoPlay || lightboxOpen || photos.length <= 1) return;
     const timer = setInterval(() => {
       setActivePhoto((prev) => (prev + 1) % photos.length);
-    }, 4500);
+    }, 3200);
     return () => clearInterval(timer);
   }, [open, autoPlay, lightboxOpen, photos.length]);
 
@@ -166,48 +166,50 @@ export function RestaurantDetailsModal({
             </button>
           </div>
 
-          {/* ── 1. CINEMATIC SLIDESHOW STAGE WITH FIXED STABLE SIZE & CRISP CLARITY ── */}
+          {/* ── 1. CINEMATIC SLIDESHOW STAGE WITH AUTOMATIC SMOOTH AUTO-TRANSITION (NO ARROWS) ── */}
           <div
             className="relative h-80 sm:h-96 md:h-[420px] w-full bg-slate-950 overflow-hidden group select-none shrink-0"
-            onMouseEnter={() => setAutoPlay(false)}
-            onMouseLeave={() => setAutoPlay(true)}
           >
             {/* Ambient Blurred Background for perfect lighting and zero distortion */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <img
                 src={photos[activePhoto]}
                 alt=""
-                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition-all duration-700"
+                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition-all duration-1000"
                 aria-hidden="true"
               />
             </div>
 
-            {/* Main Stage Image (Fixed, perfectly proportioned, crisp object-cover) */}
+            {/* Main Stage Image (Smooth fade transition) */}
             <img
+              key={activePhoto}
               src={photos[activePhoto]}
               alt={restaurant.name}
-              className="relative z-10 w-full h-full object-cover object-center transition-all duration-500 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
+              className="relative z-10 w-full h-full object-cover object-center transition-all duration-700 ease-in-out transform scale-100 cursor-pointer animate-in fade-in zoom-in-95"
               onClick={() => setLightboxOpen(true)}
             />
 
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-black/40 pointer-events-none z-10" />
 
-            {/* Slideshow Arrows */}
-            <button
-              type="button"
-              onClick={() => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md flex items-center justify-center font-black text-xl transition hover:scale-110 opacity-80 group-hover:opacity-100 shadow-xl border border-white/20 cursor-pointer"
-            >
-              {dir === "rtl" ? "→" : "←"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActivePhoto((prev) => (prev + 1) % photos.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md flex items-center justify-center font-black text-xl transition hover:scale-110 opacity-80 group-hover:opacity-100 shadow-xl border border-white/20 cursor-pointer"
-            >
-              {dir === "rtl" ? "←" : "→"}
-            </button>
+            {/* Auto-Slide Progress Dots (Clean, elegant, non-intrusive) */}
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] text-white/90 font-bold ml-1">{isAr ? "عرض تلقائي" : "Auto"}</span>
+              <div className="flex items-center gap-1 mr-1">
+                {photos.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActivePhoto(idx)}
+                    className={`transition-all duration-300 rounded-full cursor-pointer ${
+                      activePhoto === idx ? "w-5 h-2 bg-amber-400 shadow-xs" : "w-2 h-2 bg-white/40 hover:bg-white/70"
+                    }`}
+                    aria-label={`Photo ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
 
             {/* Photo Caption & Identity */}
             <div className="absolute bottom-14 sm:bottom-16 right-4 left-4 z-20 flex flex-wrap items-end justify-between gap-3 text-white pointer-events-none">
@@ -306,15 +308,25 @@ export function RestaurantDetailsModal({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Rating Card */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-800 dark:to-slate-800/60 border border-orange-100 dark:border-slate-700 flex items-center justify-between">
+                  {/* Heart Rating Card (التقييم عن طريق القلب) */}
+                  <div
+                    onClick={() => setIsLiked(!isLiked)}
+                    className="p-4 rounded-2xl bg-gradient-to-br from-rose-50 to-red-50 dark:from-slate-800 dark:to-slate-800/60 border border-red-200 dark:border-slate-700 flex items-center justify-between cursor-pointer group transition-all hover:scale-102"
+                  >
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-bold">{isAr ? "تقييم الذواقة" : "Rating"}</div>
-                      <div className="text-xl font-black text-[#D96B27]">{restaurant.ratingWord}</div>
-                      <div className="text-xs text-slate-500 font-semibold">{restaurant.reviewsCount} {isAr ? "تقييم موثق" : "reviews"}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-bold">{isAr ? "تقييم الذواقة والرواد" : "Guest Rating"}</div>
+                      <div className="text-xl font-black text-red-600 flex items-center gap-1.5 mt-0.5">
+                        <span>{isLiked ? (restaurant.reviewsCount || 1400) + 1 : (restaurant.reviewsCount || 1400)}</span>
+                        <span className="text-xs font-bold text-slate-500">{isAr ? "إعجاب وتقييم" : "likes"}</span>
+                      </div>
+                      <div className="text-[11px] text-red-500 font-bold flex items-center gap-1">
+                        <span>{isLiked ? "❤️ تم تسجيل إعجابك" : "🤍 اضغط للتقييم بالقلب"}</span>
+                      </div>
                     </div>
-                    <div className="w-14 h-14 rounded-2xl bg-[#D96B27] text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-orange-900/30">
-                      {restaurant.rating}
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-lg transition-transform group-hover:scale-110 ${
+                      isLiked ? "bg-red-500 text-white shadow-red-500/30" : "bg-white dark:bg-slate-700 text-red-500 border border-red-200"
+                    }`}>
+                      ❤️
                     </div>
                   </div>
 

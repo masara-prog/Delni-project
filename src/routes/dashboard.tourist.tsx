@@ -155,14 +155,67 @@ function TouristDashboard() {
               });
             }
             setBookings(loaded);
-            if (res.privateTrips && Array.isArray(res.privateTrips)) {
-              setPrivateTrips(res.privateTrips);
-            }
+            fetch("http://127.0.0.1:5001/api/db/private_trips")
+              .then((r) => r.json())
+              .then((dbData) => {
+                if (dbData?.data && Array.isArray(dbData.data)) {
+                  const filtered = dbData.data.filter((pt: any) => !tid || pt.tourist_id === tid || pt.customer_phone === u.phone_number);
+                  if (filtered.length > 0) {
+                    setPrivateTrips(filtered);
+                    return;
+                  }
+                }
+                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+                if (local.length > 0) setPrivateTrips(local);
+                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
+              })
+              .catch(() => {
+                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+                if (local.length > 0) setPrivateTrips(local);
+                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
+              });
           }
         });
       }
     }
   }, [navigate]);
+
+  const handleTouristDecision = async (tripId: string, decision: "مؤكدة" | "ملغاة من السائح") => {
+    try {
+      const trip = privateTrips.find((t) => t.private_trip_id === tripId);
+      if (!trip) return;
+
+      const updated = {
+        ...trip,
+        status_order: decision,
+      };
+
+      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+
+      setPrivateTrips((prev) =>
+        prev.map((t) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t))
+      );
+
+      try {
+        const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+        const next = local.map((t: any) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t));
+        localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      } catch {}
+
+      if (decision === "مؤكدة") {
+        alert("🎉 مبارك! تم إتمام وتأكيد رحلتك الخاصة بنجاح وسيتواصل معك المرشد والسائق.");
+      } else {
+        alert("تم إلغاء الرحلة الخاصة بنجاح.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("حدث خطأ أثناء حفظ القرار، يرجى المحاولة لاحقاً");
+    }
+  };
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
@@ -433,16 +486,64 @@ function TouristDashboard() {
                     <div>⏳ المدة: <span className="font-bold">{p.duration_days} أيام</span></div>
                     <div>👥 عدد المرافقين: <span className="font-bold">{p.number_of_companions} أفراد</span></div>
                   </div>
-                  {p.quoted_price && (
-                    <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium flex justify-between items-center">
-                      <span>السعر المعتمد: <b>{p.quoted_price} د.ل</b></span>
-                      <span>المرشد المعين: {p.assigned_guide_license || "قيد التعيين"}</span>
+                  {p.quoted_price ? (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 font-medium space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span>السعر المعتمد من الإدارة: <b className="text-sm font-black text-emerald-800">{p.quoted_price} د.ل</b></span>
+                        <span>المرشد المختار: <b className="text-emerald-900">{p.guide_name || p.guide_license_number || p.assigned_guide_license || "مرشد معتمد"}</b></span>
+                      </div>
+                      <div className="text-[11px] text-emerald-700">
+                        {p.admin_itinerary_plan ? `خطة البرنامج: ${p.admin_itinerary_plan}` : "تم احتساب التكاليف الإجمالية شاملة أجر المرشد وسيارة النقل والخدمات الميدانية."}
+                      </div>
+
+                      {/* Tourist Decision Actions */}
+                      {p.status_order !== "مؤكدة" && p.status_order !== "ملغاة من السائح" && (
+                        <div className="pt-2 border-t border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                          <span className="text-xs font-bold text-slate-800">
+                            هل تود إتمام وتأكيد هذه الرحلة بالسعر المقترح أعلاه؟
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTouristDecision(p.private_trip_id, "مؤكدة")}
+                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                            >
+                              <span>✅</span>
+                              <span>إتمام وتأكيد الرحلة</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTouristDecision(p.private_trip_id, "ملغاة من السائح")}
+                              className="px-3.5 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs transition cursor-pointer flex items-center gap-1"
+                            >
+                              <span>❌</span>
+                              <span>إلغاء الرحلة</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {p.status_order === "مؤكدة" && (
+                        <div className="pt-1 text-xs text-emerald-800 font-bold flex items-center gap-1.5">
+                          <span>✅</span>
+                          <span>تم إتمام وتأكيد هذه الرحلة بنجاح. سيتم التواصل معك لمتابعة تفاصيل الانطلاق.</span>
+                        </div>
+                      )}
+
+                      {p.status_order === "ملغاة من السائح" && (
+                        <div className="pt-1 text-xs text-red-700 font-bold flex items-center gap-1.5">
+                          <span>❌</span>
+                          <span>تم إلغاء هذه الرحلة الخاصة بناءً على طلبك.</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {p.admin_itinerary_plan && (
-                    <div className="text-xs text-muted-foreground bg-stone-50 p-2.5 rounded-lg border border-border">
-                      <b className="text-foreground block mb-1">البرنامج المعتمد من الإدارة:</b>
-                      {p.admin_itinerary_plan}
+                  ) : (
+                    <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">⏳</span>
+                        <span><b>الحالة:</b> قيد المراجعة وتجميع المصروفات من الإدارة (أجر المرشد + سيارة النقل + الخدمات)</span>
+                      </div>
+                      <span className="text-[11px] text-amber-700 font-bold">بانتظار تسعير الإدارة</span>
                     </div>
                   )}
                 </div>

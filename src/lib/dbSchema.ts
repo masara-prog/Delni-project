@@ -220,7 +220,7 @@ export interface WeeklyTrip {
    ========================================================= */
 export interface PrivateTrip {
   private_trip_id: string; // VARCHAR(50) PRIMARY KEY
-  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية"; // VARCHAR(25)
+  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | "ملغاة من السائح" | string; // VARCHAR(25)
   customer_description: string; // VARCHAR(100)
   preferred_start_date: string; // DATE
   duration_days: number; // INT (CHECK > 0)
@@ -234,6 +234,7 @@ export interface PrivateTrip {
   customer_requirements?: string | null; // TEXT
   assigned_guide_license?: string | null; // VARCHAR(50) NULL FK -> TourGuides
   assigned_vehicle_plate?: string | null; // VARCHAR(30) NULL FK -> Vehicles
+  guide_name?: string | null;
 }
 
 /* =========================================================

@@ -1174,6 +1174,14 @@ function HotelsPage() {
   const [likedHotels, setLikedHotels] = useState<Record<string, boolean>>({});
 
   const hotelsListingRef = useRef<HTMLElement>(null);
+  const hotelsScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollHotels = (direction: "left" | "right") => {
+    if (hotelsScrollRef.current) {
+      const offset = direction === "left" ? -460 : 460;
+      hotelsScrollRef.current.scrollBy({ left: dir === "rtl" ? -offset : offset, behavior: "smooth" });
+    }
+  };
 
   const scrollToListing = () => {
     setTimeout(() => {
@@ -1202,22 +1210,34 @@ function HotelsPage() {
       try {
         const liveHotels = await apiGetHotels();
         if (Array.isArray(liveHotels) && liveHotels.length > 0) {
-          const mapped: HotelData[] = liveHotels.map((item: any) => ({
-            id: item.hotel_id || item.id,
-            name: item.hotel_name || item.name,
-            city: item.city,
-            address: item.address_details || item.address,
-            mapsQuery: item.google_maps_url || `${item.hotel_name || item.name}+${item.city}`,
-            phone: item.phone_number || item.phone,
-            stars: Number(item.star_rating) || Number(item.stars) || 4,
-            partnership_status: item.partnership_status || "نشط",
-            propertyType: (item.property_type && item.property_type.includes("تراث")) ? "heritage" : "hotel",
-            photos: [
-              item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
-              item.hotel_photo_2 || item.photos?.[1] || "/assets/dest-harbor-coast.jpg",
-              item.hotel_photo_3 || item.photos?.[2] || "/assets/cafe-libya.jpg",
-            ],
-          }));
+          const mapped: HotelData[] = liveHotels.map((item: any) => {
+            const rawType = item.property_type || item.propertyType || "hotel";
+            const cleanType =
+              rawType === "resort" || rawType.includes("منتجع") ? "resort" :
+              rawType === "apartment" || rawType.includes("شقق") ? "apartment" :
+              rawType === "heritage" || rawType.includes("تراث") ? "heritage" : "hotel";
+            return {
+              id: item.hotel_id || item.id,
+              name: item.hotel_name || item.name,
+              city: item.city,
+              address: item.address_details || item.address,
+              mapsQuery: item.google_maps_url || `${item.hotel_name || item.name}+${item.city}`,
+              phone: item.phone_number || item.phone,
+              stars: Number(item.star_rating) || Number(item.stars) || 4,
+              partnership_status: item.partnership_status || "شريك معتمد",
+              propertyType: cleanType,
+              description: item.description || "",
+              working_hours: item.working_hours || "",
+              discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
+              photos: [
+                item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
+                item.hotel_photo_2 || item.photos?.[1] || "/assets/hotel_resort.jpg",
+                item.hotel_photo_3 || item.photos?.[2] || "/assets/dest-tripoli.jpg",
+                item.hotel_photo_4 || item.photos?.[3] || "/assets/dest-harbor-coast.jpg",
+                item.hotel_photo_5 || item.photos?.[4] || "/assets/dest-ghadames-alleys.jpg",
+              ].filter(Boolean),
+            };
+          });
           setDbHotels(mapped);
           return;
         }
@@ -1228,22 +1248,34 @@ function HotelsPage() {
         if (stored) {
           const data = JSON.parse(stored);
           if (Array.isArray(data) && data.length > 0) {
-            const mapped: HotelData[] = data.map((item: any) => ({
-              id: item.hotel_id || item.id,
-              name: item.hotel_name || item.name,
-              city: item.city,
-              address: item.address_details || item.address,
-              mapsQuery: item.google_maps_url || `${item.hotel_name || item.name}+${item.city}`,
-              phone: item.phone_number || item.phone,
-              stars: item.star_rating || item.stars || 4,
-              partnership_status: item.partnership_status || "نشط",
-              propertyType: "hotel",
-              photos: [
-                item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
-                item.hotel_photo_2 || item.photos?.[1] || "/assets/dest-harbor-coast.jpg",
-                item.hotel_photo_3 || item.photos?.[2] || "/assets/cafe-libya.jpg",
-              ],
-            }));
+            const mapped: HotelData[] = data.map((item: any) => {
+              const rawType = item.property_type || item.propertyType || "hotel";
+              const cleanType =
+                rawType === "resort" || rawType.includes("منتجع") ? "resort" :
+                rawType === "apartment" || rawType.includes("شقق") ? "apartment" :
+                rawType === "heritage" || rawType.includes("تراث") ? "heritage" : "hotel";
+              return {
+                id: item.hotel_id || item.id,
+                name: item.hotel_name || item.name,
+                city: item.city,
+                address: item.address_details || item.address,
+                mapsQuery: item.google_maps_url || `${item.hotel_name || item.name}+${item.city}`,
+                phone: item.phone_number || item.phone,
+                stars: Number(item.star_rating) || Number(item.stars) || 4,
+                partnership_status: item.partnership_status || "شريك معتمد",
+                propertyType: cleanType,
+                description: item.description || "",
+                working_hours: item.working_hours || "",
+                discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
+                photos: [
+                  item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
+                  item.hotel_photo_2 || item.photos?.[1] || "/assets/hotel_resort.jpg",
+                  item.hotel_photo_3 || item.photos?.[2] || "/assets/dest-tripoli.jpg",
+                  item.hotel_photo_4 || item.photos?.[3] || "/assets/dest-harbor-coast.jpg",
+                  item.hotel_photo_5 || item.photos?.[4] || "/assets/dest-ghadames-alleys.jpg",
+                ].filter(Boolean),
+              };
+            });
             setDbHotels(mapped);
           }
         }
@@ -1424,198 +1456,284 @@ function HotelsPage() {
         
         {/* ── 4. BROWSE BY PROPERTY TYPE (TALL CARDS WITH RICH STYLING & LINKED FILTERING) ── */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] flex items-center gap-2">
-                <span>🏨</span>
-                <span>{isAr ? "تصفح حسب نوع مكان الإقامة في ليبيا" : "Browse by Property Type in Libya"}</span>
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                {isAr
-                  ? "اضغط على أي تصنيف أدناه لتصفية وعرض الفنادق والمنتجعات التابعة له فوراً"
-                  : "Click any category to filter and view matching stays immediately"}
-              </p>
-            </div>
-            {propertyType !== "none" && (
-              <button
-                type="button"
-                onClick={() => setPropertyType("none")}
-                className="text-xs font-black text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-1.5 rounded-xl border border-red-200 transition cursor-pointer flex items-center gap-1"
-              >
-                <span>✕</span>
-                <span>{isAr ? "إلغاء التصفية" : "Clear Filter"}</span>
-              </button>
-            )}
+          <div>
+            <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] flex items-center gap-2">
+              <span>🏨</span>
+              <span>{isAr ? "تصفح حسب نوع مكان الإقامة في ليبيا" : "Browse by Property Type in Libya"}</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+              {isAr
+                ? "اضغط على أي تصنيف أدناه لتصفية وعرض الفنادق والمنتجعات التابعة له فوراً"
+                : "Click any category to filter and view matching stays immediately"}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[
-              {
-                id: "hotel",
-                title: isAr ? "فنادق فاخرة" : "Luxury Hotels",
-                count: isAr ? "24 مكان متاح" : "24 available",
-                img: "/assets/ai_city.jpg",
-                badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
-                badgeBg: "bg-[#003580]",
-                activeBorder: "border-[#003580] ring-4 ring-[#003580]/25",
-              },
-              {
-                id: "resort",
-                title: isAr ? "منتجعات سياحية" : "Touristic Resorts",
-                count: isAr ? "10 أماكن متاحة" : "10 available",
-                img: "/assets/ai_city.jpg",
-                badge: isAr ? "استجمام وشواطئ" : "Leisure & Beach",
-                badgeBg: "bg-teal-700",
-                activeBorder: "border-teal-700 ring-4 ring-teal-700/25",
-              },
-              {
-                id: "apartment",
-                title: isAr ? "شقق فندقية" : "Hotel Apartments",
-                count: isAr ? "16 مكان متاح" : "16 available",
-                img: "/assets/ai_city.jpg",
-                badge: isAr ? "خصوصية عائلية" : "Family Suites",
-                badgeBg: "bg-indigo-700",
-                activeBorder: "border-indigo-700 ring-4 ring-indigo-700/25",
-              },
-              {
-                id: "heritage",
-                title: isAr ? "نزل وفلل تراثية" : "Heritage Villas & Lodges",
-                count: isAr ? "12 مكان متاح" : "12 available",
-                img: "/assets/ai_city.jpg",
-                badge: isAr ? "أصالة وتاريخ" : "Heritage",
-                badgeBg: "bg-amber-700",
-                activeBorder: "border-amber-700 ring-4 ring-amber-700/25",
-              },
-              {
-                id: "camp",
-                title: isAr ? "مخيمات صحراوية" : "Desert Camps",
-                count: isAr ? "8 أماكن متاحة" : "8 available",
-                img: "/assets/ai_ruins.jpg",
-                badge: isAr ? "سفاري ومغامرة" : "Desert Safari",
-                badgeBg: "bg-[#D96B27]",
-                activeBorder: "border-[#D96B27] ring-4 ring-[#D96B27]/25",
-              },
-            ].map((prop) => {
-              const isSelected = propertyType === prop.id;
-              return (
+          {/* Categories Grid (2 cards per row) OR Full-width Expanded Card when selected */}
+          {propertyType === "none" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                {
+                  id: "hotel",
+                  title: isAr ? "فنادق فاخرة" : "Luxury Hotels",
+                  count: isAr ? "24 مكان متاح" : "24 available",
+                  img: "/assets/ai_hotel.jpg",
+                  badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
+                  badgeBg: "bg-[#003580]",
+                },
+                {
+                  id: "resort",
+                  title: isAr ? "منتجعات سياحية" : "Touristic Resorts",
+                  count: isAr ? "10 أماكن متاحة" : "10 available",
+                  img: "/assets/hotel_resort.jpg",
+                  badge: isAr ? "استجمام وشواطئ" : "Leisure & Beach",
+                  badgeBg: "bg-teal-700",
+                },
+                {
+                  id: "apartment",
+                  title: isAr ? "شقق فندقية" : "Hotel Apartments",
+                  count: isAr ? "16 مكان متاح" : "16 available",
+                  img: "/assets/dest-tripoli.jpg",
+                  badge: isAr ? "خصوصية عائلية" : "Family Suites",
+                  badgeBg: "bg-indigo-700",
+                },
+                {
+                  id: "heritage",
+                  title: isAr ? "نزل وفلل تراثية" : "Heritage Villas & Lodges",
+                  count: isAr ? "12 مكان متاح" : "12 available",
+                  img: "/assets/dest-ghadames-alleys.jpg",
+                  badge: isAr ? "أصالة وتاريخ" : "Heritage",
+                  badgeBg: "bg-amber-700",
+                },
+              ].map((prop) => (
                 <div
                   key={prop.id}
-                  onClick={() => {
-                    setPropertyType(prop.id === propertyType ? "none" : prop.id);
-                  }}
-                  className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
-                    isSelected
-                      ? `${prop.activeBorder} scale-[1.02]`
-                      : "border-slate-200 hover:border-slate-400"
-                  }`}
+                  onClick={() => setPropertyType(prop.id)}
+                  className="group relative h-60 sm:h-64 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer border border-slate-200 hover:border-[#D96B27] flex flex-col justify-between p-5"
                 >
-                  {/* Photo with zoom */}
                   <img
                     src={prop.img}
                     alt={prop.title}
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-100"
                   />
-                  {/* Dark gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10 pointer-events-none" />
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
                     <span className={`px-2.5 py-1 rounded-full text-white text-[10px] font-black shadow-xs ${prop.badgeBg}`}>
                       {prop.badge}
                     </span>
-                    {isSelected && (
-                      <span className="w-5 h-5 rounded-full bg-white text-[#003580] flex items-center justify-center text-xs font-black shadow-xs">
-                        ✓
-                      </span>
-                    )}
                   </div>
 
                   {/* Bottom Text */}
                   <div className="relative z-10 text-white space-y-1">
-                    <h4 className="font-black text-base sm:text-lg group-hover:text-amber-300 transition-colors leading-snug drop-shadow-sm">
+                    <h4 className="font-black text-xl group-hover:text-amber-300 transition-colors leading-snug drop-shadow-sm">
                       {prop.title}
                     </h4>
-                    <div className="text-xs text-white/85 font-bold flex items-center justify-between">
+                    <div className="text-xs text-white/90 font-bold">
                       <span>{prop.count}</span>
-                      <span className="text-amber-300 text-xs">➔</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Full width expanded card when selected
+            (() => {
+              if (propertyType === "all") {
+                return (
+                  <div className="relative w-full h-52 sm:h-60 rounded-3xl overflow-hidden shadow-xl border-2 border-[#D96B27] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-300">
+                    <img
+                      src="/assets/ai_hotel.jpg"
+                      alt="All accommodations"
+                      className="absolute inset-0 w-full h-full object-cover brightness-50"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
+                    <div className="relative z-10 flex items-center justify-between">
+                      <span className="px-3.5 py-1 rounded-full text-white text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 shadow-xs">
+                        🌟 {isAr ? "عرض شامل (كافة الأماكن)" : "All Accommodations"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPropertyType("none")}
+                        className="px-4 py-2 rounded-2xl bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
+                      >
+                        <span>✕</span>
+                        <span>{isAr ? "العودة للتصنيفات" : "Show Categories"}</span>
+                      </button>
+                    </div>
+                    <div className="relative z-10 text-white space-y-1">
+                      <h4 className="text-2xl sm:text-3xl font-black text-amber-300 drop-shadow-md">
+                        {isAr ? "كافة أماكن الإقامة والفنادق في ليبيا" : "All Accommodations & Hotels in Libya"}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-slate-200 font-medium max-w-2xl leading-relaxed">
+                        {isAr
+                          ? "استعراض شامل لكافة الفنادق والمنتجعات والشقق والنزل المصنفة عبر منصة دلّني في كافة المدن."
+                          : "Browse all verified stays across Libyan destinations with direct contacts."}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              const activeCat = [
+                {
+                  id: "hotel",
+                  title: isAr ? "فنادق فاخرة (5 نجوم)" : "Luxury Hotels",
+                  count: isAr ? "24 مكان متاح للحجز المباشر" : "24 available",
+                  img: "/assets/ai_hotel.jpg",
+                  badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
+                  badgeBg: "bg-[#003580]",
+                  desc: isAr ? "أرقى الفنادق المصنفة بضيافة استثنائية وخدمة 5 نجوم في أهم المدن مع خصم 15% لرواد دلّني." : "Top luxury rated 5-star hotels.",
+                },
+                {
+                  id: "resort",
+                  title: isAr ? "منتجعات سياحية واستجمام" : "Touristic Resorts",
+                  count: isAr ? "10 أماكن متاحة للحجز المباشر" : "10 available",
+                  img: "/assets/hotel_resort.jpg",
+                  badge: isAr ? "استجمام وشواطئ" : "Leisure & Beach",
+                  badgeBg: "bg-teal-700",
+                  desc: isAr ? "منتجعات ساحلية بإطلالات بحرية ومسابح ومرافق استجمام متكاملة." : "Coastal resorts and leisure destinations.",
+                },
+                {
+                  id: "apartment",
+                  title: isAr ? "شقق فندقية وأجنحة عائلية" : "Hotel Apartments",
+                  count: isAr ? "16 مكان متاح للحجز المباشر" : "16 available",
+                  img: "/assets/dest-tripoli.jpg",
+                  badge: isAr ? "خصوصية عائلية" : "Family Suites",
+                  badgeBg: "bg-indigo-700",
+                  desc: isAr ? "شقق وأجنحة مفروشة بالكامل تمنحك راحة وخصوصية عائلية تامة." : "Furnished apartments with family privacy.",
+                },
+                {
+                  id: "heritage",
+                  title: isAr ? "نزل وفلل تراثية تاريخية" : "Heritage Villas & Lodges",
+                  count: isAr ? "12 مكان متاح للحجز المباشر" : "12 available",
+                  img: "/assets/dest-ghadames-alleys.jpg",
+                  badge: isAr ? "أصالة وتاريخ" : "Heritage",
+                  badgeBg: "bg-amber-700",
+                  desc: isAr ? "نزل تاريخية وعمارة تقليدية عريقة في واحات ومدن ليبيا التراثية." : "Historic lodges in Libyan heritage oases.",
+                },
+              ].find((c) => c.id === propertyType);
+
+              if (!activeCat) return null;
+
+              return (
+                <div className="relative w-full h-56 sm:h-64 rounded-3xl overflow-hidden shadow-xl border-2 border-[#D96B27] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-300">
+                  <img
+                    src={activeCat.img}
+                    alt={activeCat.title}
+                    className="absolute inset-0 w-full h-full object-cover brightness-95"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
+
+                  {/* Top Bar inside expanded card */}
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-white text-xs font-black shadow-xs ${activeCat.badgeBg}`}>
+                      {activeCat.badge}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPropertyType("all")}
+                        className="px-3.5 py-1.5 rounded-2xl bg-amber-500/80 hover:bg-amber-500 text-white backdrop-blur-md border border-white/30 text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                      >
+                        <span>🌟</span>
+                        <span>{isAr ? "عرض الكل" : "View All"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPropertyType("none")}
+                        className="px-3.5 py-1.5 rounded-2xl bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-md"
+                      >
+                        <span>✕</span>
+                        <span>{isAr ? "عرض باقي التصنيفات" : "Show All"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bottom info inside expanded card */}
+                  <div className="relative z-10 text-white space-y-1.5">
+                    <h4 className="text-2xl sm:text-3xl font-black text-amber-300 drop-shadow-md">
+                      {activeCat.title}
+                    </h4>
+                    <p className="text-xs sm:text-sm text-slate-200 font-medium max-w-2xl leading-relaxed">
+                      {activeCat.desc}
+                    </p>
+                    <div className="text-xs text-white/90 font-bold flex items-center gap-2 pt-1">
+                      <span>✓ {activeCat.count}</span>
+                      <span>·</span>
+                      <span className="text-amber-400 font-bold">🏷️ خصم معتمد 15% لرواد منصة دلّني</span>
                     </div>
                   </div>
                 </div>
               );
-            })}
-          </div>
+            })()
+          )}
         </section>
 
         {/* ── 5. ALL HOTELS LISTING (Filtered by Selected Category) ── */}
-        <section ref={hotelsListingRef} id="hotels-listing-section" className="space-y-4 scroll-mt-24">
+        <section ref={hotelsListingRef} id="hotels-listing-section" className="space-y-5 scroll-mt-24">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xl font-black text-[#0F172A]">
-                {propertyType === "none"
-                  ? (isAr ? "أماكن الإقامة والفنادق في ليبيا" : "Accommodations in Libya")
-                  : (isAr ? "نتائج البحث وأماكن الإقامة المصنفة" : "Filtered Properties")}
+              <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] flex items-center gap-2">
+                <span>🏨</span>
+                <span>
+                  {propertyType === "none"
+                    ? (isAr ? "أماكن الإقامة والفنادق في ليبيا" : "Accommodations in Libya")
+                    : (isAr ? "نتائج البحث وأماكن الإقامة المصنفة" : "Filtered Properties")}
+                </span>
               </h3>
-              <p className="text-xs text-slate-500 font-medium">
-                {isAr ? "معاينة الفنادق والمنتجعات، الأسعار، وأرقام الهواتف للتواصل المباشر" : "Explore properties, rates, and direct telephone contact for booking"}
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                {isAr ? "معاينة الفنادق والمنتجعات الفاخرة، والاتصال المباشر دون عمولات وسيط" : "Explore properties, luxury rates, and direct contact with verified hosts"}
               </p>
             </div>
             {propertyType !== "none" && (
-              <span className="text-xs font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shrink-0">
-                {filtered.length} {isAr ? "مكان متاح" : "properties found"}
-              </span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => scrollHotels("right")}
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-[#003580] text-[#003580] hover:text-white border border-slate-200 shadow-xs transition flex items-center justify-center font-black cursor-pointer text-sm"
+                    title={isAr ? "تمرير لليمين" : "Scroll Right"}
+                  >
+                    <span>➔</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollHotels("left")}
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-[#003580] text-[#003580] hover:text-white border border-slate-200 shadow-xs transition flex items-center justify-center font-black cursor-pointer text-sm"
+                    title={isAr ? "تمرير لليسار" : "Scroll Left"}
+                  >
+                    <span className="rotate-180 inline-block">➔</span>
+                  </button>
+                </div>
+                <span className="text-xs font-black text-slate-700 bg-white px-3.5 py-2 rounded-2xl border border-slate-200 shadow-xs shrink-0 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>{filtered.length} {isAr ? "مكان متاح" : "properties found"}</span>
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Active Category Filter Indicator */}
-          {propertyType !== "none" && (
-            <div className="p-3.5 bg-[#EBF3FF] rounded-2xl border border-blue-200 flex items-center justify-between text-xs">
-              <span className="font-black text-[#003580] flex items-center gap-2">
-                <span>🏷️</span>
-                <span>
-                  {isAr ? "أماكن الإقامة المعروضة مصنفة حسب:" : "Filtered By:"}
-                  {" "}
-                  <strong className="text-sm underline">
-                    {propertyType === "hotel"
-                      ? (isAr ? "فنادق فاخرة" : "Luxury Hotels")
-                      : propertyType === "resort"
-                      ? (isAr ? "منتجعات سياحية" : "Touristic Resorts")
-                      : propertyType === "apartment"
-                      ? (isAr ? "شقق فندقية" : "Hotel Apartments")
-                      : propertyType === "heritage"
-                      ? (isAr ? "نزل وفلل تراثية" : "Heritage Villas & Lodges")
-                      : (isAr ? "مخيمات صحراوية" : "Desert Camps")}
-                  </strong>
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setPropertyType("none")}
-                className="text-xs font-bold text-red-600 hover:text-red-800 bg-white px-3 py-1 rounded-xl border border-red-200 transition cursor-pointer"
-              >
-                ✕ {isAr ? "إلغاء التصفية" : "Clear Filter"}
-              </button>
-            </div>
-          )}
 
           {/* Prompt banner when no category is selected yet */}
           {propertyType === "none" ? (
-            <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-[#003580]/20 shadow-xs space-y-3 my-4">
+            <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-[#003580]/20 shadow-xs space-y-4 my-4">
               <div className="text-4xl sm:text-5xl mb-2">🏨</div>
               <h4 className="text-lg sm:text-xl font-black text-[#003580]">
                 {isAr ? "يرجى اختيار نوع مكان الإقامة أعلاه لعرض الأماكن المتاحة" : "Please select a property category above to view available stays"}
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 font-semibold max-w-lg mx-auto leading-relaxed">
                 {isAr
-                  ? "اضغط على أي تصنيف بالأعلى (فنادق فاخرة، منتجعات سياحية، شقق فندقية، نزل وفلل تراثية، أو مخيمات صحراوية) لعرض قائمة الأماكن والتفاصيل فوراً."
-                  : "Pick from luxury hotels, touristic resorts, apartments, heritage lodges, or desert camps above."}
+                  ? "اضغط على أي تصنيف بالأعلى (فنادق فاخرة، منتجعات سياحية، شقق فندقية، نزل وفلل تراثية) أو انقر على 'عرض الكل' لعرض كافة الأماكن فوراً."
+                  : "Pick from luxury hotels, touristic resorts, apartments, heritage lodges, or click 'View All' above."}
               </p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
                 {[
+                  { id: "all", label: isAr ? "🌟 عرض الكل (كافة الأماكن)" : "🌟 View All" },
                   { id: "hotel", label: isAr ? "🏨 فنادق فاخرة" : "Hotels" },
                   { id: "resort", label: isAr ? "🏖️ منتجعات سياحية" : "Resorts" },
                   { id: "apartment", label: isAr ? "🏢 شقق فندقية" : "Apartments" },
                   { id: "heritage", label: isAr ? "🏛️ نزل وفلل تراثية" : "Heritage" },
-                  { id: "camp", label: isAr ? "⛺ مخيمات صحراوية" : "Camps" },
                 ].map((btn) => (
                   <button
                     key={btn.id}
@@ -1629,193 +1747,171 @@ function HotelsPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filtered.map((h) => {
-                const isFav = !!likedHotels[h.id];
-                return (
-                  <article
-                    key={h.id}
-                    onClick={() => setSelectedHotel(h)}
-                    className="group bg-white rounded-2xl border border-slate-200 hover:border-[#003580]/40 shadow-xs hover:shadow-lg transition-all p-3 sm:p-4 cursor-pointer flex flex-col md:flex-row gap-4"
-                  >
-                    {/* Photo with Heart Favorite */}
-                    <div className="relative w-full md:w-64 h-48 sm:h-52 rounded-xl overflow-hidden shrink-0 bg-slate-900">
-                      <img
-                        src={h.photos[0]}
-                        alt={h.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => toggleLike(h.id, e)}
-                        className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-xs z-10 cursor-pointer ${
-                          isFav ? "bg-white text-red-500" : "bg-black/40 text-white hover:bg-white hover:text-red-500"
-                        }`}
-                        title={isAr ? "إضافة للمفضلة" : "Save to wishlist"}
-                      >
-                        <span className="text-sm">{isFav ? "❤️" : "🤍"}</span>
-                      </button>
-                      {h.discountPct && (
-                        <div className="absolute top-2.5 left-2.5 bg-[#D96B27] text-white text-[11px] font-black px-2.5 py-0.5 rounded-full">
-                          -{h.discountPct}%
-                        </div>
-                      )}
-                    </div>
+            <div className="space-y-6">
+              {/* Hotel Listing with Smooth Horizontal Scroll ("سكرول يمين ويسار لعرضهم") & Static Orange Shadow Without Movement */}
+              <div
+                ref={hotelsScrollRef}
+                className="flex gap-6 overflow-x-auto pb-6 pt-2 px-1 snap-x snap-mandatory scroll-smooth [scrollbar-width:thin] [scrollbar-color:#D96B27_rgba(217,107,39,0.15)]"
+              >
+                {filtered.map((h) => {
+                  const isFav = !!likedHotels[h.id];
+                  return (
+                    <article
+                      key={h.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedHotel(h);
+                      }}
+                      className="group w-[320px] sm:w-[420px] md:w-[480px] shrink-0 snap-start bg-white rounded-3xl border border-orange-200/90 shadow-[0_10px_30px_rgba(217,107,39,0.20)] overflow-hidden cursor-pointer flex flex-col justify-between"
+                    >
+                      {/* Card Photo */}
+                      <div className="relative w-full h-52 sm:h-56 overflow-hidden bg-slate-100">
+                        <img
+                          src={h.photos[0]}
+                          alt={h.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
 
-                    {/* Middle Column: Details, Location, Specs (Decluttered as requested) */}
-                    <div className="flex-1 flex flex-col justify-between space-y-2">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h4 className="text-lg font-black text-[#003580] group-hover:underline">
+                        {/* Top Badges */}
+                        <div className="absolute top-3 right-3 left-3 flex items-center justify-between z-10">
+                          {/* Stars in Royal Blue Badge */}
+                          <div className="bg-[#003580] backdrop-blur-md px-3 py-1 rounded-full text-amber-300 text-xs font-black shadow-md flex items-center gap-1 border border-blue-900/40">
+                            <span>{"★".repeat(h.stars)}</span>
+                            <span className="text-[10px] text-white/95 font-bold">({h.stars} نجوم)</span>
+                          </div>
+
+                          {/* Favorite */}
+                          <button
+                            type="button"
+                            onClick={(e) => toggleLike(h.id, e)}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-sm cursor-pointer ${
+                              isFav ? "bg-white text-red-500" : "bg-white/90 text-slate-700 hover:text-red-500 hover:bg-white"
+                            }`}
+                            title={isAr ? "إضافة للمفضلة" : "Save to wishlist"}
+                          >
+                            <span className="text-sm">{isFav ? "❤️" : "🤍"}</span>
+                          </button>
+                        </div>
+
+                        {/* Bottom Badges on Image */}
+                        <div className="absolute bottom-3 right-3 left-3 flex items-center justify-between text-xs z-10">
+                          <span className="bg-white/95 backdrop-blur-md text-[#003580] text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs border border-blue-100">
+                            📍 {h.city}
+                          </span>
+                          <span className="bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs">
+                            🏷️ خصم {h.discountPct || 15}% دلّني
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Body: Simple, Elegant & Infused with Royal Blue */}
+                      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                        <div className="space-y-2">
+                          {/* Location Link & Verified Badge */}
+                          <div className="flex items-center justify-between text-xs">
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.mapsQuery || `${h.name} ${h.city}`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[#003580] hover:text-blue-900 font-bold underline flex items-center gap-1 transition"
+                            >
+                              <span>🗺️</span>
+                              <span>{isAr ? "إظهار على خرائط Google" : "View Map"}</span>
+                            </a>
+                            <span className="text-[#003580] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                              ✓ {h.partnership_status || "شريك معتمد"}
+                            </span>
+                          </div>
+
+                          {/* Title in Royal Blue */}
+                          <h4 className="text-lg sm:text-xl font-black text-[#003580] group-hover:text-blue-950 transition-colors leading-snug">
                             {h.name}
                           </h4>
-                          <span className="text-xs text-amber-500 font-bold">
-                            {"★".repeat(h.stars)}
-                          </span>
+
+                          {/* Amenities in Royal Blue tones */}
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {[
+                              { label: isAr ? "مسبح" : "Pool", icon: "🏊" },
+                              { label: isAr ? "إفطار" : "Breakfast", icon: "🥐" },
+                              { label: isAr ? "واي فاي" : "Wi-Fi", icon: "📶" },
+                              { label: isAr ? "موقف" : "Parking", icon: "🅿️" },
+                            ].map((a, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-1 rounded-xl bg-blue-50/70 border border-blue-200/60 text-[#003580] text-[11px] font-bold flex items-center gap-1"
+                              >
+                                <span>{a.icon}</span>
+                                <span>{a.label}</span>
+                              </span>
+                            ))}
+                          </div>
                         </div>
 
-                        {/* Location link */}
-                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium mb-2">
-                          <span className="text-[#003580] font-bold underline">{h.city}</span>
-                          <span>·</span>
+                        {/* Bottom Action Row (Phone + WhatsApp + معرفة المزيد in Royal Blue) */}
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.mapsQuery || `${h.name} ${h.city}`)}`}
+                            href={`tel:${h.phone}`}
+                            className="py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                            title={isAr ? "اتصال مباشر" : "Call"}
+                          >
+                            <span>📞</span>
+                            <span>{h.phone}</span>
+                          </a>
+
+                          <a
+                            href={`https://wa.me/218${h.phone.replace(/^0+/, "")}`}
                             target="_blank"
                             rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[#003580] hover:underline"
+                            className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm transition flex items-center justify-center cursor-pointer shadow-xs"
+                            title={isAr ? "واتساب" : "WhatsApp"}
                           >
-                            {isAr ? "إظهار على الخريطة" : "Show on map"}
+                            <span>💬</span>
                           </a>
-                        </div>
 
-                        {/* Clean Subtitle & Status (No paragraph clutter) */}
-                        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500 pt-1">
-                          <span className="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                            ✓ {h.partnership_status}
-                          </span>
-                          <span>·</span>
-                          <span className="text-[#003580]">
-                            {h.propertyType === "hotel"
-                              ? (isAr ? "فندق فاخر معتمد" : "Luxury Hotel")
-                              : h.propertyType === "resort"
-                              ? (isAr ? "منتجع سياحي متكامل" : "Touristic Resort")
-                              : h.propertyType === "apartment"
-                              ? (isAr ? "شقق وأجنحة فندقية" : "Hotel Suites")
-                              : h.propertyType === "heritage"
-                              ? (isAr ? "نزل تراثي أصيل" : "Heritage Lodge")
-                              : (isAr ? "مخيم صحراوي وسفاري" : "Desert Camp")}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedHotel(h);
+                            }}
+                            className="flex-1 py-2.5 px-4 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-950/20 cursor-pointer"
+                          >
+                            <span>{isAr ? "معرفة المزيد" : "View Details"}</span>
+                            <span>➔</span>
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black ${
-                          h.partnership_status === "غير نشط"
-                            ? "bg-slate-100 text-slate-600 border border-slate-300"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        }`}>
-                          {isAr ? `حالة الشراكة: ${h.partnership_status || "نشط"}` : `Partnership: ${h.partnership_status === "غير نشط" ? "Inactive" : "Active"}`}
-                        </span>
-                        <span className="text-slate-400 font-bold">· 📞 {h.phone}</span>
-                      </div>
-                    </div>
-
-                  {/* Right Column: Rating & Price & Action Button */}
-                  <div className="md:w-56 flex flex-col justify-between items-end shrink-0 border-t md:border-t-0 md:border-s md:border-slate-100 pt-3 md:pt-0 md:ps-4">
-                    {/* Score Header (Numerical Score Only) */}
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <div className="font-black text-xs text-[#003580]">{isAr ? "معدل التقييم" : "Rating"}</div>
-                        <div className="text-[10px] text-slate-400">{h.reviewsCount} {isAr ? "تقييم" : "reviews"}</div>
-                      </div>
-                      <div className="w-9 h-9 rounded-lg bg-[#003580] text-white font-black text-sm flex items-center justify-center shadow-xs">
-                        {h.rating}
-                      </div>
-                    </div>
-
-                    {/* Verified Perk Badge (Zero Price Display) */}
-                    <div className="text-right my-2 w-full">
-                      <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-right space-y-0.5">
-                        <div className="text-[10px] text-emerald-800 font-black flex items-center justify-end gap-1">
-                          <span>✓ {isAr ? "خصم معتمد 20%" : "20% Verified Perk"}</span>
-                          <span>🏷️</span>
-                        </div>
-                        <div className="text-[9px] text-slate-500 font-semibold">
-                          {isAr ? "لحجوزات رواد منصة دلّني" : "For Dallani Guests"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Blue Booking.com Button & Direct Contacts */}
-                    <div className="w-full space-y-2 mt-2">
-                      <div className="flex items-center gap-1.5">
-                        <a
-                          href={`tel:${h.phone}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
-                          title={isAr ? "اتصال مباشر برقم هاتف الفندق للحجز" : "Call Hotel Phone"}
-                        >
-                          <span>📞</span>
-                          <span>{h.phone}</span>
-                        </a>
-
-                        <a
-                          href={`https://wa.me/218${h.phone.replace(/^0+/, "")}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="py-2 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-black text-xs transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
-                          title={isAr ? "تواصل واتساب" : "WhatsApp"}
-                        >
-                          <span>💬</span>
-                        </a>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedHotel(h);
-                        }}
-                        className="w-full py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
-                      >
-                        <span>{isAr ? "معرفة المزيد" : "Learn More"}</span>
-                        <span>➔</span>
-                      </button>
-
-                      <div className="text-[10px] text-slate-400 font-bold text-center">
-                        🏢 {isAr ? "للعرض والاستعلام المباشر فقط" : "Direct Inquiry Only"}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-
-            {filtered.length === 0 && (
-              <div className="text-center py-16 bg-white rounded-3xl border border-slate-200">
-                <div className="text-4xl mb-2">🏨</div>
-                <h4 className="font-black text-slate-800 text-base">
-                  {isAr ? "لم نجد فنادق تطابق معايير بحثك" : "No hotels matched your criteria"}
-                </h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  {isAr ? "جرب تغيير المدينة أو مسح حقل البحث لإظهار جميع الفنادق." : "Try clearing your search or selecting all cities."}
-                </p>
-                <button
-                  onClick={() => {
-                    setCity("all");
-                    setStars(0);
-                    setSearchQuery("");
-                  }}
-                  className="mt-4 px-4 py-2 bg-[#003580] text-white text-xs font-black rounded-xl"
-                >
-                  {isAr ? "إعادة ضبط التصفية" : "Reset Filters"}
-                </button>
+                    </article>
+                  );
+                })}
               </div>
-            )}
-          </div>
-        )}
+
+              {filtered.length === 0 && (
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-200">
+                  <div className="text-4xl mb-2">🏨</div>
+                  <h4 className="font-black text-slate-800 text-base">
+                    {isAr ? "لم نجد فنادق تطابق معايير بحثك" : "No hotels matched your criteria"}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {isAr ? "جرب تغيير المدينة أو مسح حقل البحث لإظهار جميع الفنادق." : "Try clearing your search or selecting all cities."}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setCity("all");
+                      setStars(0);
+                      setSearchQuery("");
+                    }}
+                    className="mt-4 px-4 py-2 bg-[#003580] text-white text-xs font-black rounded-xl"
+                  >
+                    {isAr ? "إعادة ضبط التصفية" : "Reset Filters"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
       </section>
     </div>
 

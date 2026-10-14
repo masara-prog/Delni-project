@@ -1533,9 +1533,9 @@ function RestaurantsPage() {
                 title: isAr ? "مأكولات بحرية" : "Fresh Seafood",
                 sub: isAr ? "أسماك طازجة، جمبري، وقار صيد اليوم" : "Fresh Daily Catch, Grilled Prawns",
                 count: restaurants.filter((x) => x.category === "seafood").length,
-                img: "/assets/ai_food.jpg",
+                img: "/assets/seafood_category.jpg",
                 badge: isAr ? "صيد بحري طازج" : "Fresh Catch",
-                badgeBg: "bg-[#003580]",
+                badgeBg: "bg-gradient-to-r from-blue-700 to-sky-600",
                 border: "border-blue-500 ring-4 ring-blue-500/25",
               },
               {
@@ -1545,17 +1545,17 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "traditional").length,
                 img: "/assets/restaurant-libya.jpg",
                 badge: isAr ? "أصالة وتراث ليبي" : "Heritage Libyan",
-                badgeBg: "bg-amber-700",
+                badgeBg: "bg-gradient-to-r from-amber-700 to-orange-700",
                 border: "border-amber-600 ring-4 ring-amber-600/25",
               },
               {
                 id: "fastfood",
                 title: isAr ? "الفاست فود (وجبات سريعة)" : "Fast Food & Burgers",
-                sub: isAr ? "سماش برجر، شاورما، كرانشي تاون" : "Smash Burgers, Crispy Rolls",
+                sub: isAr ? "سماش برجر، كرانشي تاون، شاورما" : "Smash Burgers, Crispy Rolls",
                 count: restaurants.filter((x) => x.category === "fastfood").length,
-                img: "/assets/ai_food.jpg",
+                img: "/assets/fastfood_category.jpg",
                 badge: isAr ? "سريع وعصري" : "Fast & Casual",
-                badgeBg: "bg-[#D96B27]",
+                badgeBg: "bg-gradient-to-r from-[#D96B27] to-red-600",
                 border: "border-[#D96B27] ring-4 ring-[#D96B27]/25",
               },
               {
@@ -1565,8 +1565,8 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "cafe").length,
                 img: "/assets/cafe-libya.jpg",
                 badge: isAr ? "شاي باللوز وقهوة" : "Specialty Coffee",
-                badgeBg: "bg-teal-700",
-                border: "border-teal-600 ring-4 ring-teal-600/25",
+                badgeBg: "bg-gradient-to-r from-emerald-700 to-teal-600",
+                border: "border-emerald-600 ring-4 ring-emerald-600/25",
               },
             ].map((cat) => {
               const isSelected = selectedCategory === cat.id;
@@ -1574,8 +1574,7 @@ function RestaurantsPage() {
                 <div
                   key={cat.id}
                   onClick={() => {
-                    setSelectedCategory(cat.id);
-                    scrollToResults();
+                    setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
                   }}
                   className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
                     isSelected
@@ -1588,7 +1587,7 @@ function RestaurantsPage() {
                     alt={cat.title}
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-100"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
@@ -1607,12 +1606,11 @@ function RestaurantsPage() {
                     <h4 className="font-black text-lg sm:text-xl group-hover:text-amber-300 transition-colors leading-snug drop-shadow-sm">
                       {cat.title}
                     </h4>
-                    <p className="text-[11px] text-white/80 line-clamp-1 font-medium">
+                    <p className="text-[11px] text-white/85 line-clamp-1 font-medium">
                       {cat.sub}
                     </p>
                     <div className="text-xs text-amber-300 font-bold flex items-center justify-between pt-1">
                       <span>{cat.count} {isAr ? "أماكن معتمدة" : "spots"}</span>
-                      <span className="text-sm">➔</span>
                     </div>
                   </div>
                 </div>
@@ -1712,6 +1710,10 @@ function RestaurantsPage() {
                             </h4>
                             <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                               مفتوح الآن · {r.hours}
+                            </span>
+                            <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span>❤️</span>
+                              <span>{isFav ? (r.reviewsCount || 1200) + 1 : (r.reviewsCount || 1200)} {isAr ? "إعجاب" : "likes"}</span>
                             </span>
                           </div>
 
