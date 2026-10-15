@@ -26,7 +26,6 @@ class Hotel extends Model
         'hotel_photo_4',
         'hotel_photo_5',
         'contract_date',
-        'contract_end_date',
         'verification_status',
         'property_type',
         'amenities',
@@ -35,7 +34,6 @@ class Hotel extends Model
     protected $casts = [
         'star_rating' => 'integer',
         'contract_date' => 'date',
-        'contract_end_date' => 'date',
     ];
 
     public function weeklyTrips()

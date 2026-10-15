@@ -14,7 +14,7 @@ const demoNotifications: Notification[] = [
     id: "1",
     type: "offer",
     title: "🔥 عرض حصري جديد",
-    body: "خصم 20% في فندق الفصول الأربعة لهذا الأسبوع فقط!",
+    body: "خصومات حصرية لرواد منصة دلّني في فنادق الإقامة المعتمدة!",
     time: "منذ 5 دقائق",
     read: false,
   },

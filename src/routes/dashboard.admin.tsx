@@ -679,6 +679,11 @@ function AdminDashboard() {
     setHotels((prev) => [...prev, newHotelObj]);
     setShowAddHotel(false);
 
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...stored.filter((x: any) => x.id !== hotelId)]));
+    } catch {}
+
     fetch("http://127.0.0.1:8000/api/hotels", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -692,41 +697,84 @@ function AdminDashboard() {
         partnership_status: h.partnership_status || "نشط",
         contract_date: h.contract_end_date || h.contract_date || "2027-12-31",
         contract_end_date: h.contract_end_date || h.contract_date || "2027-12-31",
-        property_type: "فندق",
-        hotel_photo_1: h.hotel_photo_1 || "/assets/ai_city.jpg",
-        hotel_photo_2: h.hotel_photo_2 || h.hotel_photo_1 || "/assets/ai_city.jpg",
-        hotel_photo_3: h.hotel_photo_3 || h.hotel_photo_1 || "/assets/ai_city.jpg",
-        hotel_photo_4: h.hotel_photo_4 || h.hotel_photo_1 || "/assets/ai_city.jpg",
-        hotel_photo_5: h.hotel_photo_5 || h.hotel_photo_1 || "/assets/ai_city.jpg",
+        property_type: h.property_type || "فندق",
+        hotel_photo_1: h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+        hotel_photo_2: h.hotel_photo_2 || h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+        hotel_photo_3: h.hotel_photo_3 || h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+        hotel_photo_4: h.hotel_photo_4 || h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+        hotel_photo_5: h.hotel_photo_5 || h.hotel_photo_1 || "/assets/ai_hotel.jpg",
       }),
     }).catch(() => {});
   };
-  const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => x.id === h.id ? h : x)); setEditingHotel(null); };
-  const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => h.id !== id)); };
+  const handleUpdateHotel = (h: Hotel) => {
+    setHotels(hotels.map(x => x.id === h.id ? h : x));
+    setEditingHotel(null);
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      localStorage.setItem("dalni_hotels", JSON.stringify(stored.map((x: any) => x.id === h.id ? h : x)));
+    } catch {}
+    fetch("http://127.0.0.1:8000/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        hotel_id: h.id,
+        hotel_name: h.name,
+        city: h.city,
+        address_details: h.address,
+        phone_number: h.phone,
+        star_rating: parseInt(String(h.stars), 10) || 4,
+        partnership_status: h.partnership_status || "نشط",
+        contract_date: (h as any).contract_end_date || (h as any).contract_date || "2027-12-31",
+        contract_end_date: (h as any).contract_end_date || (h as any).contract_date || "2027-12-31",
+        property_type: h.property_type || "فندق",
+        hotel_photo_1: h.hotel_photo_1,
+        hotel_photo_2: h.hotel_photo_2,
+        hotel_photo_3: h.hotel_photo_3,
+        hotel_photo_4: h.hotel_photo_4,
+        hotel_photo_5: h.hotel_photo_5,
+      }),
+    }).catch(() => {});
+  };
+  const handleDeleteHotel = (id: string) => {
+    if (confirm("هل تريد حذف الفندق؟")) {
+      setHotels(hotels.filter(h => h.id !== id));
+      try {
+        const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+        localStorage.setItem("dalni_hotels", JSON.stringify(stored.filter((x: any) => x.id !== id)));
+      } catch {}
+      fetch(`http://127.0.0.1:8000/api/hotels/${id}`, { method: "DELETE" }).catch(() => {});
+    }
+  };
   const handleAddRestaurant = (r: any) => {
-    const newRest = { id: `R-0${restaurants.length + 1}`, rating_avg: 5.0, ...r };
-    setRestaurants((prev) => [newRest, ...prev]);
+    const facilityId = r.id || `FAC-${String(restaurants.length + 1).padStart(3, "0")}`;
+    const newRest = { id: facilityId, rating_avg: 5.0, ...r };
+    setRestaurants((prev) => [newRest, ...prev.filter(x => x.id !== facilityId)]);
     setShowAddRestaurant(false);
 
     try {
       const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests]));
+      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests.filter((x: any) => x.id !== facilityId)]));
     } catch {}
 
     fetch("http://127.0.0.1:8000/api/restaurants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        facility_id: newRest.id,
+        facility_id: facilityId,
         facility_name: r.name,
-        facility_type: r.type || "مأكولات شعبية",
+        facility_type: r.type || "مطعم مأكولات شعبية وتراثية",
         city: r.city || "طرابلس",
         address_details: r.address || "العنوان الرئيسي",
         phone_number: r.phone || "0910000000",
         description: r.description || "",
-        google_maps_url: r.google_maps_url || "",
-        working_hours: r.working_hours || "",
+        working_hours: r.working_hours || "09:00 صباحاً — 12:00 ليلاً",
+        contract_date: r.contract_date || "2027-12-31",
+        verification_status: r.verification_status || "معتمد",
         facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
+        facility_image_2: r.facility_image_2 || r.facility_image_1 || "/assets/ai_food.jpg",
+        facility_image_3: r.facility_image_3 || r.facility_image_1 || "/assets/ai_food.jpg",
+        facility_image_4: r.facility_image_4 || r.facility_image_1 || "/assets/ai_food.jpg",
+        facility_image_5: r.facility_image_5 || r.facility_image_1 || "/assets/ai_food.jpg",
       }),
     }).catch(() => {});
   };
@@ -738,6 +786,28 @@ function AdminDashboard() {
       const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
       localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
     } catch {}
+
+    fetch("http://127.0.0.1:8000/api/restaurants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        facility_id: r.id,
+        facility_name: r.name,
+        facility_type: r.type || "مطعم مأكولات شعبية وتراثية",
+        city: r.city || "طرابلس",
+        address_details: r.address || "العنوان الرئيسي",
+        phone_number: r.phone || "0910000000",
+        description: r.description || "",
+        working_hours: r.working_hours || "09:00 صباحاً — 12:00 ليلاً",
+        contract_date: (r as any).contract_date || "2027-12-31",
+        verification_status: (r as any).verification_status || "معتمد",
+        facility_image_1: (r as any).facility_image_1 || "/assets/ai_food.jpg",
+        facility_image_2: (r as any).facility_image_2 || "/assets/ai_food.jpg",
+        facility_image_3: (r as any).facility_image_3 || "/assets/ai_food.jpg",
+        facility_image_4: (r as any).facility_image_4 || "/assets/ai_food.jpg",
+        facility_image_5: (r as any).facility_image_5 || "/assets/ai_food.jpg",
+      }),
+    }).catch(() => {});
   };
   const handleDeleteRestaurant = (id: string) => {
     if (confirm("هل تريد حذف المطعم؟")) {
@@ -1437,10 +1507,15 @@ function AdminDashboard() {
                       <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {h.city} — {h.address}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Badge tone="green">{h.partnership_status}</Badge>
+                      <Badge tone={h.partnership_status === "نشط" ? "green" : "sun"}>{h.partnership_status}</Badge>
                       <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
                         دليل تعريفي
                       </span>
+                      {((h as any).contract_date || (h as any).contract_end_date) && (
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                          📅 انتهاء التعاقد: {String((h as any).contract_date || (h as any).contract_end_date).split("T")[0]}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1500,13 +1575,31 @@ function AdminDashboard() {
                 <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-black text-foreground text-base">{r.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-foreground text-base">{r.name}</h4>
+                        <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 font-bold">
+                          {r.id}
+                        </span>
+                      </div>
                       <div className="text-xs font-bold text-emerald-700 mt-0.5">🍲 {r.type} · ⭐ {r.rating_avg}</div>
                       <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {r.city} — {r.address}</div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
-                      دليل تعريفي
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                        r.verification_status === "معتمد"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : r.verification_status === "قيد المراجعة"
+                          ? "bg-amber-50 text-amber-800 border-amber-200"
+                          : "bg-red-50 text-red-700 border-red-200"
+                      }`}>
+                        {r.verification_status || "معتمد"}
+                      </span>
+                      {r.contract_date && (
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                          📅 انتهاء التعاقد: {String(r.contract_date).split("T")[0]}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Main & Thumbnails Gallery (5 Photos) */}
@@ -3465,9 +3558,168 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
   );
 }
 
+/* ---- INTERACTIVE WORKING HOURS CLOCK STEPPER (ساعة تزيد وتنقص) ---- */
+function WorkingHoursClockStepper({
+  value,
+  onChange,
+  label = "ساعات وأوقات العمل اليومية:",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  label?: string;
+}) {
+  const [is24Hours, setIs24Hours] = useState(value.includes("24"));
+  const [startHour, setStartHour] = useState(9);
+  const [startPeriod, setStartPeriod] = useState<"صباحاً" | "مساءً">("صباحاً");
+  const [endHour, setEndHour] = useState(12);
+  const [endPeriod, setEndPeriod] = useState<"صباحاً" | "مساءً" | "ليلاً">("ليلاً");
+
+  const emit = (sH: number, sP: "صباحاً" | "مساءً", eH: number, eP: "صباحاً" | "مساءً" | "ليلاً") => {
+    setIs24Hours(false);
+    const sStr = `${String(sH).padStart(2, "0")}:00 ${sP}`;
+    const eStr = `${String(eH).padStart(2, "0")}:00 ${eP}`;
+    onChange(`${sStr} — ${eStr}`);
+  };
+
+  const incStart = () => {
+    const next = startHour === 12 ? 1 : startHour + 1;
+    setStartHour(next);
+    emit(next, startPeriod, endHour, endPeriod);
+  };
+  const decStart = () => {
+    const prev = startHour === 1 ? 12 : startHour - 1;
+    setStartHour(prev);
+    emit(prev, startPeriod, endHour, endPeriod);
+  };
+  const incEnd = () => {
+    const next = endHour === 12 ? 1 : endHour + 1;
+    setEndHour(next);
+    emit(startHour, startPeriod, next, endPeriod);
+  };
+  const decEnd = () => {
+    const prev = endHour === 1 ? 12 : endHour - 1;
+    setEndHour(prev);
+    emit(startHour, startPeriod, prev, endPeriod);
+  };
+
+  return (
+    <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+          <span>⏰</span>
+          <span>{label}</span>
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !is24Hours;
+            setIs24Hours(next);
+            if (next) onChange("مفتوح 24 ساعة متواصلة");
+            else emit(startHour, startPeriod, endHour, endPeriod);
+          }}
+          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+            is24Hours
+              ? "bg-amber-500 border-amber-600 text-white shadow-xs"
+              : "bg-white border-amber-200 text-slate-700 hover:bg-amber-100/60"
+          }`}
+        >
+          24 ساعة متواصلة {is24Hours ? "✓" : ""}
+        </button>
+      </div>
+
+      {!is24Hours && (
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          {/* من وقت الفتح */}
+          <div className="bg-white p-2.5 rounded-xl border border-amber-200 space-y-1.5 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 block">من (ساعة البداية / الدخول):</span>
+            <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={decStart}
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
+                >
+                  -
+                </button>
+                <span className="w-8 text-center font-mono font-black text-xs text-foreground">
+                  {String(startHour).padStart(2, "0")}:00
+                </span>
+                <button
+                  type="button"
+                  onClick={incStart}
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
+                >
+                  +
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const np = startPeriod === "صباحاً" ? "مساءً" : "صباحاً";
+                  setStartPeriod(np);
+                  emit(startHour, np, endHour, endPeriod);
+                }}
+                className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-900 rounded-md hover:bg-amber-200 cursor-pointer"
+              >
+                {startPeriod}
+              </button>
+            </div>
+          </div>
+
+          {/* إلى وقت الإغلاق */}
+          <div className="bg-white p-2.5 rounded-xl border border-amber-200 space-y-1.5 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 block">إلى (ساعة الإغلاق / المغادرة):</span>
+            <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={decEnd}
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
+                >
+                  -
+                </button>
+                <span className="w-8 text-center font-mono font-black text-xs text-foreground">
+                  {String(endHour).padStart(2, "0")}:00
+                </span>
+                <button
+                  type="button"
+                  onClick={incEnd}
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
+                >
+                  +
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const np = endPeriod === "ليلاً" ? "مساءً" : endPeriod === "مساءً" ? "صباحاً" : "ليلاً";
+                  setEndPeriod(np);
+                  emit(startHour, startPeriod, endHour, np);
+                }}
+                className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-900 rounded-md hover:bg-amber-200 cursor-pointer"
+              >
+                {endPeriod}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* القيمة المعتمدة */}
+      <div className="flex items-center justify-between pt-1 text-[11px] font-bold text-amber-900">
+        <span>القيمة المعتمدة:</span>
+        <span className="px-2.5 py-1 bg-white border border-amber-200 rounded-lg font-mono text-amber-950 font-bold shadow-2xs">
+          {value || "09:00 صباحاً — 12:00 ليلاً"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: Hotel; onClose: () => void; onSave: (h: any) => void }) {
   const [hotelId] = useState(hotel?.id || `HTL-${Math.floor(100 + Math.random() * 900)}`);
   const [name, setName] = useState(hotel?.name || "");
+  const [propertyType, setPropertyType] = useState(hotel?.property_type || "فندق");
   const [city, setCity] = useState(hotel?.city || "طرابلس");
   const [address, setAddress] = useState(hotel?.address || "");
   const [phone, setPhone] = useState(hotel?.phone || "");
@@ -3475,11 +3727,10 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
   const [status, setStatus] = useState(hotel?.partnership_status || "نشط");
   const [contractEndDate, setContractEndDate] = useState((hotel as any)?.contract_end_date || (hotel as any)?.contract_date || "2027-12-31");
   const [description, setDescription] = useState(hotel?.description || "");
-  const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
   const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)");
-  const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_city.jpg");
-  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/ai_city.jpg");
-  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/ai_city.jpg");
+  const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_hotel.jpg");
+  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/ai_hotel.jpg");
+  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/ai_hotel.jpg");
   const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/ai_ghadames.jpg");
   const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/ai_ghadames.jpg");
 
@@ -3489,6 +3740,7 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
     onSave({
       id: hotelId,
       name,
+      property_type: propertyType,
       city,
       address,
       phone,
@@ -3497,7 +3749,6 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
       contract_date: contractEndDate,
       contract_end_date: contractEndDate,
       description,
-      google_maps_url: mapsUrl,
       working_hours: workingHours,
       hotel_photo_1: p1,
       hotel_photo_2: p2 || p1,
@@ -3514,14 +3765,9 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
           ℹ️ <b>دليل تعريفي استكشافي:</b> الفنادق للعرض والتعريف بالمنشأة ومميزاتها فقط دون حجز مباشر للغرف عبر المنصة.
         </div>
 
-        {/* معرّف الفندق التلقائي - مضبب ومعطل */}
+        {/* معرّف الفندق التلقائي */}
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-bold text-slate-700">معرّف الفندق (Hotel ID)</label>
-            <span className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-black">
-              🔒 يُنشأ تلقائياً في قاعدة البيانات
-            </span>
-          </div>
+          <label className="text-xs font-bold text-slate-700 block mb-1">معرّف الفندق</label>
           <input
             type="text"
             value={hotelId}
@@ -3532,33 +3778,52 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
         </div>
 
         <Field label="اسم الفندق الرسمي" value={name} onChange={setName} placeholder="مثال: فندق الفندق الكبير طرابلس" />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / غدامس..." />
-          <Field label="التصنيف بالنجوم (1-5)" type="number" value={stars} onChange={setStars} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
-            <label className="text-xs font-bold block mb-1">حالة العرض بالدليل السياحي</label>
-            <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right outline-none focus:border-primary">
-              <option value="نشط">نشط (ظاهر بالدليل)</option>
-              <option value="معلق">معلق</option>
-              <option value="موقوف">موقوف</option>
+            <label className="text-xs font-bold block mb-1">نوع المنشأة الفندقية</label>
+            <select value={propertyType} onChange={e => setPropertyType(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right outline-none focus:border-primary">
+              <option value="فندق">🏨 فندق</option>
+              <option value="منتجع سياحي">🌴 منتجع سياحي</option>
+              <option value="شقق فندقية">🏢 شقق فندقية</option>
+              <option value="نزل سياحي">🏡 نزل سياحي</option>
+              <option value="مخيم سياحي">⛺ مخيم سياحي</option>
             </select>
           </div>
-          <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
-        </div>
-        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع الرئيسي" />
-        <LibyanPhoneField label="هاتف الاستعلام والتواصل المباشر" value={phone} onChange={setPhone} />
-        <Field label="مواعيد وساعات العمل وتسجيل الوصول (Check-in / Check-out)" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 24 ساعة (تسجيل وصول 2:00 م - مغادرة 12:00 ظ)" />
-        
-        {/* Google Maps URL */}
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">📍 رابط موقع الفندق على خرائط جوجل (Google Maps URL)</label>
-          <div className="flex gap-2">
-            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="flex-1 h-10 px-3 rounded-xl border border-border text-xs outline-none focus:border-primary text-right" />
-            {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700">🗺️ فتح ↗</a>}
+          <div>
+            <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / غدامس..." />
+          </div>
+          <div>
+            <Field label="التصنيف بالنجوم (1-5)" type="number" value={stars} onChange={setStars} />
           </div>
         </div>
+
+        {/* حالة التعاقد والعرض وتاريخ انتهاء التعاقد */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs">
+          <div>
+            <label className="text-xs font-bold block mb-1 text-foreground">حالة العرض بالدليل السياحي</label>
+            <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary">
+              <option value="نشط">🟢 نشط (ظاهر بالمنصة)</option>
+              <option value="معلق">🟡 معلق (مخفي من المنصة)</option>
+              <option value="موقوف">🔴 غير نشط / موقوف (مخفي من المنصة)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1 text-foreground">📅 تاريخ انتهاء التعاقد</label>
+            <input
+              type="date"
+              value={contractEndDate}
+              onChange={e => setContractEndDate(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
+            />
+          </div>
+        </div>
+
+        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع الرئيسي" />
+        <LibyanPhoneField label="هاتف الاستعلام والتواصل المباشر" value={phone} onChange={setPhone} />
+
+        {/* مواعيد وساعات العمل وتسجيل الوصول بأزرار تفاعلية */}
+        <WorkingHoursClockStepper label="مواعيد وساعات العمل وتسجيل الوصول:" value={workingHours} onChange={setWorkingHours} />
 
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">نبذة ووصف الفندق والمميزات والخدمات</label>
@@ -3578,8 +3843,8 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ الفندق بالدليل ✓</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 cursor-pointer">إلغاء</button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 cursor-pointer">حفظ الفندق بالدليل ✓</button>
         </div>
       </form>
     </ModalShell>
@@ -3587,32 +3852,35 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 }
 
 function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
+  const [facilityId] = useState(restaurant?.id || `FAC-${Math.floor(100 + Math.random() * 900)}`);
   const [name, setName] = useState(restaurant?.name || "");
-  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية ومقهى وتراثية");
+  const [type, setType] = useState(restaurant?.type || "مطعم مأكولات شعبية وتراثية");
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
   const [description, setDescription] = useState(restaurant?.description || "");
-  const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
+  const [verificationStatus, setVerificationStatus] = useState(restaurant?.verification_status || "معتمد");
+  const [contractDate, setContractDate] = useState(restaurant?.contract_date ? String(restaurant.contract_date).split("T")[0] : "2027-12-31");
   const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "09:00 صباحاً — 12:00 ليلاً");
   const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_food.jpg");
-  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_ruins.jpg");
-  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_city.jpg");
-  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/ai_ruins.jpg");
-  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/ai_food.jpg");
+  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_food.jpg");
+  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_food.jpg");
+  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/restaurant-libya.jpg");
+  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/cafe-libya.jpg");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة للمطعم/المقهى");
+    if (!name.trim() || !city.trim()) return alert("يرجى كتابة الاسم والمدينة للمطعم/المقهى");
     onSave({
-      ...(restaurant ? { id: restaurant.id } : {}),
-      name,
+      id: facilityId,
+      name: name.trim(),
       type,
-      city,
-      address,
-      phone,
-      description,
-      google_maps_url: mapsUrl,
+      city: city.trim(),
+      address: address.trim() || "العنوان الرئيسي",
+      phone: phone.trim() || "0910000000",
+      description: description.trim(),
+      verification_status: verificationStatus,
+      contract_date: contractDate,
       working_hours: workingHours,
       facility_image_1: i1,
       facility_image_2: i2 || i1,
@@ -3628,23 +3896,72 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
         <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-900 font-semibold">
           ℹ️ <b>دليل تعريفي:</b> المطاعم والمقاهي للعرض والتعريف بنوع الطعام وساعات العمل والتواصل دون حجز مسبق.
         </div>
-        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} placeholder="مثال: مطعم و كافيه السراياء التراثي" />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="نوع وتصنيف الطعام والمنشأة (مأكولات شعبية، مقهى، بحرية...)" value={type} onChange={setType} />
-          <Field label="المدينة" value={city} onChange={setCity} />
-        </div>
-        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع - المعلم القريب" />
-        <LibyanPhoneField label="هاتف التواصل والتوصيل والاستعلام" value={phone} onChange={setPhone} />
-        <Field label="⏰ ساعات وفترات العمل اليومية" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 08:00 صباحاً — 12:00 ليلاً" />
 
-        {/* Google Maps URL */}
+        {/* معرّف المطعم التلقائي */}
         <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">📍 رابط موقع المطعم/المقهى على خرائط جوجل (Google Maps URL)</label>
-          <div className="flex gap-2">
-            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="flex-1 h-10 px-3 rounded-xl border border-border text-xs outline-none focus:border-primary text-right" />
-            {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700">🗺️ فتح ↗</a>}
+          <label className="text-xs font-bold text-slate-700 block mb-1">معرّف المرفق</label>
+          <input
+            type="text"
+            value={facilityId}
+            disabled
+            readOnly
+            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100/90 text-slate-400 font-mono font-bold text-xs text-right cursor-not-allowed select-none opacity-80 backdrop-blur-sm"
+          />
+        </div>
+
+        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} placeholder="مثال: مطعم و كافيه السراياء التراثي" />
+
+        {/* نوع المرفق كومبوبوكس والمدينة */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-bold block mb-1 text-foreground">نوع وتصنيف المرفق</label>
+            <select
+              value={type}
+              onChange={e => setType(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="مطعم مأكولات شعبية وتراثية">🍲 مطعم مأكولات شعبية وتراثية</option>
+              <option value="مطعم مأكولات بحرية وأسماك طازجة">🐟 مطعم مأكولات بحرية وأسماك طازجة</option>
+              <option value="مطعم وجبات سريعة وعصرية (فاست فود)">🍔 مطعم وجبات سريعة وعصرية (فاست فود)</option>
+              <option value="مقهى ومشاريب راقية وقهوة مختصة">☕ مقهى ومشاريب راقية وقهوة مختصة</option>
+              <option value="مشاوي ولحوم وطنية على الفحم">🥩 مشاوي ولحوم وطنية على الفحم</option>
+              <option value="مطعم عائلي ومتنوع">🍽️ مطعم عائلي ومتنوع</option>
+              <option value="حلويات ومرطبات ومخبوزات">🍰 حلويات ومرطبات ومخبوزات</option>
+            </select>
+          </div>
+          <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / مصراتة..." />
+        </div>
+
+        {/* حالة الاعتماد وتاريخ انتهاء التعاقد */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs">
+          <div>
+            <label className="text-xs font-bold block mb-1 text-foreground">حالة الاعتماد</label>
+            <select
+              value={verificationStatus}
+              onChange={e => setVerificationStatus(e.target.value as any)}
+              className="w-full h-10 px-2.5 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="معتمد">✅ معتمد</option>
+              <option value="قيد المراجعة">⏳ قيد المراجعة</option>
+              <option value="محجوب">🚫 محجوب</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1 text-foreground">📅 تاريخ انتهاء التعاقد</label>
+            <input
+              type="date"
+              value={contractDate}
+              onChange={e => setContractDate(e.target.value)}
+              className="w-full h-10 px-2.5 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
+            />
           </div>
         </div>
+
+        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع - المعلم القريب" />
+        <LibyanPhoneField label="هاتف التواصل والتوصيل والاستعلام" value={phone} onChange={setPhone} />
+
+        {/* ساعات العمل بالأزرار التفاعلية تزيد وتنقص من إلى */}
+        <WorkingHoursClockStepper value={workingHours} onChange={setWorkingHours} />
 
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">نبذة ومميزات المطعم/المقهى والوجبات والمنيو</label>
@@ -3664,8 +3981,8 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم/المقهى بالدليل ✓</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 cursor-pointer">إلغاء</button>
+          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 cursor-pointer">حفظ المطعم/المقهى بالدليل ✓</button>
         </div>
       </form>
     </ModalShell>

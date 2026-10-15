@@ -177,45 +177,60 @@ class TripController extends Controller
 
     public function storeHotel(Request $request)
     {
-        $validated = $request->validate([
-            'hotel_id' => 'required|string|max:50',
-            'hotel_name' => 'required|string|max:100',
-            'city' => 'nullable|string|max:50',
-            'address_details' => 'nullable|string|max:255',
-            'phone_number' => 'nullable|string|max:20',
-            'star_rating' => 'nullable|integer',
-            'partnership_status' => 'nullable|string|max:20',
-            'contract_date' => 'nullable|date',
-            'contract_end_date' => 'nullable|date',
-            'property_type' => 'nullable|string|max:50',
-            'hotel_photo_1' => 'nullable|string',
-            'hotel_photo_2' => 'nullable|string',
-            'hotel_photo_3' => 'nullable|string',
-            'hotel_photo_4' => 'nullable|string',
-            'hotel_photo_5' => 'nullable|string',
-        ]);
+        try {
+            // Sanitize empty strings to null for nullable date field
+            if ($request->has('contract_date') && empty($request->input('contract_date'))) {
+                $request->merge(['contract_date' => null]);
+            }
 
-        $hotel = \App\Models\Hotel::updateOrCreate(
-            ['hotel_id' => $validated['hotel_id']],
-            [
-                'hotel_name' => $validated['hotel_name'],
-                'city' => $validated['city'] ?? 'طرابلس',
-                'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
-                'phone_number' => $validated['phone_number'] ?? '0910000000',
-                'star_rating' => $validated['star_rating'] ?? 4,
-                'partnership_status' => $validated['partnership_status'] ?? 'نشط',
-                'contract_date' => $validated['contract_date'] ?? null,
-                'contract_end_date' => $validated['contract_end_date'] ?? $validated['contract_date'] ?? null,
-                'property_type' => $validated['property_type'] ?? 'فندق',
-                'hotel_photo_1' => $validated['hotel_photo_1'] ?? '/assets/ai_city.jpg',
-                'hotel_photo_2' => $validated['hotel_photo_2'] ?? null,
-                'hotel_photo_3' => $validated['hotel_photo_3'] ?? null,
-                'hotel_photo_4' => $validated['hotel_photo_4'] ?? null,
-                'hotel_photo_5' => $validated['hotel_photo_5'] ?? null,
-            ]
-        );
+            $validated = $request->validate([
+                'hotel_id' => 'required|string|max:50',
+                'hotel_name' => 'required|string|max:150',
+                'city' => 'nullable|string|max:100',
+                'address_details' => 'nullable|string|max:255',
+                'phone_number' => 'nullable|string|max:20',
+                'star_rating' => 'nullable|integer',
+                'partnership_status' => 'nullable|string|max:50',
+                'contract_date' => 'nullable|date',
+                'verification_status' => 'nullable|string|max:50',
+                'property_type' => 'nullable|string|max:100',
+                'amenities' => 'nullable|string',
+                'hotel_photo_1' => 'nullable|string',
+                'hotel_photo_2' => 'nullable|string',
+                'hotel_photo_3' => 'nullable|string',
+                'hotel_photo_4' => 'nullable|string',
+                'hotel_photo_5' => 'nullable|string',
+            ]);
 
-        return response()->json(['status' => 'success', 'hotel' => $hotel], 201);
+            $hotel = \App\Models\Hotel::updateOrCreate(
+                ['hotel_id' => $validated['hotel_id']],
+                [
+                    'hotel_name' => $validated['hotel_name'],
+                    'city' => $validated['city'] ?? 'طرابلس',
+                    'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
+                    'phone_number' => $validated['phone_number'] ?? '0910000000',
+                    'star_rating' => $validated['star_rating'] ?? 4,
+                    'partnership_status' => $validated['partnership_status'] ?? 'نشط',
+                    'contract_date' => !empty($validated['contract_date']) ? $validated['contract_date'] : null,
+                    'verification_status' => $validated['verification_status'] ?? 'معتمد',
+                    'property_type' => $validated['property_type'] ?? 'فندق',
+                    'amenities' => $validated['amenities'] ?? null,
+                    'hotel_photo_1' => $validated['hotel_photo_1'] ?? '/assets/ai_city.jpg',
+                    'hotel_photo_2' => $validated['hotel_photo_2'] ?? null,
+                    'hotel_photo_3' => $validated['hotel_photo_3'] ?? null,
+                    'hotel_photo_4' => $validated['hotel_photo_4'] ?? null,
+                    'hotel_photo_5' => $validated['hotel_photo_5'] ?? null,
+                ]
+            );
+
+            return response()->json(['status' => 'success', 'hotel' => $hotel], 201);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            $msg = implode('، ', array_map(fn($e) => implode(' ', $e), $ve->errors()));
+            return response()->json(['status' => 'error', 'message' => "خطأ في بيانات الفندق: {$msg}"], 422);
+        } catch (\Throwable $e) {
+            \Log::error('خطأ حفظ الفندق: ' . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'تعذر حفظ الفندق في قاعدة البيانات: ' . $e->getMessage()], 500);
+        }
     }
 
     public function deleteHotel($id)
@@ -226,5 +241,73 @@ class TripController extends Controller
             return response()->json(['status' => 'success', 'message' => 'تم حذف الفندق بنجاح']);
         }
         return response()->json(['status' => 'error', 'message' => 'الفندق غير موجود'], 404);
+    }
+
+    public function storeRestaurant(Request $request)
+    {
+        try {
+            // Sanitize empty strings to null for nullable date field
+            if ($request->has('contract_date') && empty($request->input('contract_date'))) {
+                $request->merge(['contract_date' => null]);
+            }
+
+            $validated = $request->validate([
+                'facility_id' => 'required|string|max:50',
+                'facility_name' => 'required|string|max:150',
+                'facility_type' => 'nullable|string|max:50',
+                'city' => 'nullable|string|max:100',
+                'address_details' => 'nullable|string|max:255',
+                'phone_number' => 'nullable|string|max:20',
+                'description' => 'nullable|string',
+                'facility_image_1' => 'nullable|string',
+                'facility_image_2' => 'nullable|string',
+                'facility_image_3' => 'nullable|string',
+                'facility_image_4' => 'nullable|string',
+                'facility_image_5' => 'nullable|string',
+                'contract_date' => 'nullable|date',
+                'verification_status' => 'nullable|string|max:50',
+                'working_hours' => 'nullable|string|max:100',
+                'features' => 'nullable|string',
+            ]);
+
+            $facility = \App\Models\RestaurantCafe::updateOrCreate(
+                ['facility_id' => $validated['facility_id']],
+                [
+                    'facility_name' => $validated['facility_name'],
+                    'facility_type' => $validated['facility_type'] ?? 'مطعم وكافيه',
+                    'city' => $validated['city'] ?? 'طرابلس',
+                    'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
+                    'phone_number' => $validated['phone_number'] ?? '0910000000',
+                    'description' => $validated['description'] ?? null,
+                    'facility_image_1' => $validated['facility_image_1'] ?? '/assets/ai_food.jpg',
+                    'facility_image_2' => $validated['facility_image_2'] ?? null,
+                    'facility_image_3' => $validated['facility_image_3'] ?? null,
+                    'facility_image_4' => $validated['facility_image_4'] ?? null,
+                    'facility_image_5' => $validated['facility_image_5'] ?? null,
+                    'contract_date' => !empty($validated['contract_date']) ? $validated['contract_date'] : null,
+                    'verification_status' => $validated['verification_status'] ?? 'معتمد',
+                    'working_hours' => $validated['working_hours'] ?? '09:00 ص - 12:00 م',
+                    'features' => $validated['features'] ?? null,
+                ]
+            );
+
+            return response()->json(['status' => 'success', 'facility' => $facility], 201);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            $msg = implode('، ', array_map(fn($e) => implode(' ', $e), $ve->errors()));
+            return response()->json(['status' => 'error', 'message' => "خطأ في بيانات المرفق: {$msg}"], 422);
+        } catch (\Throwable $e) {
+            \Log::error('خطأ حفظ المطعم/المقهى: ' . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'تعذر حفظ المطعم/المقهى في قاعدة البيانات: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteRestaurant($id)
+    {
+        $facility = \App\Models\RestaurantCafe::where('facility_id', $id)->first();
+        if ($facility) {
+            $facility->delete();
+            return response()->json(['status' => 'success', 'message' => 'تم حذف المرفق بنجاح']);
+        }
+        return response()->json(['status' => 'error', 'message' => 'المرفق غير موجود'], 404);
     }
 }

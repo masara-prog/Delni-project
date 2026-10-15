@@ -655,6 +655,15 @@ function RestaurantDetailsView({
       ? `يقدم ${restaurant.name} تجربة طعام استثنائية في قلب ${restaurant.city}، حيث تجتمع معايير الجودة والضيافة الأصيلة مع باقة من أشهى المأكولات والمشروبات المحضرة من مكونات طازجة يومياً لرواد منصة دلّني.`
       : `${restaurant.name} provides an exceptional dining experience in ${restaurant.city} with fresh local culinary traditions.`);
 
+  // Auto-advancing slideshow timer (يمشو بروحهم تلقائياً)
+  useEffect(() => {
+    if (lightboxOpen || photos.length <= 1) return;
+    const timer = setInterval(() => {
+      setActivePhoto((prev) => (prev + 1) % photos.length);
+    }, 2800);
+    return () => clearInterval(timer);
+  }, [lightboxOpen, photos.length]);
+
   const nextPhoto = () => setActivePhoto((prev) => (prev + 1) % photos.length);
   const prevPhoto = () => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length);
 
@@ -1276,11 +1285,13 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
       isAr ? "الأطباق الرئيسية والوجبة الخاصة" : "Main House Specialties",
       isAr ? "المقبلات والمشروبات الطازجة" : "Fresh Appetizers & Beverages",
     ],
-    features: [
-      isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
-      isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
-      isAr ? "خصم 20% لرواد دلّني" : "20% Dallani Perk",
-    ],
+    features: r.features
+      ? r.features.split("، ").filter(Boolean)
+      : [
+          isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
+          isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
+          isAr ? "خصم 20% لرواد دلّني" : "20% Dallani Perk",
+        ],
   };
 }
 
@@ -1299,7 +1310,8 @@ function RestaurantsPage() {
       try {
         const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
         if (Array.isArray(storedRests) && storedRests.length > 0) {
-          const mapped = storedRests.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
+          const visible = storedRests.filter((r: any) => (r.verification_status || "معتمد") === "معتمد");
+          const mapped = visible.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
           setCustomRestaurants(mapped);
         }
       } catch {}
@@ -1308,7 +1320,8 @@ function RestaurantsPage() {
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
-            const mappedApi = data.map((item: any) =>
+            const visible = data.filter((item: any) => (item.verification_status || "معتمد") === "معتمد");
+            const mappedApi = visible.map((item: any) =>
               mapAdminRestaurantToPublic(
                 {
                   id: item.facility_id,
@@ -1320,6 +1333,7 @@ function RestaurantsPage() {
                   description: item.description,
                   google_maps_url: item.google_maps_url,
                   working_hours: item.working_hours,
+                  features: item.features,
                   facility_image_1: item.facility_image_1,
                   facility_image_2: item.facility_image_2,
                   facility_image_3: item.facility_image_3,
@@ -1560,7 +1574,7 @@ function RestaurantsPage() {
                 title: isAr ? "مأكولات بحرية" : "Fresh Seafood",
                 sub: isAr ? "أسماك طازجة، جمبري، وقار صيد اليوم" : "Fresh Daily Catch, Grilled Prawns",
                 count: restaurants.filter((x) => x.category === "seafood").length,
-                img: "/assets/ai_food.jpg",
+                img: "/assets/dest-harbor-coast.jpg",
                 badge: isAr ? "صيد بحري طازج" : "Fresh Catch",
                 badgeBg: "bg-[#003580]",
                 border: "border-blue-500 ring-4 ring-blue-500/25",
@@ -1570,7 +1584,7 @@ function RestaurantsPage() {
                 title: isAr ? "مأكولات شعبية" : "Traditional Libyan",
                 sub: isAr ? "كسكسي، بازين، مبطن، حساء تراثي" : "Couscous, Bazin, Mbatten",
                 count: restaurants.filter((x) => x.category === "traditional").length,
-                img: "/assets/restaurant-libya.jpg",
+                img: "/assets/ai_food.jpg",
                 badge: isAr ? "أصالة وتراث ليبي" : "Heritage Libyan",
                 badgeBg: "bg-amber-700",
                 border: "border-amber-600 ring-4 ring-amber-600/25",
@@ -1580,7 +1594,7 @@ function RestaurantsPage() {
                 title: isAr ? "الفاست فود (وجبات سريعة)" : "Fast Food & Burgers",
                 sub: isAr ? "سماش برجر، شاورما، كرانشي تاون" : "Smash Burgers, Crispy Rolls",
                 count: restaurants.filter((x) => x.category === "fastfood").length,
-                img: "/assets/ai_food.jpg",
+                img: "/assets/restaurant-libya.jpg",
                 badge: isAr ? "سريع وعصري" : "Fast & Casual",
                 badgeBg: "bg-[#D96B27]",
                 border: "border-[#D96B27] ring-4 ring-[#D96B27]/25",
@@ -1613,9 +1627,9 @@ function RestaurantsPage() {
                   <img
                     src={cat.img}
                     alt={cat.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-100"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-105 saturate-125 contrast-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">

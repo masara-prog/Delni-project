@@ -20,451 +20,7 @@ export const Route = createFileRoute("/hotels")({
   component: HotelsPage,
 });
 
-/* ───── هيكل بيانات عروض الفنادق ───── */
-type HotelOffer = {
-  offerId: string;
-  hotelId: string;
-  title: string;
-  details: string;
-  image: string;
-  gallery: string[];
-  city: string;
-  price: number;
-  oldPrice: number;
-  discountPct: number;
-  startDate: string;
-  endDate: string;
-  badge: string;
-  emoji: string;
-};
 
-const HOTEL_OFFERS: HotelOffer[] = [
-  {
-    offerId: "HOFF-001",
-    hotelId: "HTL-001",
-    title: "عرض نهاية الأسبوع الفاخر - فندق الفصول الأربعة",
-    details: "إقامة استثنائية مطلة على البحر الأبيض المتوسط مع إفطار بوفيه مفتوح وخدمة الواي فاي وساعة مجانية بالنادي الصحي.",
-    image: "/assets/ai_city.jpg",
-    gallery: [
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-    ],
-    city: "طرابلس",
-    price: 988,
-    oldPrice: 1318,
-    discountPct: 25,
-    startDate: "2026-08-01",
-    endDate: "2026-09-30",
-    badge: "خصم حصري 25%",
-    emoji: "🏨",
-  },
-  {
-    offerId: "HOFF-002",
-    hotelId: "HTL-002",
-    title: "ليالٍ سياحية مخفضة في فندق تيبستي بنغازي",
-    details: "إطلالة بانورامية ساحرة على بحيرة 23 يوليو والمدينة مع وجبة عشاء مجانية في مطعم الفندق وخصم 20% لرواد دلّني.",
-    image: "/assets/ai_city.jpg",
-    gallery: [
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-    ],
-    city: "بنغازي",
-    price: 1048,
-    oldPrice: 1294,
-    discountPct: 20,
-    startDate: "2026-08-15",
-    endDate: "2026-10-15",
-    badge: "تخفيض خاص 20%",
-    emoji: "⭐",
-  },
-  {
-    offerId: "HOFF-003",
-    hotelId: "HTL-004",
-    title: "مغامرة الصحراء الملكية في مخيم بحيرات أوباري",
-    details: "إقامة صحراوية فاخرة تحت النجوم مع خيام ملكية مجهزة وجولة سفاري بالدفع الرباعي وسهرة فلكلورية طوارقية.",
-    image: "/assets/ai_desert.jpg",
-    gallery: [
-      "/assets/ai_desert.jpg",
-      "/assets/ai_desert.jpg",
-      "/assets/ai_desert.jpg",
-    ],
-    city: "أوباري",
-    price: 3013,
-    oldPrice: 4293,
-    discountPct: 30,
-    startDate: "2026-09-01",
-    endDate: "2026-12-31",
-    badge: "مغامرة فزان 30%",
-    emoji: "🏜️",
-  },
-  {
-    offerId: "HOFF-004",
-    hotelId: "HTL-005",
-    title: "عطلة الجبل الأخضر الطبيعية - منتجع شحات الفاخر",
-    details: "إقامة هادئة بين غابات الصنوبر ونسائم الجبل العليلة بالقرب من آثار قورينا ومعبد أبولو مع إفطار ريفي طازج.",
-    image: "/assets/dest-jabal-akhdar-panorama.jpg",
-    gallery: [
-      "/assets/dest-jabal-akhdar-panorama.jpg",
-      "/assets/dest-jabal-akhdar-panorama.jpg",
-      "/assets/dest-jabal-akhdar-bridge.jpg",
-    ],
-    city: "شحات",
-    price: 840,
-    oldPrice: 1120,
-    discountPct: 25,
-    startDate: "2026-09-01",
-    endDate: "2026-11-30",
-    badge: "طبيعة وجبال 25%",
-    emoji: "🌿",
-  },
-];
-
-function getHotels(lang: "ar" | "en"): HotelData[] {
-  return [
-    {
-      id: "HTL-001",
-      name: lang === "ar" ? "فندق الفصول الأربعة طرابلس" : "Four Seasons Hotel Tripoli",
-      city: lang === "ar" ? "طرابلس" : "Tripoli",
-      address: lang === "ar" ? "شارع الشاطئ، طرابلس" : "Beach Street, Tripoli",
-      mapsQuery: "Tripoli+Sea+Street+Libya",
-      phone: "0912345678",
-      stars: 5,
-      partnership_status: "نشط",
-      propertyType: "hotel",
-      price: 988,
-      originalPrice: 1318,
-      rating: 9.2,
-      ratingWord: lang === "ar" ? "استثنائي" : "Superb",
-      reviewsCount: 2003,
-      discountPct: 25,
-      photos: [
-        "/assets/ai_hotel.jpg",
-        "/assets/dest-harbor-coast.jpg",
-        "/assets/cafe-libya.jpg",
-      ],
-    },
-    {
-      id: "HTL-002",
-      name: lang === "ar" ? "فندق تيبستي الدولي" : "Tibesti International Hotel",
-      city: lang === "ar" ? "بنغازي" : "Benghazi",
-      address: lang === "ar" ? "شارع جمال عبد الناصر، بنغازي" : "Gamal Abdel Nasser St, Benghazi",
-      mapsQuery: "Tibesti+Hotel+Benghazi+Libya",
-      phone: "0921112233",
-      stars: 4,
-      partnership_status: "نشط",
-      propertyType: "hotel",
-      price: 1048,
-      originalPrice: 1294,
-      rating: 8.6,
-      ratingWord: lang === "ar" ? "ممتاز" : "Excellent",
-      reviewsCount: 3238,
-      discountPct: 20,
-      photos: [
-        "/assets/ai_hotel.jpg",
-        "/assets/dest-harbor-coast.jpg",
-        "/assets/ai_food.jpg",
-        "/assets/cafe-libya.jpg",
-        "/assets/dest-tripoli-harbor.jpg",
-      ],
-    },
-    {
-      id: "HTL-003",
-      name: lang === "ar" ? "نزل غدامس التراثي الأصيل" : "Ghadames Authentic Heritage Lodge",
-      city: lang === "ar" ? "غدامس" : "Ghadames",
-      address: lang === "ar" ? "المدينة القديمة، غدامس" : "Old Town, Ghadames",
-      mapsQuery: "Old+Town+Ghadames+Libya",
-      phone: "0919998877",
-      stars: 3,
-      partnership_status: "نشط",
-      propertyType: "heritage",
-      price: 840,
-      originalPrice: 1120,
-      rating: 8.9,
-      ratingWord: lang === "ar" ? "ممتاز جداً" : "Very Good",
-      reviewsCount: 915,
-      discountPct: 25,
-      photos: [
-        "/assets/dest-ghadames-oasis.jpg",
-        "/assets/dest-ghadames-alleys.jpg",
-        "/assets/dest-ghadames-clean.jpg",
-        "/assets/dest-ksar-desert.jpg",
-        "/assets/restaurant-libya.jpg",
-      ],
-    },
-    {
-      id: "HTL-004",
-      name: lang === "ar" ? "مخيم بحيرات أوباري الفاخر" : "Ubari Lakes Luxury Desert Camp",
-      city: lang === "ar" ? "أوباري" : "Ubari",
-      address: lang === "ar" ? "بحيرة قبرعون، أوباري" : "Gaberoun Lake, Ubari",
-      mapsQuery: "Gaberoun+Lake+Ubari+Libya",
-      phone: "0923334455",
-      stars: 5,
-      partnership_status: "نشط",
-      propertyType: "camp",
-      price: 3013,
-      originalPrice: 4293,
-      rating: 9.5,
-      ratingWord: lang === "ar" ? "استثنائي" : "Superb",
-      reviewsCount: 4151,
-      discountPct: 30,
-      photos: [
-        "/assets/dest-ubari-gaberoun.jpg",
-        "/assets/dest-ubari-ummalmaa.jpg",
-        "/assets/dest-sahara-dunes.jpg",
-        "/assets/private-trip.jpg",
-        "/assets/offer-desert.jpg",
-      ],
-    },
-    {
-      id: "HTL-005",
-      name: lang === "ar" ? "منتجع شحات وقورينا الجبلي" : "Cyrene Mountain Panoramic Resort",
-      city: lang === "ar" ? "شحات" : "Shahhat",
-      address: lang === "ar" ? "الجبل الأخضر، شحات" : "Green Mountain, Shahhat",
-      mapsQuery: "Cyrene+Shahhat+Libya",
-      phone: "0925556677",
-      stars: 5,
-      partnership_status: "نشط",
-      propertyType: "resort",
-      price: 1245,
-      originalPrice: 1550,
-      rating: 9.1,
-      ratingWord: lang === "ar" ? "استثنائي" : "Superb",
-      reviewsCount: 1870,
-      discountPct: 20,
-      photos: [
-        "/assets/dest-jabal-akhdar-panorama.jpg",
-        "/assets/dest-jabal-akhdar-forest.jpg",
-        "/assets/dest-jabal-akhdar-valley.jpg",
-        "/assets/dest-jabal-akhdar-bridge.jpg",
-        "/assets/restaurant-libya.jpg",
-      ],
-    },
-    {
-      id: "HTL-006",
-      name: lang === "ar" ? "فندق ساحل الخمس (لبدة الكبرى)" : "Leptis Coast Seafront Hotel",
-      city: lang === "ar" ? "الخمس" : "Al-Khoms",
-      address: lang === "ar" ? "شاطئ الخمس، بالقرب من لبدة الأثرية" : "Al-Khoms Coast, near Leptis Magna",
-      mapsQuery: "Leptis+Magna+Al+Khoms+Libya",
-      phone: "0914443322",
-      stars: 3,
-      partnership_status: "نشط",
-      propertyType: "hotel",
-      price: 760,
-      originalPrice: 950,
-      rating: 8.7,
-      ratingWord: lang === "ar" ? "ممتاز" : "Excellent",
-      reviewsCount: 1120,
-      discountPct: 20,
-      photos: [
-        "/assets/dest-leptis-coast.jpg",
-        "/assets/dest-harbor-coast.jpg",
-        "/assets/ai_hotel.jpg",
-        "/assets/ai_food.jpg",
-        "/assets/dest-tripoli-harbor.jpg",
-      ],
-    },
-    {
-      id: "HTL-007",
-      name: lang === "ar" ? "أجنحة السرايا الفندقية الفاخرة" : "Al-Saraya Luxury Hotel Suites",
-      city: lang === "ar" ? "طرابلس" : "Tripoli",
-      address: lang === "ar" ? "شارع عمر المختار، طرابلس" : "Omar Al-Mokhtar St, Tripoli",
-      mapsQuery: "Tripoli+Omar+Mokhtar+Libya",
-      phone: "0913337722",
-      stars: 4,
-      partnership_status: "نشط",
-      propertyType: "apartment",
-      price: 680,
-      originalPrice: 850,
-      rating: 9.0,
-      ratingWord: lang === "ar" ? "استثنائي" : "Superb",
-      reviewsCount: 640,
-      discountPct: 20,
-      photos: [
-        "/assets/ai_hotel.jpg",
-        "/assets/dest-tripoli-harbor.jpg",
-        "/assets/cafe-libya.jpg",
-      ],
-    },
-    {
-      id: "HTL-008",
-      name: lang === "ar" ? "منتجع شاطئ زوارة السياحي" : "Zuwara Beachfront Tourist Resort",
-      city: lang === "ar" ? "زوارة" : "Zuwara",
-      address: lang === "ar" ? "طريق الساحل، شاطئ زوارة" : "Coastal Rd, Zuwara Beach",
-      mapsQuery: "Zuwara+Beach+Libya",
-      phone: "0926661144",
-      stars: 5,
-      partnership_status: "نشط",
-      propertyType: "resort",
-      price: 1150,
-      originalPrice: 1450,
-      rating: 9.3,
-      ratingWord: lang === "ar" ? "استثنائي" : "Superb",
-      reviewsCount: 1420,
-      discountPct: 20,
-      photos: [
-        "/assets/dest-sabratha-coast.jpg",
-        "/assets/dest-harbor-coast.jpg",
-        "/assets/ai_hotel.jpg",
-        "/assets/ai_food.jpg",
-        "/assets/dest-tripoli-harbor.jpg",
-      ],
-    },
-    {
-      id: "HTL-009",
-      name: lang === "ar" ? "فيلا ونزل وادي درنة التراثي" : "Derna Valley Heritage Villa & Lodge",
-      city: lang === "ar" ? "درنة" : "Derna",
-      address: lang === "ar" ? "وادي درنة، بالقرب من الشلال" : "Derna Valley, near Waterfall",
-      mapsQuery: "Derna+Waterfall+Libya",
-      phone: "0915559988",
-      stars: 4,
-      partnership_status: "نشط",
-      propertyType: "heritage",
-      price: 920,
-      originalPrice: 1150,
-      rating: 9.2,
-      ratingWord: lang === "ar" ? "استثنائي" : "Superb",
-      reviewsCount: 810,
-      discountPct: 20,
-      photos: [
-        "/assets/dest-jabal-akhdar-valley.jpg",
-        "/assets/dest-jabal-akhdar-bridge.jpg",
-        "/assets/dest-jabal-akhdar-forest.jpg",
-        "/assets/restaurant-libya.jpg",
-        "/assets/cafe-libya.jpg",
-      ],
-    },
-  ];
-}
-
-/* ============================================================ */
-/* HOTEL OFFERS SPOTLIGHT (INTERACTIVE 3D STACKED DECK)        */
-/* ============================================================ */
-function HotelOffersSpotlight({
-  offers,
-  onSelectHotel,
-}: {
-  offers: HotelOffer[];
-  onSelectHotel: (hotelId: string) => void;
-}) {
-  const { language } = useLanguage();
-  const isAr = language === "ar";
-  const [activeIdx, setActiveIdx] = useState(0);
-
-  const offer = offers[activeIdx % offers.length];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveIdx((prev) => (prev + 1) % offers.length);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [offers.length]);
-
-  const cycleNext = () => {
-    setActiveIdx((prev) => (prev + 1) % offers.length);
-  };
-
-  const photos = offer.gallery && offer.gallery.length > 0 ? offer.gallery : [offer.image];
-  const photo0 = photos[0];
-  const photo1 = photos[1 % photos.length];
-  const photo2 = photos[2 % photos.length];
-
-  return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6">
-      <div
-        onClick={cycleNext}
-        className="group relative rounded-3xl bg-gradient-to-br from-[#FFF9F5] via-white to-[#FEF3EB] border-2 border-[#E8E2D6] p-6 sm:p-10 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden select-none"
-      >
-        {/* Ambient Glow */}
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-radial from-[#D96B27]/15 to-transparent rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-radial from-amber-400/15 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-        {/* Diagonal Corner Triangle / Ribbon for Discount */}
-        <div className="absolute top-0 right-0 w-36 h-36 overflow-hidden pointer-events-none z-20">
-          <div className="absolute top-6 -right-10 w-44 py-1.5 bg-gradient-to-r from-red-600 via-[#EA580C] to-[#D96B27] text-white text-center text-xs font-black tracking-wider shadow-md rotate-45 border-y border-white/30">
-            {isAr ? `خصم ${offer.discountPct}%` : `${offer.discountPct}% OFF`}
-          </div>
-        </div>
-
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Details on Right (RTL) */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3.5 py-1 rounded-full bg-[#D96B27]/10 text-[#D96B27] border border-[#D96B27]/25 text-xs font-black">
-                {offer.badge}
-              </span>
-              <span className="px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] border border-[#003580]/20 text-xs font-bold">
-                📍 {offer.city}
-              </span>
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#003580] tracking-tight leading-tight group-hover:text-[#D96B27] transition-colors">
-              {offer.title}
-            </h2>
-
-            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-semibold">
-              {offer.details}
-            </p>
-
-            {/* Verified Dallani Perk */}
-            <div className="flex items-center gap-3 pt-2">
-              <span className="px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black flex items-center gap-1.5">
-                <span>🏷️</span>
-                <span>{isAr ? "خصم معتمد 20% لرواد منصة دلّني · حجز واستفسار مباشر" : "20% Verified Perk for Dallani Guests · Direct Concierge"}</span>
-              </span>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-2" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                onClick={() => onSelectHotel(offer.hotelId)}
-                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
-              >
-                <span>🏨</span>
-                <span>{isAr ? "معاينة الفندق والتفاصيل" : "View Hotel Details"}</span>
-                <span>➔</span>
-              </button>
-
-              <div className="text-xs text-slate-500 font-bold">
-                {isAr ? "(انقر على البطاقة للتنقل بين العروض)" : "(Click card to cycle deals)"}
-              </div>
-            </div>
-          </div>
-
-          {/* 3D Stacked Deck of Photos */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="relative w-64 sm:w-72 h-80 sm:h-96">
-              {/* Back card 2 */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-md rotate-12 translate-x-6 translate-y-3 opacity-60 transition-all duration-300">
-                <img src={photo2} alt="Hotel view" className="w-full h-full object-cover" />
-              </div>
-              {/* Back card 1 */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-lg rotate-6 translate-x-3 translate-y-1.5 opacity-80 transition-all duration-300">
-                <img src={photo1} alt="Hotel view" className="w-full h-full object-cover" />
-              </div>
-              {/* Front active card */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-2xl rotate-0 hover:rotate-1 transition-all duration-300">
-                <img src={photo0} alt={offer.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                <div className="absolute bottom-4 right-4 left-4 flex items-center justify-between text-white text-xs font-bold">
-                  <span className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
-                    📷 {photos.length} {isAr ? "صور للعرض" : "photos"}
-                  </span>
-                  <span className="bg-[#D96B27] px-3 py-1 rounded-full font-black text-white shadow-sm">
-                    {activeIdx + 1} / {offers.length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-  );
-}
 
 /* ============================================================ */
 /* DEDICATED FULL DETAILS VIEW FOR HOTELS (DYNAMIC GALLERY & ZERO PRICES) */
@@ -515,37 +71,7 @@ function HotelDetailsView({
     { title: isAr ? "المرافق والاستجمام" : "Amenities & Wellness", icon: "✨" },
   ];
 
-  const hotelBio: Record<string, string> = {
-    "HTL-001": isAr
-      ? "يُعد فندق الفصول الأربعة طرابلس أحد أبرز صروح الإقامة الفاخرة على الواجهة البحرية للعاصمة. يتميز بإطلالات ساحرة مباشرة على البحر الأبيض المتوسط، ويجمع بين فخامة العمارة الكلاسيكية ووسائل الراحة العصرية. يقع الفندق على مقربة من كورنيش طرابلس وميدان الشهداء والمدينة القديمة، ويوفر بيئة هادئة ومثالية للوفود ورجال الأعمال والعائلات الباحثين عن أعلى مستويات الراحة والخدمة الفندقية."
-      : "Four Seasons Hotel Tripoli is a premier luxury waterfront landmark in Tripoli overlooking the Mediterranean.",
-    "HTL-002": isAr
-      ? "فندق تيبستي الدولي هو أيقونة الضيافة التاريخية في قلب مدينة بنغازي. يتميز بموقعه الاستراتيجي في ميدان الشجرة وإطلالاته البانورامية على بحيرة 23 يوليو والمدينة. يضم مرافق متكاملة وقاعات مؤتمرات ومطاعم متنوعة تخدم الزوار وتوفر استراحة مريحة لزوار المنطقة الشرقية."
-      : "Tibesti International Hotel is a historic landmark in central Benghazi overlooking July 23 Lake.",
-    "HTL-003": isAr
-      ? "يقدم نزل غدامس التراثي تجربة إقامة أصيلة تعكس عبق العمارة الطينية الفريدة للؤلؤة الصحراء المسجلة على لائحة التراث العالمي (اليونسكو). غرف تراثية مريحة تحافظ على البرودة الطبيعية صيفاً والدفء شتاءً، مع أسقف من خشب النخيل وجلسات شاي صحراوي تحت ضوء القمر."
-      : "Ghadames Authentic Heritage Lodge offers traditional mud-brick architecture and UNESCO heritage hospitality.",
-    "HTL-004": isAr
-      ? "يقدم مخيم بحيرات أوباري الفاخر تجربة صحراوية استثنائية وسط الكثبان الذهبية لبحر الرمال العظيم في فزان. خيام ملكية مجهزة بأعلى معايير الراحة والخصوصية، مع جلسات شاي طوارقي فلكلورية تحت النجوم وسهرات سمر أصيلة ورحلات سفاري 4x4 لبحيرة قبرعون وأم الماء."
-      : "Ubari Desert Camp offers an authentic Sahara glamping experience near Gaberoun and Umm al-Maa lakes.",
-    "HTL-005": isAr
-      ? "يتربع منتجع شحات وقورينا الجبلي على قمم الجبل الأخضر وسط غابات الصنوبر البديعة ونسائم البحر العليلة، مطلاً على المعالم الأثرية لمدينة قورينا الإغريقية، ويوفر إقامة جبلية هادئة لعشاق الطبيعة والتاريخ مع مأكولات ريفية طازجة."
-      : "Cyrene Mountain Panoramic Resort offers alpine tranquility and views over Cyrene ancient temples.",
-    "HTL-006": isAr
-      ? "يتمتع فندق ساحل الخمس بموقع استراتيجي على شاطئ البحر الأبيض المتوسط على بعد دقائق قليلة من مدينة لبدة الكبرى الأثرية الرومانية. غرف فسيحة ومطلة على البحر مع مطعم أسماك بحري طازج وخدمات راقية للوفود والباحثين والمصطافين."
-      : "Leptis Coast Seafront Hotel offers sea views and proximity to Leptis Magna UNESCO Roman ruins.",
-    "HTL-007": isAr
-      ? "أجنحة السرايا الفندقية بطرابلس تجمع بين راحة الشقق السكنية الفسيحة والخدمة الفندقية الراقية في شارع عمر المختار. مناسبة جداً للعائلات ورجال الأعمال، وتتضمن صالات جلوس خاصة ومطابخ تحضيرية مجهزة ومواقف سيارات آمنة."
-      : "Al-Saraya Luxury Suites provide spacious serviced accommodations in central Tripoli.",
-    "HTL-008": isAr
-      ? "منتجع شاطئ زوارة السياحي يمتد على شريط ساحلي بكر يتميز بالرمال البيضاء ومياه البحر الفيروزية الصافية. يوفر شاليهات بحرية خاصة، وأنشطة رياضات مائية، ومطاعم بحرية، ومساحات لعب للأطفال لعطلات عائلية لا تُنسى."
-      : "Zuwara Beachfront Resort offers white sand private beaches and seaside chalets.",
-    "HTL-009": isAr
-      ? "فيلا ونزل وادي درنة التراثي يقع في قلب الطبيعة الغناء لوادي درنة بالقرب من الشلال التاريخي. محاط بأشجار الفواكه والنخيل مع جلسات شرفة جبلية هادئة ومأكولات برقاوبة أصيلة لعشاق الاستجمام والهدوء."
-      : "Derna Valley Heritage Villa offers peaceful stays surrounded by waterfalls and lush nature.",
-  };
-
-  const bio = hotelBio[hotel.id] || (isAr
+  const bio = hotel.description || (isAr
     ? `${hotel.name} هو أحد أماكن الإقامة المعتمدة لدى منصة دلّني في مدينة ${hotel.city}. يتميز بمستوى خدمات راقٍ وموقع استراتيجي قريب من المعالم والخدمات، ويوفر لرواد المنصة خصومات حصرية وتجربة إقامة نموذجية ومريحة.`
     : `${hotel.name} is a verified partner stay on Dallani in ${hotel.city}.`);
 
@@ -1167,7 +693,7 @@ function HotelsPage() {
   const isAr = language === "ar";
   const [city, setCity] = useState("all");
   const [stars, setStars] = useState(0);
-  const [propertyType, setPropertyType] = useState<string>("none");
+  const [propertyType, setPropertyType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
   const [likedHotels, setLikedHotels] = useState<Record<string, boolean>>({});
@@ -1197,58 +723,94 @@ function HotelsPage() {
   const [dbHotels, setDbHotels] = useState<HotelData[]>([]);
 
   useEffect(() => {
+    const mapType = (t?: string) => {
+      if (!t) return "hotel";
+      if (t.includes("منتجع")) return "resort";
+      if (t.includes("شقق")) return "apartment";
+      if (t.includes("نزل") || t.includes("تراث")) return "heritage";
+      if (t.includes("مخيم") || t.includes("صحراو")) return "camp";
+      return "hotel";
+    };
+
+    const processHotels = (list: any[]): HotelData[] => {
+      return list
+        .filter((item: any) => {
+          const v = item.verification_status || "معتمد";
+          const p = item.partnership_status || "نشط";
+          return v === "معتمد" && p === "نشط";
+        })
+        .map((item: any) => ({
+          id: item.hotel_id || item.id,
+          name: item.hotel_name || item.name,
+          city: item.city,
+          address: item.address_details || item.address,
+          mapsQuery: `${item.hotel_name || item.name}+${item.city}`,
+          phone: item.phone_number || item.phone,
+          stars: item.star_rating || item.stars || 4,
+          partnership_status: item.partnership_status || "نشط",
+          propertyType: mapType(item.property_type),
+          photos: [
+            item.hotel_photo_1,
+            item.hotel_photo_2,
+            item.hotel_photo_3,
+            item.hotel_photo_4,
+            item.hotel_photo_5,
+          ].filter(Boolean),
+          description: item.description || (item.amenities ? `الخدمات والمرافق المتوفرة: ${item.amenities}` : undefined),
+        }));
+    };
+
+    // Load instantly from localStorage first (excluding obsolete static IDs)
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) {
+        const nonStatic = stored.filter((item: any) => !/^HTL-00[1-9]$/.test(item.hotel_id || item.id));
+        if (nonStatic.length > 0) {
+          setDbHotels(processHotels(nonStatic));
+        }
+      }
+    } catch {}
+
     fetch("http://127.0.0.1:8000/api/hotels")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          const mapped: HotelData[] = data.map((item: any) => ({
-            id: item.hotel_id,
-            name: item.hotel_name,
-            city: item.city,
-            address: item.address_details,
-            mapsQuery: `${item.hotel_name}+${item.city}`,
-            phone: item.phone_number,
-            stars: item.star_rating,
-            partnership_status: item.partnership_status || "نشط",
-            propertyType: "hotel",
-            photos: [
-              item.hotel_photo_1 || "/assets/ai_hotel.jpg",
-              item.hotel_photo_2 || "/assets/dest-harbor-coast.jpg",
-              item.hotel_photo_3 || "/assets/cafe-libya.jpg",
-            ],
-          }));
-          setDbHotels(mapped);
+          setDbHotels(processHotels(data));
         }
       })
       .catch(() => {});
   }, []);
 
   const hotels = useMemo(() => {
-    const defaultList = getHotels(language);
-    if (dbHotels.length === 0) return defaultList;
-    const dbIds = new Set(dbHotels.map((h) => h.id));
-    return [...dbHotels, ...defaultList.filter((h) => !dbIds.has(h.id))];
-  }, [language, dbHotels]);
+    return dbHotels;
+  }, [dbHotels]);
 
-  const cities = useMemo(
-    () => [
+  const cities = useMemo(() => {
+    const base = [
       { key: "all", label: language === "ar" ? "جميع المدن والمناطق" : "All Cities" },
       { key: language === "ar" ? "طرابلس" : "Tripoli", label: language === "ar" ? "طرابلس" : "Tripoli" },
       { key: language === "ar" ? "بنغازي" : "Benghazi", label: language === "ar" ? "بنغازي" : "Benghazi" },
+      { key: language === "ar" ? "مصراتة" : "Misrata", label: language === "ar" ? "مصراتة" : "Misrata" },
       { key: language === "ar" ? "غدامس" : "Ghadames", label: language === "ar" ? "غدامس" : "Ghadames" },
       { key: language === "ar" ? "أوباري" : "Ubari", label: language === "ar" ? "أوباري" : "Ubari" },
       { key: language === "ar" ? "شحات" : "Shahhat", label: language === "ar" ? "شحات (الجبل الأخضر)" : "Shahhat (Cyrene)" },
       { key: language === "ar" ? "الخمس" : "Al-Khoms", label: language === "ar" ? "الخمس (لبدة الكبرى)" : "Al-Khoms (Leptis)" },
-    ],
-    [language],
-  );
+    ];
+    const baseKeys = new Set(base.map((b) => b.key));
+    hotels.forEach((h) => {
+      if (h.city && !baseKeys.has(h.city)) {
+        base.push({ key: h.city, label: h.city });
+        baseKeys.add(h.city);
+      }
+    });
+    return base;
+  }, [language, hotels]);
 
   const filtered = useMemo(() => {
-    if (propertyType === "none") return [];
     return hotels.filter((h) => {
       const matchCity = city === "all" || h.city.toLowerCase().includes(city.toLowerCase());
       const matchStars = stars === 0 || h.stars >= stars;
-      const matchType = propertyType === "all" || h.propertyType === propertyType;
+      const matchType = propertyType === "all" || propertyType === "none" || h.propertyType === propertyType;
       const q = searchQuery.trim().toLowerCase();
       const matchSearch =
         !q ||
@@ -1273,10 +835,10 @@ function HotelsPage() {
       <div className="relative h-80 sm:h-96 overflow-hidden bg-[#003580]">
         <HeroSlideshow
           images={[
-            "/assets/ai_city.jpg",
-            "/assets/ai_ruins.jpg",
-            "/assets/ai_ruins.jpg",
-            "/assets/ai_ruins.jpg",
+            "/assets/ai_hotel.jpg",
+            "/assets/dest-harbor-coast.jpg",
+            "/assets/dest-tripoli-harbor.jpg",
+            "/assets/dest-ghadames-oasis.jpg",
           ]}
           alt="الفنادق والإقامة في ليبيا"
           brightness="brightness-90"
@@ -1426,7 +988,7 @@ function HotelsPage() {
                 id: "hotel",
                 title: isAr ? "فنادق فاخرة" : "Luxury Hotels",
                 count: isAr ? "24 مكان متاح" : "24 available",
-                img: "/assets/ai_city.jpg",
+                img: "/assets/ai_hotel.jpg",
                 badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
                 badgeBg: "bg-[#003580]",
                 activeBorder: "border-[#003580] ring-4 ring-[#003580]/25",
@@ -1435,7 +997,7 @@ function HotelsPage() {
                 id: "resort",
                 title: isAr ? "منتجعات سياحية" : "Touristic Resorts",
                 count: isAr ? "10 أماكن متاحة" : "10 available",
-                img: "/assets/ai_city.jpg",
+                img: "/assets/dest-harbor-coast.jpg",
                 badge: isAr ? "استجمام وشواطئ" : "Leisure & Beach",
                 badgeBg: "bg-teal-700",
                 activeBorder: "border-teal-700 ring-4 ring-teal-700/25",
@@ -1444,7 +1006,7 @@ function HotelsPage() {
                 id: "apartment",
                 title: isAr ? "شقق فندقية" : "Hotel Apartments",
                 count: isAr ? "16 مكان متاح" : "16 available",
-                img: "/assets/ai_city.jpg",
+                img: "/assets/dest-tripoli-harbor.jpg",
                 badge: isAr ? "خصوصية عائلية" : "Family Suites",
                 badgeBg: "bg-indigo-700",
                 activeBorder: "border-indigo-700 ring-4 ring-indigo-700/25",
@@ -1453,7 +1015,7 @@ function HotelsPage() {
                 id: "heritage",
                 title: isAr ? "نزل وفلل تراثية" : "Heritage Villas & Lodges",
                 count: isAr ? "12 مكان متاح" : "12 available",
-                img: "/assets/ai_city.jpg",
+                img: "/assets/dest-ghadames-oasis.jpg",
                 badge: isAr ? "أصالة وتاريخ" : "Heritage",
                 badgeBg: "bg-amber-700",
                 activeBorder: "border-amber-700 ring-4 ring-amber-700/25",
@@ -1462,7 +1024,7 @@ function HotelsPage() {
                 id: "camp",
                 title: isAr ? "مخيمات صحراوية" : "Desert Camps",
                 count: isAr ? "8 أماكن متاحة" : "8 available",
-                img: "/assets/ai_ruins.jpg",
+                img: "/assets/dest-ubari-gaberoun.jpg",
                 badge: isAr ? "سفاري ومغامرة" : "Desert Safari",
                 badgeBg: "bg-[#D96B27]",
                 activeBorder: "border-[#D96B27] ring-4 ring-[#D96B27]/25",
@@ -1485,10 +1047,10 @@ function HotelsPage() {
                   <img
                     src={prop.img}
                     alt={prop.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-100"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-105 saturate-115 contrast-105"
                   />
                   {/* Dark gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
@@ -1569,35 +1131,25 @@ function HotelsPage() {
             </div>
           )}
 
-          {/* Prompt banner when no category is selected yet */}
-          {propertyType === "none" ? (
+          {filtered.length === 0 ? (
             <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-[#003580]/20 shadow-xs space-y-3 my-4">
               <div className="text-4xl sm:text-5xl mb-2">🏨</div>
               <h4 className="text-lg sm:text-xl font-black text-[#003580]">
-                {isAr ? "يرجى اختيار نوع مكان الإقامة أعلاه لعرض الأماكن المتاحة" : "Please select a property category above to view available stays"}
+                {isAr ? "لا توجد نتائج تطابق معايير التصفية المحددة" : "No accommodations match your filter criteria"}
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 font-semibold max-w-lg mx-auto leading-relaxed">
                 {isAr
-                  ? "اضغط على أي تصنيف بالأعلى (فنادق فاخرة، منتجعات سياحية، شقق فندقية، نزل وفلل تراثية، أو مخيمات صحراوية) لعرض قائمة الأماكن والتفاصيل فوراً."
-                  : "Pick from luxury hotels, touristic resorts, apartments, heritage lodges, or desert camps above."}
+                  ? "جرّب تغيير المدينة، أو اختيار تصنيف آخر مثل الفنادق أو المنتجعات السياحية."
+                  : "Try clearing search filters or changing destination."}
               </p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
-                {[
-                  { id: "hotel", label: isAr ? "🏨 فنادق فاخرة" : "Hotels" },
-                  { id: "resort", label: isAr ? "🏖️ منتجعات سياحية" : "Resorts" },
-                  { id: "apartment", label: isAr ? "🏢 شقق فندقية" : "Apartments" },
-                  { id: "heritage", label: isAr ? "🏛️ نزل وفلل تراثية" : "Heritage" },
-                  { id: "camp", label: isAr ? "⛺ مخيمات صحراوية" : "Camps" },
-                ].map((btn) => (
-                  <button
-                    key={btn.id}
-                    type="button"
-                    onClick={() => setPropertyType(btn.id)}
-                    className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#003580] text-[#003580] hover:text-white border border-[#E8E2D6] text-xs font-black transition cursor-pointer shadow-xs"
-                  >
-                    {btn.label}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => { setPropertyType("all"); setCity("all"); setStars(0); }}
+                  className="px-4 py-2 rounded-xl bg-[#003580] text-white text-xs font-black transition cursor-pointer shadow-xs"
+                >
+                  {isAr ? "عرض جميع الفنادق والأماكن" : "Show All Properties"}
+                </button>
               </div>
             </div>
           ) : (

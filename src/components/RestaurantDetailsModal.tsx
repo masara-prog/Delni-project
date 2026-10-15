@@ -58,14 +58,14 @@ export function RestaurantDetailsModal({
     }
   }, [open, restaurant]);
 
-  // Slideshow timer
+  // Slideshow timer: auto-advances continuously on its own (يمشو بروحهم)
   useEffect(() => {
-    if (!open || !autoPlay || lightboxOpen || photos.length <= 1) return;
+    if (!open || lightboxOpen || photos.length <= 1) return;
     const timer = setInterval(() => {
       setActivePhoto((prev) => (prev + 1) % photos.length);
-    }, 4500);
+    }, 2800);
     return () => clearInterval(timer);
-  }, [open, autoPlay, lightboxOpen, photos.length]);
+  }, [open, lightboxOpen, photos.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -169,9 +169,14 @@ export function RestaurantDetailsModal({
           {/* ── 1. CINEMATIC SLIDESHOW STAGE WITH FIXED STABLE SIZE & CRISP CLARITY ── */}
           <div
             className="relative h-80 sm:h-96 md:h-[420px] w-full bg-slate-950 overflow-hidden group select-none shrink-0"
-            onMouseEnter={() => setAutoPlay(false)}
-            onMouseLeave={() => setAutoPlay(true)}
           >
+            {/* Auto-slideshow status indicator */}
+            <div className="absolute top-4 right-4 z-20 pointer-events-none">
+              <span className="bg-black/60 backdrop-blur-md text-emerald-400 text-[11px] font-black px-3 py-1 rounded-full border border-emerald-500/30 shadow-lg flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>{isAr ? "عرض تلقائي للصور" : "Auto Slideshow"}</span>
+              </span>
+            </div>
             {/* Ambient Blurred Background for perfect lighting and zero distortion */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <img

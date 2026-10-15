@@ -52,6 +52,8 @@ Route::get('/hotels', [TripController::class, 'hotels']);
 Route::post('/hotels', [TripController::class, 'storeHotel']);
 Route::delete('/hotels/{id}', [TripController::class, 'deleteHotel']);
 Route::get('/restaurants', [TripController::class, 'restaurants']);
+Route::post('/restaurants', [TripController::class, 'storeRestaurant']);
+Route::delete('/restaurants/{id}', [TripController::class, 'deleteRestaurant']);
 Route::get('/guides', [TripController::class, 'guides']);
 
 // --- Bookings & Manifests ---
