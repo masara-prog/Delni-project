@@ -199,7 +199,7 @@ type PrivateTripRequest = {
 };
 
 type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: string };
-type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; verification_status?: string; contract_date?: string };
+type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; verification_status?: string; contract_date?: string; features?: string };
 type Attraction = { 
   id: string; 
   place_id?: string;
@@ -973,6 +973,9 @@ function AdminDashboard() {
         address_details: r.address || "العنوان الرئيسي",
         phone_number: r.phone || "0910000000",
         description: r.description || "",
+        features: r.features || "",
+        verification_status: r.verification_status || "معتمد",
+        contract_date: r.contract_date || null,
         google_maps_url: r.google_maps_url || "",
         working_hours: r.working_hours || "",
         facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
@@ -987,6 +990,26 @@ function AdminDashboard() {
       const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
       localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
     } catch {}
+
+    fetch("http://127.0.0.1:8000/api/restaurants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        facility_id: r.id,
+        facility_name: r.name,
+        facility_type: r.type || "مأكولات شعبية",
+        city: r.city || "طرابلس",
+        address_details: r.address || "العنوان الرئيسي",
+        phone_number: r.phone || "0910000000",
+        description: r.description || "",
+        features: r.features || "",
+        verification_status: r.verification_status || "معتمد",
+        contract_date: r.contract_date || null,
+        google_maps_url: r.google_maps_url || "",
+        working_hours: r.working_hours || "",
+        facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
+      }),
+    }).catch(() => {});
   };
   const handleDeleteRestaurant = (id: string) => {
     if (confirm("هل تريد حذف المطعم؟")) {
@@ -1868,6 +1891,27 @@ function AdminDashboard() {
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs leading-relaxed text-slate-800 font-semibold">
                       <span className="font-bold text-slate-900 block mb-0.5">📜 نبذة الوجبات والخدمات:</span>
                       {r.description}
+                    </div>
+                  )}
+
+                  {/* Features & Services */}
+                  {r.features && (
+                    <div className="p-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-1">
+                      <div className="text-[11px] font-black text-teal-950 flex items-center gap-1">
+                        <span>✨</span>
+                        <span>الخدمات والخصائص المتوفرة:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {r.features.split(/[،,\n]+/).map((f, fIdx) => {
+                          const cleanF = f.trim();
+                          if (!cleanF) return null;
+                          return (
+                            <span key={fIdx} className="px-2 py-0.5 rounded-lg bg-white text-teal-800 border border-teal-200 text-[10px] font-bold shadow-2xs">
+                              {cleanF}
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -4593,6 +4637,25 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
   );
 }
 
+const PRESET_RESTAURANT_FEATURES = [
+  "📶 واي فاي مجاني",
+  "🚗 موقف سيارات مخصص",
+  "👨‍👩‍👧‍👦 قسم عائلات خاص ومريح",
+  "🌿 جلسات خارجية وشرفة",
+  "💳 دفع إلكتروني (بطاقة / سداد / إدفع لي)",
+  "🛵 خدمة توصيل سريعة",
+  "❄️ تكييف مركزي ممتاز",
+  "🕌 مصلى خاص",
+  "🎂 استضافة حفلات ومناسبات",
+  "♿ مجهز لذوي الاحتياجات الخاصة",
+  "🚭 منطقة خالية من التدخين",
+  "👶 مقاعد مخصصة للأطفال",
+  "📺 شاشات لمشاهدة المباريات",
+  "☕ قهوة مختصة وعصائر طازجة",
+  "🥐 بوفيه إفطار صباحي مفتوح",
+  "🍽️ خدمة حجز طاولات مسبق",
+];
+
 function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
   const [facilityId] = useState(restaurant?.id || `FAC-${Math.floor(100 + Math.random() * 900)}`);
   const [name, setName] = useState(restaurant?.name || "");
@@ -4601,6 +4664,7 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
   const [description, setDescription] = useState(restaurant?.description || "");
+  const [features, setFeatures] = useState(restaurant?.features || "");
   const [verificationStatus, setVerificationStatus] = useState(restaurant?.verification_status || "معتمد");
   const [contractDate, setContractDate] = useState(restaurant?.contract_date ? String(restaurant.contract_date).split("T")[0] : "2027-12-31");
   const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "09:00 صباحاً — 12:00 ليلاً");
@@ -4609,6 +4673,29 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_food.jpg");
   const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/restaurant-libya.jpg");
   const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/cafe-libya.jpg");
+
+  const toggleFeature = (feat: string) => {
+    const currentList = features
+      .split(/[،,\n]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    let updatedList: string[];
+    if (currentList.includes(feat)) {
+      updatedList = currentList.filter(f => f !== feat);
+    } else {
+      updatedList = [...currentList, feat];
+    }
+    setFeatures(updatedList.join("، "));
+  };
+
+  const isFeatureActive = (feat: string) => {
+    const currentList = features
+      .split(/[،,\n]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    return currentList.includes(feat);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -4621,6 +4708,7 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
       address: address.trim() || "العنوان الرئيسي",
       phone: phone.trim() || "0910000000",
       description: description.trim(),
+      features: features.trim(),
       verification_status: verificationStatus,
       contract_date: contractDate,
       working_hours: workingHours,
@@ -4708,6 +4796,66 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">نبذة ومميزات المطعم/المقهى والوجبات والمنيو</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="اكتب نبذة عن أصناف الوجبات والمشروبات والجلسات التراثية..." className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary" />
+        </div>
+
+        {/* حقل الخدمات والخصائص المتوفرة بالأزرار التفاعلية وتحتها نص ديناميكي */}
+        <div className="space-y-2 p-3.5 rounded-2xl bg-gradient-to-b from-slate-50 to-teal-50/20 border border-teal-100/90 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-foreground flex items-center gap-1.5">
+              <span>✨</span>
+              <span>الخدمات والخصائص المتوفرة:</span>
+              <span className="text-[10px] text-muted-foreground font-normal">(اضغط على أي زر لإضافته أو حذفه من النص أدناه)</span>
+            </label>
+            {features.trim().length > 0 && (
+              <button
+                type="button"
+                onClick={() => setFeatures("")}
+                className="text-[10px] text-red-600 hover:text-red-700 font-black hover:underline cursor-pointer bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md border border-red-200 transition"
+              >
+                مسح الكل ✕
+              </button>
+            )}
+          </div>
+
+          {/* Quick Clickable Buttons Grid */}
+          <div className="flex flex-wrap gap-1.5">
+            {PRESET_RESTAURANT_FEATURES.map((feat) => {
+              const active = isFeatureActive(feat);
+              return (
+                <button
+                  key={feat}
+                  type="button"
+                  onClick={() => toggleFeature(feat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                    active
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm ring-2 ring-emerald-400/40 scale-[1.02]"
+                      : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90 hover:border-slate-300"
+                  }`}
+                >
+                  <span>{feat}</span>
+                  {active ? (
+                    <span className="text-[11px] font-black bg-white/20 rounded-full w-4 h-4 grid place-items-center">✓</span>
+                  ) : (
+                    <span className="text-slate-400 text-xs font-black">+</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Textarea Underneath */}
+          <div className="pt-1">
+            <label className="text-[11px] font-bold text-slate-600 block mb-1">
+              📝 نص الخدمات والخصائص المحددة (ينضاف فيه ما تنقر عليه، ويمكنك التعديل أو كتابة بنود مخصصة):
+            </label>
+            <textarea
+              value={features}
+              onChange={(e) => setFeatures(e.target.value)}
+              rows={3}
+              placeholder="مثال: 📶 واي فاي مجاني، 🚗 موقف سيارات مخصص، 👨‍👩‍👧‍👦 قسم عائلات خاص ومريح..."
+              className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary leading-relaxed shadow-2xs"
+            />
+          </div>
         </div>
 
         {/* 5 Photos Section */}
