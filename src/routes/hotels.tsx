@@ -6,6 +6,7 @@ import { Icon } from "@/components/Icons";
 import { Footer } from "@/components/Footer";
 import { HotelDetailsModal, type HotelData } from "@/components/HotelDetailsModal";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
+import { apiGetHotels } from "@/lib/api";
 
 export const Route = createFileRoute("/hotels")({
   head: () => ({
@@ -723,67 +724,38 @@ function HotelsPage() {
   const [dbHotels, setDbHotels] = useState<HotelData[]>([]);
 
   useEffect(() => {
-    const mapType = (t?: string) => {
-      if (!t) return "hotel";
-      if (t.includes("منتجع")) return "resort";
-      if (t.includes("شقق")) return "apartment";
-      if (t.includes("نزل") || t.includes("تراث")) return "heritage";
-      if (t.includes("مخيم") || t.includes("صحراو")) return "camp";
-      return "hotel";
-    };
-
-    const processHotels = (list: any[]): HotelData[] => {
-      return list
-        .filter((item: any) => {
-          const v = item.verification_status || "معتمد";
-          const p = item.partnership_status || "نشط";
-          return v === "معتمد" && p === "نشط";
-        })
-        .map((item: any) => ({
-          id: item.hotel_id || item.id,
-          name: item.hotel_name || item.name,
-          city: item.city,
-          address: item.address_details || item.address,
-          mapsQuery: `${item.hotel_name || item.name}+${item.city}`,
-          phone: item.phone_number || item.phone,
-          stars: item.star_rating || item.stars || 4,
-          partnership_status: item.partnership_status || "نشط",
-          propertyType: mapType(item.property_type),
-          photos: [
-            item.hotel_photo_1,
-            item.hotel_photo_2,
-            item.hotel_photo_3,
-            item.hotel_photo_4,
-            item.hotel_photo_5,
-          ].filter(Boolean),
-          description: item.description || (item.amenities ? `الخدمات والمرافق المتوفرة: ${item.amenities}` : undefined),
-        }));
-    };
-
-    // Load instantly from localStorage first (excluding obsolete static IDs)
-    try {
-      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
-      if (Array.isArray(stored) && stored.length > 0) {
-        const nonStatic = stored.filter((item: any) => !/^HTL-00[1-9]$/.test(item.hotel_id || item.id));
-        if (nonStatic.length > 0) {
-          setDbHotels(processHotels(nonStatic));
-        }
-      }
-    } catch {}
-
     fetch("http://127.0.0.1:8000/api/hotels")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setDbHotels(processHotels(data));
+          const mapped: HotelData[] = data.map((item: any) => ({
+            id: item.hotel_id,
+            name: item.hotel_name,
+            city: item.city,
+            address: item.address_details,
+            mapsQuery: `${item.hotel_name}+${item.city}`,
+            phone: item.phone_number,
+            stars: item.star_rating,
+            partnership_status: item.partnership_status || "نشط",
+            propertyType: "hotel",
+            photos: [
+              item.hotel_photo_1 || "/assets/ai_hotel.jpg",
+              item.hotel_photo_2 || "/assets/dest-harbor-coast.jpg",
+              item.hotel_photo_3 || "/assets/cafe-libya.jpg",
+            ],
+          }));
+          setDbHotels(mapped);
         }
       })
       .catch(() => {});
   }, []);
 
   const hotels = useMemo(() => {
-    return dbHotels;
-  }, [dbHotels]);
+    const defaultList = getHotels(language);
+    if (dbHotels.length === 0) return defaultList;
+    const dbIds = new Set(dbHotels.map((h) => h.id));
+    return [...dbHotels, ...defaultList.filter((h) => !dbIds.has(h.id))];
+  }, [language, dbHotels]);
 
   const cities = useMemo(() => {
     const base = [

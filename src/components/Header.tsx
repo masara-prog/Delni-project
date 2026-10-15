@@ -57,7 +57,7 @@ export function Header({ active }: HeaderProps) {
   };
 
   const currentRole = session?.role && ROLE_DASHBOARDS[session.role] ? ROLE_DASHBOARDS[session.role] : null;
-  const userName = session?.user?.name || session?.user?.full_name || (language === 'ar' ? 'حسابي' : 'My Account');
+  const accountName = session?.user?.company_name || session?.user?.name || session?.user?.full_name || (language === 'ar' ? 'حسابي' : 'My Account');
 
   const navItems = [
     { key: "home", label: language === 'ar' ? 'الرئيسية' : 'Home', to: "/", icon: Home },
@@ -94,7 +94,7 @@ export function Header({ active }: HeaderProps) {
         </div>
 
         {/* Desktop Pill Navigation Bar with pure white vector icons */}
-        <nav className="hidden lg:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs font-bold whitespace-nowrap">
+        <nav className="hidden xl:flex items-center gap-1 overflow-x-auto no-scrollbar py-1 text-xs font-bold whitespace-nowrap">
           {navItems.map((item) => {
             const isActive = active === item.key;
             const Icon = item.icon;
@@ -102,55 +102,46 @@ export function Header({ active }: HeaderProps) {
               <Link
                 key={item.key}
                 to={item.to}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap transition-all duration-200 ${
                   isActive
                     ? "bg-white/25 text-white border border-white/50 shadow-sm font-black scale-105"
                     : "text-white/80 hover:text-white hover:bg-white/15 hover:border-white/30 border border-transparent"
                 }`}
               >
-                <Icon className="w-4 h-4 text-white shrink-0" />
+                <Icon className="w-3.5 h-3.5 text-white shrink-0" />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Right side controls */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <div className="hidden sm:block shrink-0">
-            <LanguageToggle className="p-2 text-white hover:bg-white/10" />
-          </div>
-          <div className="shrink-0 text-white">
-            <NotificationBell />
-          </div>
-
-          {/* Dynamic Auth State: Dashboard + Logout if logged in, Sign In if guest */}
-          {session && currentRole ? (
-            <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Auth State Control */}
+        <div className="flex items-center gap-2 shrink-0">
+          {session ? (
+            <div className="flex items-center gap-1.5 p-1 bg-black/35 hover:bg-black/45 backdrop-blur-xl rounded-full border border-white/20 shadow-md">
               <Link
-                to={currentRole.path}
-                className="h-10 px-3 sm:px-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1B5A78] to-[#13445C] hover:from-[#13445C] hover:to-[#0F3548] border border-white/20 text-white text-xs sm:text-sm font-black shadow-soft hover:scale-105 transition-all whitespace-nowrap"
-                title={language === 'ar' ? currentRole.labelAr : currentRole.labelEn}
+                to={currentRole ? currentRole.path : "/trips"}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:brightness-110 text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-sm hover:scale-105 transition-all border border-white/20 antialiased whitespace-nowrap"
+                title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
               >
-                <span className="text-sm sm:text-base">{currentRole.icon}</span>
-                <span className="max-w-[85px] sm:max-w-[120px] truncate">{userName}</span>
-                <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white/90 font-bold hidden md:inline-block">
-                  {language === 'ar' ? currentRole.labelAr : currentRole.labelEn}
-                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-[0_0_6px_rgba(110,231,183,0.9)]" />
+                <span className="leading-tight drop-shadow-sm max-w-[130px] truncate">{accountName}</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="h-10 w-10 inline-flex items-center justify-center rounded-xl bg-red-500/20 hover:bg-red-500/35 border border-red-400/30 text-red-200 hover:text-white transition-all shadow-soft"
-                title={language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-red-500 text-white/90 hover:text-white grid place-items-center transition-all border border-white/15 hover:border-red-400 cursor-pointer"
+                title={language === 'ar' ? 'تسجيل الخروج من المنصة' : 'Logout'}
                 aria-label="تسجيل الخروج"
               >
-                <LogOut className="w-4 h-4" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
               </button>
             </div>
           ) : (
             <Link
               to="/auth/login"
-              className="h-10 px-4 sm:px-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white text-xs sm:text-sm font-black shadow-soft hover:scale-105 transition-all whitespace-nowrap shrink-0"
+              className="h-9 px-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-soft hover:scale-105 transition-all whitespace-nowrap shrink-0"
             >
               {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
             </Link>
@@ -179,7 +170,7 @@ export function Header({ active }: HeaderProps) {
                 >
                   <span className="text-lg">{currentRole.icon}</span>
                   <div>
-                    <div className="text-white font-black">{userName}</div>
+                    <div className="text-white font-black">{accountName}</div>
                     <div className="text-[11px] text-teal-200">{language === 'ar' ? currentRole.labelAr : currentRole.labelEn}</div>
                   </div>
                 </Link>

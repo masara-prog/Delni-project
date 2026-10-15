@@ -3,7 +3,12 @@ import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import type { Driver, Vehicle } from "@/lib/dbSchema";
-import { getStoredSession } from "@/lib/api";
+import { 
+  getStoredSession, 
+  getDrivers, 
+  updateDriver, 
+  getVehicles 
+} from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/driver")({
   head: () => ({
@@ -54,68 +59,100 @@ function DriverDashboard() {
   // Driver details state according to DelniDB: drivers table
   const [driverInfo, setDriverInfo] = useState<Driver>(() => {
     const session = getStoredSession();
+    const allDrivers = getDrivers();
     if (session.user && (session.role === "driver" || session.user.driver_license_number)) {
       const u = session.user;
+      const matched = allDrivers.find(d => d.driver_license_number === u.driver_license_number || d.email === u.email);
+      const data = matched || u;
       return {
-        driver_license_number: u.driver_license_number || "DL-901",
-        full_name: u.full_name || u.name || "طارق عبد السلام الزاوي",
-        phone_number: u.phone_number || "0925556677",
-        national_id_or_passport: u.national_id_or_passport || "119900334455",
-        license_date_valid: u.license_date_valid || "2028-12-31",
-        contract_number: u.contract_number || "TC-501",
-        assigned_vehicle_plate: u.assigned_vehicle_plate || "TRIPOLI-4517",
-        email: u.email || "tariq@dalni.ly",
-        account_status: u.account_status || "نشط",
-        operational_status: u.operational_status || "متاح",
-        experience_years: u.experience_years || 8,
-        company_name: u.company_name || "شركة الصفوة لنقل الركاب والسياحة",
+        driver_license_number: data.driver_license_number || "",
+        full_name: data.full_name || data.name || "سائق مسجل",
+        phone_number: data.phone_number || "",
+        national_id_or_passport: data.national_id_or_passport || "",
+        license_date_valid: data.license_date_valid || "",
+        contract_number: data.contract_number || "",
+        assigned_vehicle_plate: data.assigned_vehicle_plate || null,
+        email: data.email || "",
+        account_status: data.account_status || "نشط",
+        operational_status: data.operational_status || "متاح",
+        company_name: data.company_name || "",
       };
     }
+    const first = allDrivers[0];
     return {
-      driver_license_number: "DL-901",
-      full_name: "طارق عبد السلام الزاوي",
-      phone_number: "0925556677",
-      national_id_or_passport: "119900334455",
-      license_date_valid: "2028-12-31",
-      contract_number: "TC-501",
-      assigned_vehicle_plate: "TRIPOLI-4517",
-      email: "tariq@dalni.ly",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 8,
-      company_name: "شركة الصفوة لنقل الركاب والسياحة",
+      driver_license_number: first?.driver_license_number || "",
+      full_name: first?.full_name || "سائق مسجل",
+      phone_number: first?.phone_number || "",
+      national_id_or_passport: first?.national_id_or_passport || "",
+      license_date_valid: first?.license_date_valid || "",
+      contract_number: first?.contract_number || "",
+      assigned_vehicle_plate: first?.assigned_vehicle_plate || null,
+      email: first?.email || "",
+      account_status: first?.account_status || "نشط",
+      operational_status: first?.operational_status || "متاح",
+      company_name: first?.company_name || "",
     };
+  });
+
+  // Assigned Vehicle details according to DelniDB: vehicles table
+  const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(() => {
+    const allVehicles = getVehicles();
+    const matched = allVehicles.find(v => v.plate_number === driverInfo.assigned_vehicle_plate);
+    if (matched) {
+      return {
+        plate_number: matched.plate_number,
+        vehicle_type: matched.vehicle_type,
+        seating_capacity: matched.seating_capacity,
+        vehicle_status: (matched.vehicle_status as any) || "جاهزة",
+        insurance_details: matched.insurance_details,
+        contract_number: matched.contract_number,
+        daily_rate: matched.daily_rate,
+        category: matched.category,
+        vehicle_image: matched.vehicle_image || "/assets/ai_city.jpg",
+        insurance_image: matched.insurance_image || "/assets/ai_city.jpg",
+      };
+    }
+    return null;
   });
 
   useEffect(() => {
     const session = getStoredSession();
     if (session.user && (session.role === "driver" || session.user.driver_license_number)) {
       const u = session.user;
+      const allDrivers = getDrivers();
+      const matched = allDrivers.find(d => d.driver_license_number === u.driver_license_number || d.email === u.email);
+      const data = matched || u;
       setDriverInfo(prev => ({
         ...prev,
-        driver_license_number: u.driver_license_number || prev.driver_license_number,
-        full_name: u.full_name || u.name || prev.full_name,
-        phone_number: u.phone_number || prev.phone_number,
-        email: u.email || prev.email,
-        assigned_vehicle_plate: u.assigned_vehicle_plate || prev.assigned_vehicle_plate,
-        company_name: u.company_name || prev.company_name,
+        driver_license_number: data.driver_license_number || prev.driver_license_number,
+        full_name: data.full_name || data.name || prev.full_name,
+        phone_number: data.phone_number || prev.phone_number,
+        email: data.email || prev.email,
+        assigned_vehicle_plate: data.assigned_vehicle_plate || prev.assigned_vehicle_plate,
+        company_name: data.company_name || prev.company_name,
+        contract_number: data.contract_number || prev.contract_number,
       }));
     }
-  }, []);
+  }, [active]);
 
-  // Assigned Vehicle details according to DelniDB: vehicles table
-  const [assignedVehicle, setAssignedVehicle] = useState<Vehicle>({
-    plate_number: "طرابلس 4517",
-    vehicle_type: "هيونداي H1 VIP 2024",
-    seating_capacity: 12,
-    vehicle_status: "جاهزة",
-    insurance_details: "تأمين ركاب ومسافرين رقم INS-44120 ساري حتى يناير 2028",
-    contract_number: "CN-2026-01",
-    daily_rate: 350,
-    category: "VIP فان",
-    vehicle_image: "/assets/ai_city.jpg",
-    insurance_image: "/assets/ai_city.jpg",
-  });
+  useEffect(() => {
+    const allVehicles = getVehicles();
+    const matched = allVehicles.find(v => v.plate_number === driverInfo.assigned_vehicle_plate);
+    if (matched) {
+      setAssignedVehicle({
+        plate_number: matched.plate_number,
+        vehicle_type: matched.vehicle_type,
+        seating_capacity: matched.seating_capacity,
+        vehicle_status: (matched.vehicle_status as any) || "جاهزة",
+        insurance_details: matched.insurance_details,
+        contract_number: matched.contract_number,
+        daily_rate: matched.daily_rate,
+        category: matched.category,
+        vehicle_image: matched.vehicle_image || "/assets/ai_city.jpg",
+        insurance_image: matched.insurance_image || "/assets/ai_city.jpg",
+      });
+    }
+  }, [driverInfo.assigned_vehicle_plate, active]);
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
@@ -126,29 +163,28 @@ function DriverDashboard() {
   ];
 
   // Notifications
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: "N-1", title: "تم تعيينك لرحلة جديدة", message: "قامت شركة الصحراء بتعيينك لسياقة حافلة طرابلس ← لبدة الكبرى اليوم الساعة 9:00 صباحاً.", trip_route: "طرابلس ← لبدة الكبرى", assigned_at: "قبل 20 دقيقة", is_read: false },
-    { id: "N-2", title: "تحديث جدول الأسبوع", message: "تمت إضافة مهمة قيادة لرحلة أوباري الصحراوية يوم 17 أغسطس.", trip_route: "طرابلس ← أوباري", assigned_at: "أمس", is_read: false }
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // Trips & Live Status
   const [activeTrip, setActiveTrip] = useState<AssignedDriverTrip>({
-    id: "TRP-101",
-    route: "طرابلس ← الخمس (لبدة الكبرى)",
-    company_name: "شركة الصحراء للنقل",
-    contract_number: "CN-2026-01",
-    plate_number: "طرابلس 4517",
+    id: `TRP-${driverInfo.driver_license_number || '101'}`,
+    route: driverInfo.assigned_vehicle_plate ? `جولة سياحية — حافلة ${driverInfo.assigned_vehicle_plate}` : "لا توجد رحلة مسندة حالياً",
+    company_name: driverInfo.company_name || "شركة النقل السياحي",
+    contract_number: driverInfo.contract_number || "",
+    plate_number: driverInfo.assigned_vehicle_plate || "غير محدد",
     date: "اليوم",
-    pickup_time: "9:00 ص",
-    pax_count: 12,
-    status: "قيد التنفيذ",
-    current_location: "طرابلس - طريق الشط (مقر الانطلاق)",
+    pickup_time: "09:00 ص",
+    pax_count: 0,
+    status: driverInfo.assigned_vehicle_plate ? "قيد التنفيذ" : "مجدولة",
+    current_location: "مقر الشركة",
     status_stage: "في الانتظار"
   });
 
   const handleToggleOperationalStatus = () => {
-    const nextStatus = driverInfo.operational_status === "متاح" ? "إجازة" : "متاح";
-    setDriverInfo({ ...driverInfo, operational_status: nextStatus });
+    const nextStatus: "متاح" | "إجازة" = driverInfo.operational_status === "متاح" ? "إجازة" : "متاح";
+    const updated: Driver = { ...driverInfo, operational_status: nextStatus };
+    setDriverInfo(updated);
+    updateDriver(driverInfo.driver_license_number, updated);
   };
 
   const handleUpdateStatusStage = (newStage: AssignedDriverTrip["status_stage"], newLocation: string) => {
@@ -160,9 +196,30 @@ function DriverDashboard() {
     });
   };
 
+  const [driverNewPassword, setDriverNewPassword] = useState("");
+  const [driverConfirmPassword, setDriverConfirmPassword] = useState("");
+
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    alert("تم حفظ وتحديث بيانات السائق والرخصة بنجاح في قاعدة البيانات (DelniDB: drivers) ✓");
+    if (driverNewPassword) {
+      if (driverNewPassword.length < 4) {
+        alert("كلمة المرور يجب أن تتكون من 4 خانات على الأقل");
+        return;
+      }
+      if (driverNewPassword !== driverConfirmPassword) {
+        alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
+        return;
+      }
+      updateDriver(driverInfo.driver_license_number, {
+        ...driverInfo,
+        password: driverNewPassword,
+      });
+      setDriverNewPassword("");
+      setDriverConfirmPassword("");
+      alert("تم تحديث كلمة المرور الخاصة بحساب السائق بنجاح ✓");
+      return;
+    }
+    alert("لم يتم إدخال كلمة مرور جديدة. باقي بيانات الحساب معتمدة ومحمية.");
   };
 
   return (
@@ -180,9 +237,6 @@ function DriverDashboard() {
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-bold">
                     حالة الحساب: {driverInfo.account_status}
-                  </span>
-                  <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-bold">
-                    الخبرة: {driverInfo.experience_years} سنوات
                   </span>
                 </div>
               </div>
@@ -316,99 +370,218 @@ function DriverDashboard() {
         </SectionCard>
       )}
 
-      {/* Vehicle Info according to DelniDB: vehicles table */}
+      {/* Vehicle Info */}
       {active === "vehicle" && (
-        <SectionCard title="تفاصيل المركبة واللوحة المسندة (DelniDB: vehicles)">
-          <div className="max-w-2xl space-y-4 text-right">
-            <div className="p-4 rounded-2xl border border-border bg-muted/20 flex justify-between items-center">
-              <div>
-                <div className="text-xs text-muted-foreground">شركة النقل التابع لها:</div>
-                <div className="font-black text-foreground text-base">{driverInfo.company_name}</div>
-                <div className="text-xs text-muted-foreground">رقم عقد الشركة: {driverInfo.contract_number}</div>
-              </div>
-              <Badge tone="sea">{assignedVehicle.vehicle_status}</Badge>
-            </div>
+        <SectionCard title="تفاصيل المركبة واللوحة المسندة">
+          {assignedVehicle ? (
+            <div className="grid lg:grid-cols-12 gap-6 text-right items-start">
+              {/* Left Column: Assigned Vehicle Image & Dedicated Company Badge */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="rounded-3xl overflow-hidden border-2 border-primary/20 bg-white shadow-soft relative group">
+                  <img
+                    src={assignedVehicle.vehicle_image || "/assets/office-bus.jpg"}
+                    alt={assignedVehicle.vehicle_type}
+                    className="w-full h-56 object-cover transition duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute top-3 right-3">
+                    <Badge tone="sea">🚌 الحافلة المخصصة للسائق</Badge>
+                  </div>
+                  <div className="p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent absolute inset-x-0 bottom-0 text-white">
+                    <div className="text-xs text-white/80 font-bold">لوحة المركبة المخصصة:</div>
+                    <div className="text-xl font-mono font-black">{assignedVehicle.plate_number}</div>
+                  </div>
+                </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
-                <div className="text-xs text-muted-foreground">رقم اللوحة المعدنية المسندة:</div>
-                <div className="font-black text-xl text-primary font-mono">{driverInfo.assigned_vehicle_plate}</div>
+                {/* Company Affiliation Card on the Left */}
+                <div className="p-4 rounded-2xl border-2 border-[#1B5A78]/25 bg-gradient-to-br from-[#1B5A78]/5 via-[#1B5A78]/10 to-transparent space-y-2">
+                  <div className="text-[11px] font-black text-[#1B5A78] flex items-center gap-1.5">
+                    <span>🏢</span>
+                    <span>شركة النقل السياحي المعتمدة التابع لها:</span>
+                  </div>
+                  <div className="font-black text-foreground text-lg flex items-center justify-between">
+                    <span>{driverInfo.company_name || "شركة النقل السياحي"}</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">✓ معتمد</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground font-semibold flex items-center justify-between pt-1 border-t border-[#1B5A78]/15">
+                    <span>رقم العقد الرسمي:</span>
+                    <span className="font-mono font-bold text-foreground">{driverInfo.contract_number}</span>
+                  </div>
+                </div>
               </div>
-              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
-                <div className="text-xs text-muted-foreground">نوع وطراز المركبة:</div>
-                <div className="font-black text-base text-foreground">{assignedVehicle.vehicle_type}</div>
-              </div>
-              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
-                <div className="text-xs text-muted-foreground">سعة المقاعد:</div>
-                <div className="font-black text-base text-foreground">{assignedVehicle.seating_capacity} راكب</div>
-              </div>
-              <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
-                <div className="text-xs text-muted-foreground">الفئة والسعر اليومي:</div>
-                <div className="font-black text-base text-foreground">{assignedVehicle.category} · {assignedVehicle.daily_rate} د.ل/يوم</div>
-              </div>
-            </div>
 
-            <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
-              <div className="text-xs text-muted-foreground font-bold">بيانات وثيقة التأمين:</div>
-              <div className="text-xs text-slate-700 font-semibold">{assignedVehicle.insurance_details}</div>
+              {/* Right Column: Vehicle Technical Specs */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="p-4 rounded-2xl border border-border bg-muted/20 flex justify-between items-center">
+                  <div>
+                    <div className="text-xs text-muted-foreground">نوع وطراز المركبة:</div>
+                    <div className="font-black text-foreground text-lg">{assignedVehicle.vehicle_type}</div>
+                  </div>
+                  <Badge tone={assignedVehicle.vehicle_status === "جاهزة" ? "green" : "sun"}>{assignedVehicle.vehicle_status}</Badge>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl border border-border bg-white space-y-1">
+                    <div className="text-xs text-muted-foreground font-bold">رقم اللوحة المعدنية:</div>
+                    <div className="font-black text-lg text-primary font-mono">{assignedVehicle.plate_number}</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl border border-border bg-white space-y-1">
+                    <div className="text-xs text-muted-foreground font-bold">سعة المقاعد:</div>
+                    <div className="font-black text-base text-foreground">{assignedVehicle.seating_capacity} راكب</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl border border-border bg-white space-y-1">
+                    <div className="text-xs text-muted-foreground font-bold">فئة المركبة:</div>
+                    <div className="font-black text-base text-foreground">{assignedVehicle.category}</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl border border-border bg-white space-y-1">
+                    <div className="text-xs text-muted-foreground font-bold">سعر التأجير اليومي:</div>
+                    <div className="font-black text-base text-foreground">{assignedVehicle.daily_rate} د.ل/يوم</div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-border bg-white space-y-2">
+                  <div className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
+                    <span>🛡️</span>
+                    <span>وثيقة التأمين الشامل للمركبة:</span>
+                  </div>
+                  <div className="text-xs text-slate-700 font-semibold">{assignedVehicle.insurance_details}</div>
+                  {assignedVehicle.insurance_image && (
+                    <div className="mt-2 pt-2 border-t border-border flex items-center gap-2">
+                      <span className="text-xs text-emerald-700 font-bold">✓ مرفق صورة وثيقة التأمين سارية المفعول</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <span className="text-3xl">🚘</span>
+              <div className="font-bold text-sm text-foreground">لا توجد مركبة مسندة لهذا السائق حالياً</div>
+              <p className="text-xs text-muted-foreground">تقوم شركة النقل بتعيين المركبة وإسناد رقم اللوحة من خلال لوحة تحكم الشركة.</p>
+            </div>
+          )}
         </SectionCard>
       )}
 
-      {/* Driver Profile according to DelniDB: drivers table */}
+      {/* Driver Profile */}
       {active === "profile" && (
-        <SectionCard title="تعديل الملف الشخصي وبيانات رخصة القيادة (DelniDB: drivers)">
+        <SectionCard title="الملف الشخصي للسائق وكلمة المرور">
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
-            <Field 
-              label="الاسم الكامل للسائق" 
-              value={driverInfo.full_name} 
-              onChange={(v) => setDriverInfo({ ...driverInfo, full_name: v })} 
-              pattern={/^[\u0600-\u06FF\sA-Za-z]+$/} 
-              errorMessage="الاسم يجب أن يحتوي على حروف فقط (عربي/إنجليزي)" 
-              maxLength={50} 
-            />
-            <Field 
-              label="رقم الهاتف" 
-              value={driverInfo.phone_number} 
-              onChange={(v) => setDriverInfo({ ...driverInfo, phone_number: v })} 
-              pattern={/^09\d{8}$/} 
-              errorMessage="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)" 
-              maxLength={10} 
-            />
-            <Field 
-              label="رقم رخصة القيادة" 
-              value={driverInfo.driver_license_number} 
-              onChange={(v) => setDriverInfo({ ...driverInfo, driver_license_number: v })} 
-              pattern={/^[A-Za-z0-9-]+$/} 
-              errorMessage="رقم الرخصة غير صالح" 
-              maxLength={20} 
-            />
-            <Field 
-              label="تاريخ صلاحية انتهاء الرخصة" 
-              type="date" 
-              value={driverInfo.license_date_valid} 
-              onChange={(v) => setDriverInfo({ ...driverInfo, license_date_valid: v })} 
-            />
-            <Field 
-              label="الرقم الوطني أو رقم جواز السفر" 
-              value={driverInfo.national_id_or_passport} 
-              onChange={(v) => setDriverInfo({ ...driverInfo, national_id_or_passport: v })} 
-              pattern={/^[A-Za-z0-9]{6,15}$/} 
-              errorMessage="يجب أن يتكون من 6 إلى 15 حرفاً أو رقماً" 
-              maxLength={15} 
-            />
-            <Field 
-              label="البريد الإلكتروني لحساب السائق" 
-              type="email" 
-              value={driverInfo.email} 
-              onChange={(v) => setDriverInfo({ ...driverInfo, email: v })} 
-              pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/} 
-              errorMessage="صيغة البريد الإلكتروني غير صحيحة" 
-            />
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5">
+              <div className="font-black flex items-center gap-1.5 text-slate-900">
+                <span>🔒</span>
+                <span>بيانات السائق ورخصة القيادة (معتمدة ومحمية من التعديل):</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                الاسم، رقم الهاتف، رقم الرخصة، تاريخ الانتهاء، الرقم الوطني والبريد الإلكتروني هي بيانات رسمية معتمدة عبر شركة النقل، ولا يمكن تعديلها من حساب السائق. يمكنك هنا فقط تحديث كلمة المرور (الرمز) لحسابك.
+              </p>
+            </div>
 
-            <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow">
-              حفظ التغييرات ✓
+            {/* Read-only official driver fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">الاسم الكامل للسائق 🔒</label>
+                <input
+                  type="text"
+                  value={driverInfo.full_name}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">رقم الهاتف 🔒</label>
+                <input
+                  type="text"
+                  value={driverInfo.phone_number}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">رقم رخصة القيادة 🔒</label>
+                <input
+                  type="text"
+                  value={driverInfo.driver_license_number}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">تاريخ صلاحية انتهاء الرخصة 🔒</label>
+                <input
+                  type="text"
+                  value={driverInfo.license_date_valid ? String(driverInfo.license_date_valid).split("T")[0] : ""}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">الرقم الوطني للسائق (12 رقماً) 🔒</label>
+                <input
+                  type="text"
+                  value={driverInfo.national_id_or_passport || ""}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">البريد الإلكتروني للحساب 🔒</label>
+                <input
+                  type="email"
+                  value={driverInfo.email || ""}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            {/* Editable Password Section */}
+            <div className="p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-3 pt-4">
+              <div className="text-xs font-black text-primary flex items-center gap-1.5">
+                <span>🔑</span>
+                <span>تحديث رمز الدخول (كلمة المرور):</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-foreground mb-1 block">كلمة المرور الجديدة</label>
+                  <input
+                    type="password"
+                    value={driverNewPassword}
+                    onChange={(e) => setDriverNewPassword(e.target.value)}
+                    placeholder="اكتب كلمة مرور جديدة..."
+                    className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-foreground mb-1 block">تأكيد كلمة المرور</label>
+                  <input
+                    type="password"
+                    value={driverConfirmPassword}
+                    onChange={(e) => setDriverConfirmPassword(e.target.value)}
+                    placeholder="أعد كتابة كلمة المرور..."
+                    className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                * اترك الحقل فارغاً إذا كنت لا ترغب في تغيير كلمة المرور الحالية.
+              </p>
+            </div>
+
+            <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow cursor-pointer hover:opacity-95 transition">
+              حفظ وتحديث كلمة المرور ✓
             </button>
           </form>
         </SectionCard>

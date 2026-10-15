@@ -7,6 +7,8 @@
 @theme inline {
   --font-sans: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-tajawal: "Tajawal", "Cairo", system-ui, sans-serif;
+  --font-alexandria: "Alexandria", "Cairo", system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

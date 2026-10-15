@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
+import { getTransportCompanies, getVehicles as getApiVehicles, getDrivers } from "@/lib/api";
 
 export const Route = createFileRoute("/transport")({
   head: () => ({
@@ -21,225 +22,47 @@ export const Route = createFileRoute("/transport")({
 
 type Vehicle = {
   id: string;
+  plateNumber: string;
+  vehicleType: string;
   name: string;
   category: "bus_large" | "minibus_vip" | "suv_4x4";
   categoryLabelAr: string;
   categoryLabelEn: string;
-  company: string;
-  companyPhone: string;
-  city: string;
-  driverName: string;
-  driverPhone: string;
-  driverExperience: string;
+  vehicleStatus: string;
   seats: number;
-  rating: number;
-  ratingWord: string;
-  reviewsCount: number;
   pricePerDay: number;
-  originalPricePerDay: number;
+  insuranceDetails: string;
+  insuranceDocument?: string | null;
   photos: string[];
-  desc: string;
-  features: string[];
+
+  // Transport Company details (Real DB)
+  company: string;
+  companyContractNumber: string;
+  companyPhone: string;
+  companyEmail?: string;
+  city: string;
+  companyAddress: string;
+  googleMapsUrl: string;
+  contractStartDate: string;
+  contractEndDate: string;
+  companyStatus: string;
+
+  // Assigned Driver details (Real DB)
+  hasDriver: boolean;
+  driverName: string;
+  driverLicense: string;
+  driverPhone: string;
+  driverNationalId: string;
+  driverLicenseExpiry: string;
+  driverOperationalStatus: string;
+  driverEmail?: string;
 };
 
-function getVehicles(lang: "ar" | "en"): Vehicle[] {
-  const isAr = lang === "ar";
-  return [
-    {
-      id: "VEH-001",
-      name: isAr ? "مرسيدس سبرنتر VIP كبار الشخصيات 2024" : "Mercedes-Benz Sprinter VIP 2024",
-      category: "minibus_vip",
-      categoryLabelAr: "ميني باص VIP",
-      categoryLabelEn: "VIP Minibus",
-      company: isAr ? "شركة السهم الذهبي للنقل السياحي" : "Golden Arrow Transport Co.",
-      companyPhone: "+218 91 333 4455",
-      city: isAr ? "طرابلس" : "Tripoli",
-      driverName: isAr ? "الكابتن عادل المقرحي" : "Capt. Adel Al-Meqrahi",
-      driverPhone: "+218 91 333 4455",
-      driverExperience: isAr ? "خبرة 12 سنة في نقل الوفود والشخصيات المهمة" : "12 years VIP delegation driver",
-      seats: 12,
-      rating: 9.6,
-      ratingWord: isAr ? "استثنائي" : "Superb",
-      reviewsCount: 840,
-      pricePerDay: 580,
-      originalPricePerDay: 720,
-      photos: [
-        "/assets/office-bus.jpg",
-        "/assets/69262c03-9b5e-485f-88ef-723c7bd432bc.jpg",
-        "/assets/transport-hero.jpg",
-      ],
-      desc: isAr
-        ? "ميني باص مخصص لكبار الشخصيات ورجال الأعمال والعائلات الراقية، مقاعد جلدية فاخرة متحركة، شاشات ترفيه فردية، طاولات اجتماعات، وثلاجة مشروبات."
-        : "Luxury VIP minibus with leather reclining captain seats, entertainment screens, and refrigerator.",
-      features: [
-        isAr ? "مقاعد جلدية متحركة فاخرة" : "Luxury Reclining Leather Seats",
-        isAr ? "تكييف حراري فائق وموزع" : "Climate Dual AC",
-        isAr ? "واي فاي وإنترنت فضائي" : "Satellite WiFi",
-        isAr ? "شاشات وشواحن لكل مقعد" : "Screens & USB Ports",
-      ],
-    },
-    {
-      id: "VEH-002",
-      name: isAr ? "حافلة يوتونغ السياحية الملكية 50 مقعد" : "Yutong Royal Tour Coach 50 Seats",
-      category: "bus_large",
-      categoryLabelAr: "باص سياحي كبير",
-      categoryLabelEn: "Large Tour Coach",
-      company: isAr ? "شركة الأفق الدولية للنقل والرحلات" : "Al-Ofoq International Transport",
-      companyPhone: "+218 92 111 8899",
-      city: isAr ? "بنغازي" : "Benghazi",
-      driverName: isAr ? "الكابتن عمران الفيتوري" : "Capt. Omran Al-Fitouri",
-      driverPhone: "+218 92 111 8899",
-      driverExperience: isAr ? "خبرة 16 سنة في الرحلات الكبرى بين المدن" : "16 years intercity coach experience",
-      seats: 50,
-      rating: 9.3,
-      ratingWord: isAr ? "استثنائي" : "Superb",
-      reviewsCount: 1290,
-      pricePerDay: 1150,
-      originalPricePerDay: 1450,
-      photos: [
-        "/assets/6692d389-47a4-48fc-a344-016619726724.jpg",
-        "/assets/transport-hero.jpg",
-        "/assets/office-bus.jpg",
-      ],
-      desc: isAr
-        ? "حافلة سياحية ضخمة ومجهزة بأحدث وسائل الراحة للمجموعات السياحية والمؤتمرات، كراسي مريحة، حمام داخلي، ميكروفون سياحي، ومساحة شحن أمتعة عملاقة."
-        : "Full-sized 50-passenger long distance tourist coach with onboard restroom and guide mic.",
-      features: [
-        isAr ? "حمام داخلي مجهز" : "Onboard Restroom",
-        isAr ? "نظام صوتي وسماعات للمرشد" : "Guide Microphone & Sound System",
-        isAr ? "مستودعات أمتعة ضخمة" : "Huge Luggage Compartments",
-        isAr ? "كاميرات مراقبة وأمان" : "Safety Security Cameras",
-      ],
-    },
-    {
-      id: "VEH-003",
-      name: isAr ? "تويوتا كوستر سياحية VIP 24 مقعد" : "Toyota Coaster VIP 24 Seats",
-      category: "bus_large",
-      categoryLabelAr: "باص سياحي متوسط",
-      categoryLabelEn: "Medium Tour Bus",
-      company: isAr ? "شركة السهم الذهبي للنقل السياحي" : "Golden Arrow Transport Co.",
-      companyPhone: "+218 91 555 1122",
-      city: isAr ? "طرابلس" : "Tripoli",
-      driverName: isAr ? "الكابتن مصطفى الشريف" : "Capt. Mustafa Al-Sharif",
-      driverPhone: "+218 91 555 1122",
-      driverExperience: isAr ? "خبرة 10 سنوات في مسارات لبدة وصبراتة" : "10 years tourist tours experience",
-      seats: 24,
-      rating: 9.1,
-      ratingWord: isAr ? "استثنائي" : "Superb",
-      reviewsCount: 710,
-      pricePerDay: 490,
-      originalPricePerDay: 620,
-      photos: [
-        "/assets/69262c03-9b5e-485f-88ef-723c7bd432bc.jpg",
-        "/assets/office-bus.jpg",
-        "/assets/transport-hero.jpg",
-      ],
-      desc: isAr
-        ? "حافلة كوستر حديثة ومريحة جداً مثالية للجولات اليومية والأفواج المتوسطة، تكييف قوي ومقاعد مريحة وعوازل صوتية."
-        : "Modern Toyota Coaster bus ideal for medium tour groups and day excursions.",
-      features: [
-        isAr ? "تكييف هواء مركزي قوي" : "Strong Central AC",
-        isAr ? "شاشة ترفيه وإرشاد" : "Tour Display Screen",
-        isAr ? "ثلاجة مياه ومشروبات" : "Water Cooler",
-      ],
-    },
-    {
-      id: "VEH-004",
-      name: isAr ? "هيونداي H1 رويال VIP 9 مقاعد" : "Hyundai H1 Royal VIP 9 Seats",
-      category: "minibus_vip",
-      categoryLabelAr: "ميني باص VIP",
-      categoryLabelEn: "VIP Minibus",
-      company: isAr ? "شركة برقة للنقل الفاخر" : "Barqa Luxury Transport",
-      companyPhone: "+218 92 666 3311",
-      city: isAr ? "بنغازي" : "Benghazi",
-      driverName: isAr ? "الكابتن فتحي الدرسي" : "Capt. Fathi Al-Dersi",
-      driverPhone: "+218 92 666 3311",
-      driverExperience: isAr ? "خبرة 9 سنوات في رحلات الجبل الأخضر وشحات" : "9 years Green Mountain specialist",
-      seats: 9,
-      rating: 9.0,
-      ratingWord: isAr ? "استثنائي" : "Superb",
-      reviewsCount: 560,
-      pricePerDay: 350,
-      originalPricePerDay: 440,
-      photos: [
-        "/assets/office-bus.jpg",
-        "/assets/69262c03-9b5e-485f-88ef-723c7bd432bc.jpg",
-        "/assets/transport-hero.jpg",
-      ],
-      desc: isAr
-        ? "ميني باص عائلي فخم ومريح بمقاعد فردية واسعة، مناسب جداً للرحلات العائلية والجولات السياحية الخاصة بين المدن والمواقع الأثرية."
-        : "Spacious comfortable VIP family van with captain seats.",
-      features: [
-        isAr ? "مقاعد كابتن مريحة" : "Captain Seats",
-        isAr ? "تكييف مزدوج أمامي وخلفي" : "Dual Front/Rear AC",
-        isAr ? "زجاج مظلل عازل للحرارة" : "Tinted Solar Glass",
-      ],
-    },
-    {
-      id: "VEH-005",
-      name: isAr ? "تويوتا لاندكروزر 4x4 صحراوي V8" : "Toyota Land Cruiser 4x4 Sahara V8",
-      category: "suv_4x4",
-      categoryLabelAr: "دفع رباعي صحراوي",
-      categoryLabelEn: "4x4 Desert SUV",
-      company: isAr ? "شركة الرمال الذهبية لخدمات السفاري" : "Golden Sands Safari Co.",
-      companyPhone: "+218 91 888 2211",
-      city: isAr ? "أوباري" : "Ubari",
-      driverName: isAr ? "الكابتن إبراهيم الطارقي" : "Capt. Ibrahim Tuareg",
-      driverPhone: "+218 91 888 2211",
-      driverExperience: isAr ? "خبرة 15 سنة في مسارات رملة أوباري وجبال أكاكوس" : "15 years Erg Ubari desert master",
-      seats: 6,
-      rating: 9.7,
-      ratingWord: isAr ? "استثنائي" : "Superb",
-      reviewsCount: 1540,
-      pricePerDay: 620,
-      originalPricePerDay: 780,
-      photos: [
-        "/assets/private-trip.jpg",
-        "/assets/transport-hero.jpg",
-        "/assets/dest-sahara-dunes.jpg",
-      ],
-      desc: isAr
-        ? "سيارة دفع رباعي مجهزة بكامل معدات عبور الكثبان الرملية العالية في أوباري وأكاكوس وغدامس، جهاز ملاحة GPS بالأقمار الصناعية ومعدات تخييم."
-        : "Heavy duty 4x4 safari cruiser fully fitted for Sahara sand dunes and Acacus expedition.",
-      features: [
-        isAr ? "دفع رباعي كامل 4x4 Diff-Lock" : "Full 4x4 Diff-Lock",
-        isAr ? "جهاز اتصال وملاحة بالصحراء" : "Satellite GPS Navigation",
-        isAr ? "معدات إنقاذ وضغط إطارات" : "Desert Recovery Kit",
-      ],
-    },
-    {
-      id: "VEH-006",
-      name: isAr ? "تويوتا لاندكروزر برادو VIP دفع رباعي وسياحي" : "Toyota Prado Luxury SUV VIP",
-      category: "suv_4x4",
-      categoryLabelAr: "دفع رباعي وصالون فاخر",
-      categoryLabelEn: "Luxury SUV VIP",
-      company: isAr ? "شركة السهم الذهبي للنقل السياحي" : "Golden Arrow Transport Co.",
-      companyPhone: "+218 91 333 4455",
-      city: isAr ? "طرابلس" : "Tripoli",
-      driverName: isAr ? "الكابتن طارق الورفلي" : "Capt. Tariq Al-Warfali",
-      driverPhone: "+218 91 333 4455",
-      driverExperience: isAr ? "خبرة 11 سنة في الجولات الساحلية الخاصة والدبلوماسية" : "11 years VIP tourist driver",
-      seats: 7,
-      rating: 9.5,
-      ratingWord: isAr ? "استثنائي" : "Superb",
-      reviewsCount: 920,
-      pricePerDay: 480,
-      originalPricePerDay: 600,
-      photos: [
-        "/assets/transport-hero.jpg",
-        "/assets/office-bus.jpg",
-        "/assets/dest-harbor-coast.jpg",
-      ],
-      desc: isAr
-        ? "سيارة دفع رباعي وصالون راقية تجمع بين الفخامة والراحة على الطرق السريعة والقدرة على عبور مختلف التضاريس السياحية."
-        : "Luxury SUV ideal for corporate delegations, family coastal tours and highway travel.",
-      features: [
-        isAr ? "مقاعد جلدية مريحة 7 ركاب" : "7-Passenger Leather Seating",
-        isAr ? "نظام ملاحة وتكييف ثلاثي" : "Tri-Zone Climate Control",
-        isAr ? "ثلاجة مشروبات وواي فاي" : "Drinks Cooler & WiFi",
-      ],
-    },
-  ];
+function formatDate(d?: string | null): string {
+  if (!d) return "";
+  const s = String(d).trim();
+  if (s.includes("T")) return s.split("T")[0];
+  return s;
 }
 
 function TransportPage() {
@@ -252,18 +75,153 @@ function TransportPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
 
-  const vehicles = useMemo(() => getVehicles(language), [language]);
+  const [rawCompanies, setRawCompanies] = useState<any[]>(() => getTransportCompanies());
+  const [rawVehicles, setRawVehicles] = useState<any[]>(() => getApiVehicles());
+  const [rawDrivers, setRawDrivers] = useState<any[]>(() => getDrivers());
 
-  const companies = useMemo(
-    () => [
+  // Real-time synchronization with Backend SQL Server if online
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchLiveData() {
+      try {
+        const compRes = await fetch("http://127.0.0.1:5001/api/db/companies", { signal: AbortSignal.timeout(3000) });
+        if (compRes.ok) {
+          const compData = await compRes.json();
+          if (compData.success && Array.isArray(compData.data) && isMounted) {
+            setRawCompanies(compData.data);
+          }
+        }
+      } catch {}
+
+      try {
+        const vehRes = await fetch("http://127.0.0.1:5001/api/db/vehicles", { signal: AbortSignal.timeout(3000) });
+        if (vehRes.ok) {
+          const vehData = await vehRes.json();
+          if (vehData.success && Array.isArray(vehData.data) && isMounted) {
+            setRawVehicles(vehData.data);
+          }
+        }
+      } catch {}
+
+      try {
+        const drvRes = await fetch("http://127.0.0.1:5001/api/db/drivers", { signal: AbortSignal.timeout(3000) });
+        if (drvRes.ok) {
+          const drvData = await drvRes.json();
+          if (drvData.success && Array.isArray(drvData.data) && isMounted) {
+            setRawDrivers(drvData.data);
+          }
+        }
+      } catch {}
+    }
+    fetchLiveData();
+    return () => { isMounted = false; };
+  }, []);
+
+  // ONLY verified companies ("موثق") are allowed to be shown!
+  // Pending ("بانتظار") or rejected ("مرفوض") are strictly excluded
+  const verifiedCompanies = useMemo(() => {
+    return rawCompanies.filter((c) => {
+      const st = String(c.verification_status || c.status || "").trim();
+      return st === "موثق" || st === "معتمد";
+    });
+  }, [rawCompanies]);
+
+  const verifiedContractNumbers = useMemo(() => {
+    return new Set(verifiedCompanies.map((c) => String(c.contract_number || "").trim()));
+  }, [verifiedCompanies]);
+
+  const verifiedCompanyNames = useMemo(() => {
+    return new Set(verifiedCompanies.map((c) => String(c.company_name || c.name || "").trim().toLowerCase()));
+  }, [verifiedCompanies]);
+
+  // Only vehicles belonging to verified companies are displayed
+  const vehicles = useMemo(() => {
+    const verifiedRawVehicles = rawVehicles.filter((v) => {
+      const contractMatch = v.contract_number && verifiedContractNumbers.has(String(v.contract_number).trim());
+      const nameMatch = v.company_name && verifiedCompanyNames.has(String(v.company_name).trim().toLowerCase());
+      return contractMatch || nameMatch;
+    });
+
+    return verifiedRawVehicles.map((v) => {
+      let cat: "bus_large" | "minibus_vip" | "suv_4x4" = "minibus_vip";
+      const catLower = (v.category || "").toLowerCase();
+      const typeLower = (v.vehicle_type || "").toLowerCase();
+      if (catLower.includes("4x4") || catLower.includes("دفع رباعي") || typeLower.includes("دفع رباعي") || catLower.includes("صحراو")) {
+        cat = "suv_4x4";
+      } else if (catLower.includes("large") || catLower.includes("كبير") || (typeLower.includes("باص") && (v.seating_capacity || 0) >= 30)) {
+        cat = "bus_large";
+      }
+
+      // Find company details
+      const parentCompany = verifiedCompanies.find(
+        (c) => String(c.contract_number).trim() === String(v.contract_number).trim() || (c.company_name && c.company_name === v.company_name)
+      );
+
+      // Find assigned driver from drivers table by assigned_vehicle_plate
+      const assignedDriver = rawDrivers.find(
+        (d) => d.assigned_vehicle_plate && String(d.assigned_vehicle_plate).trim() === String(v.plate_number).trim()
+      );
+
+      const hasDriver = !!assignedDriver;
+
+      return {
+        id: v.plate_number || `VEH-${Math.random()}`,
+        plateNumber: v.plate_number || "",
+        vehicleType: v.vehicle_type || (isAr ? "مركبة سياحية" : "Tour Vehicle"),
+        name: `${v.vehicle_type || (isAr ? "مركبة سياحية" : "Tour Vehicle")} - ${v.plate_number || ""}`,
+        category: cat,
+        categoryLabelAr: cat === "bus_large" ? "باص سياحي كبير" : cat === "suv_4x4" ? "سيارة دفع رباعي 4x4" : "ميني باص VIP",
+        categoryLabelEn: cat === "bus_large" ? "Large Tour Bus" : cat === "suv_4x4" ? "4x4 Desert SUV" : "VIP Minibus",
+        vehicleStatus: v.vehicle_status || (isAr ? "جاهز للعمل ومفحوص دورياً" : "Ready for service"),
+        seats: Number(v.seating_capacity) || 15,
+        pricePerDay: Number(v.daily_rate) || 350,
+        insuranceDetails: v.insurance_details || (isAr ? "تأمين شامل ساري المفعول" : "Comprehensive Insurance"),
+        insuranceDocument: v.insurance_document || null,
+        photos: v.vehicle_image ? [v.vehicle_image] : ["/assets/office-bus.jpg"],
+
+        // Operating Transport Company (Real DB)
+        company: v.company_name || parentCompany?.company_name || parentCompany?.name || (isAr ? "شركة النقل السياحي" : "Transport Co."),
+        companyContractNumber: v.contract_number || parentCompany?.contract_number || "",
+        companyPhone: parentCompany?.phone_number || parentCompany?.phone || "",
+        companyEmail: parentCompany?.email || "",
+        city: parentCompany?.city || (isAr ? "طرابلس" : "Tripoli"),
+        companyAddress: parentCompany?.address && !parentCompany.address.startsWith("http")
+          ? parentCompany.address
+          : (parentCompany?.city ? `المقر الرئيسي - ${parentCompany.city}` : (isAr ? "المقر الرئيسي المعتمد" : "Headquarters")),
+        googleMapsUrl: parentCompany?.google_maps_url || (parentCompany?.address && (parentCompany.address.startsWith("http") || parentCompany.address.includes("maps")) ? parentCompany.address : "") || "",
+        contractStartDate: parentCompany?.contract_start_date ? String(parentCompany.contract_start_date).split("T")[0] : "",
+        contractEndDate: parentCompany?.contract_end_date ? String(parentCompany.contract_end_date).split("T")[0] : "",
+        companyStatus: parentCompany?.verification_status || parentCompany?.status || (isAr ? "موثق" : "Verified"),
+
+        // Assigned Driver (Real DB)
+        hasDriver,
+        driverName: assignedDriver?.full_name || (isAr ? "لم يتم تعيين سائق بعد" : "No Driver Assigned"),
+        driverLicense: assignedDriver?.driver_license_number || "",
+        driverPhone: assignedDriver?.phone_number || parentCompany?.phone_number || "",
+        driverNationalId: assignedDriver?.national_id_or_passport || "",
+        driverLicenseExpiry: assignedDriver?.license_date_valid ? String(assignedDriver.license_date_valid).split("T")[0] : "",
+        driverOperationalStatus: assignedDriver?.operational_status || (isAr ? "متاح" : "Available"),
+        driverEmail: assignedDriver?.email || "",
+      };
+    });
+  }, [rawVehicles, rawDrivers, verifiedContractNumbers, verifiedCompanyNames, verifiedCompanies, isAr]);
+
+  // ONLY verified companies appear in the filter! No static fake companies!
+  const companies = useMemo(() => {
+    const list = [
       { key: "all", label: isAr ? "كافة شركات النقل المعتمدة" : "All Transport Companies" },
-      { key: "السهم الذهبي", label: isAr ? "شركة السهم الذهبي للنقل" : "Golden Arrow Co." },
-      { key: "الأفق", label: isAr ? "شركة الأفق الدولية" : "Al-Ofoq Co." },
-      { key: "برقة", label: isAr ? "شركة برقة للنقل الفاخر" : "Barqa Luxury Co." },
-      { key: "الرمال الذهبية", label: isAr ? "شركة الرمال الذهبية للسفاري" : "Golden Sands Safari" },
-    ],
-    [isAr],
-  );
+    ];
+    verifiedCompanies.forEach((c) => {
+      const name = c.company_name || c.name;
+      if (name && !list.some((item) => item.key === name)) {
+        list.push({
+          key: name,
+          label: name,
+        });
+      }
+    });
+    return list;
+  }, [verifiedCompanies, isAr]);
 
   const categories = useMemo(
     () => [
@@ -278,7 +236,10 @@ function TransportPage() {
   const filtered = useMemo(() => {
     return vehicles.filter((v) => {
       const matchCity = city === "all" || v.city.toLowerCase().includes(city.toLowerCase());
-      const matchComp = companyFilter === "all" || v.company.includes(companyFilter);
+      const matchComp =
+        companyFilter === "all" ||
+        v.company.toLowerCase().includes(companyFilter.toLowerCase()) ||
+        companyFilter.toLowerCase().includes(v.company.toLowerCase());
       const matchCat = categoryFilter === "all" || v.category === categoryFilter;
       const q = searchQuery.trim().toLowerCase();
       const matchSearch =
@@ -438,9 +399,15 @@ function TransportPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {companies.filter(c => c.key !== "all").map((c) => {
+            {companies.filter(c => c.key !== "all").length === 0 ? (
+              <div className="col-span-full p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 font-bold">
+                {isAr ? "لا توجد شركات نقل موثقة حالياً. تظهر الشركات في هذه الواجهة تلقائياً بمجرد اعتمادها من الإدارة." : "No certified transport companies currently."}
+              </div>
+            ) : (
+              companies.filter(c => c.key !== "all").map((c) => {
               const isSelected = companyFilter === c.key;
-              const count = vehicles.filter((v) => v.company.includes(c.key)).length;
+              const registeredComp = getTransportCompanies().find(rc => (rc.company_name || rc.name) === c.key);
+              const count = vehicles.filter((v) => v.company.toLowerCase().includes(c.key.toLowerCase()) || c.key.toLowerCase().includes(v.company.toLowerCase())).length || registeredComp?.total_vehicles || 0;
               return (
                 <div
                   key={c.key}
@@ -468,7 +435,7 @@ function TransportPage() {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </section>
 
@@ -548,7 +515,20 @@ function TransportPage() {
           </div>
 
           <div className="space-y-4">
-            {filtered.map((v) => {
+            {filtered.length === 0 ? (
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
+              <div className="text-5xl mb-3">🚌</div>
+              <h3 className="text-lg font-black text-[#0F172A] mb-1">
+                {isAr ? "لا توجد مركبات معروضة حالياً" : "No vehicles available currently"}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                {isAr
+                  ? "تظهر المركبات السياحية في هذه الواجهة تلقائياً بمجرد تسجيلها واعتماد وتوثيق شركات النقل التابعة لها من قبل إدارة المنصة."
+                  : "Vehicles appear here once their transport companies are verified and approved by administration."}
+              </p>
+            </div>
+          ) : (
+            filtered.map((v) => {
               const isFav = !!likedMap[v.id];
               return (
                 <article
@@ -591,45 +571,61 @@ function TransportPage() {
                   <div className="flex-1 flex flex-col justify-between space-y-3 md:py-2">
                     {/* Header */}
                     <div>
-                      <div className="text-[10px] font-black text-[#D96B27] bg-orange-50 px-2.5 py-1 rounded-md w-fit mb-2 border border-orange-100 flex items-center gap-1.5">
-                        <span>🏢</span>
-                        <span>{v.company}</span>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <div className="text-[10px] font-black text-[#D96B27] bg-orange-50 px-2.5 py-1 rounded-md border border-orange-100 flex items-center gap-1.5">
+                          <span>🏢</span>
+                          <span>{v.company}</span>
+                        </div>
+                        <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-300 font-mono tracking-wide">
+                          🇱🇾 {v.plateNumber}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                          ✓ {v.vehicleStatus}
+                        </div>
                       </div>
+
                       <h4 className="text-xl font-black text-[#0F172A] group-hover:text-[#D96B27] transition-colors leading-tight">
-                        {v.name}
+                        {v.vehicleType}
                       </h4>
-                      <div className="mt-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md w-fit border border-emerald-100">
-                        ✓ {isAr ? "فحص دوري معتمد ومعايير سلامة عالية" : "Certified Safety & High Standards"}
-                      </div>
+                      <p className="mt-1 text-xs text-slate-500 font-medium">
+                        عقد شركة رقم: #{v.companyContractNumber} · {v.city}
+                      </p>
                     </div>
 
                     {/* Driver Info */}
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 w-fit">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-lg">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 w-fit">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-lg shrink-0">
                         🧑‍✈️
                       </div>
                       <div>
-                        <div className="text-xs font-black text-[#0F172A]">{v.driverName}</div>
-                        <div className="text-[10px] font-medium text-slate-500">({v.driverExperience})</div>
+                        <div className="text-xs font-black text-[#0F172A]">
+                          {v.hasDriver ? v.driverName : (isAr ? "لم يتم تعيين سائق بعد" : "No Driver Assigned")}
+                        </div>
+                        <div className="text-[11px] font-medium text-slate-500">
+                          {v.hasDriver ? (
+                            <span>
+                              رخصة: <strong className="text-slate-700">{v.driverLicense}</strong> · الحالة: <span className="text-emerald-700 font-bold">{v.driverOperationalStatus}</span>
+                            </span>
+                          ) : (
+                            <span className="text-amber-700 font-bold">{isAr ? "جاهزة للتعيين أو الاستئجار" : "Ready for driver assignment"}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Right Action Section */}
-                  <div className="md:w-48 flex flex-col justify-end items-end shrink-0 border-t md:border-t-0 md:border-s md:border-slate-100 pt-4 md:pt-0 md:ps-5">
+                  <div className="md:w-52 flex flex-col justify-end items-end shrink-0 border-t md:border-t-0 md:border-s md:border-slate-100 pt-4 md:pt-0 md:ps-5">
                     <div className="text-right mb-4">
                       <div className="text-[10px] text-slate-400 font-bold mb-1">
                         {isAr ? "سعر التأجير اليومي" : "Daily Rate"}
                       </div>
                       <div className="flex items-baseline justify-end gap-1.5">
-                        <span className="text-xs text-red-400 line-through font-bold">
-                          {v.originalPricePerDay} {isAr ? "د.ل" : "LYD"}
-                        </span>
                         <span className="text-2xl font-black text-[#0F172A]">
                           {v.pricePerDay}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-bold">
-                          /{isAr ? "يوم" : "day"}
+                        <span className="text-xs text-slate-500 font-bold">
+                          {isAr ? "د.ل / يوم" : "LYD / day"}
                         </span>
                       </div>
                     </div>
@@ -640,154 +636,241 @@ function TransportPage() {
                         e.stopPropagation();
                         setSelectedVehicle(v);
                       }}
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-90 text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95"
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95"
                     >
-                      <span>{isAr ? "عرض التفاصيل" : "View Details"}</span>
+                      <span>{isAr ? "عرض التفاصيل المعتمدة" : "View Verified Details"}</span>
                       <span dir="ltr">➔</span>
                     </button>
                   </div>
                 </article>
               );
-            })}
+            }))}
           </div>
         </section>
       </div>
 
-      {/* ── 6. VEHICLE DETAILS MODAL (Matching Hotels Booking.com Style) ── */}
+      {/* ── 6. SIMPLIFIED DYNAMIC VEHICLE DETAILS MODAL ── */}
       {selectedVehicle && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto" dir={dir}>
-          <div className="fixed inset-0 bg-black/65 backdrop-blur-sm animate-in fade-in" onClick={() => setSelectedVehicle(null)} />
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto" dir={dir}>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs animate-in fade-in" onClick={() => setSelectedVehicle(null)} />
 
-          <div className="relative bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto z-10 border border-slate-200">
-            <button
-              onClick={() => setSelectedVehicle(null)}
-              aria-label="Close"
-              className="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white/95 text-slate-800 shadow-md flex items-center justify-center hover:bg-slate-100 transition font-black text-xl cursor-pointer"
-            >
-              ✕
-            </button>
-
-            <div className="p-5 sm:p-7 space-y-6">
-              {/* Header */}
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-slate-100 pb-5">
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black bg-[#003580] text-white px-2.5 py-0.5 rounded-md">
-                      {isAr ? selectedVehicle.categoryLabelAr : selectedVehicle.categoryLabelEn}
-                    </span>
-                    <span className="text-xs font-black bg-amber-500/10 text-amber-700 px-2.5 py-0.5 rounded-md border border-amber-500/20">
-                      🏢 {selectedVehicle.company}
-                    </span>
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A]">
-                    {selectedVehicle.name}
-                  </h2>
-                  <p className="text-xs text-slate-600 font-medium">
-                    📍 {selectedVehicle.city} · 👥 {selectedVehicle.seats} {isAr ? "مقعد مريح" : "seats"}
-                  </p>
+          <div className="relative bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto z-10 border border-slate-100">
+            {/* Header */}
+            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono bg-slate-900 text-white text-[11px] px-2.5 py-0.5 rounded-md font-bold">
+                    🇱🇾 {selectedVehicle.plateNumber}
+                  </span>
+                  <span className="bg-orange-50 text-[#D96B27] border border-orange-100 text-[11px] px-2.5 py-0.5 rounded-md font-black">
+                    {selectedVehicle.categoryLabelAr}
+                  </span>
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] px-2 py-0.5 rounded-md font-bold">
+                    ✓ {selectedVehicle.vehicleStatus}
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-2 self-end md:self-start">
-                  <a
-                    href={`tel:${selectedVehicle.driverPhone}`}
-                    className="px-5 py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-md transition inline-flex items-center gap-1.5"
-                  >
-                    <span>📞 {isAr ? "اتصال بالسائق مباشرة" : "Call Driver Directly"}</span>
-                  </a>
-                </div>
+                <h3 className="text-lg sm:text-xl font-black text-[#0F172A]">
+                  {selectedVehicle.vehicleType}
+                </h3>
               </div>
 
-              {/* Photos Gallery */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 h-64 sm:h-72 rounded-2xl overflow-hidden">
-                <div className="md:col-span-2 h-full">
-                  <img src={selectedVehicle.photos[0]} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="grid grid-rows-2 gap-2.5 h-full">
-                  <img src={selectedVehicle.photos[1 % selectedVehicle.photos.length]} alt="" className="w-full h-full object-cover" />
-                  <img src={selectedVehicle.photos[2 % selectedVehicle.photos.length]} alt="" className="w-full h-full object-cover" />
-                </div>
-              </div>
+              <button
+                onClick={() => setSelectedVehicle(null)}
+                aria-label="Close"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition font-black text-sm cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
 
-              {/* Content Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-2">
-                <div className="md:col-span-8 space-y-4">
-                  {/* Vehicle Description */}
-                  <div>
-                    <h3 className="text-base font-black text-[#0F172A] mb-2">
-                      {isAr ? "مواصفات وسيلة النقل" : "Vehicle Specifications"}
-                    </h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      {selectedVehicle.desc}
-                    </p>
-                  </div>
-
-                  {/* Required Info Card: Vehicle type, company, driver */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                    <div className="text-xs font-black text-[#003580]">
-                      🚌 {isAr ? "بيانات المركبة والجهة المشغلة:" : "Vehicle & Operator Data:"}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <div className="text-[10px] font-bold text-slate-500 mb-0.5">
-                          {isAr ? "نوع المركبة" : "Vehicle Type"}
-                        </div>
-                        <div className="font-black text-xs text-[#0F172A]">{selectedVehicle.name}</div>
-                      </div>
-                      <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <div className="text-[10px] font-bold text-slate-500 mb-0.5">
-                          {isAr ? "شركة النقل" : "Transport Co."}
-                        </div>
-                        <div className="font-black text-xs text-[#0F172A]">{selectedVehicle.company}</div>
-                      </div>
-                      <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <div className="text-[10px] font-bold text-slate-500 mb-0.5">
-                          {isAr ? "السائق المعتمد" : "Driver"}
-                        </div>
-                        <div className="font-black text-xs text-[#0F172A]">{selectedVehicle.driverName}</div>
-                      </div>
-                    </div>
+            {/* Body */}
+            <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 text-right">
+              {/* Left Column: Image, Price, Quick Actions */}
+              <div className="md:col-span-5 space-y-4">
+                <div className="relative h-48 sm:h-52 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-xs">
+                  <img
+                    src={selectedVehicle.photos[0]}
+                    alt={selectedVehicle.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2.5 right-2.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+                    📍 {selectedVehicle.city} · 👥 {selectedVehicle.seats} مقعد
                   </div>
                 </div>
 
-                <div className="md:col-span-4 space-y-4">
-                  {/* Rating Score Card */}
-                  <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
-                    <div>
-                      <div className="font-black text-sm text-[#0F172A]">{selectedVehicle.ratingWord}</div>
-                      <div className="text-xs text-slate-500 font-medium">
-                        {selectedVehicle.reviewsCount} {isAr ? "تقييم معتمد" : "verified reviews"}
-                      </div>
-                    </div>
-                    <div className="w-12 h-12 rounded-xl bg-[#003580] text-white font-black text-lg flex items-center justify-center shadow-xs">
-                      {selectedVehicle.rating}
-                    </div>
+                {/* Price Box */}
+                <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E8E2D6] space-y-1 text-center">
+                  <div className="text-[11px] font-bold text-slate-500">سعر التأجير اليومي</div>
+                  <div className="text-2xl font-black text-[#0F172A]">
+                    {selectedVehicle.pricePerDay} <span className="text-xs text-slate-500 font-bold">د.ل / يوم</span>
                   </div>
-
-                  {/* Pricing Box */}
-                  <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E8E2D6] space-y-2">
-                    <div className="text-xs font-bold text-slate-500">{isAr ? "سعر التأجير اليومي" : "Daily Rate"}</div>
-                    <div className="text-2xl font-black text-[#0F172A]">
-                      {selectedVehicle.pricePerDay} <span className="text-xs text-slate-500">{isAr ? "د.ل / يوم" : "LYD/day"}</span>
-                    </div>
-                    <div className="text-[11px] text-emerald-700 font-bold">
-                      ✓ {isAr ? "شامل السائق والوقود والتأمين" : "Driver, Fuel & Insurance Included"}
-                    </div>
+                  <div className="text-[10px] text-emerald-700 font-bold pt-1">
+                    ✓ شامل فحص السلامة المعتمد
                   </div>
+                </div>
 
-                  {/* Direct Contact Button */}
-                  <div className="space-y-2">
+                {/* Quick Call Actions */}
+                <div className="space-y-2 pt-1">
+                  {selectedVehicle.hasDriver && selectedVehicle.driverPhone && (
                     <a
                       href={`tel:${selectedVehicle.driverPhone}`}
-                      className="w-full py-3 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-sm"
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
                     >
-                      <span>📞 {isAr ? "حجز وتواصل مع السائق" : "Call & Hire Driver"}</span>
+                      <span>📞</span>
+                      <span>اتصال بالسائق مباشرة</span>
                     </a>
+                  )}
+
+                  {selectedVehicle.companyPhone && (
                     <a
                       href={`tel:${selectedVehicle.companyPhone}`}
-                      className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0F172A] font-black text-xs transition flex items-center justify-center gap-2"
+                      className="w-full py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
                     >
-                      <span>🏢 {isAr ? "الاتصال بالشركة المشغلة" : "Contact Company"}</span>
+                      <span>🏢</span>
+                      <span>اتصال بشركة النقل</span>
                     </a>
+                  )}
+
+                  {selectedVehicle.googleMapsUrl && (
+                    <a
+                      href={selectedVehicle.googleMapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-1.5"
+                    >
+                      <span>📍</span>
+                      <span>موقع الشركة على الخريطة</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Essential Details (Dynamic) */}
+              <div className="md:col-span-7 space-y-4">
+                {/* 1. Vehicle Specifications */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-2.5">
+                  <div className="text-xs font-black text-[#003580] flex items-center gap-1.5 pb-1 border-b border-slate-100">
+                    <span>🚗</span>
+                    <span>بيانات ومواصفات المركبة</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5 text-right">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold">رقم اللوحة</div>
+                      <div className="text-xs font-black text-slate-900 font-mono">{selectedVehicle.plateNumber}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold">السعة الاستيعابية</div>
+                      <div className="text-xs font-black text-slate-900">{selectedVehicle.seats} مقعد</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold">الفئة والتصنيف</div>
+                      <div className="text-xs font-black text-slate-900">{selectedVehicle.categoryLabelAr}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold">حالة المركبة</div>
+                      <div className="text-xs font-black text-emerald-700">{selectedVehicle.vehicleStatus}</div>
+                    </div>
+
+                    <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] text-slate-400 font-bold">بيانات التأمين</div>
+                        <div className="text-xs font-black text-slate-900">{selectedVehicle.insuranceDetails}</div>
+                      </div>
+                      {selectedVehicle.insuranceDocument && (
+                        <a
+                          href={selectedVehicle.insuranceDocument}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-black text-blue-700 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 hover:underline"
+                        >
+                          📄 وثيقة التأمين
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Driver Info (Dynamic) */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-2.5">
+                  <div className="text-xs font-black text-emerald-800 flex items-center justify-between pb-1 border-b border-slate-100">
+                    <span className="flex items-center gap-1.5">
+                      <span>🧑‍✈️</span>
+                      <span>السائق المعتمد</span>
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                      selectedVehicle.hasDriver ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {selectedVehicle.hasDriver ? "مسند للمركبة" : "غير مسند"}
+                    </span>
+                  </div>
+
+                  {selectedVehicle.hasDriver ? (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="text-[10px] text-slate-400 font-bold">اسم السائق</div>
+                        <div className="text-xs font-black text-slate-900">{selectedVehicle.driverName}</div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="text-[10px] text-slate-400 font-bold">رقم الرخصة</div>
+                        <div className="text-xs font-black text-slate-900 font-mono">{selectedVehicle.driverLicense}</div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="text-[10px] text-slate-400 font-bold">رقم الهاتف</div>
+                        <div className="text-xs font-black text-slate-900 font-mono" dir="ltr">{selectedVehicle.driverPhone}</div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="text-[10px] text-slate-400 font-bold">الحالة التشغيلية</div>
+                        <div className="text-xs font-black text-emerald-700">{selectedVehicle.driverOperationalStatus}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs font-medium leading-relaxed">
+                      لم يتم تعيين سائق محدد لهذه المركبة بعد. المركبة متاحة للاستئجار أو يمكن لشركة النقل توفير سائق معتمد فور الحجز.
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Operating Company Info */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-2.5">
+                  <div className="text-xs font-black text-[#D96B27] flex items-center justify-between pb-1 border-b border-slate-100">
+                    <span className="flex items-center gap-1.5">
+                      <span>🏢</span>
+                      <span>شركة النقل المشغلة</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      ✓ {selectedVehicle.companyStatus}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold">اسم الشركة</div>
+                      <div className="text-xs font-black text-slate-900">{selectedVehicle.company}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold">المدينة / المقر</div>
+                      <div className="text-xs font-black text-slate-900">{selectedVehicle.city}</div>
+                    </div>
+
+                    <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] text-slate-400 font-bold">هاتف الشركة</div>
+                        <div className="text-xs font-black text-slate-900 font-mono" dir="ltr">
+                          {selectedVehicle.companyPhone || "غير مسجل"}
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono">
+                        عقد #{selectedVehicle.companyContractNumber}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

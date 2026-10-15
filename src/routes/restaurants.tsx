@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { RestaurantDetailsModal } from "@/components/RestaurantDetailsModal";
+import { apiGetRestaurants } from "@/lib/api";
 
 export const Route = createFileRoute("/restaurants")({
   head: () => ({
@@ -1306,7 +1307,16 @@ function RestaurantsPage() {
   const [customRestaurants, setCustomRestaurants] = useState<Restaurant[]>([]);
 
   useEffect(() => {
-    const loadCustom = () => {
+    const loadCustom = async () => {
+      try {
+        const live = await apiGetRestaurants();
+        if (Array.isArray(live) && live.length > 0) {
+          const mapped = live.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
+          setCustomRestaurants(mapped);
+          return;
+        }
+      } catch {}
+
       try {
         const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
         if (Array.isArray(storedRests) && storedRests.length > 0) {
@@ -1320,8 +1330,7 @@ function RestaurantsPage() {
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
-            const visible = data.filter((item: any) => (item.verification_status || "معتمد") === "معتمد");
-            const mappedApi = visible.map((item: any) =>
+            const mappedApi = data.map((item: any) =>
               mapAdminRestaurantToPublic(
                 {
                   id: item.facility_id,
@@ -1333,7 +1342,6 @@ function RestaurantsPage() {
                   description: item.description,
                   google_maps_url: item.google_maps_url,
                   working_hours: item.working_hours,
-                  features: item.features,
                   facility_image_1: item.facility_image_1,
                   facility_image_2: item.facility_image_2,
                   facility_image_3: item.facility_image_3,
@@ -1375,10 +1383,8 @@ function RestaurantsPage() {
   };
 
   const restaurants = useMemo(() => {
-    const base = getRestaurants(language);
-    const customIds = new Set(customRestaurants.map((c) => c.id));
-    const filteredBase = base.filter((b) => !customIds.has(b.id));
-    return [...customRestaurants, ...filteredBase];
+    if (customRestaurants.length > 0) return customRestaurants;
+    return getRestaurants(language);
   }, [language, customRestaurants]);
 
   const cities = useMemo(

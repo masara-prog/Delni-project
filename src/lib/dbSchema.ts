@@ -53,7 +53,6 @@ export interface TransportationCompany {
   address: string; // VARCHAR(150)
   total_vehicles: number; // INT (CHECK >= 0)
   verification_status: "موثق" | "بانتظار" | "مرفوض"; // VARCHAR(20)
-  contract_date?: string | null; // DATE
   email?: string | null; // VARCHAR(100)
   password?: string | null; // VARCHAR(255)
   city?: string | null; // VARCHAR(50)
@@ -75,9 +74,9 @@ export interface Vehicle {
   contract_number: string; // VARCHAR(50) FK -> TransportationCompanies
   daily_rate?: number | null; // DECIMAL(10,2)
   category?: string | null; // VARCHAR(50)
-  photos?: string | null; // NVARCHAR(MAX)
   insurance_image?: string | null; // VARCHAR(255)
   company_name?: string; // Virtual join field for convenience
+  status?: string | null;
 }
 
 /* =========================================================
@@ -95,7 +94,6 @@ export interface Driver {
   account_status: "نشط" | "معلق" | "موقوف"; // VARCHAR(20)
   password?: string; // VARCHAR(255)
   operational_status?: "متاح" | "في رحلة" | "إجازة" | null; // VARCHAR(20)
-  experience_years?: number | null; // INT
   driver_photo?: string | null; // VARCHAR(255)
   company_name?: string; // Virtual join field
 }

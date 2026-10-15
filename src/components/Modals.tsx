@@ -225,15 +225,12 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 const session = getStoredSession();
                 const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-${phone}`;
                 const nSeats = parseInt(seats, 10) || 1;
-                const itemId = itemAny.daily_trip_id || itemAny.weekly_trip_id || itemAny.id || itemAny.trip_id || itemAny.refId || "";
-                const isWeekly = itemId.startsWith("w") || itemId.startsWith("WT") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
+                const isWeekly = item.id?.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
 
                 if (isWeekly) {
                   await apiBookWeeklyTrip({
                     tourist_id: touristId,
-                    weekly_trip_id: itemId || "WT-220",
-                    trip_title: item.title,
-                    seat_per_price: unit,
+                    weekly_trip_id: item.id || "WT-201",
                     number_of_seats: nSeats,
                     passengers_names: accountName || "سائح",
                     booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
@@ -241,9 +238,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 } else {
                   await apiBookDailyTrip({
                     tourist_id: touristId,
-                    daily_trip_id: itemId || "DT-366",
-                    trip_title: item.title,
-                    price_per_seat: unit,
+                    daily_trip_id: item.id || "DT-101",
                     number_of_seats: nSeats,
                     passengers_names: accountName || "سائح",
                     booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
@@ -1146,9 +1141,7 @@ export function TripScheduleModal({
               try {
                 const session = getStoredSession();
                 const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
-                const isWeekly = (selectedTrip as any).kind === "weekly" || selectedTrip.id?.startsWith("w") || selectedTrip.id?.startsWith("WT") || kindLabel.includes("أسبوع");
-                const targetTripId = (selectedTrip as any).tripId || selectedTrip.id || tripId || (isWeekly ? "WT-220" : "DT-366");
-                const targetTitle = (selectedTrip as any).tripTitle || customTitle || tripTitle || kindLabel;
+                const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
 
                 if (isWeekly) {
                   await apiBookWeeklyTrip({
@@ -1449,21 +1442,23 @@ export function PrivateTripModal({
       alert(isAr ? "الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)" : "Please enter a valid Libyan phone number (e.g., 0912345678)");
       return;
     }
-    // Send to Python FastAPI & MySQL Backend
-    fetch("http://127.0.0.1:8000/api/trips/private", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+
+    // Save to local state
+    try {
+      const existing = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
+      existing.unshift({
+        request_id: `PV-${Date.now()}`,
         customer_name: customerName || "عميل دلّني VIP",
         customer_phone: phone,
         preferred_start_date: startDate || new Date().toISOString().split("T")[0],
         duration_days: durationDays,
         number_of_companions: parseInt(persons, 10) || 1,
-        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`
-      })
-    }).catch(() => {
-      // Offline fallback
-    });
+        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`,
+        status: "قيد المراجعة",
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
+    } catch {}
     setStep("done");
   };
 

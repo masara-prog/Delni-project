@@ -7,7 +7,25 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
 import { useLanguage } from "@/lib/i18n";
 import type { TransportationCompany, Vehicle, Driver } from "@/lib/dbSchema";
-import { getStoredSession } from "@/lib/api";
+import { 
+  getStoredSession,
+  getTransportCompanies,
+  updateTransportCompany,
+  getVehicles,
+  addVehicle,
+  updateVehicle,
+  deleteVehicle,
+  getDrivers,
+  addDriver,
+  updateDriver,
+  deleteDriver,
+  saveVehicles,
+  saveDrivers,
+  saveTransportCompanies,
+  apiAddDriver,
+  apiUpdateDriver,
+  apiDeleteDriver
+} from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/transport")({
   head: () => ({
@@ -38,154 +56,97 @@ function TransportDashboard() {
   // Profile state according to DelniDB: transportation_companies table
   const [companyInfo, setCompanyInfo] = useState<TransportationCompany>(() => {
     const session = getStoredSession();
+    const companies = getTransportCompanies();
     if (session.user && (session.role === "transport" || session.user.contract_number)) {
       const u = session.user;
+      const matched = companies.find(c => c.contract_number === u.contract_number || c.email === u.email);
+      const data = matched || u;
       return {
-        contract_number: u.contract_number || "TC-501",
-        company_name: u.company_name || u.name || "شركة النقل السياحي",
-        phone_number: u.phone_number || "0913334455",
-        address: u.address || "طرابلس - طريق الشط",
-        city: u.city || "طرابلس",
-        total_vehicles: u.total_vehicles || 12,
-        available_vehicles: u.available_vehicles || 8,
-        verification_status: u.verification_status || "موثق",
-        contract_date: u.contract_date || "2025-01-15",
-        contract_start_date: u.contract_start_date || "2025-01-15",
-        contract_end_date: u.contract_end_date || "2028-01-15",
-        email: u.email || "transport@dalni.ly",
+        contract_number: data.contract_number || "",
+        company_name: data.company_name || data.name || "شركة النقل السياحي",
+        phone_number: data.phone_number || data.phone || "",
+        address: data.address || "",
+        city: data.city || "طرابلس",
+        total_vehicles: Number(data.total_vehicles) || 0,
+        available_vehicles: Number(data.available_vehicles) || 0,
+        verification_status: data.verification_status || data.status || "موثق",
+        contract_start_date: data.contract_start_date || "",
+        contract_end_date: data.contract_end_date || "",
+        email: data.email || "",
         password: "••••••••",
       };
     }
+    const first = companies[0];
     return {
-      contract_number: "TC-501",
-      company_name: "شركة الصفوة لنقل الركاب والسياحة",
-      phone_number: "0913334455",
-      address: "طرابلس - طريق الشط",
-      city: "طرابلس",
-      total_vehicles: 12,
-      available_vehicles: 8,
-      verification_status: "موثق",
-      contract_date: "2025-01-15",
-      contract_start_date: "2025-01-15",
-      contract_end_date: "2028-01-15",
-      email: "safwa@dalni.ly",
+      contract_number: first?.contract_number || "",
+      company_name: first?.company_name || first?.name || "شركة النقل السياحي",
+      phone_number: first?.phone_number || first?.phone || "",
+      address: first?.address || "",
+      city: first?.city || "طرابلس",
+      total_vehicles: Number(first?.total_vehicles) || 0,
+      available_vehicles: Number(first?.available_vehicles) || 0,
+      verification_status: first?.verification_status || "بانتظار التوثيق",
+      contract_start_date: first?.contract_start_date || "",
+      contract_end_date: first?.contract_end_date || "",
+      email: first?.email || "",
       password: "••••••••",
     };
   });
 
+  // Drivers state according to DelniDB: drivers table
+  const [drivers, setDrivers] = useState<Driver[]>(() => {
+    return getDrivers(companyInfo.contract_number) as Driver[];
+  });
+
+  // Vehicles state according to DelniDB: vehicles table
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
+    return getVehicles(companyInfo.contract_number) as Vehicle[];
+  });
+
+  // Reload data when company or active changes
   useEffect(() => {
     const session = getStoredSession();
     if (session.user && (session.role === "transport" || session.user.contract_number)) {
       const u = session.user;
+      const companies = getTransportCompanies();
+      const matched = companies.find(c => c.contract_number === u.contract_number || c.email === u.email);
+      const data = matched || u;
       setCompanyInfo(prev => ({
         ...prev,
-        contract_number: u.contract_number || prev.contract_number,
-        company_name: u.company_name || u.name || prev.company_name,
-        phone_number: u.phone_number || prev.phone_number,
-        email: u.email || prev.email,
-        address: u.address || prev.address,
-        city: u.city || prev.city,
+        contract_number: data.contract_number || prev.contract_number,
+        company_name: data.company_name || data.name || prev.company_name,
+        phone_number: data.phone_number || data.phone || prev.phone_number,
+        email: data.email || prev.email,
+        address: data.address || prev.address,
+        city: data.city || prev.city,
       }));
     }
-  }, []);
+    const loadedVehicles = getVehicles(companyInfo.contract_number) as Vehicle[];
+    setVehicles(loadedVehicles);
+    const loadedDrivers = getDrivers(companyInfo.contract_number) as Driver[];
+    setDrivers(loadedDrivers);
 
-  // Drivers state according to DelniDB: drivers table
-  const [drivers, setDrivers] = useState<Driver[]>([
-    {
-      driver_license_number: "LB-88291",
-      full_name: "علي التارقي",
-      phone_number: "0912223344",
-      license_date_valid: "2029-12-10",
-      national_id_or_passport: "119900223344",
-      email: "ali@dalni.ly",
-      password: "••••••••",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "طرابلس 4517",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 8,
-    },
-    {
-      driver_license_number: "LB-77452",
-      full_name: "مفتاح الفزاني",
-      phone_number: "0923334455",
-      license_date_valid: "2028-05-14",
-      national_id_or_passport: "119850334455",
-      email: "miftah@dalni.ly",
-      password: "••••••••",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "طرابلس 8291",
-      account_status: "نشط",
-      operational_status: "في رحلة",
-      experience_years: 12,
-    },
-    {
-      driver_license_number: "LB-99381",
-      full_name: "أنور الترهوني",
-      phone_number: "0915556677",
-      license_date_valid: "2030-08-22",
-      national_id_or_passport: "119920112233",
-      email: "anwar@dalni.ly",
-      password: "••••••••",
-      contract_number: "CN-2026-01",
-      assigned_vehicle_plate: "بنغازي 3382",
-      account_status: "نشط",
-      operational_status: "متاح",
-      experience_years: 5,
-    }
-  ]);
+    // Live sync with SQL Server DelniDB
+    if (companyInfo.contract_number) {
+      fetch(`http://127.0.0.1:5001/api/db/vehicles?contract_number=${encodeURIComponent(companyInfo.contract_number)}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res?.success && Array.isArray(res.data)) {
+            saveVehicles(res.data);
+            setVehicles(res.data);
+          }
+        }).catch(() => {});
 
-  // Vehicles state according to DelniDB: vehicles table
-  const [vehicles, setVehicles] = useState<Vehicle[]>([
-    {
-      plate_number: "طرابلس 8291",
-      contract_number: "CN-2026-01",
-      vehicle_type: "تويوتا كوستر 2025",
-      seating_capacity: 22,
-      daily_rate: 450,
-      category: "حافلة متوسطة",
-      vehicle_status: "جاهزة",
-      insurance_details: "وثيقة تأمين شامل رقم INS-99210 سارية حتى سبتمبر 2027",
-      insurance_image: "/assets/ai_city.jpg",
-      vehicle_image: officeBusImg,
-    },
-    {
-      plate_number: "طرابلس 4517",
-      contract_number: "CN-2026-01",
-      vehicle_type: "هيونداي H1 VIP 2024",
-      seating_capacity: 12,
-      daily_rate: 350,
-      category: "فان سياحي VIP",
-      vehicle_status: "جاهزة",
-      insurance_details: "تأمين ركاب ومسافرين رقم INS-44120 ساري حتى يناير 2028",
-      insurance_image: "/assets/ai_city.jpg",
-      vehicle_image: privateTripImg,
-    },
-    {
-      plate_number: "بنغازي 3382",
-      contract_number: "CN-2026-01",
-      vehicle_type: "ميرسيدس سبرنتر 2024",
-      seating_capacity: 15,
-      daily_rate: 500,
-      category: "ميني باص فاخر",
-      vehicle_status: "جاهزة",
-      insurance_details: "تأمين شامل وبطاقة برتقالية دولية سارية حتى ديسمبر 2026",
-      insurance_image: "/assets/ai_desert.jpg",
-      vehicle_image: destAcacus,
-    },
-    {
-      plate_number: "بنغازي 1298",
-      contract_number: "CN-2026-01",
-      vehicle_type: "تويوتا لاندكروزر 4x4",
-      seating_capacity: 7,
-      daily_rate: 400,
-      category: "دفع رباعي سفاري",
-      vehicle_status: "صيانة",
-      insurance_details: "تأمين صحاري وسفاري رقم INS-88120 ساري حتى مارس 2027",
-      insurance_image: "/assets/ai_desert.jpg",
-      vehicle_image: destUbari,
+      fetch(`http://127.0.0.1:5001/api/db/drivers?contract_number=${encodeURIComponent(companyInfo.contract_number)}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res?.success && Array.isArray(res.data)) {
+            saveDrivers(res.data);
+            setDrivers(res.data);
+          }
+        }).catch(() => {});
     }
-  ]);
+  }, [active, companyInfo.contract_number]);
 
   const { language } = useLanguage();
   const isAr = language === 'ar';
@@ -199,38 +160,140 @@ function TransportDashboard() {
   ];
 
   /* ---- HANDLERS DRIVERS ---- */
-  const handleAddDriver = (newDrv: Driver) => {
-    setDrivers([...drivers, newDrv]);
-    setShowAddDriver(false);
+  const handleAddDriver = async (newDrv: Driver) => {
+    try {
+      const res = await apiAddDriver({
+        ...newDrv,
+        contract_number: companyInfo.contract_number,
+        company_name: companyInfo.company_name,
+      });
+      if (!res.success) {
+        alert("⚠️ " + (res.error || "فشل حفظ بيانات السائق في قاعدة البيانات"));
+        return;
+      }
+      
+      // Success! Fetch fresh drivers from DelniDB immediately
+      if (companyInfo.contract_number) {
+        const fresh = await fetch(`http://127.0.0.1:5001/api/db/drivers?contract_number=${encodeURIComponent(companyInfo.contract_number)}`);
+        const json = await fresh.json().catch(() => null);
+        if (json?.success && Array.isArray(json.data)) {
+          saveDrivers(json.data);
+          setDrivers(json.data);
+        } else if (res.data) {
+          setDrivers(prev => [res.data as unknown as Driver, ...prev.filter(x => x.driver_license_number !== res.data!.driver_license_number)]);
+        }
+      } else if (res.data) {
+        setDrivers(prev => [res.data as unknown as Driver, ...prev.filter(x => x.driver_license_number !== res.data!.driver_license_number)]);
+      }
+
+      setShowAddDriver(false);
+      alert(isAr ? "✅ تم إضافة السائق وتثبيته في قاعدة البيانات بنجاح، وهو متاح الآن للتعيين للمركبات." : "Driver added successfully to DelniDB.");
+    } catch (err: any) {
+      alert("⚠️ حدث خطأ أثناء إضافة السائق: " + (err.message || "فشلت العملية"));
+    }
   };
-  const handleUpdateDriver = (updated: Driver) => {
-    setDrivers(drivers.map(d => d.driver_license_number === updated.driver_license_number ? updated : d));
-    setEditingDriver(null);
+
+  const handleUpdateDriver = async (updated: Driver) => {
+    try {
+      const res = await apiUpdateDriver(updated.driver_license_number, updated);
+      if (!res.success) {
+        alert("⚠️ " + (res.error || "فشل تحديث بيانات السائق"));
+        return;
+      }
+      setDrivers(drivers.map(d => d.driver_license_number === updated.driver_license_number ? updated : d));
+      setEditingDriver(null);
+      alert(isAr ? "✅ تم تحديث بيانات السائق بنجاح في قاعدة البيانات." : "Driver updated successfully.");
+    } catch (err: any) {
+      alert("⚠️ حدث خطأ أثناء التحديث: " + (err.message || "فشلت العملية"));
+    }
   };
-  const handleDeleteDriver = (lic: string) => {
-    if (confirm("هل أنت متأكد من حذف حساب هذا السائق من الشركة؟")) {
+
+  const handleDeleteDriver = async (lic: string) => {
+    if (confirm("هل أنت متأكد من حذف حساب هذا السائق نهائياً من قاعدة البيانات؟")) {
+      await apiDeleteDriver(lic);
       setDrivers(drivers.filter(d => d.driver_license_number !== lic));
+      alert(isAr ? "✅ تم حذف السائق بنجاح." : "Driver deleted successfully.");
     }
   };
 
   /* ---- HANDLERS VEHICLES ---- */
-  const handleAddVehicle = (newVeh: Vehicle) => {
-    setVehicles([...vehicles, newVeh]);
+  const handleAddVehicle = (newVeh: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => {
+    const saved = addVehicle({
+      ...newVeh,
+      contract_number: companyInfo.contract_number,
+      company_name: companyInfo.company_name,
+    }, driverInfo) as Vehicle;
+    setVehicles([saved, ...vehicles]);
+
+    if (driverInfo?.licenseNumber) {
+      setDrivers(prev => prev.map(d => {
+        if (d.driver_license_number === driverInfo.licenseNumber) {
+          return { ...d, assigned_vehicle_plate: saved.plate_number };
+        }
+        if (d.assigned_vehicle_plate === saved.plate_number) {
+          return { ...d, assigned_vehicle_plate: null };
+        }
+        return d;
+      }));
+    }
+
     setShowAddVehicle(false);
   };
-  const handleUpdateVehicle = (updated: Vehicle) => {
+  const handleUpdateVehicle = (updated: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => {
+    updateVehicle(updated.plate_number, updated, driverInfo);
     setVehicles(vehicles.map(v => v.plate_number === updated.plate_number ? updated : v));
+    if (driverInfo) {
+      setDrivers(prev => prev.map(d => {
+        if (driverInfo.licenseNumber && d.driver_license_number === driverInfo.licenseNumber) {
+          return { ...d, assigned_vehicle_plate: updated.plate_number };
+        }
+        if (d.assigned_vehicle_plate === updated.plate_number && d.driver_license_number !== driverInfo.licenseNumber) {
+          return { ...d, assigned_vehicle_plate: null };
+        }
+        return d;
+      }));
+    }
     setEditingVehicle(null);
   };
   const handleDeleteVehicle = (plate: string) => {
     if (confirm("هل تريد حذف هذه المركبة نهائياً من أسطول الشركة؟")) {
+      deleteVehicle(plate);
       setVehicles(vehicles.filter(v => v.plate_number !== plate));
+      setDrivers(prev => prev.map(d => {
+        if (d.assigned_vehicle_plate === plate) {
+          const freed = { ...d, assigned_vehicle_plate: "" };
+          updateDriver(d.driver_license_number, freed);
+          return freed;
+        }
+        return d;
+      }));
     }
   };
 
+  const [companyNewPassword, setCompanyNewPassword] = useState("");
+  const [companyConfirmPassword, setCompanyConfirmPassword] = useState("");
+
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    alert("تم تحديث بيانات الشركة في قاعدة البيانات (DelniDB: transportation_companies) بنجاح ✓");
+    if (companyNewPassword) {
+      if (companyNewPassword.length < 4) {
+        alert("كلمة المرور يجب أن تتكون من 4 خانات على الأقل");
+        return;
+      }
+      if (companyNewPassword !== companyConfirmPassword) {
+        alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
+        return;
+      }
+      updateTransportCompany(companyInfo.contract_number, {
+        ...companyInfo,
+        password: companyNewPassword,
+      });
+      setCompanyNewPassword("");
+      setCompanyConfirmPassword("");
+      alert("تم تحديث كلمة مرور حساب شركة النقل بنجاح ✓");
+      return;
+    }
+    alert("لم يتم إدخال كلمة مرور جديدة. باقي بيانات العقد والاتصال معتمدة وثابتة.");
   };
 
   return (
@@ -262,14 +325,14 @@ function TransportDashboard() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="عدد السائقين" value={drivers.length} icon="🧑‍✈️" tone="sea" />
-            <StatCard label="حجم الأسطول" value={vehicles.length} hint={`${vehicles.filter(v => v.vehicle_status === "جاهزة").length} جاهزة · ${vehicles.filter(v => v.vehicle_status === "صيانة").length} صيانة`} icon="🚌" tone="clay" />
-            <StatCard label="السيارات المتاحة" value={companyInfo.available_vehicles || 8} icon="🚗" tone="green" />
-            <StatCard label="حالة توثيق العقد" value={companyInfo.verification_status} icon="📜" tone="sun" />
+            <StatCard label="حجم الأسطول" value={vehicles.length} hint={`${vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} جاهزة · ${vehicles.filter(v => v.vehicle_status === "صيانة" || v.status === "صيانة").length} صيانة`} icon="🚌" tone="clay" />
+            <StatCard label="السيارات المتاحة" value={vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} icon="🚗" tone="green" />
+            <StatCard label="حالة توثيق العقد" value={companyInfo.verification_status || "موثق"} icon="📜" tone="sun" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
             <div className="lg:col-span-2 space-y-6">
-              <SectionCard title="سائقو الشركة المسجلون (DelniDB: drivers)" action={<button onClick={() => setShowAddDriver(true)} className="text-primary text-sm font-black hover:underline">+ إضافة سائق</button>}>
+              <SectionCard title="سائقو الشركة المسجلون" action={<button onClick={() => setShowAddDriver(true)} className="text-primary text-sm font-black hover:underline">+ إضافة سائق</button>}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -305,7 +368,7 @@ function TransportDashboard() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="أسطول السيارات والحافلات (DelniDB: vehicles)" action={<button onClick={() => setShowAddVehicle(true)} className="text-primary text-sm font-black hover:underline">+ إضافة مركبة</button>}>
+              <SectionCard title="أسطول السيارات والحافلات" action={<button onClick={() => setShowAddVehicle(true)} className="text-primary text-sm font-black hover:underline">+ إضافة مركبة</button>}>
                 <div className="grid md:grid-cols-2 gap-4">
                   {vehicles.map((v) => (
                     <div key={v.plate_number} className="p-4 rounded-2xl border border-border bg-white flex flex-col justify-between hover:border-primary/40 transition shadow-sm space-y-3 text-right">
@@ -334,25 +397,34 @@ function TransportDashboard() {
 
             <div className="space-y-6">
               <SectionCard title="الرحلات المسنّدة اليوم">
-                <div className="space-y-3">
-                  {[
-                    { r: "طرابلس ← لبدة", t: "9:00 ص", drv: "علي التارقي", v: "طرابلس 4517" },
-                    { r: "طرابلس ← غدامس", t: "8:00 ص", drv: "أنور الترهوني", v: "بنغازي 3382" },
-                    { r: "بنغازي ← شحات", t: "9:30 ص", drv: "مفتاح الفزاني", v: "طرابلس 8291" },
-                  ].map((t) => (
-                    <div key={t.r} className="p-3 rounded-xl bg-muted/50 text-right">
-                      <div className="font-black text-sm text-foreground">{t.r}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">🗓️ {t.t} · 🧑‍✈️ {t.drv} (لوحة: {t.v})</div>
-                    </div>
-                  ))}
-                </div>
+                {vehicles.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground bg-muted/30 rounded-xl">
+                    لا توجد رحلات مسندة حالياً. ستظهر الرحلات هنا فور اعتماد الأسطول وتعيين السائقين.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {vehicles.slice(0, 3).map((v) => {
+                      const d = drivers.find((dr) => dr.assigned_vehicle_plate === v.plate_number);
+                      return (
+                        <div key={v.plate_number} className="p-3 rounded-xl bg-muted/50 text-right">
+                          <div className="font-black text-sm text-foreground">{v.vehicle_type}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            🧑‍✈️ {d ? d.full_name : "بانتظار تعيين سائق"} · 🚘 لوحة: {v.plate_number}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </SectionCard>
 
               <SectionCard title="بيانات الربط مع الإدارة (العقد الرسمي)">
                 <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 space-y-1 text-xs text-right">
                   <div className="font-black text-primary text-sm">عقد شركة النقل المعين:</div>
                   <div className="font-bold text-foreground">رقم العقد: {companyInfo.contract_number}</div>
-                  <div className="text-muted-foreground font-semibold">تاريخ سريان العقد: {companyInfo.contract_start_date} إلى {companyInfo.contract_end_date}</div>
+                  <div className="text-muted-foreground font-semibold">
+                    تاريخ سريان العقد: {companyInfo.contract_start_date ? String(companyInfo.contract_start_date).split("T")[0] : "ساري"} {companyInfo.contract_end_date ? `إلى ${String(companyInfo.contract_end_date).split("T")[0]}` : ""}
+                  </div>
                   <p className="text-muted-foreground mt-1">تتيح هذه اللوحة إدارة كافة السيارات المسجلة برقم العقد وإسناد السائقين ورفع صور التأمين الموثقة.</p>
                 </div>
               </SectionCard>
@@ -364,7 +436,7 @@ function TransportDashboard() {
       {/* DRIVERS TAB */}
       {active === "drivers" && (
         <SectionCard
-          title="إدارة جميع السائقين التابعين لشركة النقل (DelniDB: drivers)"
+          title="إدارة جميع السائقين التابعين لشركة النقل"
           action={
             <button
               onClick={() => setShowAddDriver(true)}
@@ -377,42 +449,70 @@ function TransportDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-right text-xs text-muted-foreground border-b border-border">
-                  <th className="pb-3 font-bold">الاسم الكامل (full_name)</th>
-                  <th className="pb-3 font-bold">الهاتف (phone_number)</th>
-                  <th className="pb-3 font-bold">رخصة القيادة (driver_license_number)</th>
-                  <th className="pb-3 font-bold">الهوية/الجواز (national_id_or_passport)</th>
-                  <th className="pb-3 font-bold">البريد الإلكتروني (email)</th>
-                  <th className="pb-3 font-bold">المركبة المسندة (assigned_vehicle_plate)</th>
-                  <th className="pb-3 font-bold">حالة الحساب (account_status)</th>
-                  <th className="pb-3 font-bold">الحالة التشغيلية (operational_status)</th>
-                  <th className="pb-3 font-bold">إجراءات</th>
+                <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/70">
+                  <th className="py-3.5 px-3 font-black text-foreground">السائق</th>
+                  <th className="py-3.5 px-3 font-black text-foreground">رقم الهاتف</th>
+                  <th className="py-3.5 px-3 font-black text-foreground">رقم رخصة القيادة</th>
+                  <th className="py-3.5 px-3 font-black text-foreground">الحافلة المخصصة</th>
+                  <th className="py-3.5 px-3 font-black text-foreground">الحالة التشغيلية</th>
+                  <th className="py-3.5 px-3 font-black text-foreground text-center">إجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {drivers.map((d) => (
-                  <tr key={d.driver_license_number}>
-                    <td className="py-3 font-bold text-foreground">{d.full_name}</td>
-                    <td className="py-3 font-mono text-xs text-muted-foreground">{d.phone_number}</td>
-                    <td className="py-3 text-muted-foreground">
-                      <div className="font-mono font-bold text-foreground text-xs">{d.driver_license_number}</div>
-                      <div className="text-[10px] text-emerald-600 font-bold">ينتهي: {d.license_date_valid}</div>
+                  <tr key={d.driver_license_number} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-sea text-white grid place-items-center text-xs font-black shadow-xs flex-shrink-0">
+                          🧑‍✈️
+                        </div>
+                        <div>
+                          <div className="font-black text-foreground text-xs">{d.full_name}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{d.email}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-3 text-muted-foreground font-mono text-xs">{d.national_id_or_passport}</td>
-                    <td className="py-3 text-muted-foreground text-xs">{d.email}</td>
-                    <td className="py-3 text-primary font-bold text-xs">{d.assigned_vehicle_plate || "غير مسند"}</td>
-                    <td className="py-3">
-                      <Badge tone={d.account_status === "نشط" ? "green" : "muted"}>{d.account_status}</Badge>
+                    <td className="py-3 px-3 font-mono text-xs font-bold text-foreground text-right" dir="ltr">
+                      {d.phone_number}
                     </td>
-                    <td className="py-3">
+                    <td className="py-3 px-3">
+                      <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200">
+                        {d.driver_license_number}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      {d.assigned_vehicle_plate && d.assigned_vehicle_plate !== "غير مسند" ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
+                          🚌 لوحة: {d.assigned_vehicle_plate}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
+                          غير مخصصة بعد
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3">
                       <Badge tone={d.operational_status === "متاح" ? "green" : d.operational_status === "في رحلة" ? "sea" : "muted"}>
                         {d.operational_status || "متاح"}
                       </Badge>
                     </td>
-                    <td className="py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => setEditingDriver(d)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                        <button onClick={() => handleDeleteDriver(d.driver_license_number)} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => setEditingDriver(d)}
+                          className="px-3 py-1.5 bg-[#1B5A78]/10 text-[#1B5A78] hover:bg-[#1B5A78]/20 transition text-xs font-black rounded-xl cursor-pointer flex items-center gap-1 shadow-xs"
+                          title="عرض وتعديل كافة البيانات"
+                        >
+                          <span>✏️</span>
+                          <span>تعديل واطلاع</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDriver(d.driver_license_number)}
+                          className="px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 transition text-xs font-black rounded-xl cursor-pointer"
+                          title="حذف السائق"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -426,7 +526,7 @@ function TransportDashboard() {
       {/* VEHICLES TAB */}
       {active === "vehicles" && (
         <SectionCard
-          title="أسطول السيارات والحافلات (DelniDB: vehicles)"
+          title="أسطول السيارات والحافلات"
           action={
             <button
               onClick={() => setShowAddVehicle(true)}
@@ -484,150 +584,442 @@ function TransportDashboard() {
 
       {/* TRIPS TAB */}
       {active === "trips" && (
-        <SectionCard title="الرحلات المسنّدة للشركة وسائقينها (DelniDB: daily_trip_vehicles & weekly_trip_vehicles)">
-          <div className="space-y-4 text-right">
-            {[
-              { id: "T-881", route: "طرابلس ← لبدة الكبرى", driver: "علي التارقي", vehicle: "طرابلس 4517", date: "اليوم", time: "9:00 ص", status: "مؤكدة" },
-              { id: "T-882", route: "طرابلس ← غدامس", driver: "أنور الترهوني", vehicle: "بنغازي 3382", date: "غداً", time: "8:00 ص", status: "مؤكدة" },
-              { id: "T-883", route: "بنغازي ← شحات", driver: "مفتاح الفزاني", vehicle: "طرابلس 8291", date: "19 أغسطس", time: "9:30 ص", status: "بانتظار التحرك" },
-            ].map((t) => (
-              <div key={t.id} className="p-4 rounded-xl border border-border flex flex-wrap gap-4 items-center justify-between">
-                <div>
-                  <div className="text-xs text-muted-foreground">رقم الرحلة: {t.id}</div>
-                  <h4 className="font-black text-foreground text-base mt-0.5">{t.route}</h4>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    👤 السائق: <b>{t.driver}</b> · المركبة واللوحة: <b>{t.vehicle}</b>
+        <SectionCard title="الرحلات المسنّدة للشركة وسائقيها">
+          {vehicles.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
+              <span className="text-3xl block mb-2">🚌</span>
+              <div className="font-bold text-sm text-foreground">لا توجد رحلات مسندة حالياً لأسطول الشركة</div>
+              <div className="text-xs text-muted-foreground mt-1">ستظهر الرحلات المجدولة تلقائياً فور تعيين المركبات والسائقين على الرحلات السياحية.</div>
+            </div>
+          ) : (
+            <div className="space-y-4 text-right">
+              {vehicles.map((v, i) => {
+                const d = drivers.find((dr) => dr.assigned_vehicle_plate === v.plate_number);
+                return (
+                  <div key={v.plate_number} className="p-4 rounded-xl border border-border flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">مركبة مسجلة #{i + 1}</div>
+                      <h4 className="font-black text-foreground text-base mt-0.5">{v.vehicle_type}</h4>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        👤 السائق: <b>{d ? d.full_name : "غير معين"}</b> · اللوحة: <b>{v.plate_number}</b> · السعة: <b>{v.seating_capacity} راكب</b>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge tone={v.vehicle_status === "جاهزة" ? "green" : "sun"}>{v.vehicle_status || "جاهزة"}</Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-foreground">{t.date} · {t.time}</div>
-                  <Badge tone={t.status === "مؤكدة" ? "green" : "sun"}>{t.status}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </SectionCard>
       )}
 
-      {/* PROFILE TAB (DelniDB: transportation_companies) */}
+      {/* PROFILE TAB */}
       {active === "profile" && (
-        <SectionCard title="تعديل بيانات ملف شركة النقل ورقم العقد (DelniDB: transportation_companies)">
+        <SectionCard title="بيانات ملف شركة النقل وكلمة المرور">
           <form className="max-w-xl space-y-4 text-right" onSubmit={handleUpdateProfile}>
-            <Field label="رقم العقد الرسمي بالمنصة (contract_number)" value={companyInfo.contract_number} onChange={(v) => setCompanyInfo({ ...companyInfo, contract_number: v })} />
-            <Field label="اسم الشركة الرسمي (company_name)" value={companyInfo.company_name} onChange={(v) => setCompanyInfo({ ...companyInfo, company_name: v })} />
-            <LibyanPhoneField label="رقم هاتف التواصل الرئيسي (phone_number)" value={companyInfo.phone_number} onChange={(v) => setCompanyInfo({ ...companyInfo, phone_number: v })} />
-            
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="المدينة (city)" value={companyInfo.city || ""} onChange={(v) => setCompanyInfo({ ...companyInfo, city: v })} />
-              <Field label="العنوان الرئيسي للمقر (address)" value={companyInfo.address} onChange={(v) => setCompanyInfo({ ...companyInfo, address: v })} />
+            {/* Note banner explaining locked fields */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+              <div className="font-black flex items-center gap-1.5 text-slate-900">
+                <span>🔒</span>
+                <span>بيانات العقد والاعتماد الرسمي (محمية ومطابقة للعقد الورقي):</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                رقم العقد، اسم الشركة، إجمالي المركبات وتواريخ سريان العقد ورقم الهاتف والبريد الإلكتروني هي بيانات رسمية معتمدة من الإدارة العامة، ولا يمكن تغييرها إلا عبر إدارة المنصة. يمكنك هنا فقط تحديث كلمة المرور الخاصة بحساب الشركة.
+              </p>
             </div>
 
+            {/* Read-only primary contract fields */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="إجمالي المركبات (total_vehicles)" type="number" value={String(companyInfo.total_vehicles)} onChange={(v) => setCompanyInfo({ ...companyInfo, total_vehicles: Number(v) })} />
-              <Field label="المركبات المتاحة (available_vehicles)" type="number" value={String(companyInfo.available_vehicles || 0)} onChange={(v) => setCompanyInfo({ ...companyInfo, available_vehicles: Number(v) })} />
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 flex items-center justify-between">
+                  <span>رقم العقد الرسمي 🔒</span>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">معتمد</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyInfo.contract_number}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 flex items-center justify-between">
+                  <span>اسم الشركة الرسمي 🔒</span>
+                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">مسجل</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyInfo.company_name}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="تاريخ بداية العقد (contract_start_date)" type="date" value={companyInfo.contract_start_date || ""} onChange={(v) => setCompanyInfo({ ...companyInfo, contract_start_date: v })} />
-              <Field label="تاريخ نهاية العقد (contract_end_date)" type="date" value={companyInfo.contract_end_date || ""} onChange={(v) => setCompanyInfo({ ...companyInfo, contract_end_date: v })} />
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">إجمالي المركبات 🔒</label>
+                <input
+                  type="number"
+                  value={String(companyInfo.total_vehicles)}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">بداية العقد 🔒</label>
+                <input
+                  type="date"
+                  value={companyInfo.contract_start_date ? String(companyInfo.contract_start_date).split("T")[0] : ""}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">نهاية العقد 🔒</label>
+                <input
+                  type="date"
+                  value={companyInfo.contract_end_date ? String(companyInfo.contract_end_date).split("T")[0] : ""}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="البريد الإلكتروني للشركة (email)" type="email" value={companyInfo.email || ""} onChange={(v) => setCompanyInfo({ ...companyInfo, email: v })} />
-              <Field label="كلمة مرور الحساب (password)" type="password" value={companyInfo.password || ""} onChange={(v) => setCompanyInfo({ ...companyInfo, password: v })} />
+            {/* Read-only Contact & Location Details */}
+            <div className="pt-3 border-t border-border space-y-3">
+              <div className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                <span>📍</span>
+                <span>بيانات المقر والتواصل (ثابتة ومعتمدة):</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">رقم هاتف التواصل الرئيسي 🔒</label>
+                  <input
+                    type="text"
+                    value={companyInfo.phone_number}
+                    disabled
+                    readOnly
+                    dir="ltr"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-xs text-right cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">البريد الإلكتروني للشركة 🔒</label>
+                  <input
+                    type="email"
+                    value={companyInfo.email || ""}
+                    disabled
+                    readOnly
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">المدينة (طرابلس أو بنغازي) 🔒</label>
+                  <select
+                    value={companyInfo.city === "بنغازي" ? "بنغازي" : "طرابلس"}
+                    disabled
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
+                  >
+                    <option value="طرابلس">طرابلس</option>
+                    <option value="بنغازي">بنغازي</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 flex items-center justify-between">
+                    <span>رابط موقع المقر (خرائط Google) 🔒</span>
+                    {companyInfo.address && companyInfo.address.startsWith("http") && (
+                      <a
+                        href={companyInfo.address}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-primary hover:underline font-bold"
+                      >
+                        معاينة الخريطة 📍
+                      </a>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={companyInfo.address}
+                    disabled
+                    readOnly
+                    placeholder="https://maps.google.com/..."
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono text-xs text-right cursor-not-allowed"
+                  />
+                </div>
+              </div>
             </div>
 
-            <button className="px-6 h-11 rounded-xl bg-gradient-sea text-white font-black text-sm shadow-glow">
-              حفظ وتحديث الملف في DelniDB ✓
+            {/* Editable Password Section */}
+            <div className="p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-3 pt-4">
+              <div className="text-xs font-black text-primary flex items-center gap-1.5">
+                <span>🔑</span>
+                <span>تحديث كلمة مرور حساب شركة النقل:</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-foreground mb-1 block">كلمة المرور الجديدة</label>
+                  <input
+                    type="password"
+                    value={companyNewPassword}
+                    onChange={(e) => setCompanyNewPassword(e.target.value)}
+                    placeholder="اكتب كلمة مرور جديدة..."
+                    className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-foreground mb-1 block">تأكيد كلمة المرور</label>
+                  <input
+                    type="password"
+                    value={companyConfirmPassword}
+                    onChange={(e) => setCompanyConfirmPassword(e.target.value)}
+                    placeholder="أعد كتابة كلمة المرور..."
+                    className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                * اترك الحقل فارغاً إذا كنت لا ترغب في تغيير كلمة المرور الحالية.
+              </p>
+            </div>
+
+            <button className="px-6 h-11 rounded-xl bg-gradient-sea text-white font-black text-sm shadow-glow cursor-pointer hover:opacity-95 transition">
+              حفظ وتحديث كلمة المرور ✓
             </button>
           </form>
         </SectionCard>
       )}
 
       {/* ===== MODALS ===== */}
-      {showAddDriver && <DriverModal title="إضافة سائق جديد لشركة النقل" contractNumber={companyInfo.contract_number} vehicles={vehicles} onClose={() => setShowAddDriver(false)} onSave={handleAddDriver} />}
-      {editingDriver && <DriverModal title={`تعديل بيانات السائق: ${editingDriver.full_name}`} driver={editingDriver} contractNumber={companyInfo.contract_number} vehicles={vehicles} onClose={() => setEditingDriver(null)} onSave={handleUpdateDriver} />}
+      {showAddDriver && (
+        <DriverModal
+          title="إضافة سائق جديد لشركة النقل"
+          contractNumber={companyInfo.contract_number}
+          vehicles={vehicles}
+          drivers={drivers}
+          onClose={() => setShowAddDriver(false)}
+          onSave={handleAddDriver}
+        />
+      )}
+      {editingDriver && (
+        <DriverModal
+          title={`تعديل بيانات السائق: ${editingDriver.full_name}`}
+          driver={editingDriver}
+          contractNumber={companyInfo.contract_number}
+          vehicles={vehicles}
+          drivers={drivers}
+          onClose={() => setEditingDriver(null)}
+          onSave={handleUpdateDriver}
+        />
+      )}
 
-      {showAddVehicle && <VehicleModal title="إضافة مركبة جديدة لأسطول الشركة" contractNumber={companyInfo.contract_number} onClose={() => setShowAddVehicle(false)} onSave={handleAddVehicle} />}
-      {editingVehicle && <VehicleModal title={`تعديل المركبة: ${editingVehicle.plate_number}`} vehicle={editingVehicle} contractNumber={companyInfo.contract_number} onClose={() => setEditingVehicle(null)} onSave={handleUpdateVehicle} />}
+      {showAddVehicle && (
+        <VehicleModal
+          title="إضافة مركبة جديدة لأسطول الشركة"
+          contractNumber={companyInfo.contract_number}
+          drivers={drivers}
+          vehicles={vehicles}
+          onClose={() => setShowAddVehicle(false)}
+          onSave={handleAddVehicle}
+        />
+      )}
+      {editingVehicle && (
+        <VehicleModal
+          title={`تعديل المركبة: ${editingVehicle.plate_number}`}
+          vehicle={editingVehicle}
+          contractNumber={companyInfo.contract_number}
+          drivers={drivers}
+          vehicles={vehicles}
+          onClose={() => setEditingVehicle(null)}
+          onSave={handleUpdateVehicle}
+        />
+      )}
     </DashboardShell>
   );
 }
 
 /* ============ DRIVER MODAL (DelniDB: drivers) ============ */
-function DriverModal({ title, driver, contractNumber, vehicles, onClose, onSave }: { title: string; driver?: Driver; contractNumber: string; vehicles: Vehicle[]; onClose: () => void; onSave: (d: Driver) => void }) {
-  const [lic, setLic] = useState(driver?.driver_license_number || `LB-${Math.floor(10000 + Math.random() * 90000)}`);
+function DriverModal({
+  title,
+  driver,
+  contractNumber,
+  vehicles,
+  drivers = [],
+  onClose,
+  onSave,
+}: {
+  title: string;
+  driver?: Driver;
+  contractNumber: string;
+  vehicles: Vehicle[];
+  drivers?: Driver[];
+  onClose: () => void;
+  onSave: (d: Driver) => void | Promise<void>;
+}) {
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+
+  const [lic, setLic] = useState(driver?.driver_license_number || "");
   const [name, setName] = useState(driver?.full_name || "");
   const [phone, setPhone] = useState(driver?.phone_number || "");
   const [expire, setExpire] = useState(driver?.license_date_valid || "2029-12-31");
   const [nid, setNid] = useState(driver?.national_id_or_passport || "");
   const [email, setEmail] = useState(driver?.email || "");
   const [pass, setPass] = useState(driver?.password || "");
-  const [assignedPlate, setAssignedPlate] = useState(driver?.assigned_vehicle_plate || vehicles[0]?.plate_number || "");
+  const [assignedPlate, setAssignedPlate] = useState(driver?.assigned_vehicle_plate || "");
   const [operationalStatus, setOperationalStatus] = useState<Driver["operational_status"]>(driver?.operational_status || "متاح");
-  const [expYears, setExpYears] = useState(driver?.experience_years ? String(driver.experience_years) : "5");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !nid || !email) return alert("يرجى تعبئة كافة الحقول المطلوبة لضمان صحة البيانات");
-    onSave({
-      driver_license_number: lic,
-      full_name: name,
-      phone_number: phone,
-      license_date_valid: expire,
-      national_id_or_passport: nid,
-      email,
-      password: pass || "••••••••",
-      contract_number: contractNumber,
-      assigned_vehicle_plate: assignedPlate,
-      account_status: driver?.account_status || "نشط",
-      operational_status: operationalStatus,
-      experience_years: Number(expYears) || 0,
-    });
+    if (!name.trim() || !phone.trim() || !nid.trim() || !email.trim() || !lic.trim()) {
+      return alert(isAr ? "يرجى تعبئة كافة الحقول المطلوبة لضمان صحة البيانات" : "Please fill all required fields");
+    }
+
+    // 1. License Number validation: NUMBERS ONLY
+    if (!/^\d+$/.test(lic.trim())) {
+      return alert(isAr ? "رقم رخصة القيادة يجب أن يتكون من أرقام فقط" : "Driver license number must contain digits only");
+    }
+
+    // Check duplicate primary key
+    if (!driver && drivers.some(d => d.driver_license_number === lic.trim())) {
+      return alert(isAr ? "رقم رخصة القيادة هذا مسجل مسبقاً لسائق آخر" : "This license number is already registered for another driver");
+    }
+
+    // 2. National ID validation: NUMBERS ONLY & EXACTLY 12 DIGITS
+    if (!/^\d{12}$/.test(nid.trim())) {
+      return alert(isAr ? "الرقم الوطني للسائق يجب أن يتكون من 12 رقماً بالضبط (أرقام فقط)" : "National ID must be exactly 12 digits");
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      return alert(isAr ? "يرجى إدخال بريد إلكتروني صحيح" : "Please enter a valid email address");
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        driver_license_number: lic.trim(),
+        full_name: name.trim(),
+        phone_number: phone.trim(),
+        license_date_valid: expire,
+        national_id_or_passport: nid.trim(),
+        email: email.trim(),
+        password: pass || "••••••••",
+        contract_number: contractNumber,
+        assigned_vehicle_plate: driver ? (assignedPlate.trim() || null) : null,
+        account_status: driver?.account_status || "نشط",
+        operational_status: operationalStatus,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <ModalShell title={title} onClose={onClose}>
       <form className="space-y-3 text-right" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="اسم السائق الكامل (full_name)" value={name} onChange={setName} placeholder="مثال: صالح الورفلي" />
-          <LibyanPhoneField label="رقم الهاتف (phone_number)" value={phone} onChange={setPhone} />
+          <Field label={isAr ? "الاسم الكامل للسائق *" : "Driver Full Name *"} value={name} onChange={setName} placeholder={isAr ? "مثال: صالح الورفلي" : "e.g., Saleh Al-Warfali"} required />
+          <LibyanPhoneField label={isAr ? "رقم الهاتف *" : "Phone Number *"} value={phone} onChange={setPhone} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="رقم رخصة القيادة (driver_license_number)" value={lic} onChange={setLic} placeholder="LB-77452" />
-          <Field label="صلاحية الرخصة (license_date_valid)" type="date" value={expire} onChange={setExpire} />
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              {isAr ? "رقم رخصة القيادة (أرقام فقط) *" : "Driver License (Digits only) *"}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={lic}
+              onChange={(e) => setLic(e.target.value.replace(/\D/g, ""))}
+              placeholder="مثال: 77452"
+              required
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+            />
+          </div>
+          <Field label={isAr ? "تاريخ صلاحية الرخصة *" : "License Expiry Date *"} type="date" value={expire} onChange={setExpire} required />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="الرقم الوطني / جواز السفر (national_id_or_passport)" value={nid} onChange={setNid} placeholder="119900..." />
-          <Field label="سنوات الخبرة (experience_years)" type="number" value={expYears} onChange={setExpYears} />
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            {isAr ? "الرقم الوطني للسائق (12 رقماً) *" : "National ID (12 Digits) *"}
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]{12}"
+            maxLength={12}
+            value={nid}
+            onChange={(e) => setNid(e.target.value.replace(/\D/g, ""))}
+            placeholder="12 رقماً (مثال: 119900123456)"
+            required
+            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+          />
         </div>
         
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">المركبة المسندة (assigned_vehicle_plate)</label>
-          <select value={assignedPlate} onChange={e => setAssignedPlate(e.target.value)} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold outline-none focus:border-primary text-right">
-            {vehicles.map(v => (
-              <option key={v.plate_number} value={v.plate_number}>{v.vehicle_type} - {v.plate_number}</option>
-            ))}
-          </select>
-        </div>
+        {driver && (
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              {isAr ? "المركبة المخصصة للسائق (لكل حافلة سائق مخصص)" : "Assigned Vehicle (Dedicated Driver)"}
+            </label>
+            <select
+              value={assignedPlate}
+              onChange={e => setAssignedPlate(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold outline-none focus:border-primary text-right"
+            >
+              <option value="">{isAr ? "-- بدون حافلة مخصصة --" : "-- None --"}</option>
+              {vehicles.map(v => {
+                const otherDriver = drivers.find(d => d.assigned_vehicle_plate === v.plate_number && d.driver_license_number !== driver.driver_license_number);
+                if (otherDriver) {
+                  return (
+                    <option key={v.plate_number} value={v.plate_number} disabled>
+                      {v.vehicle_type} - لوحة: {v.plate_number} (مخصصة للسائق: {otherDriver.full_name})
+                    </option>
+                  );
+                }
+                return (
+                  <option key={v.plate_number} value={v.plate_number}>
+                    {v.vehicle_type} - لوحة: {v.plate_number} {assignedPlate === v.plate_number ? "(الحافلة الحالية)" : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="البريد الإلكتروني (email)" type="email" value={email} onChange={setEmail} placeholder="driver@dalni.ly" />
-          <Field label="كلمة المرور (password)" type="password" value={pass} onChange={setPass} />
+          <Field label={isAr ? "البريد الإلكتروني *" : "Email Address *"} type="email" value={email} onChange={setEmail} placeholder="driver@dalni.ly" required />
+          <Field label={isAr ? "كلمة المرور *" : "Password *"} type="password" value={pass} onChange={setPass} required />
         </div>
 
         <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">الحالة التشغيلية (operational_status)</label>
+          <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "الحالة التشغيلية *" : "Operational Status *"}</label>
           <select value={operationalStatus || "متاح"} onChange={e => setOperationalStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right">
-            <option value="متاح">متاح وجاهز للقيادة</option>
-            <option value="في رحلة">في رحلة حالياً</option>
-            <option value="إجازة">في إجازة</option>
+            <option value="متاح">{isAr ? "متاح وجاهز للقيادة" : "Available & Ready"}</option>
+            <option value="في رحلة">{isAr ? "في رحلة حالياً" : "On a Trip"}</option>
+            <option value="إجازة">{isAr ? "في إجازة" : "On Leave"}</option>
           </select>
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ بيانات السائق</button>
+          <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 h-10 rounded-xl border font-black text-xs cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
+          <button type="submit" disabled={isSubmitting} className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow cursor-pointer disabled:opacity-50">
+            {isSubmitting ? (isAr ? "جاري الحفظ في DelniDB..." : "Saving to DelniDB...") : (isAr ? "حفظ بيانات السائق" : "Save Driver Details")}
+          </button>
         </div>
       </form>
     </ModalShell>
@@ -635,72 +1027,211 @@ function DriverModal({ title, driver, contractNumber, vehicles, onClose, onSave 
 }
 
 /* ============ VEHICLE MODAL (DelniDB: vehicles) ============ */
-function VehicleModal({ title, vehicle, contractNumber, onClose, onSave }: { title: string; vehicle?: Vehicle; contractNumber: string; onClose: () => void; onSave: (v: Vehicle) => void }) {
+function VehicleModal({
+  title,
+  vehicle,
+  contractNumber,
+  drivers = [],
+  vehicles = [],
+  onClose,
+  onSave,
+}: {
+  title: string;
+  vehicle?: Vehicle;
+  contractNumber: string;
+  drivers?: Driver[];
+  vehicles?: Vehicle[];
+  onClose: () => void;
+  onSave: (v: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => void;
+}) {
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+
   const [plate, setPlate] = useState(vehicle?.plate_number || "");
   const [type, setType] = useState(vehicle?.vehicle_type || "تويوتا كوستر 2025");
   const [seats, setSeats] = useState(vehicle?.seating_capacity ? String(vehicle.seating_capacity) : "20");
   const [dailyRate, setDailyRate] = useState(vehicle?.daily_rate ? String(vehicle.daily_rate) : "450");
   const [category, setCategory] = useState(vehicle?.category || "حافلة سياحية");
   const [status, setStatus] = useState<Vehicle["vehicle_status"]>(vehicle?.vehicle_status || "جاهزة");
-  const [insuranceText, setInsuranceText] = useState(vehicle?.insurance_details || "وثيقة تأمين شامل سارية المفعول");
   const [insuranceImg, setInsuranceImg] = useState(vehicle?.insurance_image || "");
   const [vehicleImg, setVehicleImg] = useState(vehicle?.vehicle_image || officeBusImg);
 
+  // Driver Assignment: Check which drivers are unassigned or assigned to this vehicle
+  const isDriverAvailable = (d: Driver) => {
+    if (vehicle && d.assigned_vehicle_plate === vehicle.plate_number) return true;
+    if (!d.assigned_vehicle_plate) return true;
+    const p = String(d.assigned_vehicle_plate).trim();
+    return p === "" || p === "غير مسند" || p === "غير معين" || p === "none" || p === "null" || p === "غير مسندة";
+  };
+
+  // Dedicated driver policy: each vehicle has a dedicated driver and cannot repeat
+  const selectableDrivers = drivers.filter(isDriverAvailable);
+
+  const initiallyAssigned = drivers.find(d => d.assigned_vehicle_plate === vehicle?.plate_number);
+  const [selectedDriverLic, setSelectedDriverLic] = useState(
+    initiallyAssigned?.driver_license_number || ""
+  );
+  const [errorMsg, setErrorMsg] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!plate || !type || !seats) return alert("يرجى كتابة رقم اللوحة ونوع السيارة وعدد المقاعد");
+    setErrorMsg("");
+
+    const cleanPlate = plate.trim();
+    if (!cleanPlate) {
+      setErrorMsg(isAr ? "يرجى إدخال رقم اللوحة المعدنية للمركبة." : "Please enter plate number.");
+      return;
+    }
+
+    // Plate number must be numbers only
+    if (!/^\d+$/.test(cleanPlate)) {
+      setErrorMsg(isAr ? "رقم اللوحة المعدنية للمركبة يجب أن يتكون من أرقام فقط." : "Plate number must contain digits only.");
+      return;
+    }
+
+    // Check duplicate plate
+    if (!vehicle && vehicles.some(v => v.plate_number === cleanPlate)) {
+      setErrorMsg(isAr ? "رقم اللوحة المعدنية مسجل مسبقاً لمركبة أخرى في الأسطول." : "This plate number already exists.");
+      return;
+    }
+
+    if (!type.trim()) {
+      setErrorMsg(isAr ? "يرجى تحديد نوع وموديل المركبة." : "Please enter vehicle make and model.");
+      return;
+    }
+    const seatsNum = Number(seats);
+    if (isNaN(seatsNum) || seatsNum <= 0) {
+      setErrorMsg(isAr ? "عدد المقاعد يجب أن يكون رقماً صحيحاً أكبر من 0." : "Seats must be greater than 0.");
+      return;
+    }
+    const rateNum = Number(dailyRate);
+    if (isNaN(rateNum) || rateNum <= 0) {
+      setErrorMsg(isAr ? "سعر التأجير اليومي يجب أن يكون رقماً أكبر من 0." : "Daily rate must be greater than 0.");
+      return;
+    }
+
     onSave({
-      plate_number: plate,
+      plate_number: cleanPlate,
       contract_number: contractNumber,
-      vehicle_type: type,
-      seating_capacity: Number(seats),
-      daily_rate: Number(dailyRate) || 450,
+      vehicle_type: type.trim(),
+      seating_capacity: seatsNum,
+      daily_rate: rateNum,
       category,
       vehicle_status: status,
-      insurance_details: insuranceText,
+      insurance_details: "مرفق صورة الوثيقة",
       insurance_image: insuranceImg,
       vehicle_image: vehicleImg,
-    });
+    }, { licenseNumber: selectedDriverLic });
   };
 
   return (
     <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2 animate-in fade-in">
+            <span>⚠️</span>
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2">
-          <Field label="رقم اللوحة المعدنية (plate_number)" value={plate} onChange={setPlate} placeholder="مثال: طرابلس 8291" />
-          <Field label="عدد المقاعد (seating_capacity)" type="number" value={seats} onChange={setSeats} />
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              {isAr ? "رقم اللوحة المعدنية (أرقام فقط) *" : "Plate Number (Digits only) *"}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={plate}
+              onChange={(e) => setPlate(e.target.value.replace(/\D/g, ""))}
+              placeholder="مثال: 58214"
+              required
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+            />
+          </div>
+          <Field label={isAr ? "عدد المقاعد *" : "Seating Capacity *"} type="number" value={seats} onChange={setSeats} required />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="نوع السيارة وموديلها (vehicle_type)" value={type} onChange={setType} placeholder="مثال: تويوتا كوستر 2025" />
-          <Field label="فئة المركبة (category)" value={category} onChange={setCategory} placeholder="مثال: فان، ميني باص، 4x4" />
+          <Field label={isAr ? "نوع وموديل السيارة *" : "Vehicle Make & Model *"} value={type} onChange={setType} placeholder={isAr ? "مثال: تويوتا كوستر 2025" : "e.g., Toyota Coaster 2025"} required />
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "فئة المركبة *" : "Vehicle Category *"}</label>
+            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right">
+              <option value="حافلة سياحية">{isAr ? "حافلة سياحية" : "Tourist Bus"}</option>
+              <option value="ميني باص">{isAr ? "ميني باص" : "Mini Bus"}</option>
+              <option value="فان">{isAr ? "فان" : "Van"}</option>
+              <option value="سيارة دفع رباعي (4x4)">{isAr ? "سيارة دفع رباعي (4x4)" : "4x4 SUV"}</option>
+              <option value="سيدان">{isAr ? "سيدان" : "Sedan"}</option>
+            </select>
+          </div>
         </div>
         <div>
-          <Field label="سعر اليوم الواحد بالدينار (daily_rate)" type="number" value={dailyRate} onChange={setDailyRate} placeholder="مثال: 450" />
+          <Field label={isAr ? "سعر اليوم الواحد (د.ل) *" : "Daily Rate (LYD) *"} type="number" value={dailyRate} onChange={setDailyRate} placeholder="450" required />
         </div>
         
+        {/* DRIVER ASSIGNMENT SECTION */}
+        <div className="p-3.5 rounded-2xl border-2 border-[#1B5A78]/30 bg-[#1B5A78]/5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-[#1B5A78] flex items-center gap-1.5">
+              🧑‍✈️ {isAr ? "تعيين سائق مخصص للمركبة (سائق مخصص لا يتكرر):" : "Assign Dedicated Driver:"}
+            </span>
+            <span className="text-[11px] font-bold text-slate-500">
+              {selectableDrivers.length} {isAr ? "سائق متاح" : "available"}
+            </span>
+          </div>
+
+          {selectableDrivers.length > 0 ? (
+            <div>
+              <select
+                value={selectedDriverLic}
+                onChange={(e) => setSelectedDriverLic(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-right outline-none focus:border-[#1B5A78]"
+              >
+                <option value="">{isAr ? "-- بدون تعيين سائق حالياً --" : "-- No Driver Assigned --"}</option>
+                {selectableDrivers.map((d) => (
+                  <option key={d.driver_license_number} value={d.driver_license_number}>
+                    🧑‍✈️ {d.full_name} ({d.phone_number}) — رخصة: {d.driver_license_number} {d.assigned_vehicle_plate && d.assigned_vehicle_plate === plate ? `(السائق المخصص الحالي)` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-emerald-700 font-bold mt-1">
+                {isAr ? "✓ سياسة التخصيص: لكل حافلة سائق مخصص واحد فقط ولا يتكرر لمركبة أخرى." : "Dedicated policy: Each vehicle has a dedicated driver only."}
+              </p>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold space-y-1">
+              <div>⚠️ {isAr ? "كافة السائقين مخصصون لحافلات أخرى بالفعل!" : "All drivers are dedicated to other vehicles!"}</div>
+              <p className="text-[11px] font-normal text-amber-800 leading-relaxed">
+                {isAr
+                  ? "وفقاً للنظام: لكل حافلة سائق مخصص لا يتكرر. لإسناد سائق لهذه المركبة، يرجى إضافة سائق جديد أولاً من تبويب (السائقون المسجلون)."
+                  : "Each vehicle has a dedicated driver. Please add a driver from the Drivers tab first."}
+              </p>
+            </div>
+          )}
+        </div>
+
         <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">حالة السيارة (vehicle_status)</label>
+          <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "حالة السيارة *" : "Vehicle Status *"}</label>
           <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right">
-            <option value="جاهزة">جاهزة للرحلات</option>
-            <option value="في رحلة">في رحلة حالية</option>
-            <option value="صيانة">قيد الصيانة</option>
-            <option value="خارج الخدمة">خارج الخدمة</option>
+            <option value="جاهزة">{isAr ? "جاهزة للرحلات" : "Ready for Trips"}</option>
+            <option value="في رحلة">{isAr ? "في رحلة حالية" : "On a Trip"}</option>
+            <option value="صيانة">{isAr ? "قيد الصيانة" : "Under Maintenance"}</option>
+            <option value="خارج الخدمة">{isAr ? "خارج الخدمة" : "Out of Service"}</option>
           </select>
         </div>
 
         <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2">
-          <label className="text-xs font-black text-foreground block">🛡️ بيانات ووثيقة التأمين (insurance_details & insurance_image):</label>
-          <Field label="تفاصيل وثيقة التأمين" value={insuranceText} onChange={setInsuranceText} placeholder="رقم وتفاصيل التأمين..." />
-          <ImageFilePicker label="صورة وثيقة التأمين" value={insuranceImg} onChange={setInsuranceImg} />
+          <label className="text-xs font-black text-foreground block">{isAr ? "🛡️ وثيقة التأمين الشامل" : "🛡️ Comprehensive Insurance Document"}</label>
+          <ImageFilePicker label={isAr ? "صورة وثيقة التأمين" : "Insurance Image"} value={insuranceImg} onChange={setInsuranceImg} />
         </div>
 
         <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة السيارة (vehicle_image)" value={vehicleImg} onChange={setVehicleImg} />
+          <ImageFilePicker label={isAr ? "صورة السيارة" : "Vehicle Image"} value={vehicleImg} onChange={setVehicleImg} />
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ السيارة والتأمين في DelniDB</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
+          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer">{isAr ? "حفظ وتعيين المركبة بالسائق ✓" : "Save Vehicle with Driver ✓"}</button>
         </div>
       </form>
     </ModalShell>
@@ -711,22 +1242,81 @@ function VehicleModal({ title, vehicle, contractNumber, onClose, onSave }: { tit
 function ImageFilePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) { const r = new FileReader(); r.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); }; r.readAsDataURL(file); }
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      if (!src) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > h && w > MAX_DIM) {
+          h = Math.round((h * MAX_DIM) / w);
+          w = MAX_DIM;
+        } else if (h > MAX_DIM) {
+          w = Math.round((w * MAX_DIM) / h);
+          h = MAX_DIM;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          onChange(compressed);
+        } else {
+          onChange(src);
+        }
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
   };
+
+  const isBase64 = value && value.startsWith("data:");
+
   return (
     <div className="p-2.5 rounded-xl border border-border bg-muted/20 space-y-1.5 text-right">
       <div className="flex justify-between items-center">
         <label className="text-xs font-bold text-foreground">{label}</label>
-        {value && <span className="text-[10px] text-emerald-600 font-bold">✓ تم التحميل</span>}
+        {value && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-emerald-600 font-bold">✓ تم التحميل والحفظ</span>
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="text-[10px] text-red-500 hover:text-red-700 font-bold underline cursor-pointer"
+            >
+              حذف
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-2">
-        {value ? <img src={value} alt="" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-xs flex-shrink-0" /> : <div className="w-12 h-12 rounded-lg bg-muted border border-dashed border-border grid place-items-center text-xs text-muted-foreground flex-shrink-0">📷</div>}
+        {value ? (
+          <img src={value} alt="" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-xs flex-shrink-0" />
+        ) : (
+          <div className="w-12 h-12 rounded-lg bg-muted border border-dashed border-border grid place-items-center text-xs text-muted-foreground flex-shrink-0">📷</div>
+        )}
         <div className="flex-1 space-y-1">
           <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-sea text-white text-xs font-black cursor-pointer hover:opacity-90 transition shadow-soft">
             📁 اختيار صورة من الجهاز
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
           </label>
-          <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder="أو ضع رابط الصورة..." className="w-full h-8 px-2 text-[10px] rounded-lg border border-border bg-white outline-none font-mono text-right" />
+          <input
+            type="text"
+            value={isBase64 ? "صورة مخصصة مرفوعة من الجهاز ✓" : value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="أو ضع رابط الصورة..."
+            readOnly={Boolean(isBase64)}
+            className="w-full h-8 px-2 text-[10px] rounded-lg border border-border bg-white outline-none font-mono text-right"
+          />
         </div>
       </div>
     </div>
@@ -762,7 +1352,7 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Field({ label, type = "text", value, onChange, placeholder, required }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean }) {
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
@@ -771,6 +1361,7 @@ function Field({ label, type = "text", value, onChange, placeholder }: { label: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        required={required}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
       />
     </div>

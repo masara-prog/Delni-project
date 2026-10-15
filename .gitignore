@@ -38,3 +38,4 @@ delni-backend/.phpunit.result.cache
 delni-ai-service/__pycache__/
 delni-ai-service/python_env/
 *.zip
+scratch/

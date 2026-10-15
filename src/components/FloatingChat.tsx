@@ -190,51 +190,37 @@ export function FloatingChat() {
         return;
       }
 
-      // Call real Python FastAPI Delni AI backend
-      try {
-        const historyForBackend = messages.slice(-6).map((msg) => ({
-          role: msg.from === "user" ? "user" : "model",
-          content: msg.text,
-        }));
-        
-        fetch("http://127.0.0.1:8000/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: t, history: historyForBackend }),
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error("Backend offline");
-            return res.json();
-          })
-          .then((data) => {
-            setMessages((m) => [
-              ...m,
-              {
-                id: Date.now() + 1,
-                from: "ai",
-                badge: data.source === "gemini" ? "✨ ذكاء دلّني (Gemini AI)" : "🤖 مرشد دلّني الذكي",
-                text: data.reply,
-                time: now(),
-              },
-            ]);
-          })
-          .catch(() => {
-            // Graceful fallback to local response if backend is offline
-            setMessages((m) => [
-              ...m,
-              {
-                id: Date.now() + 1,
-                from: "ai",
-                text: language === 'ar' 
-                  ? `شكراً لاستفسارك! في منصة دلني نسعد بتقديم كافة التسهيلات حول المعالم، والمرشدين المعينين، وشركات النقل. يمكنك تجربة رفع صورة معلم أو كتابة استفسارك بالتفصيل.`
-                  : `Thanks for your inquiry! At Libya Journeys, we are happy to assist with landmarks, guides, and transport.`,
-                time: now()
-              }
-            ]);
-          });
-      } catch {
-        // Fallback
+      // Intelligent local client-side response
+      const lower = t.toLowerCase();
+      let reply = "";
+      if (lower.includes("أوباري") || lower.includes("صحراء") || lower.includes("سفاري")) {
+        reply = language === 'ar'
+          ? "أهلاً بك! 🐪 بحيرات أوباري وصحراء فزان وجهة عالمية فريدة للتخييم وسفاري الكثبان الذهبية (أفضل موسم: نوفمبر - مارس). لدينا رحلات أسبوعية بسيارات دفع رباعي وسائقين محترفين."
+          : "Welcome! The Ubari lakes and Fezzan desert are world-class destinations for camping and sand dune safaris. We offer weekly tours with 4WD vehicles and experienced drivers.";
+      } else if (lower.includes("لبدة") || lower.includes("رومان") || lower.includes("صبراتة")) {
+        reply = language === 'ar'
+          ? "مرحباً بك! 🏛️ لبدة الكبرى وصبراتة هما درتا التراث الروماني على البحر المتوسط المصنفتان في اليونسكو. نوفر رحلات يومية بحافلات مكيفة ومرشدين معتمدين."
+          : "Welcome! Leptis Magna and Sabratha are UNESCO-listed Roman heritage gems. We offer daily tours with air-conditioned coaches and certified guides.";
+      } else if (lower.includes("مرشد") || lower.includes("دليل")) {
+        reply = language === 'ar'
+          ? "جميع المرشدين في منصة دلني مرخصون ومعتمدون من وزارة السياحة، ويمكنك استعراض ملفاتهم واختيار المرشد الأنسب لرحلتك من صفحة المرشدين."
+          : "All tour guides on Dalni are certified. You can browse their profiles and choose the best guide from the guides page.";
+      } else {
+        reply = language === 'ar'
+          ? `شكراً لاستفسارك! في منصة دَلِّني نسعد بتقديم كافة التسهيلات حول المعالم السياحية الليبية، الرحلات اليومية والأسبوعية، وخدمات النقل والإرشاد. يمكنك أيضاً رفع صورة أي معلم سياحي للتعرف عليه فوراً!`
+          : `Thanks for your inquiry! At Dalni, we are happy to assist with Libyan landmarks, tours, transport, and certified guides. You can also upload a landmark photo for instant recognition!`;
       }
+
+      setMessages((m) => [
+        ...m,
+        {
+          id: Date.now() + 1,
+          from: "ai",
+          badge: language === 'ar' ? "✨ مساعد دَلِّني الذكي" : "✨ Dalni Smart Assistant",
+          text: reply,
+          time: now(),
+        },
+      ]);
     }, 400);
   };
 
@@ -250,33 +236,6 @@ export function FloatingChat() {
 
     setAnalyzingImage(true);
 
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("http://127.0.0.1:8000/api/ai/vision", {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAnalyzingImage(false);
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            from: "ai",
-            badge: "👁️ نتائج التعرف البصري (Delni Vision)",
-            text: data.analysis || "تم التعرف على المعلم بنجاح.",
-            time: now()
-          }
-        ]);
-        return;
-      }
-    } catch {
-      // Ignore and fallback below
-    }
-
-    // Local fallback if vision endpoint unavailable
     setTimeout(() => {
       setAnalyzingImage(false);
       const sample = landmarkSamples[Math.floor(Math.random() * landmarkSamples.length)];
@@ -285,13 +244,13 @@ export function FloatingChat() {
         {
           id: Date.now() + 1,
           from: "ai",
-          badge: language === 'ar' ? "👁️ نتائج التعرف البصري (Computer Vision)" : "👁️ Computer Vision Result",
+          badge: language === 'ar' ? "👁️ نتائج التعرف البصري" : "👁️ Computer Vision Result",
           text: sample.info,
           image: sample.img,
           time: now()
         }
       ]);
-    }, 1200);
+    }, 800);
   };
 
   return (

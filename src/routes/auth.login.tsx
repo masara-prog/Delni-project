@@ -70,6 +70,9 @@ function LoginPage() {
     if (rId === "admin") {
       setEmail("admin@dalni.ly");
       setPassword("admin123");
+    } else {
+      setEmail("");
+      setPassword("");
     }
   };
 
@@ -113,7 +116,8 @@ function LoginPage() {
         } else if (role === "driver") {
           navigate({ to: "/dashboard/driver" });
         } else {
-          navigate({ to: "/dashboard/tourist" });
+          // Open services page with trips, landmarks, and full header
+          navigate({ to: "/trips" });
         }
         return;
       } else {
@@ -246,11 +250,31 @@ function LoginPage() {
             <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
               <div className="flex items-center gap-1.5 font-black text-amber-950 mb-1">
                 <span>👑</span>
-                <span>بيانات دخول مدير النظام (الأدمن) مخصّصة ومثبتة:</span>
+                <span>بيانات دخول مدير النظام (الأدمن):</span>
               </div>
-              <div>• البريد الإلكتروني: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin@dalni.ly</code></div>
-              <div>• كلمة المرور: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin123</code></div>
-              <div className="text-[10px] text-amber-700 mt-1 font-semibold">* ملاحظة: لا يمكن إنشاء حسابات أدمن جديدة من صفحة التسجيل.</div>
+              <div>• البريد: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin@dalni.ly</code> | كلمة المرور: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin123</code></div>
+            </div>
+          )}
+
+          {/* Transport Info Notice */}
+          {role === "transport" && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
+              <div className="flex items-center gap-1.5 font-black text-blue-950 mb-1">
+                <span>🚌</span>
+                <span>دخول شركات النقل السياحي المعتمدة:</span>
+              </div>
+              <div>يرجى إدخال البريد الإلكتروني أو رقم العقد الرسمي وكلمة المرور المسجلة بشركتكم.</div>
+            </div>
+          )}
+
+          {/* Driver Info Notice */}
+          {role === "driver" && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
+              <div className="flex items-center gap-1.5 font-black text-emerald-950 mb-1">
+                <span>🧑‍✈️</span>
+                <span>دخول السائقين المعتمدين:</span>
+              </div>
+              <div>يرجى إدخال البريد الإلكتروني أو رقم رخصة القيادة وكلمة المرور المسجلة لدى شركة النقل.</div>
             </div>
           )}
 

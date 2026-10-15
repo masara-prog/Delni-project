@@ -26,6 +26,7 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import transportHero from "@/assets/transport-hero.jpg";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
+import { getStoredSession, clearStoredSession } from "@/lib/api";
 
 
 
@@ -160,7 +161,6 @@ function HomePage() {
 
 import { useLanguage } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { getStoredSession, clearStoredSession } from "@/lib/api";
 import { ROLE_DASHBOARDS } from "@/components/Header";
 
 /* ---------- Navbar ---------- */
@@ -171,7 +171,7 @@ function Navbar() {
   useEffect(() => {
     const checkAuth = () => {
       const s = getStoredSession();
-      if (s.token && s.user) {
+      if (s?.user) {
         setSession(s);
       } else {
         setSession(null);
@@ -190,8 +190,24 @@ function Navbar() {
     }
   };
 
+  const currentUser = session?.user;
+  // Account name ONLY (strictly without role or badge)
+  const accountName = currentUser
+    ? (currentUser.company_name || currentUser.name || currentUser.full_name || currentUser.email || (language === 'ar' ? 'حسابي' : 'My Account'))
+    : null;
+
   const currentRole = session?.role && ROLE_DASHBOARDS[session.role] ? ROLE_DASHBOARDS[session.role] : null;
-  const userName = session?.user?.name || session?.user?.full_name || (language === 'ar' ? 'حسابي' : 'My Account');
+  const dashboardPath = currentRole?.path || (currentUser
+    ? currentUser.role === "admin"
+      ? "/dashboard/admin"
+      : currentUser.role === "transport" || currentUser.contract_number
+      ? "/dashboard/transport"
+      : currentUser.role === "guide" || currentUser.license_number
+      ? "/dashboard/guide"
+      : currentUser.role === "driver"
+      ? "/dashboard/driver"
+      : "/trips"
+    : "/auth/login");
 
   return (
     <div className="absolute top-6 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12">
@@ -199,25 +215,25 @@ function Navbar() {
         <Logo size="xl" showText={false} />
       </Link>
       <div className="flex items-center gap-3">
-        {session && currentRole ? (
-          <div className="flex items-center gap-2">
+        {accountName ? (
+          <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-xl transition-all">
             <Link
-              to={currentRole.path}
-              className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#1B5A78] to-[#13445C] hover:from-[#13445C] hover:to-[#0F3548] text-white text-xs sm:text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/25 flex items-center gap-2"
+              to={dashboardPath}
+              className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Tajawal',sans-serif] tracking-wide shadow-md hover:scale-105 transition-all border border-white/25 antialiased"
+              title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
             >
-              <span>{currentRole.icon}</span>
-              <span className="max-w-[120px] truncate">{userName}</span>
-              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-bold">
-                {language === 'ar' ? currentRole.labelAr : currentRole.labelEn}
-              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+              <span className="leading-tight drop-shadow-sm">{accountName}</span>
             </Link>
             <button
               onClick={handleLogout}
-              className="px-3 py-2.5 rounded-full bg-red-500/20 hover:bg-red-500/40 border border-red-400/40 text-red-100 hover:text-white transition-all text-xs font-bold flex items-center gap-1 cursor-pointer"
-              title={language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Tajawal',sans-serif] transition-all border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
+              title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout'}
             >
-              <span>🚪</span>
-              <span className="hidden sm:inline">{language === 'ar' ? 'خروج' : 'Logout'}</span>
+              <svg className="w-3.5 h-3.5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>{language === 'ar' ? 'خروج' : 'Logout'}</span>
             </button>
           </div>
         ) : (
