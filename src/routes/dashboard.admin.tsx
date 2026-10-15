@@ -198,8 +198,8 @@ type PrivateTripRequest = {
   status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
 };
 
-type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string };
-type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string };
+type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: string };
+type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; verification_status?: string; contract_date?: string };
 type Attraction = { 
   id: string; 
   place_id?: string;
@@ -458,6 +458,12 @@ function AdminDashboard() {
     setShowAddCompany(false);
   };
   const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); setEditingCompany(null); };
+  const handleDeleteCompany = (contractOrId: string) => {
+    if (!confirm(`هل أنت متأكد من حذف شركة النقل (عقد: ${contractOrId})؟`)) return;
+    setCompanies(prev => prev.filter(c => c.contract_number !== contractOrId && c.id !== contractOrId));
+    deleteTransportCompany(contractOrId);
+    deleteFromSecureBackend("companies", "contract_number", contractOrId);
+  };
   const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
     setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
@@ -953,7 +959,7 @@ function AdminDashboard() {
 
     try {
       const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests.filter((x: any) => x.id !== facilityId)]));
+      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests.filter((x: any) => x.id !== newRest.id)]));
     } catch {}
 
     fetch("http://127.0.0.1:8000/api/restaurants", {

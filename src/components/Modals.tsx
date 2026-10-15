@@ -1142,6 +1142,8 @@ export function TripScheduleModal({
                 const session = getStoredSession();
                 const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
                 const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
+                const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id || (isWeekly ? "WT-220" : "DT-366");
+                const targetTitle = selectedTrip?.tripTitle || customTitle || tripTitle || (isWeekly ? "رحلة أسبوعية" : "رحلة يومية");
 
                 if (isWeekly) {
                   await apiBookWeeklyTrip({
