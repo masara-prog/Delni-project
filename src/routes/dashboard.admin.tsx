@@ -508,11 +508,34 @@ function AdminDashboard() {
       setCompanies(companies.filter(c => c.contract_number !== contractNumber));
     }
   };
-  const handleVerifyGuide = (lic: string, status: "موثق" | "مرفوض") => {
+  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
     updateGuideVerification(lic, status);
     const targetGuide = guides.find(g => g.license_number === lic);
+    
+    // Live update to Laravel backend database
+    try {
+      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(lic)}/verify`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          verification_status: status,
+          full_name: targetGuide?.full_name,
+          phone_number: targetGuide?.phone_number,
+          email: targetGuide?.email,
+          years_of_experience: targetGuide?.years_of_experience,
+          price_per_day: targetGuide?.price_per_day,
+          bio: targetGuide?.bio,
+          title: targetGuide?.title,
+          certificate: targetGuide?.certificate,
+          certificate_name: targetGuide?.certificate_name,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to verify guide in Laravel API:", err);
+    }
+
     sendToSecureBackend("guides", {
       license_number: lic,
       full_name: targetGuide?.full_name || "مرشد سياحي",
