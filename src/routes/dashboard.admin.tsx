@@ -313,6 +313,9 @@ function AdminDashboard() {
   /* DelniDB private_trips */
   const [privateTrips, setPrivateTrips] = useState<PrivateTripRequest[]>([]);
 
+  /* DelniDB tourists */
+  const [tourists, setTourists] = useState<any[]>([]);
+
   /* DelniDB bookings_daily & bookings_weekly */
   const [dailyBookings, setDailyBookings] = useState<BookingDaily[]>([]);
 
@@ -698,6 +701,13 @@ function AdminDashboard() {
           entry_fee: p.entry_fee || "مجاني",
         })));
       }
+
+      try {
+        const touristsRes = await fetch("http://127.0.0.1:5001/api/db/tourists").then(r => r.json());
+        if (touristsRes && Array.isArray(touristsRes.data)) {
+          setTourists(touristsRes.data);
+        }
+      } catch {}
     }
     fetchAdminData();
   }, []);
@@ -961,7 +971,27 @@ function AdminDashboard() {
     } catch {}
   };
 
-  const handleAddPrivateTrip = (p: any) => { setPrivateTrips([...privateTrips, p]); setShowAddPrivateTrip(false); };
+  const handleAddPrivateTrip = async (p: any) => {
+    setPrivateTrips(prev => [p, ...prev]);
+    setShowAddPrivateTrip(false);
+
+    try {
+      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      });
+    } catch (e) {
+      console.error("Failed to sync new private trip to SQL Server", e);
+    }
+
+    try {
+      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+      const next = [p, ...local.filter((x: any) => x.private_trip_id !== p.private_trip_id)];
+      localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
+    } catch {}
+  };
   const handleDeletePrivate = async (id: string) => {
     if (!confirm("هل تريد حذف طلب الرحلة الخاصة؟")) return;
     setPrivateTrips(prev => prev.filter(p => p.private_trip_id !== id));
@@ -2501,7 +2531,7 @@ function AdminDashboard() {
       {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
       {showAddFacilityOffer && <FacilityOfferModal title="إضافة عرض مطعم/كافيه" restaurants={restaurants} onClose={() => setShowAddFacilityOffer(false)} onSave={handleAddFacilityOffer} />}
       {editingFacilityOffer && <FacilityOfferModal title="تعديل عرض المطعم" offer={editingFacilityOffer} restaurants={restaurants} onClose={() => setEditingFacilityOffer(null)} onSave={handleUpdateFacilityOffer} />}
-      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
+      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} tourists={tourists} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
     </DashboardShell>
   );
 }
@@ -2566,78 +2596,258 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
 
 /* ============ MODALS ============ */
 
-function AddPrivateTripModal({ onClose, onAdd, guides }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[] }) {
+function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[]; tourists?: any[] }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+
+  // Database fields for private_trips
+  const [tripId] = useState(() => `${Math.floor(1000 + Math.random() * 9000)}`);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [duration, setDuration] = useState("1");
-  const [companions, setCompanions] = useState("1");
-  const [guideLicense, setGuideLicense] = useState("");
-  const [price, setPrice] = useState("");
-  const [plan, setPlan] = useState("");
-  const [status, setStatus] = useState("قيد الدراسة");
+  const [customerDescription, setCustomerDescription] = useState("");
+  const [preferredStartDate, setPreferredStartDate] = useState("");
+  const [durationDays, setDurationDays] = useState("1");
+  const [numberOfCompanions, setNumberOfCompanions] = useState("0");
+  const [quotedPrice, setQuotedPrice] = useState("");
+  const [adminItineraryPlan, setAdminItineraryPlan] = useState("");
+  const [guideLicenseNumber, setGuideLicenseNumber] = useState("");
+  const [touristId, setTouristId] = useState("");
+  const [customerRequirements, setCustomerRequirements] = useState("");
+  const [statusOrder, setStatusOrder] = useState<string>("قيد الدراسة");
+
+  // Selection from existing registered tourists
+  const handleSelectTourist = (selectedId: string) => {
+    if (!selectedId) {
+      setTouristId("");
+      return;
+    }
+    const found = tourists.find((t: any) => t.tourist_id === selectedId);
+    if (found) {
+      setTouristId(found.tourist_id);
+      setCustomerName(found.full_name);
+      if (found.phone_number) {
+        setCustomerPhone(found.phone_number);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !customerPhone) return alert(isAr ? "يرجى إدخال الاسم ورقم الهاتف" : "Please enter name and phone");
+    if (!customerName.trim() || !customerPhone.trim()) {
+      return alert(isAr ? "يرجى إدخال اسم العميل ورقم الهاتف" : "Please enter customer name and phone");
+    }
+
+    const fullId = `PT-${tripId}`;
+
     const newTrip = {
-      private_trip_id: `PT-${Math.floor(Math.random() * 900) + 100}`,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      customer_description: description,
-      preferred_start_date: startDate,
-      duration_days: Number(duration),
-      number_of_companions: Number(companions),
-      assigned_guide: guideLicense || undefined,
-      quoted_price: price ? Number(price) : undefined,
-      admin_itinerary_plan: plan || undefined,
-      status_order: status,
+      private_trip_id: fullId,
+      status_order: statusOrder,
+      customer_description: customerDescription || (isAr ? "طلب رحلة خاصة جديدة" : "New private trip request"),
+      preferred_start_date: preferredStartDate || new Date().toISOString().split("T")[0],
+      duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
+      number_of_companions: Math.max(0, parseInt(numberOfCompanions, 10) || 0),
+      quoted_price: quotedPrice ? parseFloat(quotedPrice) : null,
+      admin_itinerary_plan: adminItineraryPlan || null,
+      guide_license_number: guideLicenseNumber || null,
+      assigned_guide: guideLicenseNumber || null,
+      assigned_guide_license: guideLicenseNumber || null,
+      tourist_id: touristId || null,
+      customer_name: customerName.trim(),
+      customer_phone: customerPhone.trim(),
+      customer_requirements: customerRequirements || null,
     };
+
     onAdd(newTrip);
-    onClose();
   };
+
   return (
-    <ModalShell title={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
-        <Field label={isAr ? "اسم العميل" : "Customer Name"} value={customerName} onChange={setCustomerName} />
-        <LibyanPhoneField label={isAr ? "هاتف العميل" : "Customer Phone"} value={customerPhone} onChange={setCustomerPhone} />
-        <Field label={isAr ? "وصف الطلب" : "Description"} value={description} onChange={setDescription} />
-        <Field label={isAr ? "تاريخ البدء" : "Start Date"} type="date" value={startDate} onChange={setStartDate} />
-        <Field label={isAr ? "عدد أيام الرحلة" : "Duration (days)"} type="number" value={duration} onChange={v => setDuration(v)} />
-        <Field label={isAr ? "عدد المصاحبين" : "Companions"} type="number" value={companions} onChange={v => setCompanions(v)} />
-        {/* Guide selection */}
-        <select
-          value={guideLicense}
-          onChange={e => setGuideLicense(e.target.value)}
-          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-        >
-          <option value="">{isAr ? "اختر مرشدًا" : "Select Guide"}</option>
-          {guides.map(g => (
-            <option key={g.license_number} value={g.license_number}>
-              {g.full_name} ({g.license_number})
-            </option>
-          ))}
-        </select>
-        <Field label={isAr ? "السعر المقترح" : "Proposed Price"} type="number" value={price} onChange={v => setPrice(v)} />
-        <Field label={isAr ? "خطة الترتيب" : "Itinerary Plan"} value={plan} onChange={setPlan} />
-        <select
-          value={status}
-          onChange={e => setStatus(e.target.value as any)}
-          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-        >
-          <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
-          <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
-          <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
-          <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
-        </select>
+    <ModalShell title={isAr ? "إضافة طلب رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
+      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
+
+        {/* معرف الرحلة والحالة */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-xl border border-border/60">
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
+              {isAr ? "معرّف الرحلة" : "Trip ID"}
+            </label>
+            <input
+              type="text"
+              readOnly
+              value={tripId}
+              className="w-full h-9 px-3 rounded-xl border border-border bg-muted/60 text-xs font-mono font-bold text-foreground text-center"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
+              {isAr ? "حالة الطلب" : "Order Status"}
+            </label>
+            <select
+              value={statusOrder}
+              onChange={e => setStatusOrder(e.target.value)}
+              className="w-full h-9 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            >
+              <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
+              <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
+              <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
+              <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* اختيار سريع للسائح المسجل بالبحث أو القائمة */}
+        {tourists.length > 0 && (
+          <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+                <span>🔍</span>
+                {isAr ? "اختيار سائح مسجل (تعبئة الـ ID والبيانات تلقائياً):" : "Select Registered Tourist (Auto-fills ID & Info):"}
+              </span>
+              {touristId && (
+                <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  ID: {touristId}
+                </span>
+              )}
+            </div>
+            <select
+              value={touristId}
+              onChange={e => handleSelectTourist(e.target.value)}
+              className="w-full h-9 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            >
+              <option value="">{isAr ? "— اختر سائحاً من المسجلين في النظام أو املأ البيانات يدوياً —" : "— Select tourist or enter manually —"}</option>
+              {tourists.map((t: any) => (
+                <option key={t.tourist_id} value={t.tourist_id}>
+                  {t.full_name} {t.phone_number ? `(${t.phone_number})` : ""} — [ID: {t.tourist_id}]
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* بيانات العميل والتواصل */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field
+            label={isAr ? "اسم العميل / السائح *" : "Customer Name *"}
+            placeholder={isAr ? "مثال: عبد الرحمن الطرابلسي" : "e.g. John Doe"}
+            value={customerName}
+            onChange={setCustomerName}
+          />
+          <LibyanPhoneField
+            label={isAr ? "هاتف التواصل *" : "Customer Phone *"}
+            value={customerPhone}
+            onChange={setCustomerPhone}
+          />
+          <Field
+            label={isAr ? "معرّف السائح (Tourists ID)" : "Tourist ID"}
+            placeholder={isAr ? "اختياري أو يملأ تلقائياً" : "Optional or Auto"}
+            value={touristId}
+            onChange={setTouristId}
+          />
+        </div>
+
+        {/* التواريخ والمدة والمرافقين */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field
+            label={isAr ? "تاريخ البدء المفضل" : "Preferred Start Date"}
+            type="date"
+            value={preferredStartDate}
+            onChange={setPreferredStartDate}
+          />
+          <Field
+            label={isAr ? "مدة الرحلة (بالأيام)" : "Duration (days)"}
+            type="number"
+            min="1"
+            value={durationDays}
+            onChange={v => setDurationDays(v)}
+          />
+          <Field
+            label={isAr ? "عدد المرافقين" : "Companions Count"}
+            type="number"
+            min="0"
+            value={numberOfCompanions}
+            onChange={v => setNumberOfCompanions(v)}
+          />
+        </div>
+
+        {/* وصف العميل للرحلة */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            {isAr ? "وصف العميل للرحلة" : "Trip Description"}
+          </label>
+          <textarea
+            value={customerDescription}
+            onChange={e => setCustomerDescription(e.target.value)}
+            rows={2}
+            placeholder={isAr ? "تفاصيل الوجهات المرغوبة، المدن، طبيعة الجولة..." : "Trip details..."}
+            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        {/* المتطلبات الخاصة */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            {isAr ? "المتطلبات والاشتراطات الخاصة" : "Special Requirements"}
+          </label>
+          <textarea
+            value={customerRequirements}
+            onChange={e => setCustomerRequirements(e.target.value)}
+            rows={2}
+            placeholder={isAr ? "نوع السيارة (4x4)، لغة المرشد المطلوبة، وجبات معينة..." : "Special requirements..."}
+            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        {/* بيانات الإدارة: المرشد والسعر وخطة السير */}
+        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
+          <div className="text-xs font-black text-primary">⚙️ تخصيص الإدارة وتعيين المرشد والسعر:</div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold text-foreground block mb-1">
+                {isAr ? "تعيين المرشد السياحي المعتمد للرحلة" : "Assigned Tour Guide"}
+              </label>
+              <select
+                value={guideLicenseNumber}
+                onChange={e => setGuideLicenseNumber(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right shadow-2xs focus:border-primary"
+              >
+                <option value="">{isAr ? "بدون تعيين مرشد حالياً (يحدد لاحقاً)" : "None (Assign Later)"}</option>
+                {guides.map(g => (
+                  <option key={g.license_number} value={g.license_number}>
+                    {g.full_name} ({g.license_number}) {g.daily_rate ? `— ${g.daily_rate} د.ل/يوم` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Field
+              label={isAr ? "السعر الإجمالي المعتمد (د.ل)" : "Quoted Price (LYD)"}
+              type="number"
+              placeholder={isAr ? "يحدد بعد دراسة التكاليف" : "Quoted price"}
+              value={quotedPrice}
+              onChange={v => setQuotedPrice(v)}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-foreground block mb-1">
+              {isAr ? "خطة سير الرحلة وبرنامج الإدارة" : "Admin Itinerary Plan"}
+            </label>
+            <textarea
+              value={adminItineraryPlan}
+              onChange={e => setAdminItineraryPlan(e.target.value)}
+              rows={2}
+              placeholder={isAr ? "البرنامج المعتمد، توقيت التحرك، نقاط التجمع..." : "Detailed itinerary plan..."}
+              className="w-full p-2.5 rounded-xl border border-border bg-white text-xs font-semibold text-right focus:border-primary focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* أزرار الإجراء */}
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border border-border hover:bg-muted font-black text-xs transition-colors">
             {isAr ? "إلغاء" : "Cancel"}
           </button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
-            {isAr ? "حفظ الرحلة" : "Save Trip"}
+          <button type="submit" className="px-6 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition-opacity">
+            {isAr ? "حفظ طلب الرحلة الخاصة" : "Save Private Trip"}
           </button>
         </div>
       </form>
