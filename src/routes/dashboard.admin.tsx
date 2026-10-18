@@ -266,117 +266,7 @@ function AdminDashboard() {
     }
   }, [navigate]);
 
-  // Live synchronization with Microsoft SQL Server (DelniDB)
-  useEffect(() => {
-    let isMounted = true;
-    async function syncFromDb() {
-      try {
-        const compRes = await fetch("http://127.0.0.1:5001/api/db/companies", { signal: AbortSignal.timeout(3000) });
-        if (compRes.ok) {
-          const compData = await compRes.json();
-          if (compData.success && Array.isArray(compData.data) && isMounted) {
-            const mapped = compData.data.map((c: any) => ({
-              ...c,
-              name: c.company_name || c.name || "شركة نقل",
-              phone: c.phone_number || c.phone || "",
-              status: c.verification_status || c.status || "موثق",
-            }));
-            setCompanies(mapped);
-            saveTransportCompanies(compData.data);
-          }
-        }
-      } catch { }
 
-      try {
-        const vehRes = await fetch("http://127.0.0.1:5001/api/db/vehicles", { signal: AbortSignal.timeout(3000) });
-        if (vehRes.ok) {
-          const vehData = await vehRes.json();
-          if (vehData.success && Array.isArray(vehData.data) && isMounted) {
-            setVehicles(vehData.data);
-          }
-        }
-      } catch { }
-
-      try {
-        const dRes = await fetch("http://127.0.0.1:5001/api/db/drivers", { signal: AbortSignal.timeout(3000) });
-        if (dRes.ok) {
-          const dData = await dRes.json();
-          if (dData.success && Array.isArray(dData.data) && isMounted) {
-            setDrivers(dData.data);
-          }
-        }
-      } catch { }
-
-      try {
-        const gRes = await fetch("http://127.0.0.1:5001/api/db/guides", { signal: AbortSignal.timeout(3000) });
-        if (gRes.ok) {
-          const gData = await gRes.json();
-          if (gData.success && Array.isArray(gData.data) && gData.data.length > 0 && isMounted) {
-            const mapped = gData.data.map((g: any) => ({
-              ...g,
-              daily_rate: Number(g.price_per_day) || 150,
-              price_per_day: Number(g.price_per_day) || 150,
-              primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : "tripoli",
-            }));
-            setGuides(mapped);
-          }
-        }
-      } catch { }
-
-      try {
-        const hRes = await fetch("http://127.0.0.1:5001/api/db/hotels", { signal: AbortSignal.timeout(3000) });
-        if (hRes.ok) {
-          const hData = await hRes.json();
-          if (hData.success && Array.isArray(hData.data) && hData.data.length > 0 && isMounted) {
-            const mapped = hData.data.map((h: any) => ({
-              ...h,
-              id: h.hotel_id || h.id,
-              name: h.hotel_name || h.name,
-              address: h.address_details || h.address,
-              phone: h.phone_number || h.phone,
-              stars: h.star_rating || h.stars,
-            }));
-            setHotels(mapped);
-          }
-        }
-      } catch { }
-
-      try {
-        const rRes = await fetch("http://127.0.0.1:5001/api/db/restaurants", { signal: AbortSignal.timeout(3000) });
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          if (rData.success && Array.isArray(rData.data) && rData.data.length > 0 && isMounted) {
-            const mapped = rData.data.map((r: any) => ({
-              ...r,
-              id: r.facility_id || r.id,
-              name: r.facility_name || r.name,
-              type: r.facility_type || r.type,
-              address: r.address_details || r.address,
-              phone: r.phone_number || r.phone,
-            }));
-            setRestaurants(mapped);
-          }
-        }
-      } catch { }
-
-      try {
-        const pRes = await fetch("http://127.0.0.1:5001/api/db/places", { signal: AbortSignal.timeout(3000) });
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          if (pData.success && Array.isArray(pData.data) && pData.data.length > 0 && isMounted) {
-            const mapped = pData.data.map((p: any) => ({
-              ...p,
-              id: p.place_id || p.id,
-              name: p.place_name || p.name,
-            }));
-            setAttractions(mapped);
-          }
-        }
-      } catch { }
-    }
-    syncFromDb();
-    return () => { isMounted = false; };
-  }, []);
 
   /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
   const [companies, setCompanies] = useState<Company[]>(() => {
@@ -637,7 +527,9 @@ function AdminDashboard() {
   // Fetch live guides and admin data from DelniDB
   useEffect(() => {
     async function fetchAdminData() {
+      console.log("Fetching admin data from DelniDB...");
       const res = await apiGetAdminDashboard();
+      console.log("Admin Dashboard API Response:", res);
       if (!res) {
         const loadedGuides = getAllGuides();
         if (loadedGuides.length > 0) {
@@ -694,11 +586,7 @@ function AdminDashboard() {
           working_days: g.working_days || "الأحد,الأربعاء",
           total_tours_completed: Number(g.total_tours_completed) || 0,
         }));
-        setGuides(prev => {
-          const dbLicenses = new Set(dbGuides.map(g => g.license_number));
-          const nonDuplicates = prev.filter(p => !dbLicenses.has(p.license_number));
-          return [...dbGuides, ...nonDuplicates];
-        });
+        setGuides(dbGuides);
       }
 
       if (res.daily_trips) {
@@ -884,6 +772,7 @@ function AdminDashboard() {
         })));
       }
     }
+    fetchAdminData();
   }, []);
 
   useEffect(() => {
@@ -2624,7 +2513,6 @@ function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClos
   const [adminItineraryPlan, setAdminItineraryPlan] = useState("");
   const [guideLicenseNumber, setGuideLicenseNumber] = useState("");
   const [touristId, setTouristId] = useState("");
-  const [customerRequirements, setCustomerRequirements] = useState("");
   const [statusOrder, setStatusOrder] = useState<string>("قيد الدراسة");
 
   // Selection from existing registered tourists
@@ -2666,7 +2554,7 @@ function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClos
       tourist_id: touristId || null,
       customer_name: customerName,
       customer_phone: customerPhone,
-      customer_requirements: customerRequirements || null,
+      customer_requirements: null,
     };
 
     onAdd(newTrip);
@@ -2792,19 +2680,6 @@ function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClos
           />
         </div>
 
-        {/* المتطلبات الخاصة */}
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">
-            {isAr ? "المتطلبات والاشتراطات الخاصة" : "Special Requirements"}
-          </label>
-          <textarea
-            value={customerRequirements}
-            onChange={e => setCustomerRequirements(e.target.value)}
-            rows={2}
-            placeholder={isAr ? "نوع السيارة (4x4)، لغة المرشد المطلوبة، وجبات معينة..." : "Special requirements..."}
-            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
-          />
-        </div>
 
         {/* بيانات الإدارة: المرشد والسعر وخطة السير */}
         <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-3">

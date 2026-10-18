@@ -8,8 +8,8 @@
  * - Tourists & Bookings
  */
 
-export const LARAVEL_API_URL = "";
-export const AI_SERVICE_URL = "";
+export const LARAVEL_API_URL = "http://127.0.0.1:8000/api";
+export const AI_SERVICE_URL = "http://127.0.0.1:8000/api/ai";
 
 export interface ApiResponse<T = any> {
   status: "success" | "error" | "online";
@@ -1120,21 +1120,27 @@ export async function apiGetTouristBookings(touristId: string) {
 
 export async function apiGetAdminDashboard(): Promise<any> {
   try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      console.log("apiGetAdminDashboard: Successfully received from Laravel:", data);
+      return data;
+    } else {
+      console.error("apiGetAdminDashboard: Laravel returned status", res.status);
+    }
+  } catch (err) {
+    console.error("apiGetAdminDashboard: Failed to fetch from Laravel:", err);
+  }
+
+  try {
     const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`);
     if (res.ok) {
       const json = await res.json();
       if (json && json.success) {
         return json;
       }
-    }
-  } catch { }
-
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
-      headers: { Accept: "application/json" },
-    });
-    if (res.ok) {
-      return await res.json();
     }
   } catch { }
 
