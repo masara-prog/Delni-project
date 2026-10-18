@@ -1418,8 +1418,48 @@ export async function apiGetRestaurants(): Promise<any[]> {
  * Get Tour Guide Dashboard data (profile, real assigned trips, real manifest)
  */
 export async function apiGetGuideDashboard(licenseNumber: string) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/guide/${encodeURIComponent(licenseNumber)}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const liveData = await res.json();
+      if (liveData && liveData.guide) {
+        // Synchronize local guides storage and current user session with live database
+        const guides = getAllGuides();
+        const idx = guides.findIndex((g) => g.license_number === liveData.guide.license_number || g.email === liveData.guide.email);
+        if (idx !== -1) {
+          guides[idx] = { ...guides[idx], ...liveData.guide };
+          saveAllGuides(guides);
+        }
+
+        const currentSession = getStoredSession();
+        if (
+          currentSession.user &&
+          (currentSession.user.license_number === liveData.guide.license_number ||
+            currentSession.user.email === liveData.guide.email)
+        ) {
+          const updatedUser = { ...currentSession.user, ...liveData.guide };
+          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedUser));
+        }
+
+        return {
+          guide: liveData.guide,
+          assigned_trips: liveData.guide.assigned_trips || [],
+          tourists: [],
+          daily_trips: liveData.daily_trips || [],
+          weekly_trips: liveData.weekly_trips || [],
+          private_trips: liveData.private_trips || [],
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("apiGetGuideDashboard network fetch failed, using fallback cache:", err);
+  }
+
+  // Fallback if backend is unreachable
   const guides = getAllGuides();
-  const guide = guides.find((g) => g.license_number === licenseNumber);
+  const guide = guides.find((g) => g.license_number === licenseNumber || g.email === licenseNumber);
   const targetGuide = guide || getStoredSession().user || {
     license_number: licenseNumber,
     full_name: "مرشد سياحي",

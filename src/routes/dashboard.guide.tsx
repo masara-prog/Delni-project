@@ -122,7 +122,7 @@ function GuideDashboard() {
   });
 
   const [previewCertificateModal, setPreviewCertificateModal] = useState(false);
-  const isVerified = guideInfo.verification_status === "موثق";
+  const isVerified = (guideInfo.verification_status || "").trim() === "موثق" || (guideInfo.verification_status || "").trim() === "verified";
 
   // Real Assigned Trips (Empty until actually assigned in DelniDB)
   const [assignedTrips, setAssignedTrips] = useState<AssignedTrip[]>([]);
