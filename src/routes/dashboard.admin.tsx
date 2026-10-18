@@ -209,8 +209,8 @@ type PrivateTripRequest = {
   status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
 };
 
-type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[] };
-type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string };
+type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
+type Restaurant = { id: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
 type Attraction = { 
   id: string; 
   place_id?: string;
@@ -253,6 +253,21 @@ type FacilityOffer = OfferFacility & {
   date_start?: string;
   date_end?: string;
   percent_discount?: number;
+};
+
+const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
+  if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+    e.preventDefault();
+    const form = (e.target as HTMLElement).closest("form");
+    if (!form) return;
+    const focusables = Array.from(
+      form.querySelectorAll<HTMLElement>("input:not([type='hidden']):not([type='file']), select, textarea, button[type='submit']")
+    ).filter(el => !el.hasAttribute("disabled") && el.offsetParent !== null);
+    const currentIndex = focusables.indexOf(e.target as HTMLElement);
+    if (currentIndex > -1 && currentIndex + 1 < focusables.length) {
+      focusables[currentIndex + 1].focus();
+    }
+  }
 };
 
 /* ============ MAIN COMPONENT ============ */
@@ -1114,13 +1129,15 @@ function AdminDashboard() {
       address_details: newHotelObj.address,
       phone_number: newHotelObj.phone,
       star_rating: newHotelObj.stars,
-      partnership_status: newHotelObj.partnership_status || "شريك معتمد",
+      partnership_status: newHotelObj.partnership_status || "نشط",
       property_type: newHotelObj.property_type || "hotel",
       discount_percentage: newHotelObj.discount_percentage || 15,
       working_hours: newHotelObj.working_hours,
       description: newHotelObj.description,
       google_maps_url: newHotelObj.google_maps_url,
       whatsapp: newHotelObj.whatsapp,
+      contract_start_date: newHotelObj.contract_start_date,
+      contract_end_date: newHotelObj.contract_end_date,
       hotel_photo_1: newHotelObj.hotel_photo_1,
       hotel_photo_2: newHotelObj.hotel_photo_2,
       hotel_photo_3: newHotelObj.hotel_photo_3,
@@ -1145,13 +1162,15 @@ function AdminDashboard() {
       address_details: h.address,
       phone_number: h.phone,
       star_rating: h.stars,
-      partnership_status: h.partnership_status,
+      partnership_status: h.partnership_status || "نشط",
       property_type: h.property_type || "hotel",
       discount_percentage: h.discount_percentage || 15,
       working_hours: h.working_hours,
       description: h.description,
       google_maps_url: h.google_maps_url,
       whatsapp: h.whatsapp,
+      contract_start_date: h.contract_start_date,
+      contract_end_date: h.contract_end_date,
       hotel_photo_1: h.hotel_photo_1,
       hotel_photo_2: h.hotel_photo_2,
       hotel_photo_3: h.hotel_photo_3,
@@ -1196,10 +1215,13 @@ function AdminDashboard() {
       facility_image_5: newRest.facility_image_5,
       verification_status: newRest.verification_status || "موثق",
       working_hours: newRest.working_hours,
-      features: newRest.features,
+      features: Array.isArray(newRest.features) ? newRest.features.join("، ") : newRest.features,
       google_maps_url: newRest.google_maps_url,
       discount_percentage: newRest.discount_percentage || 20,
       whatsapp: newRest.whatsapp,
+      partnership_status: newRest.partnership_status || "نشط",
+      contract_start_date: newRest.contract_start_date,
+      contract_end_date: newRest.contract_end_date,
     });
   };
   const handleUpdateRestaurant = (r: Restaurant) => {
@@ -1226,10 +1248,13 @@ function AdminDashboard() {
       facility_image_5: r.facility_image_5,
       verification_status: (r as any).verification_status,
       working_hours: r.working_hours,
-      features: (r as any).features,
+      features: Array.isArray((r as any).features) ? (r as any).features.join("، ") : (r as any).features,
       google_maps_url: r.google_maps_url,
       discount_percentage: (r as any).discount_percentage || 20,
       whatsapp: (r as any).whatsapp,
+      partnership_status: r.partnership_status || "نشط",
+      contract_start_date: r.contract_start_date,
+      contract_end_date: r.contract_end_date,
     });
   };
   const handleDeleteRestaurant = (id: string) => {
@@ -2053,12 +2078,29 @@ function AdminDashboard() {
                         <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {h.city} — {h.address}</div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <Badge tone="green">{h.partnership_status || "شريك معتمد"}</Badge>
+                        {h.partnership_status === "موقوف" ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-black border border-red-200">
+                            🔴 موقوف (مخفي من المنصة)
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                            🟢 نشط (معروض بالمنصة)
+                          </span>
+                        )}
                         <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
                           دليل تعريفي
                         </span>
                       </div>
                     </div>
+
+                    {(h.contract_start_date || h.contract_end_date) && (
+                      <div className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-xl flex items-center gap-1.5 border border-slate-200">
+                        <span>📅 فترة العقد:</span>
+                        <span className="font-mono text-slate-900 font-bold">{h.contract_start_date || 'تاريخ التسجيل'}</span>
+                        <span>إلى</span>
+                        <span className="font-mono text-blue-900 font-black">{h.contract_end_date || 'مستمر'}</span>
+                      </div>
+                    )}
 
                   {/* Main & Thumbnails Gallery (5 Photos) */}
                   <div className="space-y-1.5">
@@ -2120,10 +2162,30 @@ function AdminDashboard() {
                       <div className="text-xs font-bold text-emerald-700 mt-0.5">🍲 {r.type} · ⭐ {r.rating_avg}</div>
                       <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {r.city} — {r.address}</div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
-                      دليل تعريفي
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      {r.partnership_status === "موقوف" ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-black border border-red-200">
+                          🔴 موقوف (مخفي من المنصة)
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                          🟢 نشط (معروض بالمنصة)
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
+                        دليل تعريفي
+                      </span>
+                    </div>
                   </div>
+
+                  {(r.contract_start_date || r.contract_end_date) && (
+                    <div className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-xl flex items-center gap-1.5 border border-slate-200">
+                      <span>📅 فترة العقد:</span>
+                      <span className="font-mono text-slate-900 font-bold">{r.contract_start_date || 'تاريخ التسجيل'}</span>
+                      <span>إلى</span>
+                      <span className="font-mono text-blue-900 font-black">{r.contract_end_date || 'مستمر'}</span>
+                    </div>
+                  )}
 
                   {/* Main & Thumbnails Gallery (5 Photos) */}
                   <div className="space-y-1.5">
@@ -5037,6 +5099,7 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
   );
 }
 
+
 function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: Hotel; onClose: () => void; onSave: (h: any) => void }) {
   const [propertyType, setPropertyType] = useState<string>(hotel?.property_type || "hotel");
   const [name, setName] = useState(hotel?.name || "");
@@ -5045,12 +5108,17 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
   const [phone, setPhone] = useState(hotel?.phone || "");
   const [whatsapp, setWhatsapp] = useState(hotel?.whatsapp || "");
   const [stars, setStars] = useState(hotel?.stars ? Number(hotel.stars) : 4);
-  const [status, setStatus] = useState(hotel?.partnership_status || "شريك معتمد");
+  const [status, setStatus] = useState<"نشط" | "موقوف">(hotel?.partnership_status === "موقوف" ? "موقوف" : "نشط");
   const [discountPct, setDiscountPct] = useState(hotel?.discount_percentage || 15);
   const [description, setDescription] = useState(hotel?.description || "");
   const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
   const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "خدمة استقبال 24/7 (تسجيل وصول 14:00 - مغادرة 12:00)");
   const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || ["مسبح", "إفطار", "واي فاي", "موقف"]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [contractStartDate] = useState(hotel?.contract_start_date || todayStr);
+  const [contractEndDate, setContractEndDate] = useState(hotel?.contract_end_date || "");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_hotel.jpg");
   const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/hotel_resort.jpg");
@@ -5087,10 +5155,42 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
     setAmenities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const setDurationMonths = (months: number) => {
+    const base = new Date(contractStartDate || todayStr);
+    base.setMonth(base.getMonth() + months);
+    setContractEndDate(base.toISOString().slice(0, 10));
+    setErrorMsg(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return alert("يرجى إدخال اسم مكان الإقامة");
-    if (!city.trim() || !address.trim()) return alert("يرجى إدخال المدينة والعنوان التفصيلي");
+    setErrorMsg(null);
+
+    if (!name.trim()) {
+      setErrorMsg("يرجى إدخال اسم مكان الإقامة الرسمي");
+      return;
+    }
+    if (!city.trim() || !address.trim()) {
+      setErrorMsg("يرجى إدخال المدينة والعنوان التفصيلي بدقة");
+      return;
+    }
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 8) {
+      setErrorMsg("يرجى إدخال رقم هاتف اتصال صحيح للتواصل");
+      return;
+    }
+    if (!contractEndDate) {
+      setErrorMsg("يرجى تحديد تاريخ نهاية العقد مع المنشأة");
+      return;
+    }
+    if (contractEndDate < contractStartDate) {
+      setErrorMsg("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ بداية العقد");
+      return;
+    }
+    if (Number(discountPct) < 0 || Number(discountPct) > 100) {
+      setErrorMsg("نسبة الخصم يجب أن تكون بين 0% و 100%");
+      return;
+    }
+
     onSave({
       ...(hotel ? { id: hotel.id } : {}),
       name: name.trim(),
@@ -5101,6 +5201,8 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
       whatsapp: (whatsapp || phone).trim(),
       stars: Number(stars),
       partnership_status: status,
+      contract_start_date: contractStartDate,
+      contract_end_date: contractEndDate,
       discount_percentage: Number(discountPct) || 15,
       description: description.trim(),
       google_maps_url: mapsUrl.trim(),
@@ -5116,24 +5218,153 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 
   return (
     <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
-      <form className="space-y-4 text-right p-1" onSubmit={handleSubmit}>
+      <form className="space-y-4 text-right p-1" onSubmit={handleSubmit} onKeyDown={handleEnterKeyNext}>
+        {/* Validation Error Alert Banner */}
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs font-black flex items-center justify-between gap-2 shadow-xs animate-in fade-in duration-200">
+            <span className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <span>{errorMsg}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-red-500 hover:text-red-800 font-black px-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Notice Banner */}
         <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs text-[#003580] flex items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <span className="font-black text-sm block">🏨 نموذج إضافة وتعديل أماكن الإقامة بالدليل:</span>
+            <span className="font-black text-sm block">🏨 إدارة عقد وبيانات مكان الإقامة:</span>
             <p className="text-[11px] text-blue-900/90 font-medium">
-              يتم حفظ مكان الإقامة فوراً وربطه بالتصنيف المناسب مع خصم معتمد 15% لزبائن منصة دلّني وعرض 5 صور مع ساعات العمل والموقع.
+              يبدأ العقد تلقائياً من يوم التسجيل، مع التحكم بحالة العرض بالمنصة (نشط أو موقوف) والتنقل السريع بزر Enter بين الحقول.
             </p>
           </div>
           <span className="px-2.5 py-1 rounded-xl bg-[#003580] text-white text-[11px] font-black shrink-0">
-            خصم 15% دلّني
+            خصم {discountPct}% معتمد
           </span>
+        </div>
+
+        {/* Contract Dates & Activity Status (NEW) */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-800 block">
+              📑 فترة العقد وحالة النشاط بالمنصة:
+            </label>
+            <span className="text-[10px] font-bold text-slate-500">
+              * البداية تلقائياً من يوم التسجيل
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            {/* Start Date (Auto registration day) */}
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                📅 تاريخ بداية العقد (يوم التسجيل)
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={contractStartDate}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700 text-right outline-none cursor-not-allowed font-mono"
+                />
+                <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
+                  تلقائي
+                </span>
+              </div>
+            </div>
+
+            {/* End Date (Input + shortcuts) */}
+            <div className="sm:col-span-4">
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[11px] font-bold text-slate-700 block">
+                  🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDurationMonths(6)}
+                    className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#003580] rounded hover:bg-blue-200 cursor-pointer"
+                  >
+                    +6 أشهر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationMonths(12)}
+                    className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#003580] rounded hover:bg-blue-200 cursor-pointer"
+                  >
+                    +سنة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationMonths(24)}
+                    className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#003580] rounded hover:bg-blue-200 cursor-pointer"
+                  >
+                    +سنتين
+                  </button>
+                </div>
+              </div>
+              <input
+                type="date"
+                value={contractEndDate}
+                onChange={e => {
+                  setContractEndDate(e.target.value);
+                  setErrorMsg(null);
+                }}
+                min={contractStartDate}
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-[#003580] font-mono focus:ring-1 focus:ring-[#003580]"
+              />
+            </div>
+
+            {/* Status Toggle (Active vs Suspended) */}
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                ⚡ حالة المنشأة والعرض بالمنصة
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 h-10 p-1 bg-slate-200/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setStatus("نشط")}
+                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                    status === "نشط"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🟢 نشط</span>
+                  <span className="hidden lg:inline text-[9px]">(يعرض)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus("موقوف")}
+                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                    status === "موقوف"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🔴 موقوف</span>
+                  <span className="hidden lg:inline text-[9px]">(لا يعرض)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-500 font-medium">
+            💡 ملاحظة: عند ضبط الحالة على <b>"موقوف"</b> يتم حجب مكان الإقامة تلقائياً ولا يظهر لرواد الموقع، وعند ضبطه على <b>"نشط"</b> يظهر مباشرة مع العروض.
+          </div>
         </div>
 
         {/* 1. Category Selection (4 Visual Cards) */}
         <div className="space-y-1.5">
           <label className="text-xs font-black text-slate-800 block">
-            ⭐ اختر نوع مكان الإقامة (التصنيف بالمنصة):
+            ⭐ نوع مكان الإقامة (التصنيف بالمنصة):
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {propertyOptions.map((opt) => {
@@ -5163,19 +5394,25 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           <div className="sm:col-span-6">
             <Field
-              label="اسم المنشأة / مكان الإقامة الرسمي"
+              label="اسم المنشأة / مكان الإقامة الرسمي *"
               value={name}
-              onChange={setName}
+              onChange={v => {
+                setName(v);
+                setErrorMsg(null);
+              }}
               placeholder="مثال: فندق تيبستي الدولي / شقق باب البحر"
             />
           </div>
 
           <div className="sm:col-span-3">
-            <label className="text-xs font-bold block mb-1">المدينة / المنطقة</label>
+            <label className="text-xs font-bold block mb-1">المدينة / المنطقة *</label>
             <div className="space-y-1">
               <select
                 value={city}
-                onChange={e => setCity(e.target.value)}
+                onChange={e => {
+                  setCity(e.target.value);
+                  setErrorMsg(null);
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-right outline-none focus:border-[#003580]"
               >
                 {libyanCities.map(c => (
@@ -5209,9 +5446,12 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
         {/* 3. Detailed Address & Working Hours */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
-            label="العنوان والحي التفصيلي"
+            label="العنوان والحي التفصيلي *"
             value={address}
-            onChange={setAddress}
+            onChange={v => {
+              setAddress(v);
+              setErrorMsg(null);
+            }}
             placeholder="مثال: طريق الشط - بالقرب من الكورنيش"
           />
 
@@ -5239,9 +5479,12 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
         {/* 4. Contact Numbers & Discount Percentage */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <LibyanPhoneField
-            label="هاتف الاتصال المباشر"
+            label="هاتف الاتصال المباشر *"
             value={phone}
-            onChange={setPhone}
+            onChange={v => {
+              setPhone(v);
+              setErrorMsg(null);
+            }}
           />
           <LibyanPhoneField
             label="رقم الواتساب للاستعلام"
@@ -5266,45 +5509,29 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
           </div>
         </div>
 
-        {/* 5. Google Maps Link & Partnership Status */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-8">
-            <label className="text-xs font-bold text-foreground mb-1 block">
-              📍 رابط موقع مكان الإقامة على خرائط Google Maps
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={mapsUrl}
-                onChange={e => setMapsUrl(e.target.value)}
-                placeholder="https://maps.google.com/?q=..."
-                className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-[#003580] text-right font-mono"
-              />
-              {mapsUrl && (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700"
-                >
-                  🗺️ فتح ↗
-                </a>
-              )}
-            </div>
-          </div>
-
-          <div className="sm:col-span-4">
-            <label className="text-xs font-bold block mb-1">حالة الشراكة والعرض بالدليل</label>
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value as any)}
-              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
-            >
-              <option value="شريك معتمد">شريك معتمد (نشط)</option>
-              <option value="نشط">نشط (ظاهر بالدليل)</option>
-              <option value="معلق">معلق مؤقتاً</option>
-              <option value="موقوف">موقوف</option>
-            </select>
+        {/* 5. Google Maps Link */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📍 رابط موقع مكان الإقامة على خرائط Google Maps
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={mapsUrl}
+              onChange={e => setMapsUrl(e.target.value)}
+              placeholder="https://maps.google.com/?q=..."
+              className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-[#003580] text-right font-mono"
+            />
+            {mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700"
+              >
+                🗺️ فتح ↗
+              </a>
+            )}
           </div>
         </div>
 
@@ -5393,36 +5620,121 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 
 function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
   const [name, setName] = useState(restaurant?.name || "");
-  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية ومقهى وتراثية");
+  const [category, setCategory] = useState<string>(restaurant?.category || "traditional");
+  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية وتراثية");
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
   const [whatsapp, setWhatsapp] = useState(restaurant?.whatsapp || "");
+  const [status, setStatus] = useState<"نشط" | "موقوف">(restaurant?.partnership_status === "موقوف" ? "موقوف" : "نشط");
   const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage || 20);
+  const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "11:00 ص – 11:30 م");
   const [description, setDescription] = useState(restaurant?.description || "");
   const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
-  const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "09:00 صباحاً — 12:00 ليلاً");
-  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_food.jpg");
-  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_ruins.jpg");
-  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_city.jpg");
-  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/ai_ruins.jpg");
-  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/ai_food.jpg");
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [contractStartDate] = useState(restaurant?.contract_start_date || todayStr);
+  const [contractEndDate, setContractEndDate] = useState(restaurant?.contract_end_date || "");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const initialFeatures = Array.isArray(restaurant?.features)
+    ? restaurant.features
+    : typeof restaurant?.features === "string" && restaurant.features.trim()
+    ? (restaurant.features as string).split("،").map(s => s.trim())
+    : ["جلسات عائلية خاصة", "مأكولات شعبية وتراثية", "واي فاي مجاني"];
+
+  const [features, setFeatures] = useState<string[]>(initialFeatures);
+
+  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/restaurant-libya.jpg");
+  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_food.jpg");
+  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/cafe-libya.jpg");
+  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/dest-tripoli-medina.jpg");
+  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/dest-harbor-coast.jpg");
+
+  const categoryOptions = [
+    { id: "traditional", label: "🍲 مطعم تراثي وشعبي", desc: "أكلات ليبية أصيلة (كسكسي، بازين، مبطن)" },
+    { id: "seafood", label: "🐟 مأكولات بحرية وأسماك", desc: "أسماك طازجة، جمبري، صيد يومي ومحار" },
+    { id: "cafe", label: "☕ كافيه ومقهى عصري", desc: "قهوة مختصة، شاي باللوز وجلسات هادئة" },
+    { id: "fastfood", label: "🍔 وجبات سريعة وعالمية", desc: "برجر، بيتزا، شاورما وأطباق عالمية" },
+  ];
+
+  const libyanCities = [
+    "طرابلس", "بنغازي", "مصراتة", "الزاوية", "غدامس", "أوباري",
+    "سبها", "شحات", "الخمس", "زوارة", "درنة", "طبرق", "البيضاء", "صبراتة"
+  ];
+
+  const availableFeatures = [
+    { id: "جلسات عائلية خاصة", icon: "👨‍👩‍👧‍👦" },
+    { id: "مأكولات شعبية وتراثية", icon: "🍲" },
+    { id: "واي فاي مجاني", icon: "📶" },
+    { id: "أجواء أثرية وتاريخية", icon: "🏛️" },
+    { id: "جلسات خارجية بالهواء الطلق", icon: "🌿" },
+    { id: "ألعاب أطفال وحديقة", icon: "🎠" },
+    { id: "مواقف سيارات خاصة", icon: "🅿️" },
+    { id: "خدمة دفع إلكتروني (بطاقات)", icon: "💳" },
+    { id: "لحوم وطنية طازجة 100%", icon: "🥩" },
+    { id: "إطلالة بحرية", icon: "🌊" },
+    { id: "شواء طازج على الفحم", icon: "🔥" },
+    { id: "تكييف مركزي", icon: "❄️" },
+  ];
+
+  const toggleFeature = (id: string) => {
+    setFeatures(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const setDurationMonths = (months: number) => {
+    const base = new Date(contractStartDate || todayStr);
+    base.setMonth(base.getMonth() + months);
+    setContractEndDate(base.toISOString().slice(0, 10));
+    setErrorMsg(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة للمطعم/المقهى");
+    setErrorMsg(null);
+
+    if (!name.trim()) {
+      setErrorMsg("يرجى إدخال اسم المطعم أو المقهى");
+      return;
+    }
+    if (!city.trim() || !address.trim()) {
+      setErrorMsg("يرجى إدخال المدينة والعنوان التفصيلي بدقة");
+      return;
+    }
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 8) {
+      setErrorMsg("يرجى إدخال رقم هاتف اتصال صحيح للتواصل");
+      return;
+    }
+    if (!contractEndDate) {
+      setErrorMsg("يرجى تحديد تاريخ نهاية العقد مع المطعم/المقهى");
+      return;
+    }
+    if (contractEndDate < contractStartDate) {
+      setErrorMsg("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ بداية العقد");
+      return;
+    }
+    if (Number(discountPct) < 0 || Number(discountPct) > 100) {
+      setErrorMsg("نسبة الخصم يجب أن تكون بين 0% و 100%");
+      return;
+    }
+
     onSave({
       ...(restaurant ? { id: restaurant.id } : {}),
-      name,
-      type,
-      city,
-      address,
-      phone,
+      name: name.trim(),
+      category,
+      type: type.trim(),
+      city: city.trim(),
+      address: address.trim(),
+      phone: phone.trim(),
       whatsapp: (whatsapp || phone).trim(),
       discount_percentage: Number(discountPct) || 20,
-      description,
-      google_maps_url: mapsUrl,
-      working_hours: workingHours,
+      working_hours: workingHours.trim(),
+      features,
+      partnership_status: status,
+      contract_start_date: contractStartDate,
+      contract_end_date: contractEndDate,
+      google_maps_url: mapsUrl.trim(),
+      description: description.trim(),
       facility_image_1: i1,
       facility_image_2: i2 || i1,
       facility_image_3: i3 || i1,
@@ -5432,55 +5744,397 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   };
 
   return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
-        <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-900 font-semibold">
-          ℹ️ <b>دليل تعريفي:</b> المطاعم والمقاهي للعرض والتعريف بنوع الطعام وساعات العمل والتواصل دون حجز مسبق.
-        </div>
-        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} placeholder="مثال: مطعم و كافيه السراياء التراثي" />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="نوع وتصنيف الطعام والمنشأة (مأكولات شعبية، مقهى، بحرية...)" value={type} onChange={setType} />
-          <Field label="المدينة" value={city} onChange={setCity} />
-        </div>
-        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع - المعلم القريب" />
-        <div className="grid grid-cols-2 gap-2">
-          <LibyanPhoneField label="هاتف التواصل والاستعلام" value={phone} onChange={setPhone} />
-          <LibyanPhoneField label="رقم الواتساب للتواصل المباشر" value={whatsapp} onChange={setWhatsapp} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="⏰ ساعات وفترات العمل اليومية" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 08:00 صباحاً — 12:00 ليلاً" />
-          <Field label="🏷️ نسبة الخصم لرواد دلّني (%)" type="number" value={discountPct.toString()} onChange={v => setDiscountPct(Number(v))} />
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
+      <form className="space-y-4 text-right p-1" onSubmit={handleSubmit} onKeyDown={handleEnterKeyNext}>
+        {/* Validation Error Alert Banner */}
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs font-black flex items-center justify-between gap-2 shadow-xs animate-in fade-in duration-200">
+            <span className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <span>{errorMsg}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-red-500 hover:text-red-800 font-black px-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Notice Banner */}
+        <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-950 flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <span className="font-black text-sm block">🍽️ إدارة عقد وبيانات المطاعم والمقاهي بالدليل:</span>
+            <p className="text-[11px] text-amber-900/90 font-medium">
+              تطابق كامل مع تصميم واجهة المطاعم، تاريخ بداية العقد يبدأ تلقائياً من تاريخ التسجيل، مع خيار الإيقاف/التنشيط وتفعيل Enter للتنقل.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-xl bg-amber-800 text-white text-[11px] font-black shrink-0">
+            خصم {discountPct}% لرواد دلّني
+          </span>
         </div>
 
-        {/* Google Maps URL */}
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">📍 رابط موقع المطعم/المقهى على خرائط جوجل (Google Maps URL)</label>
-          <div className="flex gap-2">
-            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="flex-1 h-10 px-3 rounded-xl border border-border text-xs outline-none focus:border-primary text-right" />
-            {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700">🗺️ فتح ↗</a>}
+        {/* Contract Dates & Activity Status */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-800 block">
+              📑 فترة العقد وحالة النشاط بالمنصة:
+            </label>
+            <span className="text-[10px] font-bold text-slate-500">
+              * البداية تلقائياً من يوم التسجيل
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            {/* Start Date (Auto registration day) */}
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                📅 تاريخ بداية العقد (يوم التسجيل)
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={contractStartDate}
+                  disabled
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700 text-right outline-none cursor-not-allowed font-mono"
+                />
+                <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
+                  تلقائي
+                </span>
+              </div>
+            </div>
+
+            {/* End Date (Input + shortcuts) */}
+            <div className="sm:col-span-4">
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[11px] font-bold text-slate-700 block">
+                  🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDurationMonths(6)}
+                    className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded hover:bg-amber-200 cursor-pointer"
+                  >
+                    +6 أشهر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationMonths(12)}
+                    className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded hover:bg-amber-200 cursor-pointer"
+                  >
+                    +سنة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationMonths(24)}
+                    className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded hover:bg-amber-200 cursor-pointer"
+                  >
+                    +سنتين
+                  </button>
+                </div>
+              </div>
+              <input
+                type="date"
+                value={contractEndDate}
+                onChange={e => {
+                  setContractEndDate(e.target.value);
+                  setErrorMsg(null);
+                }}
+                min={contractStartDate}
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600 font-mono focus:ring-1 focus:ring-amber-600"
+              />
+            </div>
+
+            {/* Status Toggle (Active vs Suspended) */}
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                ⚡ حالة المنشأة والعرض بالمنصة
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 h-10 p-1 bg-slate-200/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setStatus("نشط")}
+                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                    status === "نشط"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🟢 نشط</span>
+                  <span className="hidden lg:inline text-[9px]">(يعرض)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus("موقوف")}
+                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                    status === "موقوف"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🔴 موقوف</span>
+                  <span className="hidden lg:inline text-[9px]">(لا يعرض)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-500 font-medium">
+            💡 ملاحظة: عند ضبط الحالة على <b>"موقوف"</b> يتم حجب المطعم/المقهى تلقائياً ولا يظهر في المنصة للجمهور.
           </div>
         </div>
 
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">نبذة ومميزات المطعم/المقهى والوجبات والمنيو</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="اكتب نبذة عن أصناف الوجبات والمشروبات والجلسات التراثية..." className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary" />
+        {/* 1. Category Selection (4 Visual Cards matching Restaurant Design) */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-black text-slate-800 block">
+            🍴 تصنيف المطعم/المقهى (مطابق لتصميم المنصة):
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {categoryOptions.map((opt) => {
+              const isSelected = category === opt.id;
+              return (
+                <div
+                  key={opt.id}
+                  onClick={() => setCategory(opt.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all text-center space-y-1 select-none ${
+                    isSelected
+                      ? "border-2 border-amber-600 bg-amber-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-amber-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="text-sm font-black text-slate-900">{opt.label}</div>
+                  <div className="text-[10px] text-slate-500 leading-tight">{opt.desc}</div>
+                  {isSelected && (
+                    <div className="text-[10px] font-black text-amber-800 pt-0.5">✓ تم الاختيار</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* 5 Photos Section */}
-        <div className="pt-2 border-t border-border space-y-2">
-          <label className="text-xs font-black text-foreground block">🖼️ الصور الخمسة للمطعم/المقهى (معرض الصور):</label>
-          <div className="space-y-2">
-            <ImageFilePicker label="الصورة 1 (الواجهة والمظهر)" value={i1} onChange={setI1} />
+        {/* 2. Basic Info (Name, Specific Specialty Type, City) */}
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="sm:col-span-5">
+            <Field
+              label="اسم المطعم / المقهى الرسمي *"
+              value={name}
+              onChange={v => {
+                setName(v);
+                setErrorMsg(null);
+              }}
+              placeholder="مثال: مطعم السراي القديم / كافيه الأندلس"
+            />
+          </div>
+
+          <div className="sm:col-span-4">
+            <Field
+              label="التخصص والنوع الفرعي للطعام *"
+              value={type}
+              onChange={setType}
+              placeholder="مثال: مأكولات شعبية وتراثية، أسماك طازجة"
+            />
+          </div>
+
+          <div className="sm:col-span-3">
+            <label className="text-xs font-bold block mb-1">المدينة / المنطقة *</label>
+            <select
+              value={city}
+              onChange={e => {
+                setCity(e.target.value);
+                setErrorMsg(null);
+              }}
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-right outline-none focus:border-amber-600"
+            >
+              {libyanCities.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* 3. Detailed Address & Working Hours */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field
+            label="العنوان والحي التفصيلي *"
+            value={address}
+            onChange={v => {
+              setAddress(v);
+              setErrorMsg(null);
+            }}
+            placeholder="مثال: المدينة القديمة، بجوار السرايا الحمراء، طرابلس"
+          />
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold">⏰ ساعات العمل اليومية</label>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setWorkingHours("11:00 ص – 11:30 م")}
+                  className="text-[10px] text-amber-700 font-bold hover:underline cursor-pointer"
+                >
+                  مطعم (11ص-11:30م)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkingHours("08:00 ص – 12:00 ليلاً")}
+                  className="text-[10px] text-amber-700 font-bold hover:underline cursor-pointer"
+                >
+                  كافيه (8ص-12ل)
+                </button>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={workingHours}
+              onChange={e => setWorkingHours(e.target.value)}
+              placeholder="مثال: 11:00 ص – 11:30 م"
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-right outline-none focus:border-amber-600"
+            />
+          </div>
+        </div>
+
+        {/* 4. Contact Numbers & Discount Percentage */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <LibyanPhoneField
+            label="هاتف التواصل والاستعلام *"
+            value={phone}
+            onChange={v => {
+              setPhone(v);
+              setErrorMsg(null);
+            }}
+          />
+          <LibyanPhoneField
+            label="رقم الواتساب للتواصل المباشر"
+            value={whatsapp}
+            onChange={setWhatsapp}
+          />
+          <div>
+            <label className="text-xs font-bold block mb-1">
+              🏷️ نسبة الخصم لرواد منصة دلّني (%)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={discountPct}
+                onChange={e => setDiscountPct(Number(e.target.value))}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-black text-right outline-none focus:border-amber-600"
+              />
+              <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400 pointer-events-none">%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Google Maps Link */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📍 رابط موقع المطعم/المقهى على خرائط جوجل (Google Maps)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={mapsUrl}
+              onChange={e => setMapsUrl(e.target.value)}
+              placeholder="https://maps.google.com/?q=..."
+              className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-amber-600 text-right font-mono"
+            />
+            {mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 h-10 bg-amber-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-amber-700"
+              >
+                🗺️ فتح ↗
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* 6. Features & Amenities Chips */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-800 block">
+            ✨ مميزات وخدمات المطعم/المقهى (انقر لتحديد الخدمات):
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {availableFeatures.map(f => {
+              const isChecked = features.includes(f.id);
+              return (
+                <button
+                  type="button"
+                  key={f.id}
+                  onClick={() => toggleFeature(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                    isChecked
+                      ? "bg-amber-800 text-white border-amber-800 shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>{f.icon}</span>
+                  <span>{f.id}</span>
+                  {isChecked && <span className="text-[10px]">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 7. Bio & Signature Dishes */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📝 نبذة وأشهر الأطباق والوجبات ومميزات المنيو
+          </label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            placeholder="اكتب نبذة عن أصناف الوجبات، الأطباق المميزة (كسكسي، مبطن، شربة...)، الجلسات العائلية، والأجواء العامة..."
+            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-right outline-none focus:border-amber-600 leading-relaxed"
+          />
+        </div>
+
+        {/* 8. 5 Photos Section */}
+        <div className="pt-3 border-t border-slate-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-900 block">
+              🖼️ معرض الصور الخمسة للمطعم/المقهى (تظهر في الكرت ومعاينة التفاصيل):
+            </label>
+            <span className="text-[10px] text-slate-500 font-bold">5 صور مطلوبة</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية والمظهر)" value={i1} onChange={setI1} />
             <ImageFilePicker label="الصورة 2 (الجلسات الداخلية والسيور)" value={i2} onChange={setI2} />
             <ImageFilePicker label="الصورة 3 (الأطباق والوجبات الرئيسية)" value={i3} onChange={setI3} />
-            <ImageFilePicker label="الصورة 4 (المشروبات والمأكولات)" value={i4} onChange={setI4} />
+            <ImageFilePicker label="الصورة 4 (المشروبات والحلويات)" value={i4} onChange={setI4} />
+          </div>
+          <div className="max-w-md mx-auto">
             <ImageFilePicker label="الصورة 5 (المنيو والأجواء الخارجية)" value={i5} onChange={setI5} />
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المطعم/المقهى بالدليل ✓</button>
+        {/* Submit Action Buttons */}
+        <div className="flex gap-2 justify-end pt-3 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 h-11 rounded-xl border border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md shadow-amber-900/20 cursor-pointer transition flex items-center gap-1.5"
+          >
+            <span>حفظ المطعم/المقهى بالدليل ✓</span>
+          </button>
         </div>
       </form>
     </ModalShell>

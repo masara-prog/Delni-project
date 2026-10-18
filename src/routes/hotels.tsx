@@ -1229,6 +1229,8 @@ function HotelsPage() {
               description: item.description || "",
               working_hours: item.working_hours || "",
               discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
+              contract_start_date: item.contract_start_date || "",
+              contract_end_date: item.contract_end_date || "",
               photos: [
                 item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
                 item.hotel_photo_2 || item.photos?.[1] || "/assets/hotel_resort.jpg",
@@ -1267,6 +1269,8 @@ function HotelsPage() {
                 description: item.description || "",
                 working_hours: item.working_hours || "",
                 discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
+                contract_start_date: item.contract_start_date || "",
+                contract_end_date: item.contract_end_date || "",
                 photos: [
                   item.hotel_photo_1 || item.photos?.[0] || "/assets/ai_hotel.jpg",
                   item.hotel_photo_2 || item.photos?.[1] || "/assets/hotel_resort.jpg",
@@ -1306,6 +1310,8 @@ function HotelsPage() {
   const filtered = useMemo(() => {
     if (propertyType === "none") return [];
     return hotels.filter((h) => {
+      // Exclude suspended/inactive hotels from public platform display
+      if (h.partnership_status === "موقوف") return false;
       const matchCity = city === "all" || h.city.toLowerCase().includes(city.toLowerCase());
       const matchStars = stars === 0 || h.stars >= stars;
       const matchType = propertyType === "all" || h.propertyType === propertyType;

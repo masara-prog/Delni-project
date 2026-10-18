@@ -23,6 +23,8 @@ export type RestaurantData = {
   discountPct?: number;
   partnership_status?: string;
   whatsapp?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
 };
 
 export function RestaurantDetailsModal({

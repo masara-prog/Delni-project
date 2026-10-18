@@ -20,6 +20,9 @@ export type HotelData = {
   propertyType?: string;
   badge?: string;
   description?: string;
+  working_hours?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
 };
 
 export function HotelDetailsModal({

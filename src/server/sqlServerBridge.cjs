@@ -919,6 +919,8 @@ const server = http.createServer(async (req, res) => {
       request.input('property_type', sql.NVarChar(100), String(property_type || 'فندق').trim());
       request.input('amenities', sql.NVarChar(sql.MAX), String(amenities || '').trim());
       request.input('contract_date', sql.Date, contract_date || new Date());
+      request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
+      request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
       request.input('description', sql.NVarChar(sql.MAX), String(body.description || '').trim());
       request.input('working_hours', sql.NVarChar(150), String(body.working_hours || 'خدمة 24/7 على مدار الساعة').trim());
@@ -947,7 +949,9 @@ const server = http.createServer(async (req, res) => {
               description = @description,
               working_hours = @working_hours,
               discount_percentage = @discount_percentage,
-              whatsapp = @whatsapp
+              whatsapp = @whatsapp,
+              contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
+              contract_end_date = @contract_end_date
           WHERE hotel_id = @hotel_id;
         END
         ELSE
@@ -956,12 +960,14 @@ const server = http.createServer(async (req, res) => {
             hotel_id, hotel_name, city, address_details, phone_number, star_rating,
             partnership_status, hotel_photo_1, hotel_photo_2, hotel_photo_3, hotel_photo_4,
             hotel_photo_5, verification_status, property_type, amenities, contract_date, google_maps_url,
-            description, working_hours, discount_percentage, whatsapp
+            description, working_hours, discount_percentage, whatsapp,
+            contract_start_date, contract_end_date
           ) VALUES (
             @hotel_id, @hotel_name, @city, @address_details, @phone_number, @star_rating,
             @partnership_status, @photo_1, @photo_2, @photo_3, @photo_4,
             @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url,
-            @description, @working_hours, @discount_percentage, @whatsapp
+            @description, @working_hours, @discount_percentage, @whatsapp,
+            @contract_start_date, @contract_end_date
           );
         END
       `);
@@ -1018,6 +1024,9 @@ const server = http.createServer(async (req, res) => {
       request.input('working_hours', sql.NVarChar(100), String(working_hours || '09:00 ص - 12:00 م').trim());
       request.input('features', sql.NVarChar(sql.MAX), String(features || '').trim());
       request.input('contract_date', sql.Date, contract_date || new Date());
+      request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
+      request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
+      request.input('partnership_status', sql.NVarChar(100), String(body.partnership_status || 'نشط').trim());
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
       request.input('discount_percentage', sql.Int, Number(body.discount_percentage) || 20);
       request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || '').trim());
@@ -1042,7 +1051,10 @@ const server = http.createServer(async (req, res) => {
               features = @features,
               google_maps_url = @google_maps_url,
               discount_percentage = @discount_percentage,
-              whatsapp = @whatsapp
+              whatsapp = @whatsapp,
+              partnership_status = @partnership_status,
+              contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
+              contract_end_date = @contract_end_date
           WHERE facility_id = @facility_id;
         END
         ELSE
@@ -1052,13 +1064,15 @@ const server = http.createServer(async (req, res) => {
             phone_number, description, facility_image_1, facility_image_2,
             facility_image_3, facility_image_4, facility_image_5,
             verification_status, working_hours, features, contract_date, google_maps_url,
-            discount_percentage, whatsapp
+            discount_percentage, whatsapp, partnership_status,
+            contract_start_date, contract_end_date
           ) VALUES (
             @facility_id, @facility_name, @facility_type, @city, @address_details,
             @phone_number, @description, @img_1, @img_2,
             @img_3, @img_4, @img_5,
             @verification_status, @working_hours, @features, @contract_date, @google_maps_url,
-            @discount_percentage, @whatsapp
+            @discount_percentage, @whatsapp, @partnership_status,
+            @contract_start_date, @contract_end_date
           );
         END
       `);

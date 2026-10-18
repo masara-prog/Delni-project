@@ -39,6 +39,8 @@ type Restaurant = {
   discountPct?: number;
   partnership_status?: string;
   whatsapp?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
 };
 
 function getRestaurants(lang: "ar" | "en"): Restaurant[] {
@@ -1280,6 +1282,8 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     discountPct: typeof r.discount_percentage === "number" ? r.discount_percentage : 20,
     whatsapp: r.whatsapp || r.phone || "0910000000",
     partnership_status: r.partnership_status || "شريك معتمد",
+    contract_start_date: r.contract_start_date || "",
+    contract_end_date: r.contract_end_date || "",
     photos: photos,
     signatureDishes: [
       isAr ? "الأطباق الرئيسية والوجبة الخاصة" : "Main House Specialties",
@@ -1365,6 +1369,8 @@ function RestaurantsPage() {
     if (!selectedCategory && !searchQuery.trim()) return [];
 
     return restaurants.filter((r) => {
+      // Exclude suspended/inactive restaurants from public platform display
+      if (r.partnership_status === "موقوف") return false;
       const matchCategory = !selectedCategory || selectedCategory === "all" || r.category === selectedCategory;
       const matchCity = city === "all" || r.city.toLowerCase().includes(city.toLowerCase());
       const q = searchQuery.trim().toLowerCase();
