@@ -5106,7 +5106,6 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
   const [city, setCity] = useState(hotel?.city || "طرابلس");
   const [address, setAddress] = useState(hotel?.address || "");
   const [phone, setPhone] = useState(hotel?.phone || "");
-  const [whatsapp, setWhatsapp] = useState(hotel?.whatsapp || "");
   const [stars, setStars] = useState(hotel?.stars ? Number(hotel.stars) : 4);
   const [status, setStatus] = useState<"نشط" | "موقوف">(hotel?.partnership_status === "موقوف" ? "موقوف" : "نشط");
   const [discountPct, setDiscountPct] = useState(hotel?.discount_percentage || 15);
@@ -5198,7 +5197,7 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
       city: city.trim(),
       address: address.trim(),
       phone: phone.trim(),
-      whatsapp: (whatsapp || phone).trim(),
+      whatsapp: phone.trim(),
       stars: Number(stars),
       partnership_status: status,
       contract_start_date: contractStartDate,
@@ -5279,36 +5278,11 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
               </div>
             </div>
 
-            {/* End Date (Input + shortcuts) */}
+            {/* End Date (Input) */}
             <div className="sm:col-span-4">
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setDurationMonths(6)}
-                    className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#003580] rounded hover:bg-blue-200 cursor-pointer"
-                  >
-                    +6 أشهر
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDurationMonths(12)}
-                    className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#003580] rounded hover:bg-blue-200 cursor-pointer"
-                  >
-                    +سنة
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDurationMonths(24)}
-                    className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#003580] rounded hover:bg-blue-200 cursor-pointer"
-                  >
-                    +سنتين
-                  </button>
-                </div>
-              </div>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 value={contractEndDate}
@@ -5475,20 +5449,15 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
           </div>
         </div>
 
-        {/* 4. Contact Numbers & Discount Percentage */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* 4. Contact Number & Discount Percentage */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <LibyanPhoneField
-            label="هاتف الاتصال المباشر *"
+            label="هاتف التواصل والواتساب *"
             value={phone}
             onChange={v => {
               setPhone(v);
               setErrorMsg(null);
             }}
-          />
-          <LibyanPhoneField
-            label="رقم الواتساب للاستعلام"
-            value={whatsapp}
-            onChange={setWhatsapp}
           />
           <div>
             <label className="text-xs font-bold block mb-1">
@@ -5623,7 +5592,6 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
-  const [whatsapp, setWhatsapp] = useState(restaurant?.whatsapp || "");
   const [status, setStatus] = useState<"نشط" | "موقوف">(restaurant?.partnership_status === "موقوف" ? "موقوف" : "نشط");
   const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage || 20);
   const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "11:00 ص – 11:30 م");
@@ -5723,7 +5691,7 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
       city: city.trim(),
       address: address.trim(),
       phone: phone.trim(),
-      whatsapp: (whatsapp || phone).trim(),
+      whatsapp: phone.trim(),
       discount_percentage: Number(discountPct) || 20,
       working_hours: workingHours.trim(),
       features,
@@ -5803,36 +5771,11 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
               </div>
             </div>
 
-            {/* End Date (Input + shortcuts) */}
+            {/* End Date (Input) */}
             <div className="sm:col-span-4">
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setDurationMonths(6)}
-                    className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded hover:bg-amber-200 cursor-pointer"
-                  >
-                    +6 أشهر
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDurationMonths(12)}
-                    className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded hover:bg-amber-200 cursor-pointer"
-                  >
-                    +سنة
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDurationMonths(24)}
-                    className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded hover:bg-amber-200 cursor-pointer"
-                  >
-                    +سنتين
-                  </button>
-                </div>
-              </div>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 value={contractEndDate}
@@ -5986,20 +5929,15 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
           </div>
         </div>
 
-        {/* 4. Contact Numbers & Discount Percentage */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* 4. Contact Number & Discount Percentage */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <LibyanPhoneField
-            label="هاتف التواصل والاستعلام *"
+            label="هاتف التواصل والواتساب *"
             value={phone}
             onChange={v => {
               setPhone(v);
               setErrorMsg(null);
             }}
-          />
-          <LibyanPhoneField
-            label="رقم الواتساب للتواصل المباشر"
-            value={whatsapp}
-            onChange={setWhatsapp}
           />
           <div>
             <label className="text-xs font-bold block mb-1">

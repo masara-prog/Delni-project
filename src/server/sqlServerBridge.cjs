@@ -924,8 +924,9 @@ const server = http.createServer(async (req, res) => {
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
       request.input('description', sql.NVarChar(sql.MAX), String(body.description || '').trim());
       request.input('working_hours', sql.NVarChar(150), String(body.working_hours || 'خدمة 24/7 على مدار الساعة').trim());
-      request.input('discount_percentage', sql.Int, Number(body.discount_percentage) || 15);
-      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || '').trim());
+      const cleanPhone = String(phone_number || phone || '0910000000').trim();
+      request.input('phone_number', sql.NVarChar(20), cleanPhone);
+      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @hotel_id)
@@ -1027,9 +1028,9 @@ const server = http.createServer(async (req, res) => {
       request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
       request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
       request.input('partnership_status', sql.NVarChar(100), String(body.partnership_status || 'نشط').trim());
-      request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
-      request.input('discount_percentage', sql.Int, Number(body.discount_percentage) || 20);
-      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || '').trim());
+      const cleanPhone = String(phone_number || phone || '0910000000').trim();
+      request.input('phone_number', sql.NVarChar(20), cleanPhone);
+      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM restaurants_cafes WHERE facility_id = @facility_id)
