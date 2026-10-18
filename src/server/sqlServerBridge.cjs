@@ -241,7 +241,6 @@ const server = http.createServer(async (req, res) => {
           city,
           email,
           total_vehicles,
-          available_vehicles,
           contract_start_date,
           contract_end_date,
           verification_status,
@@ -257,7 +256,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const {
         contract_number, company_name, phone_number, address,
-        total_vehicles, available_vehicles, contract_start_date, contract_end_date,
+        total_vehicles, contract_start_date, contract_end_date,
         email, password, city, verification_status, isNew
       } = body;
 
@@ -285,7 +284,6 @@ const server = http.createServer(async (req, res) => {
       request.input('address', sql.NVarChar(255), String(address || '').trim());
       const totVehicles = Number(total_vehicles) || 1;
       request.input('total_vehicles', sql.Int, totVehicles);
-      request.input('available_vehicles', sql.Int, totVehicles);
       request.input('contract_start_date', sql.Date, contract_start_date || new Date());
       const rawPassword = body.password ? String(body.password).trim() : '';
       const shouldUpdatePass = rawPassword && rawPassword !== '••••••••' && rawPassword.length >= 4;
@@ -310,7 +308,6 @@ const server = http.createServer(async (req, res) => {
               address = @address,
               google_maps_url = CASE WHEN @google_maps_url <> '' THEN @google_maps_url ELSE google_maps_url END,
               total_vehicles = @total_vehicles,
-              available_vehicles = @available_vehicles,
               email = @email,
               city = @city,
               verification_status = @verification_status,
@@ -322,9 +319,9 @@ const server = http.createServer(async (req, res) => {
         ELSE
         BEGIN
           INSERT INTO transportation_companies 
-          (contract_number, company_name, phone_number, address, google_maps_url, total_vehicles, available_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+          (contract_number, company_name, phone_number, address, google_maps_url, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
           VALUES 
-          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, @available_vehicles, @contract_start_date, @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
+          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, @contract_start_date, @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
         END
       `);
 
@@ -420,9 +417,9 @@ const server = http.createServer(async (req, res) => {
           autoComp.input('c_phone', sql.NVarChar(20), `091${Math.floor(1000000 + Math.random() * 9000000)}`);
           await autoComp.query(`
             INSERT INTO transportation_companies 
-            (contract_number, company_name, phone_number, address, total_vehicles, available_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+            (contract_number, company_name, phone_number, address, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
             VALUES 
-            (@c_num, @c_name, @c_phone, N'طرابلس', 1, 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
+            (@c_num, @c_name, @c_phone, N'طرابلس', 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
           `);
         }
 
@@ -636,9 +633,9 @@ const server = http.createServer(async (req, res) => {
           .input('c_phone', sql.NVarChar(20), '0910000000')
           .query(`
             INSERT INTO transportation_companies 
-            (contract_number, company_name, phone_number, address, total_vehicles, available_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+            (contract_number, company_name, phone_number, address, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
             VALUES 
-            (@c_num, @c_name, @c_phone, N'ليبيا', 1, 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
+            (@c_num, @c_name, @c_phone, N'ليبيا', 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
           `);
       }
 
@@ -900,6 +897,16 @@ const server = http.createServer(async (req, res) => {
       const cleanName = String(hotel_name || name || '').trim();
       if (!cleanName) return sendJson(res, 400, { success: false, error: 'اسم الفندق مطلوب' });
 
+      // Check duplicate primary key / municipal ID on creation
+      if (body.isNew) {
+        const dupReq = db.request();
+        dupReq.input('chk_hid', sql.NVarChar(50), cleanId);
+        const dupRes = await dupReq.query('SELECT 1 FROM hotels WHERE hotel_id = @chk_hid');
+        if (dupRes.recordset.length > 0) {
+          return sendJson(res, 409, { success: false, error: 'رقم القيد البلدي مسجل مسبقاً لمكان إقامة آخر في قاعدة البيانات' });
+        }
+      }
+
       const request = db.request();
       request.input('hotel_id', sql.NVarChar(50), cleanId);
       request.input('hotel_name', sql.NVarChar(200), cleanName);
@@ -1005,6 +1012,16 @@ const server = http.createServer(async (req, res) => {
       const cleanId = String(facility_id || id || `R-0${Date.now().toString().slice(-3)}`).trim();
       const cleanName = String(facility_name || name || '').trim();
       if (!cleanName) return sendJson(res, 400, { success: false, error: 'اسم المطعم/المقهى مطلوب' });
+
+      // Check duplicate primary key / municipal ID on creation
+      if (body.isNew) {
+        const dupReq = db.request();
+        dupReq.input('chk_fid', sql.NVarChar(50), cleanId);
+        const dupRes = await dupReq.query('SELECT 1 FROM restaurants_cafes WHERE facility_id = @chk_fid');
+        if (dupRes.recordset.length > 0) {
+          return sendJson(res, 409, { success: false, error: 'رقم القيد البلدي مسجل مسبقاً لمطعم أو مقهى آخر في قاعدة البيانات' });
+        }
+      }
 
       const request = db.request();
       request.input('facility_id', sql.NVarChar(50), cleanId);
@@ -1466,6 +1483,29 @@ const server = http.createServer(async (req, res) => {
         END
       `);
 
+      // Sync hotels_trip_weekly junction table for multi-hotel support
+      const hotelList = Array.isArray(body.hotel_ids)
+        ? body.hotel_ids
+        : (body.hotel_id ? [body.hotel_id] : []);
+      if (hotelList.length > 0) {
+        try {
+          const delHReq = db.request();
+          delHReq.input('wt_id', sql.VarChar(50), cleanId);
+          await delHReq.query('DELETE FROM hotels_trip_weekly WHERE weekly_trip_id = @wt_id');
+          for (const hId of hotelList) {
+            const cleanHId = String(hId || '').trim();
+            if (cleanHId) {
+              const insHReq = db.request();
+              insHReq.input('wt_id', sql.VarChar(50), cleanId);
+              insHReq.input('h_id', sql.NVarChar(50), cleanHId);
+              await insHReq.query('IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @h_id) INSERT INTO hotels_trip_weekly (hotel_id, weekly_trip_id) VALUES (@h_id, @wt_id)');
+            }
+          }
+        } catch (hErr) {
+          console.warn('[hotels_trip_weekly sync warning]:', hErr.message);
+        }
+      }
+
       return sendJson(res, 201, { success: true, message: 'تم حفظ الرحلة الأسبوعية في DelniDB بنجاح', trip_id: cleanId });
     }
 
@@ -1477,6 +1517,7 @@ const server = http.createServer(async (req, res) => {
       const request = db.request();
       request.input('id', sql.VarChar(50), id);
       await request.query(`
+        DELETE FROM hotels_trip_weekly WHERE weekly_trip_id = @id;
         DELETE FROM bookings_weekly WHERE weekly_trip_id = @id;
         DELETE FROM weekly_trips WHERE weekly_trip_id = @id;
       `);

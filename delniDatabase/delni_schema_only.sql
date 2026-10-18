@@ -1,4 +1,4 @@
-﻿USE [DelniDB]
+USE [DelniDB]
 GO
 /****** Object:  Table [dbo].[bookings_daily]    Script Date: 10/7/2026 12:36:01 PM ******/
 SET ANSI_NULLS ON
@@ -491,7 +491,6 @@ CREATE TABLE [dbo].[transportation_companies](
 	[email] [varchar](100) NULL,
 	[password] [varchar](255) NULL,
 	[city] [varchar](50) NULL,
-	[available_vehicles] [int] NULL,
 	[contract_start_date] [date] NULL,
 	[contract_end_date] [date] NULL,
 PRIMARY KEY CLUSTERED 

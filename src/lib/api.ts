@@ -56,8 +56,6 @@ export interface TransportCompanyRecord {
   email?: string | null;
   password?: string | null;
   total_vehicles?: number | null;
-  available_vehicles?: number | null;
-  available_cars?: number | null;
   contract_start_date?: string | null;
   contract_end_date?: string | null;
   verification_status?: string | null;
@@ -240,8 +238,6 @@ export function addTransportCompany(company: Partial<TransportCompanyRecord>): T
     email: company.email || `company${list.length + 1}@dalni.ly`,
     password: company.password || "password123",
     total_vehicles: Number(company.total_vehicles) || 5,
-    available_vehicles: Number(company.available_cars !== undefined ? company.available_cars : company.available_vehicles) || 0,
-    available_cars: Number(company.available_cars !== undefined ? company.available_cars : company.available_vehicles) || 0,
     contract_start_date: company.contract_start_date || "2026-01-01",
     contract_end_date: company.contract_end_date || "2028-01-01",
     verification_status: company.verification_status || company.status || "موثق",
@@ -275,8 +271,6 @@ export function updateTransportCompany(contractNumber: string, data: Partial<Tra
       google_maps_url: data.google_maps_url !== undefined ? data.google_maps_url : (data.address && (data.address.startsWith("http") || data.address.includes("maps")) ? data.address : (list[idx].google_maps_url || "")),
       email: data.email || list[idx].email || "",
       total_vehicles: Number(data.total_vehicles !== undefined ? data.total_vehicles : list[idx].total_vehicles) || 0,
-      available_vehicles: Number(data.available_vehicles !== undefined ? data.available_vehicles : (data.available_cars !== undefined ? data.available_cars : list[idx].available_vehicles)) || 0,
-      available_cars: Number(data.available_vehicles !== undefined ? data.available_vehicles : (data.available_cars !== undefined ? data.available_cars : list[idx].available_vehicles)) || 0,
       contract_start_date: data.contract_start_date || list[idx].contract_start_date,
       contract_end_date: data.contract_end_date || list[idx].contract_end_date,
     };

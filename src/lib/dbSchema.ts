@@ -56,7 +56,6 @@ export interface TransportationCompany {
   email?: string | null; // VARCHAR(100)
   password?: string | null; // VARCHAR(255)
   city?: string | null; // VARCHAR(50)
-  available_vehicles?: number | null; // INT
   contract_start_date?: string | null; // DATE
   contract_end_date?: string | null; // DATE
 }
