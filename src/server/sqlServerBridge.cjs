@@ -283,8 +283,9 @@ const server = http.createServer(async (req, res) => {
       request.input('company_name', sql.NVarChar(150), String(company_name).trim());
       request.input('phone_number', sql.NVarChar(20), String(phone_number).trim());
       request.input('address', sql.NVarChar(255), String(address || '').trim());
-      request.input('total_vehicles', sql.Int, Number(total_vehicles) || 1);
-      request.input('available_vehicles', sql.Int, Number(available_vehicles) || 0);
+      const totVehicles = Number(total_vehicles) || 1;
+      request.input('total_vehicles', sql.Int, totVehicles);
+      request.input('available_vehicles', sql.Int, totVehicles);
       request.input('contract_start_date', sql.Date, contract_start_date || new Date());
       const rawPassword = body.password ? String(body.password).trim() : '';
       const shouldUpdatePass = rawPassword && rawPassword !== '••••••••' && rawPassword.length >= 4;
@@ -536,9 +537,6 @@ const server = http.createServer(async (req, res) => {
 
         await vReq.query(`
           UPDATE drivers SET assigned_vehicle_plate = NULL WHERE assigned_vehicle_plate = @plate_number;
-          DELETE FROM weekly_trip_vehicles WHERE plate_number = @plate_number;
-          DELETE FROM private_trip_vehicles WHERE plate_number = @plate_number;
-          DELETE FROM daily_trip_vehicles WHERE plate_number = @plate_number;
           DELETE FROM vehicles WHERE plate_number = @plate_number;
         `);
 
@@ -1580,7 +1578,6 @@ const server = http.createServer(async (req, res) => {
       const request = db.request();
       request.input('id', sql.VarChar(50), id);
       await request.query(`
-        DELETE FROM private_trip_vehicles WHERE private_trip_id = @id;
         DELETE FROM private_trips WHERE private_trip_id = @id;
       `);
       return sendJson(res, 200, { success: true, message: 'تم حذف طلب الرحلة الخاصة بنجاح من DelniDB' });

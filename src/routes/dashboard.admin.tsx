@@ -2791,7 +2791,6 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(5);
-  const [availableCars, setAvailableCars] = useState<number | string>(3);
   const [contractEndDate, setContractEndDate] = useState("");
   const [companyStatus, setCompanyStatus] = useState("موثق");
   const [showMapPicker, setShowMapPicker] = useState(false);
@@ -2846,17 +2845,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       return;
     }
     const totalV = Number(vehiclesCount);
-    const availC = Number(availableCars);
     if (isNaN(totalV) || totalV <= 0) {
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
-      return;
-    }
-    if (isNaN(availC) || availC < 0) {
-      setErrorMsg("عدد السيارات المتاحة حالياً يجب أن يكون صفراً أو أكثر.");
-      return;
-    }
-    if (availC > totalV) {
-      setErrorMsg("عدد السيارات المتاحة حالياً لا يمكن أن يتجاوز إجمالي عدد مركبات الأسطول.");
       return;
     }
     if (!contractEndDate.trim()) {
@@ -2877,8 +2867,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       pass: pass.trim(),
       password: pass.trim(),
       total_vehicles: totalV,
-      available_cars: availC,
-      available_vehicles: availC,
+      available_cars: totalV,
+      available_vehicles: totalV,
       contract_start_date: new Date().toISOString().split("T")[0],
       contract_end_date: contractEndDate.trim(),
       status: companyStatus,
@@ -2995,36 +2985,29 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
               <span>سعة الأسطول وصلاحية التعاقد</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/90 text-right space-y-1">
-              <p className="text-[11px] text-amber-900 font-bold flex items-center gap-1.5">
+            <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/90 text-right space-y-1">
+              <p className="text-[11px] text-blue-900 font-bold flex items-center gap-1.5">
                 <span>💡</span>
-                <span><b>إجمالي الأسطول:</b> إجمالي المركبات التي تملكها الشركة (يجب أن يكون 1 على الأقل).</span>
-              </p>
-              <p className="text-[11px] text-amber-900 font-bold flex items-center gap-1.5">
-                <span>🚗</span>
-                <span><b>السيارات المتاحة:</b> المركبات الجاهزة حالياً للتشغيل (لا تتجاوز إجمالي الأسطول).</span>
+                <span><b>عدد مركبات الأسطول:</b> إجمالي عدد المركبات المعتمدة رسمياً في العقد (تكون جميعها متاحة للتشغيل).</span>
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <Field label="عدد مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-              <Field label="عدد السيارات المتاحة للتشغيل *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
               <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
-              <div>
-                <label className="text-xs font-bold text-slate-800 block mb-1.5">حالة التوثيق والتشغيل *</label>
-                <select
-                  value={companyStatus}
-                  onChange={e => setCompanyStatus(e.target.value as any)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
-                >
-                  <option value="موثق">موثق (نشط يظهر للعلن ويعرض سياراته)</option>
-                  <option value="بانتظار">بانتظار المراجعة (معلق لا يظهر)</option>
-                  <option value="مرفوض">مرفوض / غير نشط (يختفي من المنصة)</option>
-                </select>
-              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-800 block mb-1.5">حالة التوثيق والتشغيل *</label>
+              <select
+                value={companyStatus}
+                onChange={e => setCompanyStatus(e.target.value as any)}
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
+              >
+                <option value="موثق">موثق (نشط يظهر للعلن ويعرض سياراته)</option>
+                <option value="بانتظار">بانتظار المراجعة (معلق لا يظهر)</option>
+                <option value="مرفوض">مرفوض / غير نشط (يختفي من المنصة)</option>
+              </select>
             </div>
           </div>
 
@@ -3067,7 +3050,6 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
   const [address, setAddress] = useState(company.google_maps_url || company.address || "");
   const [email, setEmail] = useState(company.email || "");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(company.total_vehicles ?? 5);
-  const [availableCars, setAvailableCars] = useState<number | string>(company.available_vehicles ?? company.available_cars ?? 0);
   const [contractStartDate, setContractStartDate] = useState(company.contract_start_date || "2026-01-01");
   const [contractEndDate, setContractEndDate] = useState(company.contract_end_date || "2028-01-01");
   const [status, setStatus] = useState(company.verification_status || company.status || "موثق");
@@ -3101,17 +3083,8 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       return;
     }
     const totalV = Number(vehiclesCount);
-    const availC = Number(availableCars);
     if (isNaN(totalV) || totalV <= 0) {
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
-      return;
-    }
-    if (isNaN(availC) || availC < 0) {
-      setErrorMsg("عدد السيارات المتاحة حالياً يجب أن يكون صفراً أو أكثر.");
-      return;
-    }
-    if (availC > totalV) {
-      setErrorMsg("عدد السيارات المتاحة لا يمكن أن يتجاوز إجمالي مركبات الأسطول.");
       return;
     }
 
@@ -3127,8 +3100,8 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       google_maps_url: cleanAddress,
       email: email.trim(),
       total_vehicles: totalV,
-      available_vehicles: availC,
-      available_cars: availC,
+      available_vehicles: totalV,
+      available_cars: totalV,
       contract_start_date: contractStartDate,
       contract_end_date: contractEndDate,
       verification_status: status,
@@ -3221,9 +3194,8 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
               <span>📊</span>
               <span>سعة الأسطول وحالة التوثيق والتشغيل</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <Field label="إجمالي مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-              <Field label="السيارات المتاحة للتشغيل *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
+            <div>
+              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

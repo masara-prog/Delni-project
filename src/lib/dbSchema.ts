@@ -297,34 +297,7 @@ export interface OfferFacility {
   badge?: string | null; // VARCHAR(50)
 }
 
-/* =========================================================
-   18, 19, 20. ربط السيارات بالرحلات (Vehicle Allocations)
-   ========================================================= */
-export interface DailyTripVehicle {
-  daily_alloc_id: string; // VARCHAR(50) PRIMARY KEY
-  daily_trip_id: string; // VARCHAR(50) FK
-  plate_number: string; // VARCHAR(30) FK
-  allocation_date: string; // DATE
-  status: string; // VARCHAR(20)
-}
-
-export interface WeeklyTripVehicle {
-  weekly_alloc_id: string; // VARCHAR(50) PRIMARY KEY
-  weekly_trip_id: string; // VARCHAR(50) FK
-  plate_number: string; // VARCHAR(30) FK
-  start_date: string; // DATE
-  end_date: string; // DATE
-  status: string; // VARCHAR(20)
-}
-
-export interface PrivateTripVehicle {
-  private_alloc_id: string; // VARCHAR(50) PRIMARY KEY
-  private_trip_id: string; // VARCHAR(50) FK
-  plate_number: string; // VARCHAR(30) FK
-  start_date: string; // DATE
-  end_date: string; // DATE
-  allocation_status: string; // VARCHAR(25)
-}
+// Note: Multi-vehicle trip allocation tables (daily_trip_vehicles, weekly_trip_vehicles, private_trip_vehicles) were removed as each trip directly assigns single vehicles.
 
 /* =========================================================
    21, 22. الحجوزات (Bookings)
