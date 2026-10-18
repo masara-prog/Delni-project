@@ -350,7 +350,7 @@ export function HotelDetailsModal({
                   </span>
                 </div>
                 <div className="text-[10px] text-slate-500 font-bold">
-                  {isAr ? "تواصل مباشرة مع إدارة الفندق دون عمولة" : "Contact hotel directly"}
+                  {isAr ? "تواصل مباشرة مع إدارة الفندق" : "Contact hotel directly"}
                 </div>
               </div>
             </div>

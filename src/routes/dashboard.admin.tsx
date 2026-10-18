@@ -5268,11 +5268,10 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
               </label>
               <div className="relative">
                 <input
-                  type="date"
-                  value={contractStartDate}
-                  disabled
+                  type="text"
+                  value={contractStartDate || todayStr}
                   readOnly
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700 text-right outline-none cursor-not-allowed font-mono"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-800 text-right outline-none cursor-default font-mono select-none"
                 />
                 <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
                   تلقائي
@@ -5331,26 +5330,26 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
                 <button
                   type="button"
                   onClick={() => setStatus("نشط")}
-                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     status === "نشط"
                       ? "bg-emerald-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <span>🟢 نشط</span>
-                  <span className="hidden lg:inline text-[9px]">(يعرض)</span>
+                  <span>🟢</span>
+                  <span>نشط</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setStatus("موقوف")}
-                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     status === "موقوف"
                       ? "bg-red-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <span>🔴 موقوف</span>
-                  <span className="hidden lg:inline text-[9px]">(لا يعرض)</span>
+                  <span>🔴</span>
+                  <span>موقوف</span>
                 </button>
               </div>
             </div>
@@ -5621,7 +5620,6 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
   const [name, setName] = useState(restaurant?.name || "");
   const [category, setCategory] = useState<string>(restaurant?.category || "traditional");
-  const [type, setType] = useState(restaurant?.type || "مأكولات شعبية وتراثية");
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
@@ -5637,11 +5635,25 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   const [contractEndDate, setContractEndDate] = useState(restaurant?.contract_end_date || "");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const categoryTypeMap: Record<string, string> = {
+    traditional: "مأكولات شعبية وتراثية",
+    seafood: "مأكولات بحرية وأسماك",
+    cafe: "كافيه ومقهى عصري",
+    fastfood: "وجبات سريعة وعالمية",
+  };
+
+  const availableFeatures = [
+    { id: "واي فاي وإنترنت مجاني", icon: "📶" },
+    { id: "مواقف سيارات خاصة", icon: "🅿️" },
+    { id: "خدمة دفع إلكتروني (بطاقات)", icon: "💳" },
+    { id: "جلسات خارجية بالهواء الطلق", icon: "🌿" },
+  ];
+
   const initialFeatures = Array.isArray(restaurant?.features)
     ? restaurant.features
     : typeof restaurant?.features === "string" && restaurant.features.trim()
     ? (restaurant.features as string).split("،").map(s => s.trim())
-    : ["جلسات عائلية خاصة", "مأكولات شعبية وتراثية", "واي فاي مجاني"];
+    : ["واي فاي وإنترنت مجاني", "مواقف سيارات خاصة", "خدمة دفع إلكتروني (بطاقات)", "جلسات خارجية بالهواء الطلق"];
 
   const [features, setFeatures] = useState<string[]>(initialFeatures);
 
@@ -5654,28 +5666,13 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   const categoryOptions = [
     { id: "traditional", label: "🍲 مطعم تراثي وشعبي", desc: "أكلات ليبية أصيلة (كسكسي، بازين، مبطن)" },
     { id: "seafood", label: "🐟 مأكولات بحرية وأسماك", desc: "أسماك طازجة، جمبري، صيد يومي ومحار" },
-    { id: "cafe", label: "☕ كافيه ومقهى عصري", desc: "قهوة مختصة، شاي باللوز وجلسات هادئة" },
+    { id: "cafe", label: "☕ كافيه ومقهى عصري", desc: "قهوة مختصة وجلسات هادئة" },
     { id: "fastfood", label: "🍔 وجبات سريعة وعالمية", desc: "برجر، بيتزا، شاورما وأطباق عالمية" },
   ];
 
   const libyanCities = [
     "طرابلس", "بنغازي", "مصراتة", "الزاوية", "غدامس", "أوباري",
     "سبها", "شحات", "الخمس", "زوارة", "درنة", "طبرق", "البيضاء", "صبراتة"
-  ];
-
-  const availableFeatures = [
-    { id: "جلسات عائلية خاصة", icon: "👨‍👩‍👧‍👦" },
-    { id: "مأكولات شعبية وتراثية", icon: "🍲" },
-    { id: "واي فاي مجاني", icon: "📶" },
-    { id: "أجواء أثرية وتاريخية", icon: "🏛️" },
-    { id: "جلسات خارجية بالهواء الطلق", icon: "🌿" },
-    { id: "ألعاب أطفال وحديقة", icon: "🎠" },
-    { id: "مواقف سيارات خاصة", icon: "🅿️" },
-    { id: "خدمة دفع إلكتروني (بطاقات)", icon: "💳" },
-    { id: "لحوم وطنية طازجة 100%", icon: "🥩" },
-    { id: "إطلالة بحرية", icon: "🌊" },
-    { id: "شواء طازج على الفحم", icon: "🔥" },
-    { id: "تكييف مركزي", icon: "❄️" },
   ];
 
   const toggleFeature = (id: string) => {
@@ -5722,7 +5719,7 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
       ...(restaurant ? { id: restaurant.id } : {}),
       name: name.trim(),
       category,
-      type: type.trim(),
+      type: restaurant?.type || categoryTypeMap[category] || "مطعم وكافيه",
       city: city.trim(),
       address: address.trim(),
       phone: phone.trim(),
@@ -5795,11 +5792,10 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
               </label>
               <div className="relative">
                 <input
-                  type="date"
-                  value={contractStartDate}
-                  disabled
+                  type="text"
+                  value={contractStartDate || todayStr}
                   readOnly
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700 text-right outline-none cursor-not-allowed font-mono"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-800 text-right outline-none cursor-default font-mono select-none"
                 />
                 <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
                   تلقائي
@@ -5858,26 +5854,26 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
                 <button
                   type="button"
                   onClick={() => setStatus("نشط")}
-                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     status === "نشط"
                       ? "bg-emerald-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <span>🟢 نشط</span>
-                  <span className="hidden lg:inline text-[9px]">(يعرض)</span>
+                  <span>🟢</span>
+                  <span>نشط</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setStatus("موقوف")}
-                  className={`h-full rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     status === "موقوف"
                       ? "bg-red-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <span>🔴 موقوف</span>
-                  <span className="hidden lg:inline text-[9px]">(لا يعرض)</span>
+                  <span>🔴</span>
+                  <span>موقوف</span>
                 </button>
               </div>
             </div>
@@ -5917,9 +5913,9 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
           </div>
         </div>
 
-        {/* 2. Basic Info (Name, Specific Specialty Type, City) */}
+        {/* 2. Basic Info (Name, City) */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-5">
+          <div className="sm:col-span-8">
             <Field
               label="اسم المطعم / المقهى الرسمي *"
               value={name}
@@ -5932,15 +5928,6 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
           </div>
 
           <div className="sm:col-span-4">
-            <Field
-              label="التخصص والنوع الفرعي للطعام *"
-              value={type}
-              onChange={setType}
-              placeholder="مثال: مأكولات شعبية وتراثية، أسماك طازجة"
-            />
-          </div>
-
-          <div className="sm:col-span-3">
             <label className="text-xs font-bold block mb-1">المدينة / المنطقة *</label>
             <select
               value={city}

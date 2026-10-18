@@ -356,7 +356,7 @@ export function RestaurantDetailsModal({
                   </span>
                 </div>
                 <div className="text-[10px] text-slate-500 font-bold">
-                  {isAr ? "تواصل مباشرة مع إدارة المطعم دون وسيط" : "Contact restaurant directly"}
+                  {isAr ? "تواصل مباشرة مع إدارة المطعم" : "Contact restaurant directly"}
                 </div>
               </div>
             </div>
