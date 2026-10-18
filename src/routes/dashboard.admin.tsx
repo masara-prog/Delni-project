@@ -27,6 +27,7 @@ import {
   deleteFromSecureBackend
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { getChatSessions, sendAdminReply } from "@/lib/supportChat";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -1099,7 +1100,36 @@ function AdminDashboard() {
           return [...storedPrivate.filter((p: any) => !ids.has(p.private_trip_id)), ...prev];
         });
       }
+
+      // Live Support Chat Sessions
+      const sessions = getChatSessions();
+      setChatSessions(sessions);
+      if (sessions.length > 0) {
+        setActiveChatId(sessions[0].id);
+      }
     } catch {}
+
+    const handleChatSync = (e: any) => {
+      const all = e?.detail || getChatSessions();
+      setChatSessions([...all]);
+    };
+    const handleStorageSync = (e: StorageEvent) => {
+      if (e.key === "dalni_chat_sessions") {
+        setChatSessions(getChatSessions());
+      }
+      if (e.key === "dalni_support_tickets" && e.newValue) {
+        try {
+          setTickets(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener("dalni_chat_sync", handleChatSync);
+    window.addEventListener("storage", handleStorageSync);
+
+    return () => {
+      window.removeEventListener("dalni_chat_sync", handleChatSync);
+      window.removeEventListener("storage", handleStorageSync);
+    };
   }, []);
 
   const handleAddHotel = (h: any) => {
@@ -1110,7 +1140,7 @@ function AdminDashboard() {
       rating_avg: 5.0,
       property_type: h.property_type || "hotel",
       discount_percentage: Number(h.discount_percentage) || 15,
-      amenities: h.amenities || ["مسبح", "إفطار", "واي فاي", "موقف"],
+      amenities: h.amenities || ["مسبح", "واي فاي", "موقف"],
       whatsapp: h.whatsapp || h.phone,
       ...h,
     };
@@ -1313,7 +1343,13 @@ function AdminDashboard() {
       deleteFromSecureBackend("places", "place_id", id);
     }
   };
-  const handleReplyTicket = (ticketId: string, reply: string) => { setTickets(tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" } : t)); };
+  const handleReplyTicket = (ticketId: string, reply: string) => {
+    const updated = tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" as const } : t);
+    setTickets(updated);
+    try {
+      localStorage.setItem("dalni_support_tickets", JSON.stringify(updated));
+    } catch {}
+  };
   // Offers
   const handleAddDailyOffer = (o: any) => { const newId = `DO-${String(dailyOffers.length + 1).padStart(3, "0")}`; setDailyOffers([...dailyOffers, { ...o, offer_daily_id: newId, id: newId }]); setShowAddDailyOffer(false); };
   const handleUpdateDailyOffer = (o: DailyOffer) => { setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x)); setEditingDailyOffer(null); };
@@ -1324,15 +1360,11 @@ function AdminDashboard() {
   const handleAddFacilityOffer = (o: any) => { const newId = `FO-${String(facilityOffers.length + 1).padStart(3, "0")}`; setFacilityOffers([...facilityOffers, { ...o, facility_offer_id: newId, id: newId }]); setShowAddFacilityOffer(false); };
   const handleUpdateFacilityOffer = (o: FacilityOffer) => { setFacilityOffers(facilityOffers.map(x => (x.facility_offer_id || x.id) === (o.facility_offer_id || o.id) ? o : x)); setEditingFacilityOffer(null); };
   const handleDeleteFacilityOffer = (id: string) => { if (confirm("حذف العرض؟")) setFacilityOffers(facilityOffers.filter(o => (o.facility_offer_id || o.id) !== id)); };
-  // Bot
+  // Bot & Live Support Chat Override
   const handleBotSend = () => {
     if (!botInput.trim() || !activeChatId) return;
-    const now = new Date().toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
-    setChatSessions(prev => prev.map(s => {
-      if (s.id !== activeChatId) return s;
-      const msg: ChatMessage = { id: `m${s.messages.length + 1}`, from: "admin", text: botInput, time: now };
-      return { ...s, messages: [...s.messages, msg], last_message: botInput };
-    }));
+    sendAdminReply(activeChatId, botInput.trim());
+    setChatSessions(getChatSessions());
     setBotInput("");
   };
 
@@ -2041,7 +2073,7 @@ function AdminDashboard() {
           </div>
 
           <SectionCard
-            title="🏨 دليل أماكن الإقامة والفنادق في ليبيا (فنادق فاخرة — منتجعات — شقق فندقية — نزل تراثية)"
+            title="🏨 دليل أماكن الإقامة والفنادق في ليبيا (فنادق فاخرة — منتجعات — شقق فندقية — مخيمات صحراوية)"
             action={
               <button
                 onClick={() => setShowAddHotel(true)}
@@ -2059,7 +2091,7 @@ function AdminDashboard() {
                     : h.property_type === "apartment"
                     ? "🏢 شقق فندقية"
                     : h.property_type === "heritage"
-                    ? "🏛️ نزل وفيلا تراثية"
+                    ? "⛺ مخيمات صحراوية"
                     : "🏨 فندق فاخر";
                 return (
                   <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
@@ -5084,7 +5116,7 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
   const [description, setDescription] = useState(hotel?.description || "");
   const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
   const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "خدمة استقبال 24/7 (تسجيل وصول 14:00 - مغادرة 12:00)");
-  const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || ["مسبح", "إفطار", "واي فاي", "موقف"]);
+  const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || ["مسبح", "واي فاي", "موقف"]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const [contractStartDate] = useState(hotel?.contract_start_date || todayStr);
@@ -5101,7 +5133,7 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
     { id: "hotel", label: "🏨 فندق فاخر", desc: "فنادق مصنفة وضيافة استثنائية" },
     { id: "resort", label: "🏖️ منتجع سياحي", desc: "منتجعات ساحلية واستجمام وشواطئ" },
     { id: "apartment", label: "🏢 شقق فندقية", desc: "أجنحة وشقق مفروشة بخصوصية عائلية" },
-    { id: "heritage", label: "🏛️ نزل وفيلا تراثية", desc: "عمارة تراثية وأصالة في الواحات والمدن" },
+    { id: "heritage", label: "⛺ مخيمات صحراوية", desc: "إقامة صحراوية وتخييم أصيل في الواحات والصحراء" },
   ];
 
   const libyanCities = [
@@ -5111,11 +5143,9 @@ function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: 
 
   const availableAmenities = [
     { id: "مسبح", icon: "🏊" },
-    { id: "إفطار", icon: "🥐" },
     { id: "واي فاي", icon: "📶" },
     { id: "موقف", icon: "🅿️" },
     { id: "خدمة غرف", icon: "🛎️" },
-    { id: "تكييف", icon: "❄️" },
     { id: "صالة رياضية", icon: "🏋️" },
     { id: "إطلالة بحرية", icon: "🌊" },
     { id: "شاطئ خاص", icon: "🏖️" },

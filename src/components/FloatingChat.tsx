@@ -46,6 +46,7 @@ const landmarkSamples = [
 ];
 
 import { useLanguage } from "@/lib/i18n";
+import { sendUserMessage } from "@/lib/supportChat";
 
 const now = () => new Date().toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" });
 
@@ -85,19 +86,9 @@ export function FloatingChat() {
     setSupportInput("");
     setSupportTyping(true);
 
-    // Save ticket to localStorage for Admin Dashboard
+    // Save to shared live chat sessions for Admin Dashboard
     try {
-      const stored = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
-      stored.unshift({
-        id: `TK-${Date.now().toString().slice(-4)}`,
-        user_name: "زائر عبر شات الدعم",
-        user_role: "سائح",
-        subject: txt.slice(0, 35),
-        message: txt,
-        status: "جديد",
-        created_at: now()
-      });
-      localStorage.setItem("dalni_support_tickets", JSON.stringify(stored));
+      sendUserMessage("floating-chat-visitor", "زائر شات دلني", "سائح", txt);
     } catch {}
 
     setTimeout(() => {

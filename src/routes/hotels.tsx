@@ -1504,10 +1504,10 @@ function HotelsPage() {
                 },
                 {
                   id: "heritage",
-                  title: isAr ? "نزل وفلل تراثية" : "Heritage Villas & Lodges",
+                  title: isAr ? "مخيمات صحراوية" : "Desert Camps",
                   count: isAr ? "12 مكان متاح" : "12 available",
                   img: "/assets/dest-ghadames-alleys.jpg",
-                  badge: isAr ? "أصالة وتاريخ" : "Heritage",
+                  badge: isAr ? "تخييم وسفاري" : "Desert Safari",
                   badgeBg: "bg-amber-700",
                 },
               ].map((prop) => (
@@ -1611,12 +1611,12 @@ function HotelsPage() {
                 },
                 {
                   id: "heritage",
-                  title: isAr ? "نزل وفلل تراثية تاريخية" : "Heritage Villas & Lodges",
+                  title: isAr ? "مخيمات صحراوية وسفاري" : "Desert Camps & Safari",
                   count: isAr ? "12 مكان متاح للحجز المباشر" : "12 available",
                   img: "/assets/dest-ghadames-alleys.jpg",
-                  badge: isAr ? "أصالة وتاريخ" : "Heritage",
+                  badge: isAr ? "تخييم وسفاري" : "Desert Safari",
                   badgeBg: "bg-amber-700",
-                  desc: isAr ? "نزل تاريخية وعمارة تقليدية عريقة في واحات ومدن ليبيا التراثية." : "Historic lodges in Libyan heritage oases.",
+                  desc: isAr ? "مخيمات وتخييم صحراوي أصيل في واحات وكثبان الصحراء الليبية." : "Authentic desert camping and lodges in Libyan desert and oases.",
                 },
               ].find((c) => c.id === propertyType);
 
@@ -1730,8 +1730,8 @@ function HotelsPage() {
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 font-semibold max-w-lg mx-auto leading-relaxed">
                 {isAr
-                  ? "اضغط على أي تصنيف بالأعلى (فنادق فاخرة، منتجعات سياحية، شقق فندقية، نزل وفلل تراثية) أو انقر على 'عرض الكل' لعرض كافة الأماكن فوراً."
-                  : "Pick from luxury hotels, touristic resorts, apartments, heritage lodges, or click 'View All' above."}
+                  ? "اضغط على أي تصنيف بالأعلى (فنادق فاخرة، منتجعات سياحية، شقق فندقية، مخيمات صحراوية) أو انقر على 'عرض الكل' لعرض كافة الأماكن فوراً."
+                  : "Pick from luxury hotels, touristic resorts, apartments, desert camps, or click 'View All' above."}
               </p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
                 {[
@@ -1739,7 +1739,7 @@ function HotelsPage() {
                   { id: "hotel", label: isAr ? "🏨 فنادق فاخرة" : "Hotels" },
                   { id: "resort", label: isAr ? "🏖️ منتجعات سياحية" : "Resorts" },
                   { id: "apartment", label: isAr ? "🏢 شقق فندقية" : "Apartments" },
-                  { id: "heritage", label: isAr ? "🏛️ نزل وفلل تراثية" : "Heritage" },
+                  { id: "heritage", label: isAr ? "⛺ مخيمات صحراوية" : "Desert Camps" },
                 ].map((btn) => (
                   <button
                     key={btn.id}
@@ -1840,7 +1840,6 @@ function HotelsPage() {
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {[
                               { label: isAr ? "مسبح" : "Pool", icon: "🏊" },
-                              { label: isAr ? "إفطار" : "Breakfast", icon: "🥐" },
                               { label: isAr ? "واي فاي" : "Wi-Fi", icon: "📶" },
                               { label: isAr ? "موقف" : "Parking", icon: "🅿️" },
                             ].map((a, idx) => (

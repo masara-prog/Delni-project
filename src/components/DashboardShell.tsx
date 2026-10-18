@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/lib/i18n";
 import { clearStoredSession } from "@/lib/api";
+import { DashboardSupportChatModal } from "@/components/DashboardSupportChatModal";
 
 export type NavItem = { id: string; label: string; icon: string; badge?: string | number; group?: string };
 
@@ -25,6 +26,7 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [showSupportChat, setShowSupportChat] = useState(false);
   const { dir, language } = useLanguage();
   const isAr = language === 'ar';
 
@@ -60,9 +62,13 @@ export function DashboardShell({
               <span>🏠</span>
               <span>{isAr ? "الرئيسية" : "Home"}</span>
             </Link>
-            <Link to="/support" className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition">
+            <button
+              type="button"
+              onClick={() => setShowSupportChat(true)}
+              className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition cursor-pointer"
+            >
               💬 {isAr ? "الدعم" : "Support"}
-            </Link>
+            </button>
             <button className="relative p-2 rounded-xl hover:bg-muted transition" aria-label="notifications">
               <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0" strokeLinecap="round" strokeLinejoin="round" />
@@ -218,13 +224,17 @@ export function DashboardShell({
               <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
                 {isAr ? "تواصل مع الدعم عبر المحادثة الفورية." : "Contact live support anytime."}
               </p>
-              <Link
-                to="/support"
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-lg transition"
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSupportChat(true);
+                  setOpen(false);
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-xs hover:opacity-95"
                 style={{ background: "rgba(197,160,89,0.25)", color: "rgba(197,160,89,1)" }}
               >
                 {isAr ? "فتح المحادثة ←" : "Open Chat →"}
-              </Link>
+              </button>
             </div>
 
             {/* Version */}
@@ -239,6 +249,15 @@ export function DashboardShell({
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-8">{children}</main>
       </div>
+
+      {/* Embedded Live Support Chat Modal */}
+      <DashboardSupportChatModal
+        open={showSupportChat}
+        onClose={() => setShowSupportChat(false)}
+        userName={userName}
+        userRole={roleLabel}
+        role={role}
+      />
     </div>
   );
 }

@@ -102,7 +102,7 @@ export function HotelDetailsModal({
     { title: isAr ? "الإطلالة البانورامية والواجهة الرئيسية" : "Main Façade & Panoramic View", icon: "🏛️" },
     { title: isAr ? "الأجنحة والغرف الفاخرة المطلة" : "Luxury Sea/Mountain Suites", icon: "🛏️" },
     { title: isAr ? "صالة الاستقبال والبهو الأندلسي" : "Lobby & Reception", icon: "✨" },
-    { title: isAr ? "مطعم الفندق وبوفيه الإفطار" : "Fine Dining & Breakfast", icon: "🍽️" },
+    { title: isAr ? "مطعم الفندق والمأكولات الراقية" : "Fine Dining Restaurant", icon: "🍽️" },
     { title: isAr ? "المرافق والاستجمام وحمام السباحة" : "Wellness & Leisure Facilities", icon: "🏊‍♂️" },
   ];
 
@@ -321,7 +321,6 @@ export function HotelDetailsModal({
               {[
                 { label: isAr ? "استقبال 24 ساعة" : "24/7 Front Desk", icon: "🛎️" },
                 { label: isAr ? "واي فاي فايبر مجاني" : "Free WiFi", icon: "📶" },
-                { label: isAr ? "تكييف مركزي هادئ" : "Climate Control", icon: "❄️" },
                 { label: isAr ? "موقف سيارات محروس" : "Secure Parking", icon: "🅿️" },
                 { label: isAr ? "خدمة غرف ونظافة" : "Daily Housekeeping", icon: "✨" },
               ].map((am, idx) => (
