@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import logoAsset from "@/assets/dalni-logo.png.asset.json";
 import { Header } from "@/components/Header";
 import { useLanguage } from "@/lib/i18n";
+import { sendUserMessage } from "@/lib/supportChat";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
@@ -64,19 +65,9 @@ function SupportChatPage() {
     setInput("");
     setTyping(true);
 
-    // Save ticket to localStorage for Admin Dashboard
+    // Save to shared live chat sessions for Admin Dashboard
     try {
-      const stored = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
-      stored.unshift({
-        id: `TK-${Date.now().toString().slice(-4)}`,
-        user_name: "سائح / زائر الموقع",
-        user_role: "سائح",
-        subject: text.slice(0, 35),
-        message: text,
-        status: "جديد",
-        created_at: time
-      });
-      localStorage.setItem("dalni_support_tickets", JSON.stringify(stored));
+      sendUserMessage("public-visitor-support", "زائر عبر مركز الدعم", "سائح", text);
     } catch {}
 
     setTimeout(() => {

@@ -93,6 +93,8 @@ export type DailyTrip = {
   type: "daily";
   title: string;
   img: string;
+  images?: string[];
+  gallery?: string;
   description: string;
   activities: string[];
   attractions: TouristAttraction[];
@@ -111,12 +113,25 @@ export type DailyTrip = {
     model: string;
     company: string;
     driver: string;
+    plateNumber?: string;
+    driverPhone?: string;
+    capacity?: number;
+    year?: number;
   };
+  restaurant?: {
+    id?: string;
+    name: string;
+    type?: string;
+    city?: string;
+    address?: string;
+    phone?: string;
+    image?: string;
+  };
+  itinerary_steps?: Array<{ time: string; title: string; desc: string }>;
   accommodation?: string;
   price: number;
   rating: number;
   reviews: number;
-  schedules?: any[];
 };
 
 export type WeeklyTrip = {
@@ -124,6 +139,8 @@ export type WeeklyTrip = {
   type: "weekly";
   title: string;
   img: string;
+  images?: string[];
+  gallery?: string;
   description: string;
   startDate: string;
   endDate: string;
@@ -145,10 +162,23 @@ export type WeeklyTrip = {
     model: string;
     company: string;
     driver: string;
+    plateNumber?: string;
+    driverPhone?: string;
+    capacity?: number;
+    year?: number;
   };
+  restaurant?: {
+    id?: string;
+    name: string;
+    type?: string;
+    city?: string;
+    address?: string;
+    phone?: string;
+    image?: string;
+  };
+  itinerary_steps?: Array<{ time: string; title: string; desc: string }>;
   rating: number;
   reviews: number;
-  schedules?: any[];
 };
 
 export type PrivateTemplate = {
@@ -156,12 +186,56 @@ export type PrivateTemplate = {
   type: "private";
   title: string;
   img: string;
+  images?: string[];
+  gallery?: string;
   description: string;
   sampleDays: string;
   note: string;
 };
 
 export type Trip = DailyTrip | WeeklyTrip | PrivateTemplate;
+
+export function getTripImages(t: Trip | any): string[] {
+  if (Array.isArray(t?.images) && t.images.length > 0) {
+    const list = t.images.filter(Boolean);
+    while (list.length < 5) list.push(list[0] || t.img || heroImg);
+    return list.slice(0, 5);
+  }
+  if (t?.gallery) {
+    const list = (typeof t.gallery === "string" ? t.gallery.split(",") : t.gallery).map((s: string) => s.trim()).filter(Boolean);
+    if (list.length > 0) {
+      while (list.length < 5) list.push(list[0] || t.img || heroImg);
+      return list.slice(0, 5);
+    }
+  }
+
+  // Authentic Libyan presets per trip ID
+  const PRESETS: Record<string, string[]> = {
+    d1: [heroImg, destLeptisTheater, destLeptisArch, destLeptisForum, destLeptisCoast],
+    d2: [destTripoli, destTripoliCastle, destTripoliArch, destTripoliMedina, destTripoliHarbor],
+    d3: [destCyreneApollo, destCyrene, destCyreneSanctuary, destCyrenePanorama, destJabalAkhdarValley],
+    d4: [destSabratah, destSabrathaTheater, destSabrathaCoast, destSabrathaTemple, destSabrathaRuins],
+    d5: [destGharyanCave, destGharyanCourtyard, destKsarDesert, destKsarNalut, destNafusaFortress],
+    d6: [destJabalAkhdarPanorama, destJabalAkhdarBridge, destJabalAkhdarForest, destJabalAkhdarValley, destJabalAkhdarPass],
+    w1: [destUbariGaberoun, destUbari, destUbariUmmAlMaa, destAcacusArch, destSaharaDunes],
+    w2: [destGhadamesOasis, destGhadames, destGhadamesAlleys, destKsarDesert, offerDesert],
+    p1: [destAcacusArch, destAcacus, destUbariGaberoun, destUbariUmmAlMaa, destSaharaDunes],
+    p2: [heroImg, destLeptisTheater, destSabratah, destSabrathaTheater, destTripoliCastle],
+  };
+
+  if (t?.id && PRESETS[t.id]) return PRESETS[t.id];
+
+  const title = String(t?.title || t?.trip_title || "").toLowerCase();
+  if (title.includes("لبدة") || title.includes("رومان")) return [heroImg, destLeptisTheater, destLeptisArch, destLeptisForum, destLeptisCoast];
+  if (title.includes("صبراتة")) return [destSabratah, destSabrathaTheater, destSabrathaCoast, destSabrathaTemple, destSabrathaRuins];
+  if (title.includes("أوباري") || title.includes("صحراء") || title.includes("رمال")) return [destUbariGaberoun, destUbari, destUbariUmmAlMaa, destAcacusArch, destSaharaDunes];
+  if (title.includes("غدامس")) return [destGhadamesOasis, destGhadames, destGhadamesAlleys, destKsarDesert, offerDesert];
+  if (title.includes("شحات") || title.includes("قورينا") || title.includes("أخضر")) return [destCyreneApollo, destCyrene, destCyreneSanctuary, destCyrenePanorama, destJabalAkhdarValley];
+  if (title.includes("طرابلس")) return [destTripoli, destTripoliCastle, destTripoliArch, destTripoliMedina, destTripoliHarbor];
+
+  const primary = t?.img || heroImg;
+  return [primary, destLeptisTheater, destSabrathaTheater, destUbariGaberoun, destGhadamesOasis];
+}
 
 export type TripOffer = {
   id: string;
@@ -1181,7 +1255,20 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
   }
 
   // Daily Tours STRICTLY 09:00 AM to 09:00 PM (12 hours) as explicitly demanded by user
-  const itinerary = t.type === "daily" ? [
+  let customSteps: any[] | null = null;
+  if ((t as any).itinerary_steps) {
+    try {
+      const parsed = typeof (t as any).itinerary_steps === "string" ? JSON.parse((t as any).itinerary_steps) : (t as any).itinerary_steps;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customSteps = parsed;
+      }
+    } catch {}
+  }
+
+  const restaurantData = (t as any).restaurant || null;
+  const restaurantName = restaurantData?.name || null;
+
+  const itinerary = customSteps || (t.type === "daily" ? [
     {
       time: "09:00 ص",
       title: isAr ? "نقطة التجمع والانطلاق من موقعنا" : "Assembly & Departure",
@@ -1195,7 +1282,11 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
     {
       time: "01:30 م",
       title: isAr ? "استراحة وتناول وجبة الغداء التراثية المشمولة" : "Authentic Lunch Gathering",
-      desc: isAr ? "تناول وجبة غداء ليبية تقليدية كاملة (أطباق رئيسية، سلطات طازجة، عصائر، ومياه معدنية) في مطعم تراثي معتمد مشمول بالرحلة." : "Complete traditional Libyan meal with fresh salads and beverages included in the tour."
+      desc: isAr
+        ? (restaurantName
+            ? `تناول وجبة غداء ليبية تقليدية كاملة في ${restaurantName} (${restaurantData?.city || departurePoint}) مشمولة بالكامل بالرحلة.`
+            : "تناول وجبة غداء ليبية تقليدية كاملة (أطباق رئيسية، سلطات طازجة، عصائر، ومياه معدنية) في مطعم تراثي معتمد مشمول بالرحلة.")
+        : "Complete traditional Libyan meal with fresh salads and beverages included in the tour."
     },
     {
       time: "04:30 م",
@@ -1226,7 +1317,9 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
     {
       time: "02:00 م",
       title: isAr ? "وجبة الغداء والاستراحة" : "Lunch & Rest",
-      desc: isAr ? "تناول وجبة غداء تراثية شهية مشمولة في البرنامج." : "Traditional meal included in program."
+      desc: isAr
+        ? (restaurantName ? `تناول وجبة غداء تراثية شهية مشمولة في ${restaurantName}.` : "تناول وجبة غداء تراثية شهية مشمولة في البرنامج.")
+        : "Traditional meal included in program."
     },
     {
       time: "05:00 م",
@@ -1238,12 +1331,22 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
       title: isAr ? "العشاء وجلسة السمر الفلكلورية" : "Dinner & Campfire",
       desc: isAr ? "وجبة عشاء مشويات مع شاي طوارقي وجلسة فلكلورية تحت النجوم." : "Dinner and folklore tea under the stars."
     }
-  ];
+  ]);
 
-  const vehicle = "vehicle" in t && t.vehicle ? t.vehicle : {
+  const vehicle = "vehicle" in t && t.vehicle ? {
+    model: t.vehicle.model,
+    company: t.vehicle.company,
+    driver: t.vehicle.driver,
+    plateNumber: t.vehicle.plateNumber,
+    driverPhone: t.vehicle.driverPhone,
+    capacity: t.vehicle.capacity || totalSeats,
+  } : {
     model: "مرسيدس سبرينتر سياحي VIP مكيف ومجهز",
     company: "شركة السهم الذهبي للنقل السياحي",
-    driver: "الكابتن عادل المقرحي"
+    driver: "الكابتن علي الرجباني",
+    plateNumber: "طرابلس 4222",
+    driverPhone: "0915647786",
+    capacity: 25,
   };
 
   const guide = "guide" in t && t.guide ? t.guide : {
@@ -1264,6 +1367,7 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
     itinerary,
     vehicle,
     guide,
+    restaurant: restaurantData,
     priceFormatted,
     isPrivate,
   };
@@ -1362,16 +1466,14 @@ function TripDetailsView({
     "animate-ken-burns-d",
   ] as const;
 
-  const cityImages = CITY_IMAGES[trip.id] ?? [
-    trip.img,
-  ];
+  const cityImages = useMemo(() => getTripImages(trip), [trip]);
 
   // Slideshow state for city images
   const [activeSlide, setActiveSlide] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % cityImages.length);
-    }, 2000);
+    }, 4000);
     return () => clearInterval(timer);
   }, [cityImages.length]);
 
@@ -1384,7 +1486,7 @@ function TripDetailsView({
     <div className="min-h-screen bg-[#FAF7F2] text-[#0F172A] pb-20 relative" dir={dir}>
       {/* 1. Sleek Compact Image Slideshow Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
-        <div className="relative w-full h-[260px] sm:h-[320px] lg:h-[360px] bg-black rounded-3xl overflow-hidden shadow-lg border border-[#E8E2D6]">
+        <div className="relative w-full h-[260px] sm:h-[320px] lg:h-[360px] bg-black rounded-3xl overflow-hidden shadow-lg border border-[#E8E2D6] group">
           {/* Stacked animated city images with crossfade */}
           {cityImages.map((imgSrc, idx) => (
             <div
@@ -1394,7 +1496,7 @@ function TripDetailsView({
             >
               <img
                 src={imgSrc}
-                alt={trip.title}
+                alt={`${trip.title} - ${idx + 1}`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -1403,8 +1505,26 @@ function TripDetailsView({
           {/* Clean subtle bottom gradient for text contrast only */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent z-10 pointer-events-none" />
 
+          {/* Prev / Next Manual Navigation Arrows on Banner */}
+          <button
+            type="button"
+            onClick={() => setActiveSlide((prev) => (prev - 1 + cityImages.length) % cityImages.length)}
+            aria-label="Previous Slide"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-25 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 flex items-center justify-center text-lg transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSlide((prev) => (prev + 1) % cityImages.length)}
+            aria-label="Next Slide"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-25 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 flex items-center justify-center text-lg transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
+          >
+            ›
+          </button>
+
           {/* Slide indicator dots */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20">
             {cityImages.map((_, idx) => (
               <button
                 key={idx}
@@ -1412,12 +1532,15 @@ function TripDetailsView({
                 onClick={() => setActiveSlide(idx)}
                 className={`rounded-full transition-all duration-300 cursor-pointer ${
                   idx === activeSlide
-                    ? "w-6 h-2 bg-white shadow-md"
-                    : "w-2 h-2 bg-white/45 hover:bg-white/75"
+                    ? "w-5 h-1.5 bg-amber-400 shadow-md"
+                    : "w-1.5 h-1.5 bg-white/45 hover:bg-white/75"
                 }`}
                 aria-label={`الصورة ${idx + 1}`}
               />
             ))}
+            <span className="text-[10px] text-white/90 font-bold ml-1">
+              {activeSlide + 1}/{cityImages.length}
+            </span>
           </div>
 
           {/* Floating Transparent Top Navigation Bar Directly Over Image */}
@@ -1755,23 +1878,68 @@ function TripDetailsView({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-sm text-[#0F172A]">
-                      {isAr ? "مطعم الحوش للتراث والمأكولات الشعبية" : "Al-Housh Heritage Restaurant"}
-                    </span>
-                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      {isAr ? "شامل الغداء بالرحلة" : "Lunch Included"}
-                    </span>
+                {info.restaurant ? (
+                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2.5">
+                    <div className="flex items-start gap-3">
+                      {info.restaurant.image ? (
+                        <img
+                          src={info.restaurant.image}
+                          alt={info.restaurant.name}
+                          className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-orange-100 border border-orange-200 flex items-center justify-center text-2xl shrink-0">
+                          🍽️
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="font-black text-sm text-[#0F172A] truncate">
+                            {info.restaurant.name}
+                          </span>
+                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+                            {isAr ? "وجبة الغداء المعتمدة" : "Lunch Included"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-amber-700 font-bold">
+                          {info.restaurant.type || "مطعم ومقهى سياحي معتمد"}
+                        </div>
+                        <div className="text-[11px] text-slate-600 font-medium leading-relaxed mt-1">
+                          {info.restaurant.address || `مطعم معتمد لتقديم وجبة الغداء التراثية المشمولة بالرحلة في ${info.restaurant.city || 'ليبيا'}.`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
+                      <span>📍 {info.restaurant.city || "طرابلس"} {info.restaurant.address ? `— ${info.restaurant.address}` : ""}</span>
+                      {info.restaurant.phone ? (
+                        <a href={`tel:${info.restaurant.phone}`} className="text-emerald-700 font-black hover:underline flex items-center gap-1">
+                          <span>📞</span>
+                          <span>{info.restaurant.phone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-emerald-700 font-bold">شامل بالرحلة ✓</span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                    {isAr ? "أشهى أطباق الكسكسي بالبصلة، البازين، والمشروبات الليبية والشوربة مع جلسات عربية مريحة." : "Authentic couscous, bazeen, and traditional hospitality."}
-                  </p>
-                  <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
-                    <span>📍 {info.departurePoint.includes("طرابلس") ? "طرابلس - المدينة القديمة" : "بنغازي - شارع فينيسيا"}</span>
-                    <a href="tel:0914445566" className="text-emerald-700 font-black hover:underline">📞 0914445566</a>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm text-[#0F172A]">
+                        {isAr ? "مطعم الحوش للتراث والمأكولات الشعبية" : "Al-Housh Heritage Restaurant"}
+                      </span>
+                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        {isAr ? "شامل الغداء بالرحلة" : "Lunch Included"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      {isAr ? "أشهى أطباق الكسكسي بالبصلة، البازين، والمشروبات الليبية والشوربة مع جلسات عربية مريحة." : "Authentic couscous, bazeen, and traditional hospitality."}
+                    </p>
+                    <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
+                      <span>📍 {info.departurePoint.includes("طرابلس") ? "طرابلس - المدينة القديمة" : "بنغازي - شارع فينيسيا"}</span>
+                      <a href="tel:0914445566" className="text-emerald-700 font-black hover:underline">📞 0914445566</a>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2">
                   <div className="flex items-center justify-between">
@@ -1850,13 +2018,35 @@ function TripDetailsView({
                   <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "نوع وموديل المركبة:" : "Vehicle Type:"}</span>
                   <span className="font-black text-[#0F172A]">{info.vehicle.model}</span>
                 </div>
+                {info.vehicle.plateNumber && (
+                  <div>
+                    <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "رقم اللوحة المعدنية:" : "License Plate:"}</span>
+                    <span className="font-black text-slate-800 bg-white px-2 py-0.5 rounded-lg border border-slate-200 inline-block font-mono">
+                      {info.vehicle.plateNumber}
+                    </span>
+                  </div>
+                )}
+                {info.vehicle.capacity && (
+                  <div>
+                    <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "سعة المركبة المعتمدة:" : "Capacity:"}</span>
+                    <span className="font-bold text-sky-700">{info.vehicle.capacity} راكب</span>
+                  </div>
+                )}
                 <div>
                   <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "الشركة المشغلة:" : "Operating Company:"}</span>
                   <span className="font-bold text-[#003580]">{info.vehicle.company}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "السائق المكلف:" : "Assigned Driver:"}</span>
-                  <span className="font-black text-emerald-800">👨‍✈️ {info.vehicle.driver}</span>
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="font-black text-emerald-800">👨‍✈️ {info.vehicle.driver}</span>
+                    {info.vehicle.driverPhone && (
+                      <a href={`tel:${info.vehicle.driverPhone}`} className="text-emerald-700 font-bold hover:underline flex items-center gap-1 text-[11px]">
+                        <span>📞</span>
+                        <span>{info.vehicle.driverPhone}</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1866,6 +2056,9 @@ function TripDetailsView({
                   model: info.vehicle.model,
                   company: info.vehicle.company,
                   driver: info.vehicle.driver,
+                  licensePlate: info.vehicle.plateNumber,
+                  phone: info.vehicle.driverPhone,
+                  seats: info.vehicle.capacity,
                 })}
                 className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
               >
@@ -2295,9 +2488,6 @@ function TripsPage() {
 
   const modals = useModalPair();
   const [scheduleKind, setScheduleKind] = useState<"daily" | "weekly" | null>(null);
-  const [scheduleTripId, setScheduleTripId] = useState<string | undefined>(undefined);
-  const [scheduleTripPrice, setScheduleTripPrice] = useState<number | undefined>(undefined);
-  const [scheduleTripObj, setScheduleTripObj] = useState<Trip | null>(null);
   const [scheduleTripTitle, setScheduleTripTitle] = useState<string | undefined>(undefined);
   const [scheduleTripImage, setScheduleTripImage] = useState<string | undefined>(undefined);
   const [customSchedules, setCustomSchedules] = useState<any[] | undefined>(undefined);
@@ -2328,87 +2518,135 @@ function TripsPage() {
           apiGetWeeklyTrips(),
         ]);
 
-        const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => ({
-          id: t.daily_trip_id || `DT-${t.id}`,
-          type: "daily" as const,
-          title: t.trip_title,
-          img: t.photo || heroImg,
-          description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
-          activities: t.activities ? (Array.isArray(t.activities) ? t.activities : [t.activities]) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
-          attractions: [
-            {
-              name: t.destination_city || "المعلم الأثري",
-              location: `${t.departure_city || 'طرابلس'} - ليبيا`,
-              description: t.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
-            }
-          ],
-          targetPersons: t.max_capacity || 25,
-          availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
-          daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "أسبوعياً",
-          departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
-          entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
-          guide: {
-            name: t.guide?.full_name || "مرشد سياحي معتمد",
-            title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
-            phone: t.guide?.phone_number || "0912345678",
-            cv: {
-              name: t.guide?.full_name || "مرشد سياحي معتمد",
-              title: t.guide?.title || "مرشد معتمد من وزارة السياحة",
-              licenseNumber: t.guide?.license_number || t.guide_license_number || "G-2026",
-              experienceYears: t.guide?.years_of_experience || 3,
-              rating: 5.0,
-              pricePerDay: Number(t.guide?.price_per_day) || 150,
-              phone: t.guide?.phone_number || "0912345678",
-              bio: t.guide?.bio || "مرشد سياحي مرخص يقدم جولات سياحية نوعية واحترافية.",
-              specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
-            }
-          },
-          vehicle: {
-            model: t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : "حافلة ميني باص سياحي 25 راكب",
-            company: "شركة النقل السياحي المعتمدة",
-            driver: "سائق مرخص ومحترف",
-          },
-          accommodation: "رحلة يومية — عودة مساءً",
-          price: Number(t.price_per_seat) || 120,
-          rating: 5.0,
-          reviews: 1,
-        }));
+        const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => {
+          const galleryList = t.gallery
+            ? (typeof t.gallery === "string" ? t.gallery.split(",").map((s: string) => s.trim()).filter(Boolean) : t.gallery)
+            : [];
+          const primaryImg = t.photo || (galleryList[0] || heroImg);
+          const fiveImgs = [primaryImg, ...galleryList.filter((x: string) => x !== primaryImg)];
+          while (fiveImgs.length < 5) fiveImgs.push(fiveImgs[fiveImgs.length - 1] || primaryImg);
 
-        const mappedWeekly: WeeklyTrip[] = (Array.isArray(resWeekly) ? resWeekly : []).map((t: any) => ({
-          id: t.weekly_trip_id || `WT-${t.id}`,
-          type: "weekly" as const,
-          title: t.trip_title,
-          img: t.photo || destUbari,
-          description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
-          startDate: t.start_date || "2026-10-15",
-          endDate: t.end_date || "2026-10-20",
-          targetPersons: t.max_capacity || 25,
-          availableSeats: t.max_capacity || 25,
-          seatPrice: Number(t.seat_per_price) || 1500,
-          cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
-          attractions: [
-            {
-              name: t.destination_region || "الواحات والآثار",
-              location: "ليبيا",
-              description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
-            }
-          ],
-          hotels: ["فندق مبيت معتمد"],
-          departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
-          entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
-          guide: {
-            name: t.guide?.full_name || "مرشد سياحي معتمد",
-            title: t.guide?.title || "مرشد معتمد",
-            phone: t.guide?.phone_number || "0912345678",
-          },
-          vehicle: {
-            model: "حافلة سياحية مجهزة للمسافات الطويلة",
-            company: "شركة النقل السياحي الدولية",
-            driver: "سائق خبير بالمسارات السياحية",
-          },
-          rating: 5.0,
-          reviews: 1,
-        }));
+          return {
+            id: t.daily_trip_id || `DT-${t.id}`,
+            type: "daily" as const,
+            title: t.trip_title,
+            img: primaryImg,
+            images: fiveImgs.slice(0, 5),
+            gallery: t.gallery,
+            description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
+            activities: t.activities ? (Array.isArray(t.activities) ? t.activities : String(t.activities).split(',')) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
+            attractions: [
+              {
+                name: t.destination_city || "المعلم الأثري",
+                location: `${t.departure_city || 'طرابلس'} - ليبيا`,
+                description: t.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
+              }
+            ],
+            targetPersons: t.max_capacity || 25,
+            availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
+            daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "السبت,الثلاثاء",
+            departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
+            entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
+            guide: {
+              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
+              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
+              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+              cv: {
+                name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
+                title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
+                licenseNumber: t.guide_license_number || t.guide?.license_number || "G-1001",
+                experienceYears: t.guide?.years_of_experience || 6,
+                rating: 5.0,
+                pricePerDay: Number(t.guide?.price_per_day) || 180,
+                phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+                bio: t.guide?.bio || "مرشد سياحي معتمد ومختص بآثار لبدة الكبرى وصبراتة والمدن التاريخية.",
+                specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
+              }
+            },
+            vehicle: {
+              model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة ميني باص سياحي 25 راكب"),
+              company: t.transport_company_name || "شركة النقل السياحي المعتمدة",
+              driver: t.driver_name || "سائق مرخص ومحترف",
+              plateNumber: t.vehicle_plate || undefined,
+              driverPhone: t.driver_phone || undefined,
+              capacity: t.vehicle_capacity || t.max_capacity || 25,
+            },
+            restaurant: t.restaurant_name ? {
+              id: t.restaurant_id,
+              name: t.restaurant_name,
+              type: t.restaurant_type || "مطعم تراثي",
+              city: t.restaurant_city || t.departure_city || "طرابلس",
+              address: t.restaurant_address || "",
+              phone: t.restaurant_phone || "",
+              image: t.restaurant_image || "/assets/dest-tripoli-old-city.jpg",
+            } : undefined,
+            itinerary_steps: t.itinerary_steps,
+            accommodation: "رحلة يومية — عودة مساءً",
+            price: Number(t.price_per_seat) || 120,
+            rating: 5.0,
+            reviews: 1,
+          };
+        });
+
+        const mappedWeekly: WeeklyTrip[] = (Array.isArray(resWeekly) ? resWeekly : []).map((t: any) => {
+          const galleryList = t.gallery
+            ? (typeof t.gallery === "string" ? t.gallery.split(",").map((s: string) => s.trim()).filter(Boolean) : t.gallery)
+            : [];
+          const primaryImg = t.photo || (galleryList[0] || destUbari);
+          const fiveImgs = [primaryImg, ...galleryList.filter((x: string) => x !== primaryImg)];
+          while (fiveImgs.length < 5) fiveImgs.push(fiveImgs[fiveImgs.length - 1] || primaryImg);
+
+          return {
+            id: t.weekly_trip_id || `WT-${t.id}`,
+            type: "weekly" as const,
+            title: t.trip_title,
+            img: primaryImg,
+            images: fiveImgs.slice(0, 5),
+            gallery: t.gallery,
+            description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
+            startDate: t.start_date || "2026-10-25",
+            endDate: t.end_date || "2026-10-31",
+            targetPersons: t.max_capacity || 20,
+            availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 20),
+            seatPrice: Number(t.seat_per_price) || 1500,
+            cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
+            attractions: [
+              {
+                name: t.destination_region || "الواحات والآثار",
+                location: "ليبيا",
+                description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
+              }
+            ],
+            hotels: ["فندق مبيت معتمد"],
+            departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
+            entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
+            guide: {
+              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
+              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
+              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+            },
+            vehicle: {
+              model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة سياحية مجهزة للمسافات الطويلة"),
+              company: t.transport_company_name || "شركة النقل السياحي الدولية",
+              driver: t.driver_name || "سائق خبير بالمسارات السياحية",
+              plateNumber: t.vehicle_plate || undefined,
+              driverPhone: t.driver_phone || undefined,
+              capacity: t.vehicle_capacity || t.max_capacity || 20,
+            },
+            restaurant: t.restaurant_name ? {
+              id: t.restaurant_id,
+              name: t.restaurant_name,
+              type: t.restaurant_type || "مطعم تراثي",
+              city: t.restaurant_city || t.departure_city || "طرابلس",
+              address: t.restaurant_address || "",
+              phone: t.restaurant_phone || "",
+              image: t.restaurant_image || "/assets/dest-tripoli-old-city.jpg",
+            } : undefined,
+            itinerary_steps: t.itinerary_steps,
+            rating: 5.0,
+            reviews: 1,
+          };
+        });
 
         setLiveDbTrips([...mappedDaily, ...mappedWeekly]);
       } catch (err) {
@@ -2509,11 +2747,8 @@ function TripsPage() {
               return;
             }
             setScheduleKind(activeTripDetails.type);
-            setScheduleTripId(activeTripDetails.id);
             setScheduleTripTitle(activeTripDetails.title);
             setScheduleTripImage(activeTripDetails.img);
-            setScheduleTripPrice(activeTripDetails.type === "daily" ? activeTripDetails.price : activeTripDetails.seatPrice);
-            setScheduleTripObj(activeTripDetails);
             setCustomSchedules((activeTripDetails as any).schedules);
           }}
           onOpenGuideCV={(cvData) => setSelectedGuideCV(cvData)}
@@ -2541,20 +2776,13 @@ function TripsPage() {
           open={!!scheduleKind}
           onClose={() => {
             setScheduleKind(null);
-            setScheduleTripId(undefined);
             setScheduleTripTitle(undefined);
             setScheduleTripImage(undefined);
-            setScheduleTripPrice(undefined);
-            setScheduleTripObj(null);
             setCustomSchedules(undefined);
           }}
           kind={scheduleKind}
-          tripId={scheduleTripId}
-          tripTitle={scheduleTripTitle}
           customTitle={scheduleTripTitle}
           customImage={scheduleTripImage}
-          customPrice={scheduleTripPrice}
-          trip={scheduleTripObj}
           customSchedules={customSchedules}
         />
 
@@ -2798,25 +3026,17 @@ function TripsPage() {
           window.scrollTo({ top: 0, behavior: "instant" });
         }}
         onBook={(offer) => {
-          const matchingTrip = allTrips.find(t => t.id === offer.id || t.title === offer.title);
-          const offerPrice = Number(String(offer.price).replace(/,/g, ""));
           if (offer.schedules && offer.schedules.length > 0) {
             setScheduleKind(offer.kind);
-            setScheduleTripId(matchingTrip?.id || offer.id);
             setScheduleTripTitle(offer.title);
             setScheduleTripImage(offer.img);
-            setScheduleTripPrice(offerPrice);
-            setScheduleTripObj(matchingTrip || null);
             setCustomSchedules(offer.schedules);
           } else {
             modals.openBooking({
-              id: matchingTrip?.id || offer.id,
-              daily_trip_id: offer.kind === "daily" ? (matchingTrip?.id || offer.id) : undefined,
-              weekly_trip_id: offer.kind === "weekly" ? (matchingTrip?.id || offer.id) : undefined,
               title: offer.title,
               subtitle: offer.sub,
               image: offer.img,
-              price: offerPrice,
+              price: Number(offer.price.replace(/,/g, "")),
             });
           }
         }}
@@ -2892,11 +3112,8 @@ function TripsPage() {
                       return;
                     }
                     setScheduleKind(t.type);
-                    setScheduleTripId(t.id);
                     setScheduleTripTitle(t.title);
                     setScheduleTripImage(t.img);
-                    setScheduleTripPrice(t.type === "daily" ? t.price : t.seatPrice);
-                    setScheduleTripObj(t);
                     setCustomSchedules((t as any).schedules);
                   }}
                 />
@@ -3001,15 +3218,10 @@ function TripsPage() {
             if (subtitle && (subtitle.includes("خاصة") || subtitle.includes("Private"))) {
               setPrivateOpen(true);
             } else {
-              const isW = subtitle && subtitle.includes("أسبوعية");
-              const matched = allTrips.find(tr => tr.title === title || tr.id === (item as any)?.refId);
-              setScheduleKind(isW ? "weekly" : "daily");
-              setScheduleTripId((item as any)?.refId || matched?.id);
+              setScheduleKind(subtitle && subtitle.includes("أسبوعية") ? "weekly" : "daily");
               setScheduleTripTitle(item?.title || title);
               setScheduleTripImage(item?.image);
-              setScheduleTripPrice(typeof item?.price === "number" ? item.price : (matched ? (matched.type === "daily" ? matched.price : (matched.type === "weekly" ? matched.seatPrice : undefined)) : undefined));
-              setScheduleTripObj(matched || null);
-              setCustomSchedules(item?.schedules || (matched as any)?.schedules);
+              setCustomSchedules(item?.schedules);
             }
           });
         }}
@@ -3025,20 +3237,13 @@ function TripsPage() {
         open={!!scheduleKind}
         onClose={() => {
           setScheduleKind(null);
-          setScheduleTripId(undefined);
           setScheduleTripTitle(undefined);
           setScheduleTripImage(undefined);
-          setScheduleTripPrice(undefined);
-          setScheduleTripObj(null);
           setCustomSchedules(undefined);
         }}
         kind={scheduleKind}
-        tripId={scheduleTripId}
-        tripTitle={scheduleTripTitle}
         customTitle={scheduleTripTitle}
         customImage={scheduleTripImage}
-        customPrice={scheduleTripPrice}
-        trip={scheduleTripObj}
         customSchedules={customSchedules}
       />
 
@@ -3150,6 +3355,18 @@ function TripCard({
   const isAr = language === "ar";
   const seatsAvailable = "availableSeats" in t ? t.availableSeats : undefined;
   const targetPersons = "targetPersons" in t ? t.targetPersons : undefined;
+  const tripImages = useMemo(() => getTripImages(t), [t]);
+  const [activeImgIndex, setActiveImgIndex] = useState(0);
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImgIndex((prev) => (prev - 1 + tripImages.length) % tripImages.length);
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImgIndex((prev) => (prev + 1) % tripImages.length);
+  };
 
   // Alternating staggered offsets like the gallery showcase in Image 1
   const staggerClasses = [
@@ -3167,19 +3384,42 @@ function TripCard({
       onClick={onDetails}
       className={`group relative w-[290px] sm:w-[315px] min-w-[290px] sm:min-w-[315px] h-[450px] sm:h-[480px] rounded-[34px] overflow-hidden shadow-[0_20px_55px_rgba(217,107,39,0.32)] hover:shadow-[0_28px_70px_rgba(217,107,39,0.55)] transition-all duration-300 cursor-pointer select-none flex flex-col justify-between ${stagger}`}
     >
-      {/* Full Bleed Photo Background */}
-      <img
-        src={t.img}
-        alt={t.title}
-        loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-100 contrast-100"
-      />
+      {/* 5 Full Bleed Photo Backgrounds with Smooth Crossfade */}
+      {tripImages.map((imgSrc, i) => (
+        <img
+          key={i}
+          src={imgSrc}
+          alt={`${t.title} - ${i + 1}`}
+          loading={i === 0 ? "eager" : "lazy"}
+          className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 brightness-100 contrast-100 ${
+            i === activeImgIndex ? "opacity-100 z-0 scale-100" : "opacity-0 -z-10 pointer-events-none"
+          }`}
+        />
+      ))}
 
       {/* Clean Subtle Gradient for High Contrast Typography */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/30 pointer-events-none z-5" />
 
-      {/* Top Floating Badges */}
-      <div className="relative z-10 p-5 flex items-center justify-between gap-2">
+      {/* Prev / Next 5-Image Navigation Arrows on Card Sides */}
+      <button
+        type="button"
+        onClick={handlePrevImage}
+        aria-label="Previous Image"
+        className="absolute left-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        onClick={handleNextImage}
+        aria-label="Next Image"
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
+      >
+        ›
+      </button>
+
+      {/* Top Floating Badges & 5-Image Interactive Indicator */}
+      <div className="relative z-10 p-5 pb-2 flex items-center justify-between gap-1.5">
         <span className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white font-black text-xs shadow-md border border-white/25">
           {t.type === "daily"
             ? (isAr ? "☀️ رحلة يومية" : "☀️ Daily Tour")
@@ -3188,16 +3428,28 @@ function TripCard({
             : (isAr ? "👑 خاصة VIP" : "👑 Private VIP")}
         </span>
 
-        {t.type !== "private" ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-md text-white font-black text-xs shadow-md border border-white/25">
-            <span className="text-amber-300 font-black">★ {t.rating}</span>
-            <span className="text-[10px] text-white/80 font-bold">{isAr ? "ممتاز" : "Superb"}</span>
-          </div>
-        ) : (
-          <span className="px-3 py-1.5 rounded-full bg-amber-500/90 backdrop-blur-md text-white font-black text-xs shadow-md border border-white/25">
-            👑 {isAr ? "تخصيص كامل" : "Customized"}
+        {/* 5-Image Dots / Indicator with Counter */}
+        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/25 shadow-md">
+          {tripImages.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveImgIndex(i);
+              }}
+              aria-label={`الصورة ${i + 1}`}
+              className={`transition-all rounded-full cursor-pointer ${
+                i === activeImgIndex
+                  ? "w-3.5 h-1.5 bg-amber-400"
+                  : "w-1.5 h-1.5 bg-white/50 hover:bg-white"
+              }`}
+            />
+          ))}
+          <span className="text-[10px] text-amber-300 font-black ml-1 select-none">
+            {activeImgIndex + 1}/5
           </span>
-        )}
+        </div>
       </div>
 
       {/* Bottom Floating Information: Title, Departure, Seats, Price, Action */}

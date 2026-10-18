@@ -2,10 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import {
-  getStoredSession,
-  apiGetAdminDashboard,
-  apiVerifyGuide,
+import { 
+  getStoredSession, 
+  apiGetAdminDashboard, 
+  apiVerifyGuide, 
   apiDeleteGuide,
   apiCreateDailyTrip,
   apiUpdateDailyTrip,
@@ -13,9 +13,8 @@ import {
   apiCreateWeeklyTrip,
   apiUpdateWeeklyTrip,
   apiDeleteWeeklyTrip,
-  getAllGuides,
-  saveAllGuides,
-  updateGuideVerification,
+  getAllGuides, 
+  updateGuideVerification, 
   deleteGuideAccount,
   getTransportCompanies,
   saveTransportCompanies,
@@ -27,7 +26,8 @@ import {
   sendToSecureBackend,
   deleteFromSecureBackend
 } from "@/lib/api";
-import { formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { getChatSessions, sendAdminReply } from "@/lib/supportChat";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -57,59 +57,58 @@ export const Route = createFileRoute("/dashboard/admin")({
 });
 
 /* ============ TYPES ============ */
-type Company = {
-  id?: string | null;
-  contract_number: string;
-  name: string;
+type Company = { 
+  id?: string | null; 
+  contract_number: string; 
+  name: string; 
   company_name?: string;
-  phone: string;
+  phone: string; 
   phone_number?: string;
-  address: string;
+  address: string; 
   city?: string | null;
-  email?: string | null;
-  pass?: string | null;
-  password?: string | null;
-  total_vehicles?: number | null;
+  email?: string | null; 
+  pass?: string | null; 
+  password?: string | null; 
+  total_vehicles?: number | null; 
   available_cars?: number | null;
-  available_vehicles?: number | null;
-  contract_start_date?: string | null;
-  contract_end_date?: string | null;
+contract_start_date?: string | null; 
+  contract_end_date?: string | null; 
   status?: "موثق" | "بانتظار" | "مرفوض" | string;
   verification_status?: "موثق" | "بانتظار التوثيق" | "بانتظار" | "مرفوض" | string | null;
   google_maps_url?: string | null;
 };
 
-type Driver = {
-  driver_license_number: string;
-  full_name: string;
-  phone_number: string;
-  national_id_or_passport?: string;
-  license_date_valid?: string;
-  contract_number?: string;
-  assigned_vehicle_plate?: string | null;
-  email?: string;
-  company_name?: string | null;
+type Driver = { 
+  driver_license_number: string; 
+  full_name: string; 
+  phone_number: string; 
+  national_id_or_passport?: string; 
+  license_date_valid?: string; 
+  contract_number?: string; 
+  assigned_vehicle_plate?: string | null; 
+  email?: string; 
+  company_name?: string | null; 
   account_status?: "نشط" | "معلق" | "موقوف" | string | null;
   operational_status?: string | null;
 };
 
-type Guide = {
-  license_number: string;
-  full_name: string;
+type Guide = { 
+  license_number: string; 
+  full_name: string; 
   title?: string;
   avatar?: string;
-  phone_number: string;
-  years_of_experience: number;
-  certificate: string;
+  phone_number: string; 
+  years_of_experience: number; 
+  certificate: string; 
   certificate_name?: string;
-  digital_certificate_file?: string;
-  bio?: string;
-  speaks_english?: boolean;
-  speaks_french?: boolean;
-  speaks_italian?: boolean;
-  verification_status?: "موثق" | "بانتظار التوثيق" | "مرفوض" | string;
-  email?: string;
-  daily_rate?: number;
+  digital_certificate_file?: string; 
+  bio?: string; 
+  speaks_english?: boolean; 
+  speaks_french?: boolean; 
+  speaks_italian?: boolean; 
+  verification_status?: "موثق" | "بانتظار التوثيق" | "مرفوض" | string; 
+  email?: string; 
+  daily_rate?: number; 
   price_per_day?: number;
   primaryRegion?: string;
   operating_regions?: string | string[];
@@ -117,112 +116,114 @@ type Guide = {
   total_tours_completed?: number;
 };
 
-type Vehicle = {
-  plate_number: string;
-  company_id?: string | null;
+type Vehicle = { 
+  plate_number: string; 
+  company_id?: string | null; 
   contract_number?: string | null;
-  company_name?: string | null;
-  vehicle_type: string;
-  capacity?: number | null;
+  company_name?: string | null; 
+  vehicle_type: string; 
+  capacity?: number | null; 
   seating_capacity?: number | null;
-  daily_rate?: number | null;
-  status?: "جاهزة" | "في رحلة" | "صيانة" | string | null;
+  daily_rate?: number | null; 
+  status?: "جاهزة" | "في رحلة" | "صيانة" | string | null; 
   vehicle_status?: string | null;
 };
 
-type DailyTrip = {
-  id: string;
+type DailyTrip = { 
+  id: string; 
   daily_trip_id?: string;
-  title: string;
+  title: string; 
   trip_title?: string;
-  description: string;
-  price_per_seat: number;
-  max_capacity: number;
-  available_seats: number;
-  bookings_count: number;
-  rating_avg: number;
-  guide_license?: string;
+  description: string; 
+  price_per_seat: number; 
+  max_capacity: number; 
+  available_seats: number; 
+  bookings_count: number; 
+  rating_avg: number; 
+  guide_license?: string; 
   guide_license_number?: string;
-  vehicle_plates?: string[];
-  is_active: boolean;
-  photo?: string;
-  recurring_days?: string[] | string;
-  bus_capacity?: 25 | 50;
-  destination?: string;
+  vehicle_plates?: string[]; 
+  is_active: boolean; 
+  photo?: string; 
+  recurring_days?: string[] | string; 
+  bus_capacity?: 15 | 25 | 50; 
+  destination?: string; 
   destination_city?: string;
-  departure_city?: string;
+  departure_city?: string; 
+  gallery?: string;
+  images?: string[];
+  vehicle_plate?: string | null;
+  restaurant_id?: string | null;
+  itinerary_steps?: any;
 };
 
-type WeeklyTrip = {
-  id: string;
+type WeeklyTrip = { 
+  id: string; 
   weekly_trip_id?: string;
-  title: string;
+  title: string; 
   trip_title?: string;
   trip_description?: string;
   description?: string;
-  start_date: string;
-  end_date: string;
-  seat_per_price: number;
-  max_capacity: number;
-  available_seats?: number;
-  bookings_count: number;
-  rating_avg: number;
-  guide_license?: string;
+  start_date?: string; 
+  end_date?: string; 
+  seat_per_price: number; 
+  max_capacity: number; 
+  available_seats?: number; 
+  bookings_count: number; 
+  rating_avg: number; 
+  guide_license?: string; 
   guide_license_number?: string;
-  vehicle_plates?: string[];
-  is_active: boolean;
-  photo?: string;
-  weekly_day?: string;
-  bus_capacity?: 25 | 50;
-  destinations?: string[];
+  vehicle_plates?: string[]; 
+  is_active: boolean; 
+  photo?: string; 
+  weekly_day?: string; 
+  bus_capacity?: 15 | 25 | 50; 
+  destinations?: string[]; 
   destination_region?: string;
-  departure_city?: string;
-  destination?: string;
-  hotel_id?: string;
+  departure_city?: string; 
+  destination?: string; 
+  hotel_id?: string; 
+  gallery?: string;
+  images?: string[];
+  vehicle_plate?: string | null;
+  restaurant_id?: string | null;
+  itinerary_steps?: any;
 };
 
-type PrivateTripRequest = {
-  private_trip_id: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_description: string;
-  preferred_start_date: string;
-  duration_days: number;
-  number_of_companions: number;
-  quoted_price?: number;
-  admin_itinerary_plan?: string;
-  assigned_guide?: string;
+type PrivateTripRequest = { 
+  private_trip_id: string; 
+  customer_name: string; 
+  customer_phone: string; 
+  customer_description: string; 
+  preferred_start_date: string; 
+  duration_days: number; 
+  number_of_companions: number; 
+  quoted_price?: number; 
+  admin_itinerary_plan?: string; 
+  assigned_guide?: string; 
   assigned_guide_license?: string;
   guide_license_number?: string;
-  tourist_id?: string;
-  customer_requirements?: string;
-  assigned_vehicle?: string;
+  assigned_vehicle?: string; 
   assigned_vehicle_plate?: string;
-  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string;
+  customer_requirements?: string;
+  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
 };
 
-type Tourist = {
-  tourist_id: string;
-  full_name: string;
-  phone_number?: string;
-  email?: string;
-};
-
-type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: string };
-type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; verification_status?: string; contract_date?: string; features?: string };
-type Attraction = {
-  id: string;
+type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
+type Restaurant = { id: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
+type Attraction = { 
+  id: string; 
   place_id?: string;
-  name: string;
+  name: string; 
   place_name?: string;
-  city: string;
-  category: string;
-  description: string;
-  place_image: string;
-  visitors_count: number;
-  latitude?: number;
-  longitude?: number;
-  google_maps_url?: string;
+  city: string; 
+  category: string; 
+  description: string; 
+  place_image: string; 
+  visitors_count: number; 
+  latitude?: number; 
+  longitude?: number; 
+  google_maps_url?: string; 
   is_unesco?: boolean;
   unesco_year?: number;
 };
@@ -254,6 +255,21 @@ type FacilityOffer = OfferFacility & {
   percent_discount?: number;
 };
 
+const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
+  if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+    e.preventDefault();
+    const form = (e.target as HTMLElement).closest("form");
+    if (!form) return;
+    const focusables = Array.from(
+      form.querySelectorAll<HTMLElement>("input:not([type='hidden']):not([type='file']), select, textarea, button[type='submit']")
+    ).filter(el => !el.hasAttribute("disabled") && el.offsetParent !== null);
+    const currentIndex = focusables.indexOf(e.target as HTMLElement);
+    if (currentIndex > -1 && currentIndex + 1 < focusables.length) {
+      focusables[currentIndex + 1].focus();
+    }
+  }
+};
+
 /* ============ MAIN COMPONENT ============ */
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -266,7 +282,131 @@ function AdminDashboard() {
     }
   }, [navigate]);
 
+  // Live synchronization with Microsoft SQL Server (DelniDB)
+  useEffect(() => {
+    let isMounted = true;
+    async function syncFromDb() {
+      try {
+        const compRes = await fetch("http://127.0.0.1:5001/api/db/companies", { signal: AbortSignal.timeout(3000) });
+        if (compRes.ok) {
+          const compData = await compRes.json();
+          if (compData.success && Array.isArray(compData.data) && isMounted) {
+            const mapped = compData.data.map((c: any) => ({
+              ...c,
+              name: c.company_name || c.name || "شركة نقل",
+              phone: c.phone_number || c.phone || "",
+              status: c.verification_status || c.status || "موثق",
+            }));
+            setCompanies(mapped);
+            saveTransportCompanies(compData.data);
+          }
+        }
+      } catch {}
 
+      try {
+        const vehRes = await fetch("http://127.0.0.1:5001/api/db/vehicles", { signal: AbortSignal.timeout(3000) });
+        if (vehRes.ok) {
+          const vehData = await vehRes.json();
+          if (vehData.success && Array.isArray(vehData.data) && isMounted) {
+            setVehicles(vehData.data);
+          }
+        }
+      } catch {}
+
+      try {
+        const dRes = await fetch("http://127.0.0.1:5001/api/db/drivers", { signal: AbortSignal.timeout(3000) });
+        if (dRes.ok) {
+          const dData = await dRes.json();
+          if (dData.success && Array.isArray(dData.data) && isMounted) {
+            setDrivers(dData.data);
+          }
+        }
+      } catch {}
+
+      try {
+        const gRes = await fetch("http://127.0.0.1:5001/api/db/guides", { signal: AbortSignal.timeout(3000) });
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          if (gData.success && Array.isArray(gData.data) && gData.data.length > 0 && isMounted) {
+            const mapped = gData.data.map((g: any) => ({
+              ...g,
+              daily_rate: Number(g.price_per_day) || 150,
+              price_per_day: Number(g.price_per_day) || 150,
+              primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : "tripoli",
+            }));
+            setGuides(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const hRes = await fetch("http://127.0.0.1:5001/api/db/hotels", { signal: AbortSignal.timeout(3000) });
+        if (hRes.ok) {
+          const hData = await hRes.json();
+          if (hData.success && Array.isArray(hData.data) && hData.data.length > 0 && isMounted) {
+            const mapped = hData.data.map((h: any) => ({
+              ...h,
+              id: h.hotel_id || h.id,
+              name: h.hotel_name || h.name,
+              address: h.address_details || h.address,
+              phone: h.phone_number || h.phone,
+              stars: h.star_rating || h.stars,
+            }));
+            setHotels(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const rRes = await fetch("http://127.0.0.1:5001/api/db/restaurants", { signal: AbortSignal.timeout(3000) });
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if (rData.success && Array.isArray(rData.data) && rData.data.length > 0 && isMounted) {
+            const mapped = rData.data.map((r: any) => ({
+              ...r,
+              id: r.facility_id || r.id,
+              name: r.facility_name || r.name,
+              type: r.facility_type || r.type,
+              address: r.address_details || r.address,
+              phone: r.phone_number || r.phone,
+            }));
+            setRestaurants(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const pRes = await fetch("http://127.0.0.1:5001/api/db/places", { signal: AbortSignal.timeout(3000) });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData.success && Array.isArray(pData.data) && pData.data.length > 0 && isMounted) {
+            const mapped = pData.data.map((p: any) => ({
+              ...p,
+              id: p.place_id || p.id,
+              name: p.place_name || p.name,
+            }));
+            setAttractions(mapped);
+          }
+        }
+      } catch {}
+
+      try {
+        const prvRes = await fetch("http://127.0.0.1:5001/api/db/private_trips", { signal: AbortSignal.timeout(3000) });
+        if (prvRes.ok) {
+          const prvData = await prvRes.json();
+          if (prvData.success && Array.isArray(prvData.data) && isMounted) {
+            setPrivateTrips((prev) => {
+              const ids = new Set(prvData.data.map((p: any) => p.private_trip_id));
+              const nonDb = prev.filter((p) => !ids.has(p.private_trip_id));
+              return [...prvData.data, ...nonDb];
+            });
+          }
+        }
+      } catch {}
+    }
+    syncFromDb();
+    return () => { isMounted = false; };
+  }, []);
 
   /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
   const [companies, setCompanies] = useState<Company[]>(() => {
@@ -282,38 +422,7 @@ function AdminDashboard() {
     return getDrivers();
   });
 
-  const [guides, setGuides] = useState<Guide[]>(() => {
-    const loaded = getAllGuides();
-    if (loaded && loaded.length > 0) {
-      return loaded.map((g: any) => ({
-        license_number: g.license_number,
-        full_name: g.full_name,
-        title: g.title || "",
-        avatar: g.avatar || "",
-        phone_number: g.phone_number,
-        years_of_experience: Number(g.years_of_experience) || 2,
-        certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-        certificate_name: g.certificate_name,
-        digital_certificate_file: g.digital_certificate_file,
-        bio: g.bio || "",
-        speaks_english: Boolean(g.speaks_english),
-        speaks_french: Boolean(g.speaks_french),
-        speaks_italian: Boolean(g.speaks_italian),
-        verification_status: g.verification_status || "قيد المراجعة",
-        email: g.email || "",
-        daily_rate: Number(g.price_per_day) || 150,
-        price_per_day: Number(g.price_per_day) || 150,
-        primaryRegion: g.primaryRegion || "tripoli",
-        operating_regions: g.operating_regions || "tripoli",
-        working_days: g.working_days || "الأحد,الأربعاء",
-        total_tours_completed: Number(g.total_tours_completed) || 0,
-      }));
-    }
-    return [];
-  });
-
-  const [editingGuide, setEditingGuide] = useState<Guide | null>(null);
-  const [guideStatusFilter, setGuideStatusFilter] = useState<"الكل" | "بانتظار التوثيق" | "موثق" | "مرفوض">("الكل");
+  const [guides, setGuides] = useState<Guide[]>([]);
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => getVehicles());
@@ -341,9 +450,6 @@ function AdminDashboard() {
   /* DelniDB places_tourist */
   const [attractions, setAttractions] = useState<Attraction[]>([]);
 
-  /* DelniDB tourists */
-  const [tourists, setTourists] = useState<Tourist[]>([]);
-
   const [reviews, setReviews] = useState<ItemReview[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
@@ -361,7 +467,6 @@ function AdminDashboard() {
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [viewingGuide, setViewingGuide] = useState<Guide | null>(null);
-  const [showAddGuide, setShowAddGuide] = useState(false);
   const [showAddTrip, setShowAddTrip] = useState<"daily" | "weekly" | null>(null);
   const [editingDailyTrip, setEditingDailyTrip] = useState<DailyTrip | null>(null);
   const [editingWeeklyTrip, setEditingWeeklyTrip] = useState<WeeklyTrip | null>(null);
@@ -392,42 +497,22 @@ function AdminDashboard() {
     setCompanies([mapped, ...companies]);
     setShowAddCompany(false);
   };
-  const handleUpdateCompany = (updated: Company) => { setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); setEditingCompany(null); };
-  const handleDeleteCompany = (contractOrId: string) => {
-    if (!confirm(`هل أنت متأكد من حذف شركة النقل (عقد: ${contractOrId})؟`)) return;
-    setCompanies(prev => prev.filter(c => c.contract_number !== contractOrId && c.id !== contractOrId));
-    deleteTransportCompany(contractOrId);
-    deleteFromSecureBackend("companies", "contract_number", contractOrId);
+  const handleUpdateCompany = (updated: Company) => { 
+    updateTransportCompany(updated.contract_number, updated);
+    setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); 
+    setEditingCompany(null); 
   };
-  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
+  const handleDeleteCompany = (contractNumber: string) => {
+    if (confirm("هل تريد حذف شركة النقل؟")) {
+      deleteTransportCompany(contractNumber);
+      setCompanies(companies.filter(c => c.contract_number !== contractNumber));
+    }
+  };
+  const handleVerifyGuide = (lic: string, status: "موثق" | "مرفوض") => {
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
     updateGuideVerification(lic, status);
-
     const targetGuide = guides.find(g => g.license_number === lic);
-
-    // Sync with backend API (creates in DB if not existing, or updates status)
-    try {
-      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(lic)}/verify`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          verification_status: status,
-          full_name: targetGuide?.full_name,
-          phone_number: targetGuide?.phone_number,
-          email: targetGuide?.email,
-          years_of_experience: targetGuide?.years_of_experience,
-          price_per_day: targetGuide?.daily_rate || targetGuide?.price_per_day,
-          bio: targetGuide?.bio,
-          title: targetGuide?.title,
-          certificate: targetGuide?.certificate,
-          certificate_name: targetGuide?.certificate_name,
-          digital_certificate_file: targetGuide?.digital_certificate_file,
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to sync guide verification status with backend:", e);
-    }
     sendToSecureBackend("guides", {
       license_number: lic,
       full_name: targetGuide?.full_name || "مرشد سياحي",
@@ -449,87 +534,10 @@ function AdminDashboard() {
     }
   };
 
-  const handleAddGuide = async (newG: Guide) => {
-    setGuides(prev => [newG, ...prev.filter(g => g.license_number !== newG.license_number)]);
-    setShowAddGuide(false);
-
-    // Update LocalStorage
-    try {
-      const stored = getAllGuides();
-      const recordToAdd: any = {
-        ...newG,
-        email: newG.email || `${newG.license_number.toLowerCase()}@dalni.ly`,
-      };
-      saveAllGuides([recordToAdd, ...stored.filter((g: any) => g.license_number !== newG.license_number)]);
-    } catch { }
-
-    // Direct persist to backend
-    try {
-      await fetch("http://127.0.0.1:8000/api/auth/register/guide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          license_number: newG.license_number,
-          full_name: newG.full_name,
-          phone_number: newG.phone_number,
-          email: newG.email,
-          years_of_experience: newG.years_of_experience,
-          price_per_day: newG.daily_rate || newG.price_per_day || 150,
-          bio: newG.bio || "",
-          title: newG.title || "مرشد سياحي معتمد",
-          certificate: newG.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-          certificate_name: newG.certificate_name,
-          digital_certificate_file: newG.digital_certificate_file,
-          verification_status: newG.verification_status || "موثق",
-          password: "password123",
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to add guide to backend:", e);
-    }
-  };
-
-  const handleUpdateGuide = async (updated: Guide) => {
-    setGuides(prev => prev.map(g => g.license_number === updated.license_number ? updated : g));
-    setEditingGuide(null);
-
-    // Update LocalStorage
-    try {
-      const stored = getAllGuides();
-      const next = stored.map((g: any) => g.license_number === updated.license_number ? { ...g, ...updated } : g);
-      saveAllGuides(next);
-    } catch { }
-
-    // Update Backend Database
-    try {
-      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(updated.license_number)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: updated.full_name,
-          title: updated.title,
-          phone_number: updated.phone_number,
-          email: updated.email,
-          years_of_experience: updated.years_of_experience,
-          price_per_day: updated.daily_rate || updated.price_per_day,
-          bio: updated.bio,
-          certificate: updated.certificate,
-          verification_status: updated.verification_status,
-          operating_regions: Array.isArray(updated.operating_regions) ? updated.operating_regions.join(",") : updated.operating_regions,
-          working_days: Array.isArray(updated.working_days) ? updated.working_days.join(",") : updated.working_days,
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to update guide in DB:", e);
-    }
-  };
-
   // Fetch live guides and admin data from DelniDB
   useEffect(() => {
     async function fetchAdminData() {
-      console.log("Fetching admin data from DelniDB...");
       const res = await apiGetAdminDashboard();
-      console.log("Admin Dashboard API Response:", res);
       if (!res) {
         const loadedGuides = getAllGuides();
         if (loadedGuides.length > 0) {
@@ -611,6 +619,20 @@ function AdminDashboard() {
           photo: d.photo || "/assets/ai_ruins.jpg",
           activities: d.activities || "",
           is_active: d.is_active !== false,
+          vehicle_plate: d.vehicle_plate || "",
+          vehicle_model: d.vehicle_model || "",
+          vehicle_capacity: d.vehicle_capacity || d.max_capacity || 25,
+          transport_company_name: d.transport_company_name || "",
+          driver_name: d.driver_name || "",
+          driver_phone: d.driver_phone || "",
+          driver_license_number: d.driver_license_number || "",
+          restaurant_id: d.restaurant_id || "",
+          restaurant_name: d.restaurant_name || "",
+          restaurant_type: d.restaurant_type || "",
+          restaurant_city: d.restaurant_city || "",
+          restaurant_address: d.restaurant_address || "",
+          restaurant_phone: d.restaurant_phone || "",
+          itinerary_steps: d.itinerary_steps || null,
         }));
         setDailyTrips(mappedDaily);
       }
@@ -639,6 +661,20 @@ function AdminDashboard() {
           guide_license_number: w.guide_license_number || "",
           photo: w.photo || "/assets/ai_ghadames.jpg",
           is_active: w.is_active !== false,
+          vehicle_plate: w.vehicle_plate || "",
+          vehicle_model: w.vehicle_model || "",
+          vehicle_capacity: w.vehicle_capacity || w.max_capacity || 25,
+          transport_company_name: w.transport_company_name || "",
+          driver_name: w.driver_name || "",
+          driver_phone: w.driver_phone || "",
+          driver_license_number: w.driver_license_number || "",
+          restaurant_id: w.restaurant_id || "",
+          restaurant_name: w.restaurant_name || "",
+          restaurant_type: w.restaurant_type || "",
+          restaurant_city: w.restaurant_city || "",
+          restaurant_address: w.restaurant_address || "",
+          restaurant_phone: w.restaurant_phone || "",
+          itinerary_steps: w.itinerary_steps || null,
         }));
         setWeeklyTrips(mappedWeekly);
       }
@@ -762,17 +798,7 @@ function AdminDashboard() {
           entry_fee: p.entry_fee || "مجاني",
         })));
       }
-
-      if (res.tourists && Array.isArray(res.tourists)) {
-        setTourists(res.tourists.map((t: any) => ({
-          tourist_id: t.tourist_id,
-          full_name: t.full_name,
-          phone_number: t.phone_number || "",
-          email: t.email || "",
-        })));
-      }
     }
-    fetchAdminData();
   }, []);
 
   useEffect(() => {
@@ -796,6 +822,12 @@ function AdminDashboard() {
     try {
       const cleanGuideLic = data.guide_license_number?.trim() || data.guide_license?.trim() || null;
       if (type === "daily") {
+        const imgList = (data.images && data.images.length > 0)
+          ? data.images
+          : (data.gallery ? (typeof data.gallery === 'string' ? data.gallery.split(',') : data.gallery) : [data.photo]);
+        const primary = imgList[0] || data.photo || "/assets/dest-leptis-theater.jpg";
+        const galleryStr = imgList.filter(Boolean).join(",");
+
         const payload = {
           trip_title: data.trip_title || data.title,
           description: data.description || "",
@@ -805,8 +837,13 @@ function AdminDashboard() {
           max_capacity: Number(data.max_capacity) || 25,
           recurring_days: data.recurring_days || "السبت,الثلاثاء",
           guide_license_number: cleanGuideLic,
-          photo: data.photo || "/assets/dest-leptis.jpg",
+          photo: primary,
+          gallery: galleryStr,
+          images: imgList,
           activities: data.activities || null,
+          vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : null),
+          restaurant_id: data.restaurant_id || null,
+          itinerary_steps: data.itinerary_steps ? (typeof data.itinerary_steps === 'string' ? data.itinerary_steps : JSON.stringify(data.itinerary_steps)) : null,
         };
         const res = await apiCreateDailyTrip(payload);
         if (!res || res.status === "error" || res.errors || !res.trip) {
@@ -820,14 +857,26 @@ function AdminDashboard() {
             ...createdTrip,
             id: createdTrip.daily_trip_id,
             title: createdTrip.trip_title,
+            photo: primary,
+            gallery: galleryStr,
+            images: imgList,
             bookings_count: 0,
             rating_avg: 5.0,
             is_active: true,
+            vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : ""),
+            restaurant_id: data.restaurant_id || "",
+            itinerary_steps: data.itinerary_steps || null,
           },
           ...prev,
         ]);
         alert("تم حفظ الرحلة اليومية بنجاح في قاعدة البيانات!");
       } else {
+        const imgList = (data.images && data.images.length > 0)
+          ? data.images
+          : (data.gallery ? (typeof data.gallery === 'string' ? data.gallery.split(',') : data.gallery) : [data.photo]);
+        const primary = imgList[0] || data.photo || "/assets/dest-ubari-gaberoun.jpg";
+        const galleryStr = imgList.filter(Boolean).join(",");
+
         const payload = {
           trip_title: data.trip_title || data.title,
           trip_description: data.trip_description || data.description || "",
@@ -838,7 +887,12 @@ function AdminDashboard() {
           start_date: data.start_date || undefined,
           end_date: data.end_date || undefined,
           guide_license_number: cleanGuideLic,
-          photo: data.photo || "/assets/dest-ubari.jpg",
+          photo: primary,
+          gallery: galleryStr,
+          images: imgList,
+          vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : null),
+          restaurant_id: data.restaurant_id || null,
+          itinerary_steps: data.itinerary_steps ? (typeof data.itinerary_steps === 'string' ? data.itinerary_steps : JSON.stringify(data.itinerary_steps)) : null,
         };
         const res = await apiCreateWeeklyTrip(payload);
         if (!res || res.status === "error" || res.errors || !res.trip) {
@@ -852,9 +906,15 @@ function AdminDashboard() {
             ...createdTrip,
             id: createdTrip.weekly_trip_id,
             title: createdTrip.trip_title,
+            photo: primary,
+            gallery: galleryStr,
+            images: imgList,
             bookings_count: 0,
             rating_avg: 5.0,
             is_active: true,
+            vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : ""),
+            restaurant_id: data.restaurant_id || "",
+            itinerary_steps: data.itinerary_steps || null,
           },
           ...prev,
         ]);
@@ -869,6 +929,12 @@ function AdminDashboard() {
   const handleUpdateDailyTrip = async (updated: DailyTrip) => {
     const tripId = updated.daily_trip_id || updated.id;
     try {
+      const imgList = (updated as any).images && (updated as any).images.length > 0
+        ? (updated as any).images
+        : (updated.gallery ? (typeof updated.gallery === 'string' ? updated.gallery.split(',') : updated.gallery) : [updated.photo]);
+      const primary = imgList[0] || updated.photo || "/assets/dest-leptis-theater.jpg";
+      const galleryStr = imgList.filter(Boolean).join(",");
+
       const payload = {
         trip_title: updated.trip_title || updated.title,
         description: updated.description || "",
@@ -877,17 +943,22 @@ function AdminDashboard() {
         destination_city: updated.destination || updated.destination_city || "المعلم الأثري",
         max_capacity: Number(updated.max_capacity) || 25,
         recurring_days: Array.isArray(updated.recurring_days) ? updated.recurring_days.join(",") : (updated.recurring_days || "السبت,الثلاثاء"),
-        guide_license_number: updated.guide_license_number || updated.guide_license || null,
-        photo: updated.photo || "/assets/dest-leptis.jpg",
+        guide_license_number: updated.guide_license_number || updated.guide_license || undefined,
+        photo: primary,
+        gallery: galleryStr,
+        images: imgList,
         activities: Array.isArray((updated as any).activities) ? (updated as any).activities.join(" • ") : ((updated as any).activities || null),
+        vehicle_plate: (updated as any).vehicle_plate || (Array.isArray((updated as any).vehicle_plates) ? (updated as any).vehicle_plates[0] : null),
+        restaurant_id: (updated as any).restaurant_id || null,
+        itinerary_steps: (updated as any).itinerary_steps ? (typeof (updated as any).itinerary_steps === 'string' ? (updated as any).itinerary_steps : JSON.stringify((updated as any).itinerary_steps)) : null,
       };
       const res = await apiUpdateDailyTrip(tripId, payload);
       if (res && res.status === "success") {
-        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...d, ...updated, ...res.trip } : d));
+        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...d, ...updated, ...payload, ...res.trip } : d));
         alert("تم تحديث الرحلة اليومية بنجاح في قاعدة البيانات!");
       } else {
         alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
-        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? updated : d));
+        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...updated, ...payload } : d));
       }
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
@@ -908,6 +979,12 @@ function AdminDashboard() {
   const handleUpdateWeeklyTrip = async (updated: WeeklyTrip) => {
     const tripId = updated.weekly_trip_id || updated.id;
     try {
+      const imgList = (updated as any).images && (updated as any).images.length > 0
+        ? (updated as any).images
+        : (updated.gallery ? (typeof updated.gallery === 'string' ? updated.gallery.split(',') : updated.gallery) : [updated.photo]);
+      const primary = imgList[0] || updated.photo || "/assets/dest-ubari-gaberoun.jpg";
+      const galleryStr = imgList.filter(Boolean).join(",");
+
       const payload = {
         trip_title: updated.trip_title || updated.title,
         trip_description: updated.trip_description || updated.description || "",
@@ -917,16 +994,21 @@ function AdminDashboard() {
         max_capacity: Number(updated.max_capacity) || 25,
         start_date: updated.start_date || undefined,
         end_date: updated.end_date || undefined,
-        guide_license_number: updated.guide_license_number || updated.guide_license || null,
-        photo: updated.photo || "/assets/dest-ubari.jpg",
+        guide_license_number: updated.guide_license_number || updated.guide_license || undefined,
+        photo: primary,
+        gallery: galleryStr,
+        images: imgList,
+        vehicle_plate: (updated as any).vehicle_plate || (Array.isArray((updated as any).vehicle_plates) ? (updated as any).vehicle_plates[0] : null),
+        restaurant_id: (updated as any).restaurant_id || null,
+        itinerary_steps: (updated as any).itinerary_steps ? (typeof (updated as any).itinerary_steps === 'string' ? (updated as any).itinerary_steps : JSON.stringify((updated as any).itinerary_steps)) : null,
       };
       const res = await apiUpdateWeeklyTrip(tripId, payload);
       if (res && res.status === "success") {
-        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? { ...w, ...updated, ...res.trip } : w));
+        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? ({ ...w, ...updated, ...payload, ...res.trip } as any) : w));
         alert("تم تحديث الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
       } else {
         alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
-        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? updated : w));
+        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? ({ ...updated, ...payload } as any) : w));
       }
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
@@ -943,30 +1025,55 @@ function AdminDashboard() {
       console.error(err);
     }
   };
-  const handleSavePrivate = (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => {
-    setPrivateTrips(privateTrips.map(p => p.private_trip_id === id ? { ...p, status_order: status, quoted_price: price, admin_itinerary_plan: plan, assigned_guide: guide, assigned_vehicle: vehicle } : p));
+  const handleSavePrivate = async (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => {
+    const existing = privateTrips.find(p => p.private_trip_id === id);
+    const updatedTrip = {
+      ...(existing || {}),
+      private_trip_id: id,
+      status_order: status,
+      quoted_price: price !== undefined ? price : existing?.quoted_price,
+      admin_itinerary_plan: plan !== undefined ? plan : existing?.admin_itinerary_plan,
+      guide_license_number: guide || existing?.guide_license_number,
+      assigned_guide: guide || existing?.assigned_guide,
+      assigned_vehicle: vehicle || existing?.assigned_vehicle,
+    };
+
+    setPrivateTrips((prev: any) => prev.map((p: any) => p.private_trip_id === id ? updatedTrip : p));
     setEvaluatingPrivateTrip(null);
-  };
-  const handleAddPrivateTrip = async (p: any) => {
-    setPrivateTrips(prev => [p, ...prev]);
-    setShowAddPrivateTrip(false);
 
     try {
-      const stored = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
-      localStorage.setItem("dalni_private_trips", JSON.stringify([p, ...stored.filter((x: any) => x.private_trip_id !== p.private_trip_id)]));
-    } catch { }
-
-    try {
-      await fetch("http://127.0.0.1:8000/api/trips/private/request", {
+      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(p),
+        body: JSON.stringify(updatedTrip),
       });
     } catch (e) {
-      console.error("Failed to sync private trip with DB:", e);
+      console.error("Failed to sync private trip with SQL Server", e);
     }
+
+    try {
+      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+      const next = local.map((p: any) => p.private_trip_id === id ? updatedTrip : p);
+      if (!local.find((p: any) => p.private_trip_id === id)) next.unshift(updatedTrip);
+      localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
+    } catch {}
   };
-  const handleDeletePrivate = (id: string) => { if (confirm("هل تريد حذف طلب الرحلة الخاصة؟")) setPrivateTrips(privateTrips.filter(p => p.private_trip_id !== id)); };
+
+  const handleAddPrivateTrip = (p: any) => { setPrivateTrips([...privateTrips, p]); setShowAddPrivateTrip(false); };
+  const handleDeletePrivate = async (id: string) => {
+    if (!confirm("هل تريد حذف طلب الرحلة الخاصة؟")) return;
+    setPrivateTrips(prev => prev.filter(p => p.private_trip_id !== id));
+    try {
+      await fetch(`http://127.0.0.1:5001/api/db/private_trips?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    } catch {}
+    try {
+      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+      const next = local.filter((p: any) => p.private_trip_id !== id);
+      localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
+    } catch {}
+  };
   useEffect(() => {
     try {
       const storedTickets = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
@@ -984,67 +1091,167 @@ function AdminDashboard() {
           return [...storedRests.filter((r: any) => !ids.has(r.id)), ...prev];
         });
       }
-    } catch { }
+
+      const storedPrivate = JSON.parse(localStorage.getItem("delni_private_trips") || localStorage.getItem("dalni_private_trips") || "[]");
+      if (Array.isArray(storedPrivate) && storedPrivate.length > 0) {
+        setPrivateTrips((prev) => {
+          const ids = new Set(prev.map((p) => p.private_trip_id));
+          return [...storedPrivate.filter((p: any) => !ids.has(p.private_trip_id)), ...prev];
+        });
+      }
+
+      // Live Support Chat Sessions
+      const sessions = getChatSessions();
+      setChatSessions(sessions);
+      if (sessions.length > 0) {
+        setActiveChatId(sessions[0].id);
+      }
+    } catch {}
+
+    const handleChatSync = (e: any) => {
+      const all = e?.detail || getChatSessions();
+      setChatSessions([...all]);
+    };
+    const handleStorageSync = (e: StorageEvent) => {
+      if (e.key === "dalni_chat_sessions") {
+        setChatSessions(getChatSessions());
+      }
+      if (e.key === "dalni_support_tickets" && e.newValue) {
+        try {
+          setTickets(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener("dalni_chat_sync", handleChatSync);
+    window.addEventListener("storage", handleStorageSync);
+
+    return () => {
+      window.removeEventListener("dalni_chat_sync", handleChatSync);
+      window.removeEventListener("storage", handleStorageSync);
+    };
   }, []);
 
   const handleAddHotel = (h: any) => {
-    const hotelId = `HTL-00${hotels.length + 1}`;
-    const newHotelObj = { id: hotelId, bookings_count: 0, rating_avg: 5.0, ...h };
-    setHotels((prev) => [...prev, newHotelObj]);
+    const hotelId = h.hotel_id || h.id || `HTL-${Date.now().toString().slice(-4)}`;
+    const newHotelObj: Hotel = {
+      id: hotelId,
+      bookings_count: 0,
+      rating_avg: 5.0,
+      property_type: h.property_type || "hotel",
+      discount_percentage: Number(h.discount_percentage) || 15,
+      amenities: h.amenities || ["مسبح", "واي فاي", "موقف"],
+      whatsapp: h.whatsapp || h.phone,
+      ...h,
+    };
+    setHotels((prev) => [newHotelObj, ...prev]);
     setShowAddHotel(false);
 
     try {
-      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
-      localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...stored.filter((x: any) => x.id !== hotelId)]));
-    } catch { }
+      const storedHotels = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...storedHotels]));
+    } catch {}
 
-    fetch("http://127.0.0.1:8000/api/hotels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        hotel_id: hotelId,
-        hotel_name: h.name,
-        city: h.city || "طرابلس",
-        address_details: h.address || "العنوان الرئيسي",
-        phone_number: h.phone || "0910000000",
-        star_rating: parseInt(h.stars, 10) || 4,
-        partnership_status: "نشط",
-        property_type: "فندق",
-        hotel_photo_1: h.hotel_photo_1 || "/assets/ai_city.jpg",
-      }),
-    }).catch(() => { });
+    sendToSecureBackend("hotels", {
+      hotel_id: hotelId,
+      hotel_name: newHotelObj.name,
+      city: newHotelObj.city,
+      address_details: newHotelObj.address,
+      phone_number: newHotelObj.phone,
+      star_rating: newHotelObj.stars,
+      partnership_status: newHotelObj.partnership_status || "نشط",
+      property_type: newHotelObj.property_type || "hotel",
+      discount_percentage: newHotelObj.discount_percentage || 15,
+      working_hours: newHotelObj.working_hours,
+      description: newHotelObj.description,
+      google_maps_url: newHotelObj.google_maps_url,
+      whatsapp: newHotelObj.whatsapp,
+      contract_start_date: newHotelObj.contract_start_date,
+      contract_end_date: newHotelObj.contract_end_date,
+      hotel_photo_1: newHotelObj.hotel_photo_1,
+      hotel_photo_2: newHotelObj.hotel_photo_2,
+      hotel_photo_3: newHotelObj.hotel_photo_3,
+      hotel_photo_4: newHotelObj.hotel_photo_4,
+      hotel_photo_5: newHotelObj.hotel_photo_5,
+      verification_status: "موثق",
+    });
   };
-  const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => x.id === h.id ? h : x)); setEditingHotel(null); };
-  const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => h.id !== id)); };
+  const handleUpdateHotel = (h: Hotel) => {
+    setHotels(hotels.map(x => x.id === h.id ? h : x));
+    setEditingHotel(null);
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      const updated = stored.map((item: any) => item.id === h.id ? { ...item, ...h } : item);
+      localStorage.setItem("dalni_hotels", JSON.stringify(updated));
+    } catch {}
+
+    sendToSecureBackend("hotels", {
+      hotel_id: h.id,
+      hotel_name: h.name,
+      city: h.city,
+      address_details: h.address,
+      phone_number: h.phone,
+      star_rating: h.stars,
+      partnership_status: h.partnership_status || "نشط",
+      property_type: h.property_type || "hotel",
+      discount_percentage: h.discount_percentage || 15,
+      working_hours: h.working_hours,
+      description: h.description,
+      google_maps_url: h.google_maps_url,
+      whatsapp: h.whatsapp,
+      contract_start_date: h.contract_start_date,
+      contract_end_date: h.contract_end_date,
+      hotel_photo_1: h.hotel_photo_1,
+      hotel_photo_2: h.hotel_photo_2,
+      hotel_photo_3: h.hotel_photo_3,
+      hotel_photo_4: h.hotel_photo_4,
+      hotel_photo_5: h.hotel_photo_5,
+      verification_status: "موثق",
+    });
+  };
+  const handleDeleteHotel = (id: string) => {
+    if (confirm("هل تريد حذف الفندق؟")) {
+      setHotels(hotels.filter(h => h.id !== id));
+      try {
+        const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+        localStorage.setItem("dalni_hotels", JSON.stringify(stored.filter((item: any) => item.id !== id)));
+      } catch {}
+      deleteFromSecureBackend("hotels", "hotel_id", id);
+    }
+  };
   const handleAddRestaurant = (r: any) => {
-    const newRest = { id: `R-0${restaurants.length + 1}`, rating_avg: 5.0, ...r };
+    const facilityId = r.facility_id || r.id || `R-0${restaurants.length + 1}`;
+    const newRest = { id: facilityId, rating_avg: 5.0, ...r };
     setRestaurants((prev) => [newRest, ...prev]);
     setShowAddRestaurant(false);
 
     try {
       const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests.filter((x: any) => x.id !== newRest.id)]));
-    } catch { }
+      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests]));
+    } catch {}
 
-    fetch("http://127.0.0.1:8000/api/restaurants", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        facility_id: newRest.id,
-        facility_name: r.name,
-        facility_type: r.type || "مأكولات شعبية",
-        city: r.city || "طرابلس",
-        address_details: r.address || "العنوان الرئيسي",
-        phone_number: r.phone || "0910000000",
-        description: r.description || "",
-        features: r.features || "",
-        verification_status: r.verification_status || "معتمد",
-        contract_date: r.contract_date || null,
-        google_maps_url: r.google_maps_url || "",
-        working_hours: r.working_hours || "",
-        facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
-      }),
-    }).catch(() => { });
+    sendToSecureBackend("restaurants", {
+      facility_id: facilityId,
+      facility_name: newRest.name || newRest.facility_name,
+      facility_type: newRest.type || newRest.facility_type,
+      city: newRest.city,
+      address_details: newRest.address || newRest.address_details,
+      phone_number: newRest.phone || newRest.phone_number,
+      description: newRest.description,
+      facility_image_1: newRest.facility_image_1,
+      facility_image_2: newRest.facility_image_2,
+      facility_image_3: newRest.facility_image_3,
+      facility_image_4: newRest.facility_image_4,
+      facility_image_5: newRest.facility_image_5,
+      verification_status: newRest.verification_status || "موثق",
+      working_hours: newRest.working_hours,
+      features: Array.isArray(newRest.features) ? newRest.features.join("، ") : newRest.features,
+      google_maps_url: newRest.google_maps_url,
+      discount_percentage: newRest.discount_percentage || 20,
+      whatsapp: newRest.whatsapp,
+      partnership_status: newRest.partnership_status || "نشط",
+      contract_start_date: newRest.contract_start_date,
+      contract_end_date: newRest.contract_end_date,
+    });
   };
   const handleUpdateRestaurant = (r: Restaurant) => {
     setRestaurants(restaurants.map(x => x.id === r.id ? r : x));
@@ -1053,27 +1260,31 @@ function AdminDashboard() {
       const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
       const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
       localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
-    } catch { }
+    } catch {}
 
-    fetch("http://127.0.0.1:8000/api/restaurants", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        facility_id: r.id,
-        facility_name: r.name,
-        facility_type: r.type || "مأكولات شعبية",
-        city: r.city || "طرابلس",
-        address_details: r.address || "العنوان الرئيسي",
-        phone_number: r.phone || "0910000000",
-        description: r.description || "",
-        features: r.features || "",
-        verification_status: r.verification_status || "معتمد",
-        contract_date: r.contract_date || null,
-        google_maps_url: r.google_maps_url || "",
-        working_hours: r.working_hours || "",
-        facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
-      }),
-    }).catch(() => { });
+    sendToSecureBackend("restaurants", {
+      facility_id: r.id || (r as any).facility_id,
+      facility_name: r.name || (r as any).facility_name,
+      facility_type: r.type || (r as any).facility_type,
+      city: r.city,
+      address_details: r.address || (r as any).address_details,
+      phone_number: r.phone || (r as any).phone_number,
+      description: r.description,
+      facility_image_1: r.facility_image_1,
+      facility_image_2: r.facility_image_2,
+      facility_image_3: r.facility_image_3,
+      facility_image_4: r.facility_image_4,
+      facility_image_5: r.facility_image_5,
+      verification_status: (r as any).verification_status,
+      working_hours: r.working_hours,
+      features: Array.isArray((r as any).features) ? (r as any).features.join("، ") : (r as any).features,
+      google_maps_url: r.google_maps_url,
+      discount_percentage: (r as any).discount_percentage || 20,
+      whatsapp: (r as any).whatsapp,
+      partnership_status: r.partnership_status || "نشط",
+      contract_start_date: r.contract_start_date,
+      contract_end_date: r.contract_end_date,
+    });
   };
   const handleDeleteRestaurant = (id: string) => {
     if (confirm("هل تريد حذف المطعم؟")) {
@@ -1081,15 +1292,15 @@ function AdminDashboard() {
       try {
         const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
         localStorage.setItem("dalni_restaurants", JSON.stringify(storedRests.filter((r: any) => r.id !== id)));
-      } catch { }
+      } catch {}
       deleteFromSecureBackend("restaurants", "facility_id", id);
     }
   };
-  const handleAddAttraction = (a: any) => {
+  const handleAddAttraction = (a: any) => { 
     const placeId = a.place_id || a.id || `A-0${attractions.length + 1}`;
     const newPlace = { id: placeId, place_id: placeId, visitors_count: 0, ...a };
-    setAttractions([...attractions, newPlace]);
-    setShowAddAttraction(false);
+    setAttractions([...attractions, newPlace]); 
+    setShowAddAttraction(false); 
     sendToSecureBackend("places", {
       place_id: placeId,
       place_name: newPlace.name || newPlace.place_name,
@@ -1106,9 +1317,9 @@ function AdminDashboard() {
       gallery: newPlace.gallery,
     });
   };
-  const handleUpdateAttraction = (a: Attraction) => {
-    setAttractions(attractions.map(x => x.id === a.id ? a : x));
-    setEditingAttraction(null);
+  const handleUpdateAttraction = (a: Attraction) => { 
+    setAttractions(attractions.map(x => x.id === a.id ? a : x)); 
+    setEditingAttraction(null); 
     sendToSecureBackend("places", {
       place_id: a.id || (a as any).place_id,
       place_name: a.name || (a as any).place_name,
@@ -1125,13 +1336,19 @@ function AdminDashboard() {
       gallery: (a as any).gallery,
     });
   };
-  const handleDeleteAttraction = (id: string) => {
+  const handleDeleteAttraction = (id: string) => { 
     if (confirm("هل تريد حذف المعلم السياحي؟")) {
-      setAttractions(attractions.filter(a => a.id !== id));
+      setAttractions(attractions.filter(a => a.id !== id)); 
       deleteFromSecureBackend("places", "place_id", id);
     }
   };
-  const handleReplyTicket = (ticketId: string, reply: string) => { setTickets(tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" } : t)); };
+  const handleReplyTicket = (ticketId: string, reply: string) => {
+    const updated = tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" as const } : t);
+    setTickets(updated);
+    try {
+      localStorage.setItem("dalni_support_tickets", JSON.stringify(updated));
+    } catch {}
+  };
   // Offers
   const handleAddDailyOffer = (o: any) => { const newId = `DO-${String(dailyOffers.length + 1).padStart(3, "0")}`; setDailyOffers([...dailyOffers, { ...o, offer_daily_id: newId, id: newId }]); setShowAddDailyOffer(false); };
   const handleUpdateDailyOffer = (o: DailyOffer) => { setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x)); setEditingDailyOffer(null); };
@@ -1142,15 +1359,11 @@ function AdminDashboard() {
   const handleAddFacilityOffer = (o: any) => { const newId = `FO-${String(facilityOffers.length + 1).padStart(3, "0")}`; setFacilityOffers([...facilityOffers, { ...o, facility_offer_id: newId, id: newId }]); setShowAddFacilityOffer(false); };
   const handleUpdateFacilityOffer = (o: FacilityOffer) => { setFacilityOffers(facilityOffers.map(x => (x.facility_offer_id || x.id) === (o.facility_offer_id || o.id) ? o : x)); setEditingFacilityOffer(null); };
   const handleDeleteFacilityOffer = (id: string) => { if (confirm("حذف العرض؟")) setFacilityOffers(facilityOffers.filter(o => (o.facility_offer_id || o.id) !== id)); };
-  // Bot
+  // Bot & Live Support Chat Override
   const handleBotSend = () => {
     if (!botInput.trim() || !activeChatId) return;
-    const now = new Date().toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
-    setChatSessions(prev => prev.map(s => {
-      if (s.id !== activeChatId) return s;
-      const msg: ChatMessage = { id: `m${s.messages.length + 1}`, from: "admin", text: botInput, time: now };
-      return { ...s, messages: [...s.messages, msg], last_message: botInput };
-    }));
+    sendAdminReply(activeChatId, botInput.trim());
+    setChatSessions(getChatSessions());
     setBotInput("");
   };
 
@@ -1259,7 +1472,7 @@ function AdminDashboard() {
                 <QuickAction icon="🗓️" label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
                 <QuickAction icon="🏨" label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
                 <QuickAction icon="🍽️" label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
-                <QuickAction icon="👑" label={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClick={() => setShowAddPrivateTrip(true)} />
+                          <QuickAction icon="👑" label={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClick={() => setShowAddPrivateTrip(true)} />
                 <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
                 <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
                 <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
@@ -1351,184 +1564,81 @@ function AdminDashboard() {
       )}
 
       {/* GUIDES TAB */}
-      {active === "guides" && (() => {
-        const filteredGuides = guides.filter(g => {
-          if (guideStatusFilter === "الكل") return true;
-          if (guideStatusFilter === "بانتظار التوثيق") return !g.verification_status || g.verification_status === "بانتظار التوثيق" || g.verification_status === "قيد المراجعة";
-          if (guideStatusFilter === "موثق") return g.verification_status === "موثق";
-          if (guideStatusFilter === "مرفوض") return g.verification_status === "مرفوض";
-          return true;
-        });
-
-        const pendingCount = guides.filter(g => !g.verification_status || g.verification_status === "بانتظار التوثيق" || g.verification_status === "قيد المراجعة").length;
-        const verifiedCount = guides.filter(g => g.verification_status === "موثق").length;
-        const rejectedCount = guides.filter(g => g.verification_status === "مرفوض").length;
-
-        return (
-          <SectionCard
-            title="جدول اعتماد وتوثيق المرشدين السياحيين"
-            action={
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  onClick={() => setGuideStatusFilter("الكل")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-                    guideStatusFilter === "الكل"
-                      ? "bg-primary text-white shadow-xs"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                  }`}
-                >
-                  الكل ({guides.length})
-                </button>
-                <button
-                  onClick={() => setGuideStatusFilter("بانتظار التوثيق")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-                    guideStatusFilter === "بانتظار التوثيق"
-                      ? "bg-amber-500 text-white shadow-xs"
-                      : "bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200"
-                  }`}
-                >
-                  ⏳ بانتظار الاعتماد ({pendingCount})
-                </button>
-                <button
-                  onClick={() => setGuideStatusFilter("موثق")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-                    guideStatusFilter === "موثق"
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
-                  }`}
-                >
-                  ✅ المعتمدون والموثقون ({verifiedCount})
-                </button>
-                {rejectedCount > 0 && (
-                  <button
-                    onClick={() => setGuideStatusFilter("مرفوض")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-                      guideStatusFilter === "مرفوض"
-                        ? "bg-red-600 text-white shadow-xs"
-                        : "bg-red-50 hover:bg-red-100 text-red-800 border border-red-200"
-                    }`}
-                  >
-                    ❌ مرفوض ({rejectedCount})
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowAddGuide(true)}
-                  className="px-3.5 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
-                >
-                  + إضافة مرشد سياحي جديد
-                </button>
-              </div>
-            }
-          >
-            <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right flex items-center justify-between flex-wrap gap-2">
-              <span>📌 جدول بيانات المرشدين السياحيين المعتمدين والمسجلين. يتم تخزين المرشدين بشكل دائم في هذا الجدول وفي قاعدة البيانات حتى بعد قبولهم وتوثيقهم.</span>
-              <span className="text-[11px] font-bold text-foreground">إجمالي المرشدين: <span className="font-mono text-primary font-black">{guides.length}</span></span>
+      {active === "guides" && (
+        <SectionCard title="معاينة وثائق المرشدين واعتمادهم">
+          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right">
+            📌 يعرض هذا القسم فقط المرشدين الحقيقيين المسجلين في قاعدة بيانات دِلني (DelniDB).
+          </div>
+          {guides.length === 0 ? (
+            <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
+              لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً.
             </div>
-
-            {filteredGuides.length === 0 ? (
-              <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
-                {guides.length === 0
-                  ? "لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً."
-                  : `لا توجد نتائج مطابقة لفلتر (${guideStatusFilter}).`}
-              </div>
-            ) : (
-              <div className="overflow-x-auto text-right bg-white rounded-xl border border-border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/70">
-                      <th className="py-3 px-3 font-black">المرشد السياحي</th>
-                      <th className="py-3 px-3 font-black">رقم الرخصة</th>
-                      <th className="py-3 px-3 font-black">بيانات الاتصال</th>
-                      <th className="py-3 px-3 font-black">الخبرة والترخيص</th>
-                      <th className="py-3 px-3 font-black">السعر اليومي</th>
-                      <th className="py-3 px-3 font-black">حالة التوثيق</th>
-                      <th className="py-3 px-3 font-black text-center">الإجراءات والعمليات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredGuides.map((g) => (
-                      <tr key={g.license_number} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2.5">
-                            {g.avatar ? (
-                              <img src={g.avatar} alt={g.full_name} className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-slate-100 grid place-items-center text-sm shrink-0 border border-slate-200">
-                                👤
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <div className="font-black text-foreground text-sm">{g.full_name}</div>
-                              {g.title && <div className="text-[11px] text-primary font-bold">{g.title}</div>}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 font-mono font-bold text-xs text-slate-800">
-                          <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200 inline-block">
-                            {g.license_number}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-xs">
-                          {g.phone_number && <div className="font-semibold text-slate-700">📱 {g.phone_number}</div>}
-                          {g.email && <div className="text-muted-foreground mt-0.5 truncate max-w-[170px]" title={g.email}>✉️ {g.email}</div>}
-                        </td>
-                        <td className="py-3 px-3 text-xs">
-                          <div className="font-bold text-slate-800 flex items-center gap-1">
-                            <span>📜</span>
-                            <span className="truncate max-w-[180px]" title={g.certificate}>{g.certificate}</span>
-                          </div>
-                          {g.certificate_name && (
-                            <div className="text-[10px] text-primary font-black mt-0.5">
-                              📎 {g.certificate_name}
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
+              {guides.map((g) => (
+                <div key={g.license_number} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          {g.avatar ? (
+                            <img src={g.avatar} alt={g.full_name} className="w-9 h-9 rounded-full object-cover border shrink-0" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-slate-100 grid place-items-center text-sm shrink-0 border">
+                              👤
                             </div>
                           )}
-                          <div className="text-[11px] text-muted-foreground mt-0.5">⏳ {g.years_of_experience} سنوات خبرة</div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black inline-block whitespace-nowrap">
-                            {g.daily_rate || g.price_per_day || 150} د.ل / يوم
-                          </span>
-                        </td>
-                        <td className="py-3 px-3">
-                          <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
-                            {g.verification_status || "بانتظار التوثيق"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                            <button
-                              onClick={() => setViewingGuide(g)}
-                              className="px-2.5 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer flex items-center gap-1"
-                              title="معاينة وفحص الوثائق واعتماد المرشد"
-                            >
-                              <span>📄</span>
-                              <span>معاينة واعتماد</span>
-                            </button>
-                            <button
-                              onClick={() => setEditingGuide(g)}
-                              className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-black transition cursor-pointer border border-amber-200"
-                              title="تعديل بيانات المرشد"
-                            >
-                              ✏️ تعديل
-                            </button>
-                            <button
-                              onClick={() => handleDeleteGuide(g.license_number)}
-                              className="px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-black transition cursor-pointer border border-red-200"
-                              title="حذف المرشد نهائياً"
-                            >
-                              حذف
-                            </button>
+                          <div className="min-w-0">
+                            <h3 className="font-black text-foreground text-sm truncate">{g.full_name}</h3>
+                            {g.title && <div className="text-[11px] text-primary font-bold truncate">{g.title}</div>}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-        );
-      })()}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">رقم الرخصة: <span className="font-mono font-bold text-slate-800">{g.license_number}</span></div>
+                        {g.email && <div className="text-[11px] text-slate-600 font-semibold mt-0.5 truncate">✉️ {g.email}</div>}
+                        {g.phone_number && <div className="text-[11px] text-slate-600 font-semibold mt-0.5">📱 {g.phone_number}</div>}
+                      </div>
+                      <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
+                        {g.verification_status || "بانتظار التوثيق"}
+                      </Badge>
+                    </div>
+
+                    {g.bio && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{g.bio}</p>}
+
+                    <div className="text-xs space-y-1.5 pt-1 border-t border-slate-100">
+                      <div className="font-bold text-foreground truncate">📜 {g.certificate}</div>
+                      {g.certificate_name && (
+                        <div className="text-[11px] text-primary font-black bg-primary/5 px-2 py-0.5 rounded border border-primary/20 inline-flex items-center gap-1">
+                          <span>📎 ملف الشهادة المرفق:</span>
+                          <span className="underline">{g.certificate_name}</span>
+                        </div>
+                      )}
+                      <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
+                      <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block">
+                        💰 أجر المرشد اليومي: {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 flex gap-2 border-t border-slate-100">
+                    <button 
+                      onClick={() => setViewingGuide(g)} 
+                      className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
+                    >
+                      معاينة الوثائق والاعتماد 📄
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteGuide(g.license_number)} 
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-black transition cursor-pointer border border-red-200"
+                    >
+                      حذف
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      )}
 
       {/* TRIPS TAB */}
       {active === "trips" && (
@@ -1899,82 +2009,47 @@ function AdminDashboard() {
 
       {/* PRIVATE TRIPS */}
       {active === "private_trips" && (
-        <SectionCard
-          title="إدارة الرحلات الخاصة VIP"
-          action={
-            <button
-              onClick={() => setShowAddPrivateTrip(true)}
-              className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow flex items-center gap-1.5 hover:opacity-95 transition-opacity"
-            >
-              <span>+</span>
-              <span>{isAr ? "إضافة رحلة خاصة جديدة" : "Add New Private Trip"}</span>
-            </button>
-          }
-        >
+        <SectionCard title="إدارة الرحلات الخاصة VIP (تسعير وتحديد تكاليف المرشد والنقل والخدمات)">
           <div className="space-y-4 text-right">
             {privateTrips.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-xs font-bold border border-dashed rounded-2xl">
-                {isAr ? "لا توجد طلبات رحلات خاصة مسجلة حالياً." : "No private trips registered."}
-              </div>
+              <div className="text-center py-8 text-muted-foreground text-xs">لا توجد طلبات رحلات خاصة VIP حالياً.</div>
             ) : (
               privateTrips.map((pt) => (
-                <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3 shadow-2xs">
-                  <div className="flex justify-between items-start">
+                <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
+                  <div className="flex justify-between items-start flex-wrap gap-2">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-muted font-bold text-muted-foreground">{pt.private_trip_id}</span>
-                        <h3 className="font-black text-foreground text-base">{pt.customer_name} ({pt.customer_phone})</h3>
+                      <h3 className="font-black text-foreground text-base">{pt.customer_name} ({pt.customer_phone})</h3>
+                      <div className="text-xs text-muted-foreground mt-0.5 font-bold">
+                        👨‍✈️ المرشد المطلوب: <span className="text-primary font-black">{pt.guide_license_number || "غير محدد"}</span>
                       </div>
-                      {pt.tourist_id && (
-                        <div className="text-[11px] font-bold text-muted-foreground mt-0.5">
-                          👤 معرّف السائح: <span className="font-mono">{pt.tourist_id}</span>
-                        </div>
-                      )}
                     </div>
-                    <Badge tone={pt.status_order === "مؤكدة" ? "green" : pt.status_order === "مرفوضة من الأدمن" ? "red" : "sun"}>
-                      {pt.status_order}
+                    <Badge tone={pt.status_order === "مؤكدة" ? "green" : pt.status_order?.includes("موافقة") ? "sea" : pt.status_order === "ملغاة من السائح" ? "red" : "sun"}>
+                      {pt.status_order || "بانتظار تسعير الإدارة"}
                     </Badge>
                   </div>
-
-                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl border border-border/50">
-                    <span className="font-black text-foreground">وصف الطلب: </span>" {pt.customer_description} "
-                  </p>
-
+                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl font-medium">" {pt.customer_description} "</p>
                   {pt.customer_requirements && (
-                    <div className="text-xs text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-200">
-                      <span className="font-black">📌 المتطلبات والاشتراطات: </span>
-                      <span>{pt.customer_requirements}</span>
+                    <div className="text-xs text-amber-900 bg-amber-50/70 p-2 rounded-xl border border-amber-200/60 font-semibold">
+                      <b>متطلبات السائح الخاصة:</b> {pt.customer_requirements}
                     </div>
                   )}
-
-                  <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground pt-1">
-                    <span>📅 تاريخ الانطلاق: <strong className="text-foreground">{pt.preferred_start_date}</strong></span>
-                    <span>⏱️ المدة: <strong className="text-foreground">{pt.duration_days} أيام</strong></span>
-                    <span>👥 المرافقين: <strong className="text-foreground">{pt.number_of_companions}</strong></span>
-                    {pt.quoted_price ? (
-                      <span className="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                        💰 السعر المعتمد: <strong>{pt.quoted_price} د.ل</strong>
-                      </span>
-                    ) : (
-                      <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
-                        ⏳ بانتظار التسعير
-                      </span>
-                    )}
+                  <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground">
+                    <span>📅 تاريخ الانطلاق: {pt.preferred_start_date}</span>
+                    <span>⏱️ المدة: {pt.duration_days} أيام</span>
+                    <span>👥 عدد المرافقين: {pt.number_of_companions}</span>
+                    {pt.quoted_price && <span className="text-emerald-700 font-black">💰 التسعيرة المعتمدة: {pt.quoted_price} د.ل</span>}
                   </div>
-
                   {pt.admin_itinerary_plan && (
-                    <div className="text-xs text-muted-foreground bg-emerald-50/40 p-2.5 rounded-xl border border-emerald-200/60">
-                      <span className="font-black text-emerald-900">🗺️ خطة الإدارة: </span>
-                      <span>{pt.admin_itinerary_plan}</span>
+                    <div className="text-xs bg-emerald-50/70 border border-emerald-200 p-2.5 rounded-xl text-emerald-950 font-semibold">
+                      <b>خطة البرنامج:</b> {pt.admin_itinerary_plan}
                     </div>
                   )}
-
-                  <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
-                    <button onClick={() => handleDeletePrivate(pt.private_trip_id)} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50">
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button onClick={() => handleDeletePrivate(pt.private_trip_id)} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50 cursor-pointer">
                       حذف
                     </button>
-                    <button onClick={() => setEvaluatingPrivateTrip(pt)} className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95">
-                      تقييم وتحديد السعر والحافلة والمرشد
+                    <button onClick={() => setEvaluatingPrivateTrip(pt)} className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 cursor-pointer">
+                      {pt.quoted_price ? "تعديل الحسبة والتسعيرة" : "احتساب التكلفة واعتماد التسعيرة"}
                     </button>
                   </div>
                 </div>
@@ -1996,28 +2071,67 @@ function AdminDashboard() {
             </div>
           </div>
 
-          <SectionCard title="🏨 دليل الفنادق وأماكن الإقامة (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddHotel(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة فندق بالدليل</button>}>
+          <SectionCard
+            title="🏨 دليل أماكن الإقامة والفنادق في ليبيا (فنادق فاخرة — منتجعات — شقق فندقية — مخيمات صحراوية)"
+            action={
+              <button
+                onClick={() => setShowAddHotel(true)}
+                className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition"
+              >
+                + إضافة مكان إقامة جديد
+              </button>
+            }
+          >
             <div className="grid md:grid-cols-2 gap-4">
-              {hotels.map((h) => (
-                <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-black text-foreground text-base">{h.name}</h4>
-                      <div className="text-xs font-bold text-gold-foreground mt-0.5">{"⭐".repeat(h.stars)} · ⭐ {h.rating_avg} ({h.bookings_count} زيارة)</div>
-                      <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {h.city} — {h.address}</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge tone={h.partnership_status === "نشط" ? "green" : "sun"}>{h.partnership_status}</Badge>
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
-                        دليل تعريفي
-                      </span>
-                      {((h as any).contract_date || (h as any).contract_end_date) && (
-                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
-                          📅 انتهاء التعاقد: {String((h as any).contract_date || (h as any).contract_end_date).split("T")[0]}
+              {hotels.map((h) => {
+                const propTypeLabel =
+                  h.property_type === "resort"
+                    ? "🏖️ منتجع سياحي"
+                    : h.property_type === "apartment"
+                    ? "🏢 شقق فندقية"
+                    : h.property_type === "heritage"
+                    ? "⛺ مخيمات صحراوية"
+                    : "🏨 فندق فاخر";
+                return (
+                  <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#003580] text-[10px] font-black border border-blue-200">
+                            {propTypeLabel}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
+                            🏷️ خصم {h.discount_percentage || 15}% دلّني
+                          </span>
+                        </div>
+                        <h4 className="font-black text-[#003580] text-base">{h.name}</h4>
+                        <div className="text-xs font-bold text-amber-500 mt-0.5">{"★".repeat(h.stars)} ({h.stars} نجوم)</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {h.city} — {h.address}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {h.partnership_status === "موقوف" ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-black border border-red-200">
+                            🔴 موقوف (مخفي من المنصة)
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                            🟢 نشط (معروض بالمنصة)
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
+                          دليل تعريفي
                         </span>
-                      )}
+                      </div>
                     </div>
-                  </div>
+
+                    {(h.contract_start_date || h.contract_end_date) && (
+                      <div className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-xl flex items-center gap-1.5 border border-slate-200">
+                        <span>📅 فترة العقد:</span>
+                        <span className="font-mono text-slate-900 font-bold">{h.contract_start_date || 'تاريخ التسجيل'}</span>
+                        <span>إلى</span>
+                        <span className="font-mono text-blue-900 font-black">{h.contract_end_date || 'مستمر'}</span>
+                      </div>
+                    )}
 
                   {/* Main & Thumbnails Gallery (5 Photos) */}
                   <div className="space-y-1.5">
@@ -2065,7 +2179,7 @@ function AdminDashboard() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
           </SectionCard>
 
@@ -2075,31 +2189,34 @@ function AdminDashboard() {
                 <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-black text-foreground text-base">{r.name}</h4>
-                        <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 font-bold">
-                          {r.id}
-                        </span>
-                      </div>
+                      <h4 className="font-black text-foreground text-base">{r.name}</h4>
                       <div className="text-xs font-bold text-emerald-700 mt-0.5">🍲 {r.type} · ⭐ {r.rating_avg}</div>
                       <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {r.city} — {r.address}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${r.verification_status === "معتمد"
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                          : r.verification_status === "قيد المراجعة"
-                            ? "bg-amber-50 text-amber-800 border-amber-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }`}>
-                        {r.verification_status || "معتمد"}
-                      </span>
-                      {r.contract_date && (
-                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
-                          📅 انتهاء التعاقد: {String(r.contract_date).split("T")[0]}
+                      {r.partnership_status === "موقوف" ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-black border border-red-200">
+                          🔴 موقوف (مخفي من المنصة)
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                          🟢 نشط (معروض بالمنصة)
                         </span>
                       )}
+                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
+                        دليل تعريفي
+                      </span>
                     </div>
                   </div>
+
+                  {(r.contract_start_date || r.contract_end_date) && (
+                    <div className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-xl flex items-center gap-1.5 border border-slate-200">
+                      <span>📅 فترة العقد:</span>
+                      <span className="font-mono text-slate-900 font-bold">{r.contract_start_date || 'تاريخ التسجيل'}</span>
+                      <span>إلى</span>
+                      <span className="font-mono text-blue-900 font-black">{r.contract_end_date || 'مستمر'}</span>
+                    </div>
+                  )}
 
                   {/* Main & Thumbnails Gallery (5 Photos) */}
                   <div className="space-y-1.5">
@@ -2118,27 +2235,6 @@ function AdminDashboard() {
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs leading-relaxed text-slate-800 font-semibold">
                       <span className="font-bold text-slate-900 block mb-0.5">📜 نبذة الوجبات والخدمات:</span>
                       {r.description}
-                    </div>
-                  )}
-
-                  {/* Features & Services */}
-                  {r.features && (
-                    <div className="p-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-1">
-                      <div className="text-[11px] font-black text-teal-950 flex items-center gap-1">
-                        <span>✨</span>
-                        <span>الخدمات والخصائص المتوفرة:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {r.features.split(/[،,\n]+/).map((f, fIdx) => {
-                          const cleanF = f.trim();
-                          if (!cleanF) return null;
-                          return (
-                            <span key={fIdx} className="px-2 py-0.5 rounded-lg bg-white text-teal-800 border border-teal-200 text-[10px] font-bold shadow-2xs">
-                              {cleanF}
-                            </span>
-                          );
-                        })}
-                      </div>
                     </div>
                   )}
 
@@ -2364,12 +2460,13 @@ function AdminDashboard() {
                   <div className="flex-1 p-4 space-y-3 overflow-y-auto" style={{ background: "rgba(250,248,245,0.5)" }}>
                     {session.messages.map(msg => (
                       <div key={msg.id} className={`flex ${msg.from === "user" ? "justify-start" : "justify-end"}`}>
-                        <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs font-semibold ${msg.from === "user"
+                        <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs font-semibold ${
+                          msg.from === "user"
                             ? "bg-white border border-border text-foreground rounded-br-sm"
                             : msg.from === "admin"
-                              ? "bg-emerald-600 text-white rounded-bl-sm"
-                              : "bg-gradient-sea text-white rounded-bl-sm"
-                          }`}>
+                            ? "bg-emerald-600 text-white rounded-bl-sm"
+                            : "bg-gradient-sea text-white rounded-bl-sm"
+                        }`}>
                           {msg.from !== "user" && (
                             <div className="text-[10px] opacity-70 mb-0.5">
                               {msg.from === "admin" ? "👤 مشرف" : "🤖 دلّني بوت"}
@@ -2417,16 +2514,14 @@ function AdminDashboard() {
       {showAddCompany && <AddCompanyModal companies={companies} onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
       {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
       {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
-      {editingGuide && <EditGuideModal guide={editingGuide} onClose={() => setEditingGuide(null)} onSave={handleUpdateGuide} />}
-      {showAddGuide && <AddGuideModal existingGuides={guides} onClose={() => setShowAddGuide(false)} onAdd={handleAddGuide} />}
-      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
-      {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
-      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
+      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
+      {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
+      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
       {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
-      {showAddHotel && <HotelModal title="إضافة فندق جديد" onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
-      {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
-      {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
-      {editingRestaurant && <RestaurantModal title={`تعديل: ${editingRestaurant.name}`} restaurant={editingRestaurant} onClose={() => setEditingRestaurant(null)} onSave={handleUpdateRestaurant} />}
+      {showAddHotel && <HotelModal title="إضافة فندق جديد" existingHotels={hotels} onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
+      {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} existingHotels={hotels} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
+      {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" existingRestaurants={restaurants} onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
+      {editingRestaurant && <RestaurantModal title={`تعديل: ${editingRestaurant.name}`} restaurant={editingRestaurant} existingRestaurants={restaurants} onClose={() => setEditingRestaurant(null)} onSave={handleUpdateRestaurant} />}
       {showAddAttraction && <AttractionModal title="إضافة معلم سياحي جديد" onClose={() => setShowAddAttraction(false)} onSave={handleAddAttraction} />}
       {editingAttraction && <AttractionModal title={`تعديل: ${editingAttraction.name}`} attraction={editingAttraction} onClose={() => setEditingAttraction(null)} onSave={handleUpdateAttraction} />}
       {showAddDailyOffer && <DailyOfferModal title="إضافة عرض رحلة يومية" dailyTrips={dailyTrips} onClose={() => setShowAddDailyOffer(false)} onSave={handleAddDailyOffer} />}
@@ -2435,7 +2530,7 @@ function AdminDashboard() {
       {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
       {showAddFacilityOffer && <FacilityOfferModal title="إضافة عرض مطعم/كافيه" restaurants={restaurants} onClose={() => setShowAddFacilityOffer(false)} onSave={handleAddFacilityOffer} />}
       {editingFacilityOffer && <FacilityOfferModal title="تعديل عرض المطعم" offer={editingFacilityOffer} restaurants={restaurants} onClose={() => setEditingFacilityOffer(null)} onSave={handleUpdateFacilityOffer} />}
-      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} tourists={tourists} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
+      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
     </DashboardShell>
   );
 }
@@ -2465,12 +2560,14 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
             key={v.plate_number}
             type="button"
             onClick={() => toggle(v.plate_number)}
-            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition-all ${selected.includes(v.plate_number) ? "border-primary bg-primary/5 shadow-xs" : "border-border hover:bg-muted/30"
-              }`}
+            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition-all ${
+              selected.includes(v.plate_number) ? "border-primary bg-primary/5 shadow-xs" : "border-border hover:bg-muted/30"
+            }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition-all ${selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
-                }`}>
+              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition-all ${
+                selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
+              }`}>
                 {selected.includes(v.plate_number) && "✓"}
               </div>
               <div className="min-w-0">
@@ -2481,8 +2578,9 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
                 <div className="text-[10px] text-muted-foreground truncate mt-0.5">{v.vehicle_type} · 👥 سعة {v.capacity} مقعد</div>
               </div>
             </div>
-            <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${v.status === "جاهزة" ? "bg-emerald-100 text-emerald-700" : v.status === "في رحلة" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-              }`}>{v.status}</span>
+            <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${
+              v.status === "جاهزة" ? "bg-emerald-100 text-emerald-700" : v.status === "في رحلة" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+            }`}>{v.status}</span>
           </button>
         ))}
       </div>
@@ -2497,242 +2595,78 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
 
 /* ============ MODALS ============ */
 
-function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[]; tourists?: Tourist[] }) {
+function AddPrivateTripModal({ onClose, onAdd, guides }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[] }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
-
-  // Database fields for private_trips
-  const [tripId] = useState(() => `${Math.floor(1000 + Math.random() * 9000)}`);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [customerDescription, setCustomerDescription] = useState("");
-  const [preferredStartDate, setPreferredStartDate] = useState("");
-  const [durationDays, setDurationDays] = useState("1");
-  const [numberOfCompanions, setNumberOfCompanions] = useState("0");
-  const [quotedPrice, setQuotedPrice] = useState("");
-  const [adminItineraryPlan, setAdminItineraryPlan] = useState("");
-  const [guideLicenseNumber, setGuideLicenseNumber] = useState("");
-  const [touristId, setTouristId] = useState("");
-  const [statusOrder, setStatusOrder] = useState<string>("قيد الدراسة");
-
-  // Selection from existing registered tourists
-  const handleSelectTourist = (selectedId: string) => {
-    if (!selectedId) {
-      setTouristId("");
-      return;
-    }
-    const found = tourists.find(t => t.tourist_id === selectedId);
-    if (found) {
-      setTouristId(found.tourist_id);
-      setCustomerName(found.full_name);
-      if (found.phone_number) {
-        setCustomerPhone(found.phone_number);
-      }
-    }
-  };
-
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [duration, setDuration] = useState("1");
+  const [companions, setCompanions] = useState("1");
+  const [guideLicense, setGuideLicense] = useState("");
+  const [price, setPrice] = useState("");
+  const [plan, setPlan] = useState("");
+  const [status, setStatus] = useState("قيد الدراسة");
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName.trim() || !customerPhone.trim()) {
-      return alert(isAr ? "يرجى إدخال اسم العميل ورقم الهاتف" : "Please enter customer name and phone");
-    }
-
-    const fullId = `PT-${tripId}`;
-
+    if (!customerName || !customerPhone) return alert(isAr ? "يرجى إدخال الاسم ورقم الهاتف" : "Please enter name and phone");
     const newTrip = {
-      private_trip_id: fullId,
-      status_order: statusOrder,
-      customer_description: customerDescription || (isAr ? "طلب رحلة خاصة جديدة" : "New private trip request"),
-      preferred_start_date: preferredStartDate || new Date().toISOString().split("T")[0],
-      duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
-      number_of_companions: Math.max(0, parseInt(numberOfCompanions, 10) || 0),
-      quoted_price: quotedPrice ? parseFloat(quotedPrice) : null,
-      admin_itinerary_plan: adminItineraryPlan || null,
-      guide_license_number: guideLicenseNumber || null,
-      assigned_guide: guideLicenseNumber || null,
-      assigned_guide_license: guideLicenseNumber || null,
-      tourist_id: touristId || null,
+      private_trip_id: `PT-${Math.floor(Math.random() * 900) + 100}`,
       customer_name: customerName,
       customer_phone: customerPhone,
-      customer_requirements: null,
+      customer_description: description,
+      preferred_start_date: startDate,
+      duration_days: Number(duration),
+      number_of_companions: Number(companions),
+      assigned_guide: guideLicense || undefined,
+      quoted_price: price ? Number(price) : undefined,
+      admin_itinerary_plan: plan || undefined,
+      status_order: status,
     };
-
     onAdd(newTrip);
+    onClose();
   };
-
   return (
-    <ModalShell title={isAr ? "إضافة طلب رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
-      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
-
-        {/* معرف الرحلة والحالة */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-xl border border-border/60">
-          <div>
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
-              {isAr ? "معرّف الرحلة" : "Trip ID"}
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={tripId}
-              className="w-full h-9 px-3 rounded-xl border border-border bg-muted/60 text-xs font-mono font-bold text-foreground text-center"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
-              {isAr ? "حالة الطلب" : "Order Status"}
-            </label>
-            <select
-              value={statusOrder}
-              onChange={e => setStatusOrder(e.target.value)}
-              className="w-full h-9 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
-            >
-              <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
-              <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
-              <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
-              <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
-            </select>
-          </div>
-        </div>
-
-        {/* اختيار سريع للسائح المسجل بالبحث أو القائمة */}
-        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
-              <span>🔍</span>
-              {isAr ? "اختيار سائح مسجل (تعبئة الـ ID والبيانات تلقائياً):" : "Select Registered Tourist (Auto-fills ID & Info):"}
-            </span>
-            {touristId && (
-              <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                ID: {touristId}
-              </span>
-            )}
-          </div>
-          <select
-            value={touristId}
-            onChange={e => handleSelectTourist(e.target.value)}
-            className="w-full h-9 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
-          >
-            <option value="">{isAr ? "— اختر سائحاً من المسجلين في النظام أو املأ البيانات يدوياً —" : "— Select tourist or enter manually —"}</option>
-            {tourists.map(t => (
-              <option key={t.tourist_id} value={t.tourist_id}>
-                {t.full_name} {t.phone_number ? `(${t.phone_number})` : ""} — [ID: {t.tourist_id}]
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* بيانات العميل والتواصل */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field
-            label={isAr ? "اسم العميل / السائح *" : "Customer Name *"}
-            placeholder={isAr ? "مثال: عبد الرحمن الطرابلسي" : "e.g. John Doe"}
-            value={customerName}
-            onChange={setCustomerName}
-          />
-          <LibyanPhoneField
-            label={isAr ? "هاتف التواصل *" : "Customer Phone *"}
-            value={customerPhone}
-            onChange={setCustomerPhone}
-          />
-          <Field
-            label={isAr ? "معرّف السائح (Tourists ID)" : "Tourist ID"}
-            placeholder={isAr ? "اختياري أو يملأ تلقائياً" : "Optional or Auto"}
-            value={touristId}
-            onChange={setTouristId}
-          />
-        </div>
-
-        {/* التواريخ والمدة والمرافقين */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field
-            label={isAr ? "تاريخ البدء المفضل" : "Preferred Start Date"}
-            type="date"
-            value={preferredStartDate}
-            onChange={setPreferredStartDate}
-          />
-          <Field
-            label={isAr ? "مدة الرحلة (بالأيام)" : "Duration (days)"}
-            type="number"
-            min="1"
-            value={durationDays}
-            onChange={v => setDurationDays(v)}
-          />
-          <Field
-            label={isAr ? "عدد المرافقين" : "Companions Count"}
-            type="number"
-            min="0"
-            value={numberOfCompanions}
-            onChange={v => setNumberOfCompanions(v)}
-          />
-        </div>
-
-        {/* وصف العميل للرحلة */}
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">
-            {isAr ? "وصف العميل للرحلة" : "Trip Description"}
-          </label>
-          <textarea
-            value={customerDescription}
-            onChange={e => setCustomerDescription(e.target.value)}
-            rows={2}
-            placeholder={isAr ? "تفاصيل الوجهات المرغوبة، المدن، طبيعة الجولة..." : "Trip details..."}
-            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
-          />
-        </div>
-
-
-        {/* بيانات الإدارة: المرشد والسعر وخطة السير */}
-        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
-          <div className="text-xs font-black text-primary">⚙️ تخصيص الإدارة وتعيين المرشد والسعر:</div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold text-foreground block mb-1">
-                {isAr ? "تعيين المرشد السياحي المعتمد للرحلة" : "Assigned Tour Guide"}
-              </label>
-              <select
-                value={guideLicenseNumber}
-                onChange={e => setGuideLicenseNumber(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right shadow-2xs focus:border-primary"
-              >
-                <option value="">{isAr ? "بدون تعيين مرشد حالياً (يحدد لاحقاً)" : "None (Assign Later)"}</option>
-                {guides.map(g => (
-                  <option key={g.license_number} value={g.license_number}>
-                    {g.full_name} ({g.license_number}) {g.daily_rate ? `— ${g.daily_rate} د.ل/يوم` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Field
-              label={isAr ? "السعر الإجمالي المعتمد (د.ل)" : "Quoted Price (LYD)"}
-              type="number"
-              placeholder={isAr ? "يحدد بعد دراسة التكاليف" : "Quoted price"}
-              value={quotedPrice}
-              onChange={v => setQuotedPrice(v)}
-            />
-          </div>
-
-          <div>
-            <label className="text-[11px] font-bold text-foreground block mb-1">
-              {isAr ? "خطة سير الرحلة وبرنامج الإدارة" : "Admin Itinerary Plan"}
-            </label>
-            <textarea
-              value={adminItineraryPlan}
-              onChange={e => setAdminItineraryPlan(e.target.value)}
-              rows={2}
-              placeholder={isAr ? "البرنامج المعتمد، توقيت التحرك، نقاط التجمع..." : "Detailed itinerary plan..."}
-              className="w-full p-2.5 rounded-xl border border-border bg-white text-xs font-semibold text-right focus:border-primary focus:outline-none"
-            />
-          </div>
-        </div>
-
-        {/* أزرار الإجراء */}
+    <ModalShell title={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
+      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+        <Field label={isAr ? "اسم العميل" : "Customer Name"} value={customerName} onChange={setCustomerName} />
+        <LibyanPhoneField label={isAr ? "هاتف العميل" : "Customer Phone"} value={customerPhone} onChange={setCustomerPhone} />
+        <Field label={isAr ? "وصف الطلب" : "Description"} value={description} onChange={setDescription} />
+        <Field label={isAr ? "تاريخ البدء" : "Start Date"} type="date" value={startDate} onChange={setStartDate} />
+        <Field label={isAr ? "عدد أيام الرحلة" : "Duration (days)"} type="number" value={duration} onChange={v => setDuration(v)} />
+        <Field label={isAr ? "عدد المصاحبين" : "Companions"} type="number" value={companions} onChange={v => setCompanions(v)} />
+        {/* Guide selection */}
+        <select
+          value={guideLicense}
+          onChange={e => setGuideLicense(e.target.value)}
+          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+        >
+          <option value="">{isAr ? "اختر مرشدًا" : "Select Guide"}</option>
+          {guides.map(g => (
+            <option key={g.license_number} value={g.license_number}>
+              {g.full_name} ({g.license_number})
+            </option>
+          ))}
+        </select>
+        <Field label={isAr ? "السعر المقترح" : "Proposed Price"} type="number" value={price} onChange={v => setPrice(v)} />
+        <Field label={isAr ? "خطة الترتيب" : "Itinerary Plan"} value={plan} onChange={setPlan} />
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value as any)}
+          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
+        >
+          <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
+          <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
+          <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
+          <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
+        </select>
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border border-border hover:bg-muted font-black text-xs transition-colors">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             {isAr ? "إلغاء" : "Cancel"}
           </button>
-          <button type="submit" className="px-6 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition-opacity">
-            {isAr ? "حفظ طلب الرحلة الخاصة" : "Save Private Trip"}
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+            {isAr ? "حفظ الرحلة" : "Save Trip"}
           </button>
         </div>
       </form>
@@ -2751,10 +2685,10 @@ function LocationMapPickerModal({
   onSelect: (url: string) => void;
   onClose: () => void;
 }) {
-  const defaultCoords = initialCity === "بنغازي"
-    ? { lat: 32.1194, lng: 20.0868 }
+  const defaultCoords = initialCity === "بنغازي" 
+    ? { lat: 32.1194, lng: 20.0868 } 
     : { lat: 32.8872, lng: 13.1913 };
-
+    
   let initLat = defaultCoords.lat;
   let initLng = defaultCoords.lng;
   if (currentUrl) {
@@ -2888,7 +2822,6 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(5);
-  const [availableCars, setAvailableCars] = useState<number | string>(3);
   const [contractEndDate, setContractEndDate] = useState("");
   const [companyStatus, setCompanyStatus] = useState("موثق");
   const [showMapPicker, setShowMapPicker] = useState(false);
@@ -2943,17 +2876,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       return;
     }
     const totalV = Number(vehiclesCount);
-    const availC = Number(availableCars);
     if (isNaN(totalV) || totalV <= 0) {
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
-      return;
-    }
-    if (isNaN(availC) || availC < 0) {
-      setErrorMsg("عدد السيارات المتاحة حالياً يجب أن يكون صفراً أو أكثر.");
-      return;
-    }
-    if (availC > totalV) {
-      setErrorMsg("عدد السيارات المتاحة حالياً لا يمكن أن يتجاوز إجمالي عدد مركبات الأسطول.");
       return;
     }
     if (!contractEndDate.trim()) {
@@ -2974,9 +2898,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       pass: pass.trim(),
       password: pass.trim(),
       total_vehicles: totalV,
-      available_cars: availC,
-      available_vehicles: availC,
-      contract_start_date: new Date().toISOString().split("T")[0],
+      available_cars: totalV,
+contract_start_date: new Date().toISOString().split("T")[0],
       contract_end_date: contractEndDate.trim(),
       status: companyStatus,
       verification_status: companyStatus,
@@ -2985,113 +2908,154 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
   return (
     <>
-      <ModalShell title="إضافة شركة نقل سياحي جديدة (كافة الحقول إلزامية)" onClose={onClose}>
-        <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+      <ModalShell title="إضافة شركة نقل سياحي جديدة (كافة الحقول إلزامية)" onClose={onClose} maxWidth="max-w-3xl">
+        <form className="space-y-4 text-right" onSubmit={handleSubmit}>
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2 animate-in fade-in">
-              <span>⚠️</span>
+            <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2.5 animate-in fade-in">
+              <span className="text-base">⚠️</span>
               <span>{errorMsg}</span>
             </div>
           )}
 
-          <div>
-            <label className="text-xs font-bold text-foreground mb-1 block">رقم العقد (أرقام فقط - مطابق للورقي) *</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={contractNo}
-              onChange={(e) => setContractNo(e.target.value.replace(/\D/g, ""))}
-              placeholder="أرقام فقط (مثال: 123445)"
-              required
-              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
-            />
-          </div>
-          <Field label="اسم شركة النقل *" value={name} onChange={setName} placeholder="شركة السهم الذهبي للنقل" required />
-          <LibyanPhoneField label="الهاتف *" value={phone} onChange={setPhone} />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-bold block mb-1">المدينة *</label>
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white focus:border-primary outline-none"
-              >
-                <option value="طرابلس">طرابلس</option>
-                <option value="بنغازي">بنغازي</option>
-              </select>
+          {/* 1. البيانات الأساسية والعقد */}
+          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+              <span>🏢</span>
+              <span>بيانات الشركة والتعاقد الرسمي</span>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div>
+                <label className="text-xs font-bold text-slate-800 mb-1.5 block">
+                  رقم العقد الورقي (أرقام فقط) *
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={contractNo}
+                  onChange={(e) => setContractNo(e.target.value.replace(/\D/g, ""))}
+                  placeholder="أرقام فقط (مثال: 123445)"
+                  required
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none text-xs font-semibold shadow-xs"
+                />
+              </div>
+
+              <Field label="اسم شركة النقل السياحي *" value={name} onChange={setName} placeholder="شركة السهم الذهبي للنقل" required />
+
+              <LibyanPhoneField label="رقم هاتف الشركة *" value={phone} onChange={setPhone} />
+
+              <div>
+                <label className="text-xs font-bold text-slate-800 mb-1.5 block">المدينة المعتمدة *</label>
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
+                >
+                  <option value="طرابلس">طرابلس</option>
+                  <option value="بنغازي">بنغازي</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. الموقع الجغرافي وحساب الدخول */}
+          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+              <span>📍</span>
+              <span>الموقع الجغرافي وبيانات الحساب</span>
+            </div>
+
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs font-bold text-foreground">موقع مقر الشركة (خرائط Google) *</label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-bold text-slate-800">موقع مقر الشركة (خرائط Google Maps) *</label>
                 <button
                   type="button"
                   onClick={() => setShowMapPicker(true)}
-                  className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 transition"
+                  className="text-xs font-bold text-[#003580] hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition shadow-xs"
                 >
-                  🗺️ تحديد من الخريطة
+                  🗺️ تحديد دقيق من الخريطة
                 </button>
               </div>
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="https://maps.google.com/?q=... أو اختر من الخريطة"
+                placeholder="https://maps.google.com/?q=... أو اختر من الخريطة مباشرة"
                 required
-                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none text-xs font-semibold shadow-xs"
               />
-              <div className="flex justify-between items-center mt-1">
+              <div className="flex justify-between items-center mt-1.5">
                 {address && (address.startsWith("http") || address.includes("maps")) ? (
                   <a
                     href={address.startsWith("http") ? address : `https://${address}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5"
+                    className="text-[11px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1"
                   >
-                    📍 معاينة الرابط في Google Maps ↗
+                    📍 معاينة رابط المقر في Google Maps ↗
                   </a>
                 ) : (
-                  <span className="text-[10px] text-muted-foreground font-semibold">
-                    انقر "تحديد من الخريطة" لاختيار الموقع بالدقة
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    انقر "تحديد دقيق من الخريطة" لتحديد مقر الشركة بدقة
                   </span>
                 )}
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+              <Field label="البريد الإلكتروني للشركة *" type="email" value={email} onChange={setEmail} placeholder="transport@company.ly" required />
+              <Field label="كلمة المرور للدخول *" type="password" value={pass} onChange={setPass} placeholder="6 خانات على الأقل" required />
+            </div>
           </div>
 
-          <Field label="البريد الإلكتروني للشركة *" type="email" value={email} onChange={setEmail} placeholder="transport@company.ly" required />
-          <Field label="كلمة المرور *" type="password" value={pass} onChange={setPass} placeholder="6 خانات على الأقل" required />
+          {/* 3. سعة الأسطول والتعاقد */}
+          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+              <span>📊</span>
+              <span>سعة الأسطول وصلاحية التعاقد</span>
+            </div>
 
-          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-right">
-            <p className="text-[10px] text-amber-800 font-bold mb-1">
-              * <b>عدد مركبات الأسطول:</b> إجمالي المركبات التي تملكها الشركة (يجب أن يكون 1 على الأقل).
-            </p>
-            <p className="text-[10px] text-amber-800 font-bold">
-              * <b>عدد السيارات المتاحة:</b> المركبات الجاهزة حالياً للتشغيل (لا تتجاوز الأسطول).
-            </p>
-          </div>
+            <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/90 text-right space-y-1">
+              <p className="text-[11px] text-blue-900 font-bold flex items-center gap-1.5">
+                <span>💡</span>
+                <span><b>عدد مركبات الأسطول:</b> إجمالي عدد المركبات المعتمدة رسمياً في العقد (تكون جميعها متاحة للتشغيل).</span>
+              </p>
+            </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="عدد مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-            <Field label="عدد السيارات المتاحة *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+              <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
+            </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
             <div>
-              <label className="text-xs font-bold block mb-1">حالة الشركة *</label>
-              <select value={companyStatus} onChange={e => setCompanyStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white">
-                <option value="موثق">موثق</option>
-                <option value="بانتظار">بانتظار</option>
-                <option value="مرفوض">مرفوض</option>
+              <label className="text-xs font-bold text-slate-800 block mb-1.5">حالة التوثيق والتشغيل *</label>
+              <select
+                value={companyStatus}
+                onChange={e => setCompanyStatus(e.target.value as any)}
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
+              >
+                <option value="موثق">موثق (نشط يظهر للعلن ويعرض سياراته)</option>
+                <option value="بانتظار">بانتظار المراجعة (معلق لا يظهر)</option>
+                <option value="مرفوض">مرفوض / غير نشط (يختفي من المنصة)</option>
               </select>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-2">
-            <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer">إلغاء</button>
-            <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer">حفظ واعتماد الشركة ✓</button>
+          <div className="flex items-center gap-3 justify-end pt-3 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 h-11 rounded-xl border border-slate-200 font-black text-xs text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+            >
+              <span>حفظ واعتماد الشركة في المنظومة</span>
+              <span>✓</span>
+            </button>
           </div>
         </form>
       </ModalShell>
@@ -3116,7 +3080,6 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
   const [address, setAddress] = useState(company.google_maps_url || company.address || "");
   const [email, setEmail] = useState(company.email || "");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(company.total_vehicles ?? 5);
-  const [availableCars, setAvailableCars] = useState<number | string>(company.available_vehicles ?? company.available_cars ?? 0);
   const [contractStartDate, setContractStartDate] = useState(company.contract_start_date || "2026-01-01");
   const [contractEndDate, setContractEndDate] = useState(company.contract_end_date || "2028-01-01");
   const [status, setStatus] = useState(company.verification_status || company.status || "موثق");
@@ -3150,17 +3113,8 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       return;
     }
     const totalV = Number(vehiclesCount);
-    const availC = Number(availableCars);
     if (isNaN(totalV) || totalV <= 0) {
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
-      return;
-    }
-    if (isNaN(availC) || availC < 0) {
-      setErrorMsg("عدد السيارات المتاحة حالياً يجب أن يكون صفراً أو أكثر.");
-      return;
-    }
-    if (availC > totalV) {
-      setErrorMsg("عدد السيارات المتاحة لا يمكن أن يتجاوز إجمالي مركبات الأسطول.");
       return;
     }
 
@@ -3176,8 +3130,7 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       google_maps_url: cleanAddress,
       email: email.trim(),
       total_vehicles: totalV,
-      available_vehicles: availC,
-      available_cars: availC,
+available_cars: totalV,
       contract_start_date: contractStartDate,
       contract_end_date: contractEndDate,
       verification_status: status,
@@ -3187,97 +3140,127 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
 
   return (
     <>
-      <ModalShell title={`تعديل بيانات شركة: ${company.company_name || company.name || ""}`} onClose={onClose}>
-        <form className="space-y-3 text-right" onSubmit={handleSubmit}>
+      <ModalShell title={`تعديل بيانات شركة: ${company.company_name || company.name || ""}`} onClose={onClose} maxWidth="max-w-3xl">
+        <form className="space-y-4 text-right" onSubmit={handleSubmit}>
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2">
-              <span>⚠️</span>
+            <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2.5 animate-in fade-in">
+              <span className="text-base">⚠️</span>
               <span>{errorMsg}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="رقم العقد (المعرف)" value={contractNo} onChange={setContractNo} required />
-            <Field label="اسم شركة النقل *" value={name} onChange={setName} required />
+          {/* 1. البيانات الأساسية */}
+          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+              <span>🏢</span>
+              <span>بيانات الشركة والتعاقد الرسمي</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <Field label="رقم العقد الورقي (المعرف) *" value={contractNo} onChange={setContractNo} required />
+              <Field label="اسم شركة النقل السياحي *" value={name} onChange={setName} required />
+              <LibyanPhoneField label="رقم هاتف الشركة *" value={phone} onChange={setPhone} />
+              <Field label="البريد الإلكتروني للشركة" type="email" value={email} onChange={setEmail} placeholder="company@dalni.ly" />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <LibyanPhoneField label="الهاتف *" value={phone} onChange={setPhone} />
-            <Field label="البريد الإلكتروني" type="email" value={email} onChange={setEmail} placeholder="company@dalni.ly" />
+          {/* 2. المقر والمدينة */}
+          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+              <span>📍</span>
+              <span>المقر والمدينة المعتمدة</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div>
+                <label className="text-xs font-bold text-slate-800 block mb-1.5">المدينة المعتمدة *</label>
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
+                >
+                  <option value="طرابلس">طرابلس</option>
+                  <option value="بنغازي">بنغازي</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-bold text-slate-800">موقع المقر (خرائط Google Maps) *</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(true)}
+                    className="text-xs font-bold text-[#003580] hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition shadow-xs"
+                  >
+                    🗺️ تحديد دقيق من الخريطة
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="https://maps.google.com/?q=..."
+                  required
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#003580] outline-none text-xs font-semibold shadow-xs"
+                />
+                <div className="flex justify-between items-center mt-1.5">
+                  {address && (address.startsWith("http") || address.includes("maps")) && (
+                    <a
+                      href={address.startsWith("http") ? address : `https://${address}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1"
+                    >
+                      📍 معاينة رابط المقر في Google Maps ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {/* 3. الأسطول والتعاقد */}
+          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+              <span>📊</span>
+              <span>سعة الأسطول وحالة التوثيق والتشغيل</span>
+            </div>
             <div>
-              <label className="text-xs font-bold block mb-1">المدينة *</label>
+              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <Field label="تاريخ بدء التعاقد" type="date" value={contractStartDate} onChange={setContractStartDate} />
+              <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-800 mb-1.5 block">حالة التوثيق والتشغيل *</label>
               <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white focus:border-primary outline-none"
+                value={status}
+                onChange={e => setStatus(e.target.value as any)}
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
               >
-                <option value="طرابلس">طرابلس</option>
-                <option value="بنغازي">بنغازي</option>
+                <option value="موثق">موثق (نشط يظهر للعلن ويعرض سياراته)</option>
+                <option value="بانتظار">بانتظار المراجعة (معلق لا يظهر)</option>
+                <option value="مرفوض">مرفوض / غير نشط (يختفي من المنصة)</option>
               </select>
             </div>
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs font-bold text-foreground">موقع مقر الشركة (خرائط Google) *</label>
-                <button
-                  type="button"
-                  onClick={() => setShowMapPicker(true)}
-                  className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 transition"
-                >
-                  🗺️ تحديد من الخريطة
-                </button>
-              </div>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="https://maps.google.com/?q=... أو اختر من الخريطة"
-                required
-                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
-              />
-              <div className="flex justify-between items-center mt-1">
-                {address && (address.startsWith("http") || address.includes("maps")) && (
-                  <a
-                    href={address.startsWith("http") ? address : `https://${address}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5"
-                  >
-                    📍 معاينة الرابط في Google Maps ↗
-                  </a>
-                )}
-              </div>
-            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="إجمالي مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-            <Field label="السيارات المتاحة للتشغيل *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="تاريخ بدء التعاقد" type="date" value={contractStartDate} onChange={setContractStartDate} />
-            <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold mb-1 block">حالة الشركة *</label>
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value as any)}
-              className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right bg-white"
+          <div className="flex items-center gap-3 justify-end pt-3 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 h-11 rounded-xl border border-slate-200 font-black text-xs text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              <option value="موثق">موثق</option>
-              <option value="بانتظار">بانتظار</option>
-              <option value="مرفوض">مرفوض</option>
-            </select>
-          </div>
-
-          <div className="flex gap-2 justify-end pt-2">
-            <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer">إلغاء</button>
-            <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer">حفظ وتحديث في قاعدة البيانات ✓</button>
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+            >
+              <span>حفظ وتحديث في قاعدة البيانات</span>
+              <span>✓</span>
+            </button>
           </div>
         </form>
       </ModalShell>
@@ -3511,298 +3494,692 @@ function GuideVerificationModal({
   );
 }
 
-function EditGuideModal({
-  guide,
-  onClose,
-  onSave,
+/* =========================================================================
+   TRIP COMPONENTS: ITINERARY, VEHICLE FLEET & RESTAURANT SELECTORS
+   ========================================================================= */
+
+interface ItineraryStepItem {
+  time: string;
+  title: string;
+  desc: string;
+}
+
+const DEFAULT_DAILY_ITINERARY_STEPS: ItineraryStepItem[] = [
+  {
+    time: "09:00 ص",
+    title: "نقطة التجمع والانطلاق من موقعنا",
+    desc: "التجمع في موقعنا في طرابلس - النوفليين والصعود للمركبة السياحية المجهزة والانطلاق في تمام 09:00 صباحاً.",
+  },
+  {
+    time: "10:30 ص",
+    title: "الجولة الميدانية الأولى واستكشاف المعالم الأثرية",
+    desc: "استكشاف المعالم الرئيسية رفقة المرشد السياحي المعتمد مع شرح تاريخي موثق.",
+  },
+  {
+    time: "01:30 م",
+    title: "استراحة وتناول وجبة الغداء التراثية المشمولة",
+    desc: "تناول وجبة غداء ليبية تقليدية كاملة (أطباق رئيسية، سلطات طازجة، عصائر، ومياه معدنية) في مطعم تراثي معتمد مشمول بالرحلة.",
+  },
+  {
+    time: "04:30 م",
+    title: "جولة المعالم الترفيهية والطبيعية / حديقة الحيوان",
+    desc: "زيارة حديقة الحيوان أو المعالم الطبيعية والساحلية، وأخذ صور تذكارية في أجواء مريحة وممتعة.",
+  },
+  {
+    time: "07:00 م",
+    title: "استراحة ضيافة وتذوق ووقت حر للتسوق",
+    desc: "استراحة ضيافة وتذوق حلويات تقليدية، مع وقت مخصص لشراء التذكارات والصناعات اليدوية.",
+  },
+  {
+    time: "09:00 م",
+    title: "العودة وختام الرحلة في نقطة الانطلاق",
+    desc: "العودة بسلامة الله بالمركبة السياحية إلى موقعنا في طرابلس - النوفليين في تمام الساعة 09:00 مساءً.",
+  },
+];
+
+function TripItineraryTimelineEditor({
+  steps,
+  onChange,
+  selectedRestaurant,
 }: {
-  guide: Guide;
-  onClose: () => void;
-  onSave: (updated: Guide) => void;
+  steps: ItineraryStepItem[];
+  onChange: (steps: ItineraryStepItem[]) => void;
+  selectedRestaurant?: Restaurant | null;
 }) {
-  const { language } = useLanguage();
-  const isAr = language === 'ar';
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [fullName, setFullName] = useState(guide.full_name || "");
-  const [title, setTitle] = useState(guide.title || "");
-  const [phone, setPhone] = useState(guide.phone_number || "");
-  const [email, setEmail] = useState(guide.email || "");
-  const [experienceYears, setExperienceYears] = useState(String(guide.years_of_experience || 2));
-  const [dailyRate, setDailyRate] = useState(String(guide.daily_rate || guide.price_per_day || 150));
-  const [verificationStatus, setVerificationStatus] = useState(guide.verification_status || "موثق");
-  const [bio, setBio] = useState(guide.bio || "");
-  const [certificate, setCertificate] = useState(guide.certificate || "");
+  const handleStepChange = (index: number, field: keyof ItineraryStepItem, val: string) => {
+    const next = [...steps];
+    next[index] = { ...next[index], [field]: val };
+    onChange(next);
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim() || !phone.trim()) {
-      return alert(isAr ? "يرجى إدخال اسم المرشد ورقم الهاتف" : "Please enter guide name and phone");
-    }
-
-    const updated: Guide = {
-      ...guide,
-      full_name: fullName,
-      title,
-      phone_number: phone,
-      email,
-      years_of_experience: Number(experienceYears) || 0,
-      daily_rate: Number(dailyRate) || 150,
-      price_per_day: Number(dailyRate) || 150,
-      verification_status: verificationStatus,
-      bio,
-      certificate,
+  const handleAddStep = () => {
+    const nextNum = steps.length + 1;
+    const newStep: ItineraryStepItem = {
+      title: `المحطة ${nextNum} - وجهة استكشاف جديدة`,
+      time: "02:00 م",
+      desc: "تفاصيل وبرنامج الزيارة لهذه المحطة السياحية...",
     };
+    onChange([...steps, newStep]);
+    setIsEditing(true);
+  };
 
-    onSave(updated);
+  const handleDeleteStep = (index: number) => {
+    if (steps.length <= 1) {
+      alert("يجب الإبقاء على محطة واحدة على الأقل في خط سير الرحلة.");
+      return;
+    }
+    const next = steps.filter((_, idx) => idx !== index);
+    onChange(next);
+  };
+
+  const handleResetDefaults = () => {
+    onChange(DEFAULT_DAILY_ITINERARY_STEPS);
   };
 
   return (
-    <ModalShell
-      title={isAr ? `تعديل بيانات المرشد: ${guide.full_name} (${guide.license_number})` : `Edit Guide: ${guide.full_name}`}
-      onClose={onClose}
-    >
-      <form onSubmit={handleSubmit} className="space-y-3.5 text-right">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label={isAr ? "الاسم الكامل للمرشد *" : "Full Name *"} value={fullName} onChange={setFullName} />
-          <Field label={isAr ? "المسمى / التخصص" : "Title / Specialty"} placeholder="خبير الآثار الرومانية والتراث..." value={title} onChange={setTitle} />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <LibyanPhoneField label={isAr ? "رقم الهاتف *" : "Phone *"} value={phone} onChange={setPhone} />
-          <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" value={email} onChange={setEmail} />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label={isAr ? "سنوات الخبرة" : "Experience (years)"} type="number" value={experienceYears} onChange={v => setExperienceYears(v)} />
-          <Field label={isAr ? "الأجر اليومي (د.ل)" : "Daily Rate (LYD)"} type="number" value={dailyRate} onChange={v => setDailyRate(v)} />
-          <div>
-            <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "حالة الاعتماد" : "Status"}</label>
-            <select
-              value={verificationStatus}
-              onChange={e => setVerificationStatus(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
-            >
-              <option value="موثق">{isAr ? "✅ موثق ومعتمد" : "Verified"}</option>
-              <option value="بانتظار التوثيق">{isAr ? "⏳ بانتظار التوثيق" : "Pending"}</option>
-              <option value="مرفوض">{isAr ? "❌ مرفوض" : "Rejected"}</option>
-            </select>
-          </div>
-        </div>
-
-        <Field label={isAr ? "المؤهل والشهادات الرسمية" : "Certificate"} value={certificate} onChange={setCertificate} />
-
+    <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E8E2D6] shadow-sm space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "نبذة تعريفية عن المرشد" : "Bio"}</label>
-          <textarea
-            value={bio}
-            onChange={e => setBio(e.target.value)}
-            rows={3}
-            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
-          />
+          <h3 className="text-base sm:text-lg font-black text-[#003580] flex items-center gap-2">
+            <span>⏱️</span>
+            <span>محطات وخط سير الرحلة خطوة بخطوة</span>
+          </h3>
+          <p className="text-xs text-slate-500 font-bold mt-0.5">
+            إمكانية إضافة محطات أو حذف محطات وتعديل المواعيد والشرح بدقة ({steps.length} محطات حالية)
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleAddStep}
+            className="px-3 py-1.5 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer flex items-center gap-1 shadow-xs"
+          >
+            <span>➕</span>
+            <span>إضافة محطة</span>
+          </button>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleResetDefaults}
+              className="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+            >
+              استعادة الافتراضي
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsEditing(!isEditing)}
+            className={`px-3 py-1.5 text-xs font-black rounded-xl border transition cursor-pointer flex items-center gap-1.5 ${
+              isEditing ? "bg-blue-600 text-white border-blue-700" : "bg-white text-[#003580] border-blue-200 hover:bg-blue-50"
+            }`}
+          >
+            <span>{isEditing ? "✓ تم التعديل" : "✏️ تخصيص وتعديل المحطات"}</span>
+          </button>
+        </div>
+      </div>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-border">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border border-border text-xs font-black">
-            {isAr ? "إلغاء" : "Cancel"}
-          </button>
-          <button type="submit" className="px-6 h-10 rounded-xl bg-gradient-sea text-white text-xs font-black shadow-glow hover:opacity-95">
-            {isAr ? "حفظ التعديلات" : "Save Changes"}
-          </button>
-        </div>
-      </form>
-    </ModalShell>
+      {/* Steps List */}
+      <div className="space-y-3.5 relative before:absolute before:inset-0 before:left-auto before:right-3.5 before:w-0.5 before:bg-[#E8E2D6] pt-1">
+        {steps.map((step, idx) => {
+          const isLunchStep = idx === 2;
+          const displayDesc = isLunchStep && selectedRestaurant
+            ? `تناول وجبة غداء ليبية تقليدية كاملة في (${selectedRestaurant.name} - ${selectedRestaurant.type || 'مطعم معتمد'}) بمدينة ${selectedRestaurant.city || 'طرابلس'} مشمول بالرحلة.`
+            : step.desc;
+
+          return (
+            <div key={idx} className="relative flex items-start gap-3.5 pr-8">
+              <div className="absolute right-1 top-2 w-5 h-5 rounded-full bg-[#003580] text-white flex items-center justify-center text-[10px] font-black shadow-xs ring-4 ring-white">
+                {idx + 1}
+              </div>
+
+              <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E8E2D6] flex-1">
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-black text-slate-700">المحطة رقم {idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteStep(idx)}
+                        className="px-2 py-0.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-[10px] font-black transition cursor-pointer flex items-center gap-1"
+                        title="حذف هذه المحطة من خط السير"
+                      >
+                        <span>🗑️</span>
+                        <span>حذف المحطة</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">عنوان المحطة {idx + 1}</label>
+                        <input
+                          type="text"
+                          value={step.title}
+                          onChange={(e) => handleStepChange(idx, "title", e.target.value)}
+                          className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs font-bold text-right bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">التوقيت</label>
+                        <input
+                          type="text"
+                          value={step.time}
+                          onChange={(e) => handleStepChange(idx, "time", e.target.value)}
+                          className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs font-bold text-right bg-white"
+                          placeholder="09:00 ص"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">شرح وتفاصيل المحطة</label>
+                      <textarea
+                        value={step.desc}
+                        onChange={(e) => handleStepChange(idx, "desc", e.target.value)}
+                        rows={2}
+                        className="w-full p-2 rounded-lg border border-slate-300 text-xs text-right bg-white"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-xs sm:text-sm text-[#0F172A]">{step.title}</h4>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteStep(idx)}
+                          className="text-red-400 hover:text-red-600 text-xs px-1"
+                          title="حذف المحطة"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <span className="text-[11px] font-black text-[#003580] bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-xs">
+                        {step.time}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      {displayDesc}
+                    </p>
+                    {isLunchStep && selectedRestaurant && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/70 border border-amber-300 text-amber-900 rounded-lg text-[10px] font-black">
+                        <span>🍽️ المطعم المعتمد:</span>
+                        <span>{selectedRestaurant.name} ({selectedRestaurant.city})</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
-function AddGuideModal({
-  existingGuides = [],
-  onClose,
-  onAdd,
+function TripVehicleAndDriverSelector({
+  vehicles,
+  drivers,
+  busCapacity,
+  onCapacityChange,
+  selectedPlate,
+  onSelectPlate,
 }: {
-  existingGuides?: Guide[];
-  onClose: () => void;
-  onAdd: (g: Guide) => void;
+  vehicles: Vehicle[];
+  drivers: Driver[];
+  busCapacity: 15 | 25 | 50;
+  onCapacityChange: (cap: 15 | 25 | 50) => void;
+  selectedPlate: string;
+  onSelectPlate: (plate: string) => void;
 }) {
-  const { language } = useLanguage();
-  const isAr = language === 'ar';
+  const matchingVehicles = useMemo(() => {
+    return vehicles.filter((v) => {
+      const cap = Number(v.seating_capacity || (v as any).capacity || 0);
+      if (busCapacity === 15) return cap <= 18;
+      if (busCapacity === 25) return cap > 18 && cap <= 30;
+      if (busCapacity === 50) return cap > 30;
+      return true;
+    });
+  }, [vehicles, busCapacity]);
 
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [title, setTitle] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [experienceYears, setExperienceYears] = useState("3");
-  const [dailyRate, setDailyRate] = useState("150");
-  const [verificationStatus, setVerificationStatus] = useState("موثق");
-  const [certificate, setCertificate] = useState("ترخيص رسمي صادر من وزارة السياحة والآثار");
-  const [bio, setBio] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-
-    const cleanLic = licenseNumber.trim();
-    if (!cleanLic) {
-      setErrorMsg("يرجى إدخال رقم الرخصة السياحية (حقل إلزامي)");
-      return;
-    }
-    if (existingGuides.some(g => g.license_number.toLowerCase() === cleanLic.toLowerCase())) {
-      setErrorMsg("رقم الرخصة هذا مسجل مسبقاً لمرشد آخر في المنصة");
-      return;
-    }
-    if (!fullName.trim()) {
-      setErrorMsg("يرجى إدخال الاسم الكامل للمرشد السياحي");
-      return;
-    }
-    if (!phone.trim()) {
-      setErrorMsg("يرجى إدخال رقم هاتف المرشد السياحي");
-      return;
-    }
-
-    const newGuide: Guide = {
-      license_number: cleanLic,
-      full_name: fullName.trim(),
-      title: title.trim() || "مرشد سياحي معتمد",
-      phone_number: phone.trim(),
-      email: email.trim() || `${cleanLic.toLowerCase()}@dalni.ly`,
-      years_of_experience: Number(experienceYears) || 2,
-      daily_rate: Number(dailyRate) || 150,
-      price_per_day: Number(dailyRate) || 150,
-      verification_status: verificationStatus,
-      certificate: certificate.trim() || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-      bio: bio.trim() || "مرشد سياحي معتمد ومسجل في منصة دِلني.",
-      speaks_english: true,
-      speaks_french: false,
-      speaks_italian: false,
-      working_days: "السبت,الأحد,الاثنين,الثلاثاء,الأربعاء,الخميس,الجمعة",
-      operating_regions: "tripoli",
-      total_tours_completed: 0,
-    };
-
-    onAdd(newGuide);
-  };
+  const vehiclesToDisplay = matchingVehicles.length > 0 ? matchingVehicles : vehicles;
 
   return (
-    <ModalShell
-      title={isAr ? "➕ إضافة مرشد سياحي جديد إلى قاعدة البيانات" : "Add New Tour Guide"}
-      onClose={onClose}
-    >
-      <form onSubmit={handleSubmit} className="space-y-3.5 text-right">
-        {errorMsg && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2">
-            <span>⚠️</span>
-            <span>{errorMsg}</span>
+    <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-black text-emerald-950 text-sm flex items-center gap-1.5">
+          <span>🚌</span>
+          <span>تحديد سعة الحافلة وفلترة المركبات والسائقين</span>
+        </div>
+        <span className="px-3 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-xs font-black">
+          السعة المختارة: {busCapacity} راكب
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <button
+          type="button"
+          onClick={() => onCapacityChange(15)}
+          className={`p-3 rounded-2xl border-2 cursor-pointer transition text-right flex items-center gap-2.5 ${
+            busCapacity === 15
+              ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
+              : "bg-white/60 border-slate-200 hover:border-emerald-300"
+          }`}
+        >
+          <div className="text-2xl">🚐</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-black text-xs text-slate-900">15 راكب</div>
+            <div className="text-[10px] text-slate-500 font-bold truncate">فان سياحي مجهز (تويوتا/مرسيدس)</div>
           </div>
-        )}
+          {busCapacity === 15 && <span className="text-emerald-600 text-sm font-black">✓</span>}
+        </button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field
-            label={isAr ? "رقم الرخصة السياحية *" : "License Number *"}
-            placeholder="مثال: G-105 أو 8931"
-            value={licenseNumber}
-            onChange={setLicenseNumber}
-            required
-          />
-          <Field
-            label={isAr ? "الاسم الكامل للمرشد *" : "Full Name *"}
-            placeholder="مثال: أحمد عبد الله المحمودي"
-            value={fullName}
-            onChange={setFullName}
-            required
-          />
+        <button
+          type="button"
+          onClick={() => onCapacityChange(25)}
+          className={`p-3 rounded-2xl border-2 cursor-pointer transition text-right flex items-center gap-2.5 ${
+            busCapacity === 25
+              ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
+              : "bg-white/60 border-slate-200 hover:border-emerald-300"
+          }`}
+        >
+          <div className="text-2xl">🚌</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-black text-xs text-slate-900">25 راكب</div>
+            <div className="text-[10px] text-slate-500 font-bold truncate">ميني باص سياحي (كوستر فاخر)</div>
+          </div>
+          {busCapacity === 25 && <span className="text-emerald-600 text-sm font-black">✓</span>}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onCapacityChange(50)}
+          className={`p-3 rounded-2xl border-2 cursor-pointer transition text-right flex items-center gap-2.5 ${
+            busCapacity === 50
+              ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
+              : "bg-white/60 border-slate-200 hover:border-emerald-300"
+          }`}
+        >
+          <div className="text-2xl">🚍</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-black text-xs text-slate-900">50 راكب</div>
+            <div className="text-[10px] text-slate-500 font-bold truncate">حافلة سياحية كبرى VIP</div>
+          </div>
+          {busCapacity === 50 && <span className="text-emerald-600 text-sm font-black">✓</span>}
+        </button>
+      </div>
+
+      <div className="space-y-2 pt-2 border-t border-emerald-100">
+        <label className="text-xs font-bold text-slate-700 block">
+          المركبات المتاحة في قاعدة البيانات بسعة {busCapacity} راكب مع السائق المسند:
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+          {vehiclesToDisplay.map((v) => {
+            const isSelected = selectedPlate === v.plate_number;
+            const assignedDriver = drivers.find((d) => d.assigned_vehicle_plate === v.plate_number);
+            const cap = v.seating_capacity || (v as any).capacity || busCapacity;
+
+            return (
+              <div
+                key={v.plate_number}
+                onClick={() => onSelectPlate(v.plate_number)}
+                className={`p-3 rounded-xl border-2 cursor-pointer transition text-right flex items-start gap-2.5 ${
+                  isSelected
+                    ? "bg-emerald-50/80 border-emerald-600 shadow-sm ring-1 ring-emerald-500"
+                    : "bg-white border-slate-200 hover:border-emerald-300"
+                }`}
+              >
+                <div className="text-xl mt-0.5">
+                  {cap > 30 ? "🚍" : cap > 18 ? "🚌" : "🚐"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-black text-xs text-slate-900 truncate">
+                      {v.vehicle_type || "مركبة سياحية"}
+                    </span>
+                    <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                      {cap} راكب
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-bold">
+                    لوحة: <span className="text-slate-800 font-black">{v.plate_number}</span> | {v.company_name || "شركة النقل"}
+                  </div>
+                  <div className="mt-1 pt-1 border-t border-slate-100 text-[10px] flex items-center justify-between">
+                    <span className="text-emerald-900 font-black truncate">
+                      👨‍✈️ {assignedDriver ? assignedDriver.full_name : "سائق معتمد من الشركة"}
+                    </span>
+                    {assignedDriver?.phone_number && (
+                      <span className="text-slate-600 font-bold text-[9px] mr-1">
+                        📞 {assignedDriver.phone_number}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field
-            label={isAr ? "المسمى / التخصص" : "Title / Specialty"}
-            placeholder="مرشد آثار وتاريخ، صحراء، غوص..."
-            value={title}
-            onChange={setTitle}
-          />
-          <LibyanPhoneField
-            label={isAr ? "رقم الهاتف *" : "Phone *"}
-            value={phone}
-            onChange={setPhone}
-          />
+function TripRestaurantSelector({
+  restaurants,
+  selectedId,
+  selectedIds = [],
+  targetCity,
+  targetCities = [],
+  onSelect,
+  onToggleSelect,
+}: {
+  restaurants: Restaurant[];
+  selectedId?: string;
+  selectedIds?: string[];
+  targetCity?: string;
+  targetCities?: string[];
+  onSelect?: (id: string) => void;
+  onToggleSelect?: (id: string) => void;
+}) {
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "restaurant" | "cafe">("all");
+  const [cityFilterOverride, setCityFilterOverride] = useState<string>("auto");
+
+  // Effective target cities to filter by
+  const effectiveTargetCities = useMemo(() => {
+    const list: string[] = [];
+    if (targetCity) list.push(targetCity);
+    if (targetCities && targetCities.length > 0) {
+      targetCities.forEach(c => { if (!list.includes(c)) list.push(c); });
+    }
+    return list;
+  }, [targetCity, targetCities]);
+
+  // Combined active selected IDs
+  const activeSelectedIds = useMemo(() => {
+    const set = new Set<string>();
+    if (selectedId) set.add(selectedId);
+    if (selectedIds && selectedIds.length > 0) {
+      selectedIds.forEach(id => set.add(id));
+    }
+    return Array.from(set);
+  }, [selectedId, selectedIds]);
+
+  const handleToggle = (id: string) => {
+    if (onToggleSelect) {
+      onToggleSelect(id);
+    } else if (onSelect) {
+      onSelect(activeSelectedIds.includes(id) ? "" : id);
+    }
+  };
+
+  // Filter restaurants by category and city
+  const filteredRestaurants = useMemo(() => {
+    return restaurants.filter(r => {
+      // 1. Category Filter (Restaurant vs Cafe)
+      if (categoryFilter === "restaurant") {
+        if (r.category === "cafe" || (r.type && r.type.includes("مقهى"))) return false;
+      } else if (categoryFilter === "cafe") {
+        if (r.category !== "cafe" && !(r.type && (r.type.includes("مقهى") || r.type.includes("كافيه")))) return false;
+      }
+
+      // 2. City Filter
+      if (cityFilterOverride === "all") return true;
+      if (cityFilterOverride !== "auto" && cityFilterOverride !== "") {
+        return r.city === cityFilterOverride;
+      }
+      if (effectiveTargetCities.length > 0) {
+        return effectiveTargetCities.some(dest => 
+          r.city.includes(dest) || dest.includes(r.city) || (r.address && r.address.includes(dest))
+        );
+      }
+      return true;
+    });
+  }, [restaurants, categoryFilter, cityFilterOverride, effectiveTargetCities]);
+
+  return (
+    <div className="p-4 bg-orange-50/70 rounded-2xl border border-orange-200 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-black text-orange-950 text-sm flex items-center gap-1.5">
+          <span>🍽️</span>
+          <span>مطاعم ومقاهي الرحلة (اختيار متعدد وتصفية ذكية حسب المدينة)</span>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field
-            label={isAr ? "البريد الإلكتروني" : "Email"}
-            type="email"
-            placeholder="guide@dalni.ly"
-            value={email}
-            onChange={setEmail}
-          />
-          <Field
-            label={isAr ? "سنوات الخبرة" : "Experience (years)"}
-            type="number"
-            min="1"
-            value={experienceYears}
-            onChange={v => setExperienceYears(v)}
-          />
-          <Field
-            label={isAr ? "الأجر اليومي (د.ل)" : "Daily Rate (LYD)"}
-            type="number"
-            min="0"
-            value={dailyRate}
-            onChange={v => setDailyRate(v)}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-bold text-foreground mb-1 block">
-              {isAr ? "حالة التوثيق الأولية *" : "Initial Verification Status *"}
-            </label>
-            <select
-              value={verificationStatus}
-              onChange={e => setVerificationStatus(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+        <div className="flex items-center gap-2">
+          {activeSelectedIds.length > 0 && (
+            <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white text-[11px] font-black">
+              تم تحديد ({activeSelectedIds.length}) منشأة
+            </span>
+          )}
+          {activeSelectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelect) onSelect("");
+                if (onToggleSelect && selectedIds) {
+                  selectedIds.forEach(id => onToggleSelect(id));
+                }
+              }}
+              className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
             >
-              <option value="موثق">{isAr ? "✅ معتمد وموثق مباشرة" : "Verified"}</option>
-              <option value="بانتظار التوثيق">{isAr ? "⏳ بانتظار التوثيق والمراجعة" : "Pending"}</option>
-            </select>
-          </div>
-          <Field
-            label={isAr ? "المؤهل والشهادات الرسمية" : "Certificate"}
-            placeholder="ترخيص صادر من وزارة السياحة..."
-            value={certificate}
-            onChange={setCertificate}
-          />
+              إلغاء التحديد بالكامل
+            </button>
+          )}
         </div>
+      </div>
 
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">
-            {isAr ? "نبذة تعريفية عن المرشد" : "Bio"}
-          </label>
-          <textarea
-            value={bio}
-            onChange={e => setBio(e.target.value)}
-            rows={2}
-            placeholder="نبذة مختصرة عن خبرات المرشد ومناطقه المفضلة..."
-            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
-          />
-        </div>
+      <p className="text-[11px] text-orange-900/90 font-medium">
+        يمكنك تصفية المطاعم والمقاهي حسب مدينة الرحلة المختارة وتحديد أكثر من مطعم أو مقهى لبرنامج الرحلة.
+      </p>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-border">
+      {/* Filter Tabs: Category & City */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-orange-100">
+        {/* Category Tabs */}
+        <div className="flex items-center gap-1 bg-white/80 p-1 rounded-xl border border-orange-200">
           <button
             type="button"
-            onClick={onClose}
-            className="px-4 h-10 rounded-xl border border-border text-xs font-black hover:bg-slate-50 transition cursor-pointer"
+            onClick={() => setCategoryFilter("all")}
+            className={`px-3 py-1 rounded-lg text-xs font-black transition cursor-pointer ${
+              categoryFilter === "all" ? "bg-orange-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
           >
-            {isAr ? "إلغاء" : "Cancel"}
+            الكل ({restaurants.length})
           </button>
           <button
-            type="submit"
-            className="px-6 h-10 rounded-xl bg-gradient-sea text-white text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
+            type="button"
+            onClick={() => setCategoryFilter("restaurant")}
+            className={`px-3 py-1 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1 ${
+              categoryFilter === "restaurant" ? "bg-orange-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
           >
-            {isAr ? "حفظ المرشد في قاعدة البيانات ✓" : "Save Guide ✓"}
+            <span>🍽️</span>
+            <span>مطاعم</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCategoryFilter("cafe")}
+            className={`px-3 py-1 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1 ${
+              categoryFilter === "cafe" ? "bg-orange-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <span>☕</span>
+            <span>مقاهي وكافيهات</span>
           </button>
         </div>
-      </form>
-    </ModalShell>
+
+        {/* City Filter Override */}
+        <div className="flex items-center gap-1.5 text-xs font-bold text-orange-950">
+          <span>📍 تصفية المدينة:</span>
+          <select
+            value={cityFilterOverride}
+            onChange={(e) => setCityFilterOverride(e.target.value)}
+            className="h-8 px-2.5 rounded-lg border border-orange-200 bg-white text-xs font-bold text-right"
+          >
+            <option value="auto">تلقائي (حسب وجهة الرحلة: {effectiveTargetCities.join("، ") || "الكل"})</option>
+            <option value="all">عرض كافة المدن</option>
+            {["طرابلس", "بنغازي", "مصراتة", "الخمس", "غدامس", "أوباري", "سبها", "شحات", "صبراتة", "درنة", "طبرق"].map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Facilities Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+        {filteredRestaurants.length === 0 && (
+          <div className="col-span-full text-center text-xs text-orange-800 py-4 font-bold bg-orange-100/60 rounded-xl space-y-1">
+            <p>لا توجد منشآت مطابقة في مدينة الوجهة المحددة ({effectiveTargetCities.join("، ")}).</p>
+            <button
+              type="button"
+              onClick={() => setCityFilterOverride("all")}
+              className="text-orange-700 underline font-black text-xs hover:text-orange-950"
+            >
+              انقر هنا لعرض منشآت كافة المدن
+            </button>
+          </div>
+        )}
+        {filteredRestaurants.map((r) => {
+          const isSelected = activeSelectedIds.includes(r.id);
+          const isCafe = r.category === "cafe" || (r.type && (r.type.includes("مقهى") || r.type.includes("كافيه")));
+          return (
+            <div
+              key={r.id}
+              onClick={() => handleToggle(r.id)}
+              className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-3 ${
+                isSelected
+                  ? "bg-orange-50 border-orange-600 shadow-sm ring-2 ring-orange-500/20"
+                  : "bg-white border-slate-200 hover:border-orange-300"
+              }`}
+            >
+              <img
+                src={r.facility_image_1 || (isCafe ? "/assets/cafe-libya.jpg" : "/assets/restaurant-libya.jpg")}
+                alt={r.name}
+                className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 bg-slate-100"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span>{isCafe ? "☕" : "🍽️"}</span>
+                    <span className="font-black text-xs text-slate-900 truncate">{r.name}</span>
+                  </div>
+                  {isSelected ? (
+                    <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[10px] font-black rounded-md">مختار ✓</span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-bold">+ تحديد</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-orange-900 font-bold mb-0.5">
+                  {r.type || (isCafe ? "كافيه ومقهى" : "مطعم مأكولات")} · <span className="text-orange-700 font-black">مدينة {r.city}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium truncate">
+                  📍 {r.address || "ليبيا"} | خصم {r.discount_percentage || 15}%
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TripHotelSelector({
+  hotels,
+  selectedHotelIds = [],
+  onToggleHotel,
+  targetCities = [],
+}: {
+  hotels: Hotel[];
+  selectedHotelIds: string[];
+  onToggleHotel: (id: string) => void;
+  targetCities?: string[];
+}) {
+  const [showAllCities, setShowAllCities] = useState(false);
+
+  const filteredHotels = useMemo(() => {
+    if (showAllCities || targetCities.length === 0) return hotels;
+    return hotels.filter(h => 
+      targetCities.some(dest => h.city.includes(dest) || dest.includes(h.city) || (h.address && h.address.includes(dest)))
+    );
+  }, [hotels, showAllCities, targetCities]);
+
+  return (
+    <div className="p-4 bg-sky-50/70 rounded-2xl border border-sky-200 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-black text-sky-950 text-sm flex items-center gap-1.5">
+          <span>🏨</span>
+          <span>فنادق ومخيمات الإقامة (إمكانية اختيار أكثر من فندق وتصفية بالمدينة)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedHotelIds.length > 0 && (
+            <span className="px-2.5 py-0.5 rounded-full bg-sky-700 text-white text-[11px] font-black">
+              تم تحديد ({selectedHotelIds.length}) أماكن إقامة
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowAllCities(!showAllCities)}
+            className="text-[11px] font-bold text-sky-700 hover:underline cursor-pointer"
+          >
+            {showAllCities ? "تصفية بمدن الرحلة فقط" : "عرض كافة المدن"}
+          </button>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-sky-900/90 font-medium">
+        اختر مكان إقامة أو أكثر (فنادق، منتجعات، مخيمات صحراوية) للمبيت وتوزيع النزلاء أثناء الرحلة الأسبوعية.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+        {filteredHotels.length === 0 && (
+          <div className="col-span-full text-center text-xs text-sky-800 py-4 font-bold bg-sky-100/60 rounded-xl space-y-1">
+            <p>لا توجد فنادق مسجلة في مدينة الوجهة المحددة ({targetCities.join("، ")}).</p>
+            <button
+              type="button"
+              onClick={() => setShowAllCities(true)}
+              className="text-sky-700 underline font-black text-xs hover:text-sky-950"
+            >
+              عرض فنادق كافة المدن
+            </button>
+          </div>
+        )}
+        {filteredHotels.map((h) => {
+          const isSelected = selectedHotelIds.includes(h.id);
+          return (
+            <div
+              key={h.id}
+              onClick={() => onToggleHotel(h.id)}
+              className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-3 ${
+                isSelected
+                  ? "bg-sky-50 border-sky-600 shadow-sm ring-2 ring-sky-500/20"
+                  : "bg-white border-slate-200 hover:border-sky-300"
+              }`}
+            >
+              <img
+                src={h.hotel_photo_1 || "/assets/ai_hotel.jpg"}
+                alt={h.name}
+                className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 bg-slate-100"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-black text-xs text-slate-900 truncate">{h.name}</span>
+                  {isSelected ? (
+                    <span className="px-1.5 py-0.5 bg-sky-700 text-white text-[10px] font-black rounded-md">مختار ✓</span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-bold">+ تحديد</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-sky-900 font-bold mb-0.5">
+                  ⭐ {h.stars || 4} نجوم · <span className="text-sky-700 font-black">مدينة {h.city}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium truncate">
+                  📍 {h.address} | خصم {h.discount_percentage || 15}%
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -3811,6 +4188,8 @@ function CreateTripModal({
   guides,
   vehicles,
   hotels,
+  restaurants = [],
+  drivers = [],
   onClose,
   onCreate,
 }: {
@@ -3818,6 +4197,8 @@ function CreateTripModal({
   guides: Guide[];
   vehicles: Vehicle[];
   hotels: Hotel[];
+  restaurants?: Restaurant[];
+  drivers?: Driver[];
   onClose: () => void;
   onCreate: (t: "daily" | "weekly", d: any) => void;
 }) {
@@ -3828,21 +4209,52 @@ function CreateTripModal({
   const [multiDestinations, setMultiDestinations] = useState<string[]>(isDaily ? [] : ["أوباري"]);
   const [departureCity, setDepartureCity] = useState("طرابلس");
   const [price, setPrice] = useState(isDaily ? "120" : "1650");
-  const [busCapacity, setBusCapacity] = useState<25 | 50>(isDaily ? 50 : 25);
+  const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(25);
   const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "");
-  const [selVehicles, setSelVehicles] = useState<string[]>(vehicles[0]?.plate_number ? [vehicles[0].plate_number] : []);
+  const [selectedPlate, setSelectedPlate] = useState<string>(vehicles[0]?.plate_number || "");
+  
+  // Multi-select restaurants & cafes
+  const [selectedRestaurantIds, setSelectedRestaurantIds] = useState<string[]>(() => {
+    return restaurants[0] ? [restaurants[0].id] : [];
+  });
+  const handleToggleRestaurant = (id: string) => {
+    setSelectedRestaurantIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  // Multi-select hotels
+  const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>(() => {
+    return hotels[0] ? [hotels[0].id] : [];
+  });
+  const handleToggleHotel = (id: string) => {
+    setSelectedHotelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(DEFAULT_DAILY_ITINERARY_STEPS);
   const [startDate, setStartDate] = useState("2026-09-01");
   const [endDate, setEndDate] = useState("2026-09-06");
-  const [photo1, setPhoto1] = useState(isDaily ? "/assets/ai_ruins.jpg" : "/assets/ai_ghadames.jpg");
-  const [photo2, setPhoto2] = useState(isDaily ? "/assets/dest-leptis-arch.jpg" : "/assets/dest-ubari-gaberoun.jpg");
-  const [photo3, setPhoto3] = useState(isDaily ? "/assets/dest-leptis-forum.jpg" : "/assets/dest-sahara-dunes.jpg");
+  const [images, setImages] = useState<string[]>(
+    isDaily
+      ? [
+          "/assets/dest-leptis-theater.jpg",
+          "/assets/dest-leptis-arch.jpg",
+          "/assets/dest-leptis-forum.jpg",
+          "/assets/dest-leptis-coast.jpg",
+          "/assets/hero-leptis.jpg",
+        ]
+      : [
+          "/assets/dest-ubari-gaberoun.jpg",
+          "/assets/dest-ubari-ummalmaa.jpg",
+          "/assets/dest-acacus-arch.jpg",
+          "/assets/dest-sahara-dunes.jpg",
+          "/assets/dest-ubari.jpg",
+        ]
+  );
   const [isActive, setIsActive] = useState(true);
-  const [hotelId, setHotelId] = useState("");
 
-  // Daily Trips schedule: MUST be exactly 2 days in a week
+  // Daily Trips schedule: ALLOWS 1 day OR 2 days in a week!
   const [recurringDays, setRecurringDays] = useState<string[]>(["الأحد", "الأربعاء"]);
 
-  // Weekly Trips schedule: MUST be exactly 1 day in a week
+  // Weekly Trips schedule: 1 day in a week
   const [weeklyDay, setWeeklyDay] = useState<string>("الجمعة");
 
   const [activities, setActivities] = useState(
@@ -3874,7 +4286,6 @@ function CreateTripModal({
       setRecurringDays(recurringDays.filter((d) => d !== day));
     } else {
       if (recurringDays.length >= 2) {
-        // Replace oldest or keep max 2
         setRecurringDays([recurringDays[1], day]);
       } else {
         setRecurringDays([...recurringDays, day]);
@@ -3886,106 +4297,87 @@ function CreateTripModal({
     return guides.filter(g => g.verification_status !== "مرفوض");
   }, [guides]);
 
+  const selectedPrimaryRestaurant = useMemo(() => {
+    return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
+  }, [restaurants, selectedRestaurantIds]);
 
   const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
       e.preventDefault();
       const form = (e.target as HTMLElement).closest("form");
       if (!form) return;
-      const focusables = Array.from(
-        form.querySelectorAll<HTMLElement>("input:not([type='hidden']):not([type='file']), select, textarea, button[type='submit']")
-      ).filter(el => !el.hasAttribute("disabled") && el.offsetParent !== null);
-      const currentIndex = focusables.indexOf(e.target as HTMLElement);
-      if (currentIndex > -1 && currentIndex + 1 < focusables.length) {
-        focusables[currentIndex + 1].focus();
+      const elements = Array.from(
+        form.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button[type="button"]'
+        )
+      );
+      const currentIndex = elements.indexOf(e.target as HTMLElement);
+      if (currentIndex > -1 && currentIndex < elements.length - 1) {
+        elements[currentIndex + 1].focus();
       }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || title.trim().length < 4) {
-      alert("يرجى إدخال عنوان واضح وشامل للرحلة (٤ أحرف على الأقل).");
+
+    if (isDaily && (recurringDays.length < 1 || recurringDays.length > 2)) {
+      alert("تنبيه: يجب اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية!");
       return;
     }
-    const numPrice = Number(price);
-    if (isNaN(numPrice) || numPrice <= 0) {
-      alert("يرجى إدخال سعر صحيح لمقعد الرحلة (أكبر من 0 د.ل).");
-      return;
-    }
-    if (isDaily && recurringDays.length !== 2) {
-      alert("تنبيه: الرحلات اليومية يجب أن تكون يومين بالضبط في الأسبوع (مثلاً: الأحد والأربعاء)!");
-      return;
-    }
-    if (!isDaily && !weeklyDay) {
-      alert("تنبيه: الرحلات الأسبوعية يجب تحديد يوم انطلاق أسبوعي واحد لها!");
-      return;
-    }
+
     if (!isDaily && multiDestinations.length === 0) {
-      alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل في الرحلات الأسبوعية!");
+      alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل للرحلة الأسبوعية!");
       return;
     }
 
-    const allPhotos = [photo1, photo2, photo3].filter(Boolean);
-    const mainPhoto = allPhotos[0] || photo1;
-    const galleryJson = JSON.stringify(allPhotos);
-
-    const base = {
-      daily_trip_id: `DT-${100 + Math.floor(Math.random() * 890 + 10)}`,
-      weekly_trip_id: `WT-${200 + Math.floor(Math.random() * 790 + 10)}`,
-      trip_title: title.trim(),
-      title: title.trim(),
+    const payload: any = {
+      trip_title: title,
+      title,
       description: desc,
+      destination: isDaily ? destination : multiDestinations.join(" + "),
+      destination_city: isDaily ? destination : multiDestinations[0] || "ليبيا",
+      destinations: !isDaily ? multiDestinations : [destination],
+      departure_city: departureCity,
+      price_per_seat: +price,
+      seat_per_price: +price,
+      bus_capacity: busCapacity,
       max_capacity: busCapacity,
       available_seats: busCapacity,
-      bus_capacity: busCapacity,
+      recurring_days: recurringDays.join(","),
+      weekly_day: weeklyDay,
+      start_date: startDate,
+      end_date: endDate,
       guide_license_number: guideLic,
-      guide_license: guideLic,
-      vehicle_plates: selVehicles,
-      is_active: isActive,
-      photo: mainPhoto,
-      gallery: galleryJson,
-      departure_city: departureCity,
+      vehicle_plate: selectedPlate || null,
+      vehicle_plates: selectedPlate ? [selectedPlate] : [],
+      restaurant_id: selectedRestaurantIds[0] || null,
+      restaurant_ids: selectedRestaurantIds,
+      hotel_id: selectedHotelIds[0] || null,
+      hotel_ids: selectedHotelIds,
+      itinerary_steps: itinerarySteps,
+      photo: images[0] || (isDaily ? "/assets/dest-leptis-theater.jpg" : "/assets/dest-ubari-gaberoun.jpg"),
+      gallery: images.filter(Boolean).join(","),
+      images: images,
       activities: activities.trim() || null,
+      is_active: isActive,
     };
 
-    if (isDaily) {
-      onCreate("daily", {
-        ...base,
-        destination,
-        destination_city: destination,
-        price_per_seat: +price,
-        recurring_days: recurringDays.join(","),
-        recurring_days_list: recurringDays,
-      });
-    } else {
-      onCreate("weekly", {
-        ...base,
-        destinations: multiDestinations,
-        destination: multiDestinations.join(" + "),
-        seat_per_price: +price,
-        start_date: startDate,
-        end_date: endDate,
-        hotel_id: hotelId,
-        weekly_day: weeklyDay,
-        trip_description: desc,
-      });
-    }
+    onCreate(type, payload);
   };
-
-  const selectedGuideObj = guides.find((g) => g.license_number === guideLic);
 
   return (
     <ModalShell
+      maxWidth="max-w-5xl"
       title={
         isDaily
-          ? "إنشاء رحلة يومية جديدة (يومان في الأسبوع — حافلة 25 أو 50 راكب)"
-          : "إنشاء رحلة أسبوعية جديدة (يوم واحد في الأسبوع — حافلة 25 أو 50 راكب)"
+          ? `إنشاء رحلة يومية جديدة (${recurringDays.length} يوم/أيام — حافلة ${busCapacity} راكب)`
+          : `إنشاء رحلة أسبوعية جديدة (يوم واحد في الأسبوع — حافلة ${busCapacity} راكب)`
       }
       onClose={onClose}
     >
       <form className="space-y-5 text-right text-xs" onSubmit={handleSubmit}>
-
+        
         {/* 1. Basic Info */}
         <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
           <div className="font-black text-slate-800 text-sm flex items-center gap-1.5">
@@ -4042,8 +4434,9 @@ function CreateTripModal({
                   key={city}
                   type="button"
                   onClick={() => isDaily ? setDestination(city) : handleMultiDestToggle(city)}
-                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-                    }`}
+                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
+                    isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                  }`}
                 >
                   {city} {isSelected && !isDaily && "✓"}
                 </button>
@@ -4052,265 +4445,208 @@ function CreateTripModal({
           </div>
 
           <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} onKeyDown={handleEnterKeyNext} />
-
-          <Field
-            label="الأنشطة المتاحة ضمن الرحلة (افصل بينها بنقطة • أو فاصلة)"
-            value={activities}
-            onChange={setActivities}
-            onKeyDown={handleEnterKeyNext}
+          
+          <Field 
+            label="الأنشطة المتاحة ضمن الرحلة (افصل بينها بنقطة • أو فاصلة)" 
+            value={activities} 
+            onChange={setActivities} 
+            onKeyDown={handleEnterKeyNext} 
           />
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="سعر المقعد الواحد (د.ل)" type="number" value={price} onChange={setPrice} onKeyDown={handleEnterKeyNext} />
             <div>
               <label className="text-xs font-bold mb-1 block">حالة تفعيل الرحلة</label>
-              <select
-                value={isActive ? "true" : "false"}
-                onChange={(e) => setIsActive(e.target.value === "true")}
-                className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-              >
-                <option value="true">نشطة ومعروضة للحجز</option>
-                <option value="false">موقوفة ومخفية مؤقتاً</option>
-              </select>
+              <div className="grid grid-cols-2 gap-1 h-10 p-1 bg-slate-200/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setIsActive(true)}
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                    isActive ? "bg-emerald-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🟢</span>
+                  <span>نشطة ومتاحة</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsActive(false)}
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                    !isActive ? "bg-slate-700 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>⚪</span>
+                  <span>مسودة</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 2. Days Schedule: Daily = 2 Days / Weekly = 1 Day */}
-        <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200 space-y-3">
-          {isDaily ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="font-black text-blue-900 text-sm flex items-center gap-1.5">
-                    <span>📅</span>
-                    <span>اختيار يومي الانطلاق للرحلة</span>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${recurringDays.length === 2 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                    }`}>
-                    {recurringDays.length === 2 ? "✓ تم الاختيار" : "اختر يومين"}
-                  </span>
-                </div>
+        {/* 2. Schedule Selector */}
+        {isDaily ? (
+          <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="font-black text-blue-900 text-xs flex items-center gap-1.5">
+                <span>📅</span>
+                <span>جدول أيام الانطلاق الأسبوعية (اختر يوماً واحداً أو يومين):</span>
+              </label>
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[11px] font-black">
+                {recurringDays.length} يوم مختار ({recurringDays.join(" و ")})
+              </span>
+            </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                  {allWeekDays.map((d) => {
-                    const isSel = recurringDays.includes(d);
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => toggleDailyDay(d)}
-                        className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${isSel
-                            ? "bg-blue-600 text-white border-blue-700 shadow-md scale-105"
-                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
-                          }`}
-                      >
-                        <span>{isSel ? "✓" : ""}</span>
-                        <span>{d}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="font-black text-amber-900 text-sm flex items-center gap-1.5">
-                  <span>🗓️</span>
-                  <span>جدول الرحلة الأسبوعية: يوم واحد في الأسبوع</span>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black">
-                  يوم الانطلاق: {weeklyDay}
-                </span>
-              </div>
-
-              {/* 1 Day Selector Chips */}
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-                {allWeekDays.map((d) => (
+            <div className="grid grid-cols-7 gap-1.5">
+              {allWeekDays.map((d) => {
+                const isSelected = recurringDays.includes(d);
+                return (
                   <button
                     key={d}
                     type="button"
-                    onClick={() => setWeeklyDay(d)}
-                    className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${weeklyDay === d
-                        ? "bg-amber-600 text-white border-amber-700 shadow-sm"
-                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                      }`}
+                    onClick={() => toggleDailyDay(d)}
+                    className={`py-2 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                      isSelected
+                        ? "bg-blue-600 text-white border-blue-700 shadow-sm ring-2 ring-blue-500/20"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
+                    }`}
                   >
-                    <span>{weeklyDay === d ? "✓" : "○"}</span>
                     <span>{d}</span>
+                    {isSelected && <span className="text-[10px]">✓</span>}
                   </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100">
-                <Field label="تاريخ الانطلاق المعتمد" type="date" value={startDate} onChange={handleStartDateChange} />
-                <Field label="تاريخ العودة والانتهاء" type="date" value={endDate} onChange={setEndDate} />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* 3. Bus Capacity & Driver Fleet: 25 or 50 Passengers */}
-        <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="font-black text-emerald-900 text-sm flex items-center gap-1.5">
-              <span>🚌</span>
-              <span>سعة الحافلة المتاحة (25 أو 50 راكب حسب السائق والمركبة)</span>
+                );
+              })}
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[11px] font-black">
-              السعة: {busCapacity} راكب
-            </span>
+            <p className="text-[10px] text-blue-700 font-bold">
+              * النظام يتيح للرحلة اليومية أن تنطلق في يوم واحد أو يومين ثابتين كل أسبوع (مثال: الأحد والأربعاء).
+            </p>
           </div>
+        ) : (
+          <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="font-black text-amber-950 text-xs flex items-center gap-1.5">
+                <span>🗓️</span>
+                <span>فترة وموعد الرحلة الأسبوعية:</span>
+              </label>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[11px] font-black">
+                تنطلق الرحلة كل يوم {weeklyDay}
+              </span>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div
-              onClick={() => {
-                setBusCapacity(25);
-                setSelVehicles(["طرابلس 8291"]);
-              }}
-              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${busCapacity === 25
-                  ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
-                  : "bg-white/60 border-slate-200 hover:border-emerald-300"
-                }`}
-            >
-              <div className="text-3xl">🚐</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <div className="font-black text-sm text-slate-900">25 راكب</div>
-                <div className="text-[11px] text-slate-500 font-bold">ميني باص سياحي مريح</div>
-                <div className="text-[10px] text-emerald-700 font-black">سائق: مفتاح الفزاني</div>
+                <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                  📅 تاريخ الانطلاق (يبدأ منه جدول الأسبوع):
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600"
+                />
               </div>
-            </div>
-
-            <div
-              onClick={() => {
-                setBusCapacity(50);
-                setSelVehicles(["طرابلس 4517"]);
-              }}
-              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${busCapacity === 50
-                  ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
-                  : "bg-white/60 border-slate-200 hover:border-emerald-300"
-                }`}
-            >
-              <div className="text-3xl">🚍</div>
               <div>
-                <div className="font-black text-sm text-slate-900">50 راكب</div>
-                <div className="text-[11px] text-slate-500 font-bold">حافلة سياحية كبرى VIP</div>
-                <div className="text-[10px] text-emerald-700 font-black">سائق: علي التارقي</div>
+                <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                  🏁 تاريخ نهاية الرحلة الأسبوعية:
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  className="w-full h-10 px-3 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600"
+                />
               </div>
             </div>
           </div>
+        )}
 
-          <div className="pt-2 border-t border-emerald-100">
-            <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
-          </div>
-        </div>
+        {/* 3. Vehicles & Drivers Filtered by Capacity */}
+        <TripVehicleAndDriverSelector
+          vehicles={vehicles}
+          drivers={drivers}
+          busCapacity={busCapacity}
+          onCapacityChange={(cap) => setBusCapacity(cap)}
+          selectedPlate={selectedPlate}
+          onSelectPlate={setSelectedPlate}
+        />
 
-        {/* 4. Simple Guide Assignment */}
-        <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-2">
-          <div className="font-black text-amber-900 text-sm flex items-center gap-1.5 mb-1">
-            <span>🧭</span>
-            <span>تعيين المرشد السياحي للرحلة</span>
-          </div>
+        {/* 4. Multi-Select Restaurants & Cafes Filtered by Destination City */}
+        <TripRestaurantSelector
+          restaurants={restaurants}
+          selectedIds={selectedRestaurantIds}
+          onToggleSelect={handleToggleRestaurant}
+          targetCity={isDaily ? destination : undefined}
+          targetCities={!isDaily ? multiDestinations : [destination]}
+        />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+        {/* 5. Multi-Select Hotels (for Weekly Trips) */}
+        {!isDaily && (
+          <TripHotelSelector
+            hotels={hotels}
+            selectedHotelIds={selectedHotelIds}
+            onToggleHotel={handleToggleHotel}
+            targetCities={multiDestinations}
+          />
+        )}
+
+        {/* 6. Step-by-Step Itinerary Editor with Add / Delete Stops */}
+        <TripItineraryTimelineEditor
+          steps={itinerarySteps}
+          onChange={setItinerarySteps}
+          selectedRestaurant={selectedPrimaryRestaurant}
+        />
+
+        {/* 7. Tour Guide Selector */}
+        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+          <label className="text-xs font-bold text-slate-800 block">
+            👨‍🏫 المرشد السياحي المعين للرحلة (مرخص وموثق بالمنصة):
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
                 لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
               </div>
             )}
-            {filteredGuidesList.map((g) => (
-              <div
-                key={g.license_number}
-                onClick={() => setGuideLic(prev => prev === g.license_number ? "" : g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${guideLic === g.license_number
-                    ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
-                    : "bg-white border-slate-200 hover:border-amber-300"
-                  }`}
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
-                  {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-0.5">
-                    <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
-                    {guideLic === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
-                  </div>
-                  {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
-                  <div className="text-[9px] text-slate-500 font-bold">
-                    رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
-                  </div>
-                  <div className="text-[9px] text-emerald-700 font-black">
-                    {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {selectedGuideObj && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm overflow-hidden shrink-0 border border-emerald-300">
-                {selectedGuideObj.avatar ? <img src={selectedGuideObj.avatar} alt={selectedGuideObj.full_name} className="w-full h-full object-cover" /> : "👤"}
-              </div>
-              <div>
-                <div className="text-xs font-black text-emerald-900">تم تعيين: {selectedGuideObj.full_name} {selectedGuideObj.title && `(${selectedGuideObj.title})`}</div>
-                <div className="text-[10px] text-emerald-700 font-semibold">رقم الرخصة: {selectedGuideObj.license_number} | الأجر اليومي: {selectedGuideObj.daily_rate || selectedGuideObj.price_per_day || 150} د.ل</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Hotel Selection for Weekly Trips */}
-        {!isDaily && (
-          <div className="p-3.5 bg-sky-50/60 rounded-2xl border border-sky-200 space-y-2">
-            <div className="font-black text-sky-900 text-sm flex items-center gap-1.5 mb-1">
-              <span>🏨</span>
-              <span>تعيين فندق المبيت للرحلة</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-              {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).length === 0 && (
-                <div className="col-span-full text-center text-xs text-sky-700 py-3 font-bold bg-sky-100/50 rounded-xl">
-                  لا توجد فنادق مسجلة في وجهات الرحلة.
-                </div>
-              )}
-              {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).map((h) => (
+            {filteredGuidesList.map((g) => {
+              const isSelected = guideLic === g.license_number;
+              return (
                 <div
-                  key={h.id}
-                  onClick={() => setHotelId(h.id)}
-                  className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${hotelId === h.id
-                      ? "bg-sky-50/50 border-sky-500 ring-1 ring-sky-500"
-                      : "bg-white border-slate-200 hover:border-sky-300"
-                    }`}
+                  key={g.license_number}
+                  onClick={() => setGuideLic(g.license_number)}
+                  className={`p-2.5 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5 ${
+                    isSelected
+                      ? "bg-amber-50/70 border-amber-600 shadow-sm ring-1 ring-amber-500"
+                      : "bg-white border-slate-200 hover:border-amber-300"
+                  }`}
                 >
-                  <img src={h.hotel_photo_1} alt={h.name} className="w-10 h-10 rounded-xl object-cover shadow-sm bg-slate-100" />
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border border-slate-200">
+                    {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-0.5">
-                      <div className="font-black text-xs text-slate-900 truncate">{h.name}</div>
-                      {hotelId === h.id && <div className="text-sky-600 text-xs">✅</div>}
+                      <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
+                      {isSelected && <span className="text-amber-600 text-xs font-black">✅</span>}
                     </div>
-                    <div className="text-[9px] text-slate-500 font-bold mb-1">⭐ {h.rating_avg} ({h.stars} نجوم)</div>
-                    <div className="text-[9px] text-slate-500 leading-relaxed truncate">
-                      <span className="text-sky-700 font-black">المدينة:</span> {h.city} — {h.address}
+                    {g.title && <div className="text-[10px] text-blue-700 font-bold truncate">{g.title}</div>}
+                    <div className="text-[9px] text-slate-500 font-bold">
+                      رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
+                    </div>
+                    <div className="text-[9px] text-emerald-700 font-black">
+                      {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 5. Photos Pickers (Multiple Photos for slideshow) */}
-        <div className="pt-3 border-t border-border space-y-2">
-          <div className="font-bold text-xs text-slate-800">📸 صور الرحلة المتاحة للعرض والأنيميشن في المنصة (أضف أكثر من صورة):</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <ImageFilePicker label="الصورة 1 (الغلاف الرئيسي)" value={photo1} onChange={setPhoto1} />
-            <ImageFilePicker label="الصورة 2 (معرض الصور)" value={photo2} onChange={setPhoto2} />
-            <ImageFilePicker label="الصورة 3 (معرض الصور)" value={photo3} onChange={setPhoto3} />
+              );
+            })}
           </div>
         </div>
 
-        {/* 6. Form Actions */}
+        {/* 8. 5-Image Manager */}
+        <div className="pt-2 border-t border-slate-200">
+          <TripImagesFiveManager images={images} onChange={setImages} />
+        </div>
+
+        {/* Modal Submit Actions */}
         <div className="flex gap-2 justify-end pt-3 border-t border-slate-200">
           <button type="button" onClick={onClose} className="px-5 h-10 rounded-xl border border-slate-300 font-black text-xs hover:bg-slate-50 cursor-pointer">
             إلغاء
@@ -4332,58 +4668,91 @@ function DailyTripEditModal({
   trip,
   guides,
   vehicles,
+  hotels: _hotels,
+  restaurants = [],
+  drivers = [],
   onClose,
   onSave,
 }: {
   trip: DailyTrip;
   guides: Guide[];
   vehicles: Vehicle[];
+  hotels?: Hotel[];
+  restaurants?: Restaurant[];
+  drivers?: Driver[];
   onClose: () => void;
   onSave: (t: DailyTrip) => void;
 }) {
-  const parseGallery = (p?: string, g?: any) => {
-    if (g) {
-      try {
-        const parsed = typeof g === 'string' ? JSON.parse(g) : g;
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch { }
-    }
-    if (p) return p.includes(",") ? p.split(",") : [p];
-    return [];
-  };
-
-  const initialDailyPhotos = parseGallery(trip.photo, (trip as any).gallery);
-  const [photo1, setPhoto1] = useState(initialDailyPhotos[0] || trip.photo || "/assets/ai_ruins.jpg");
-  const [photo2, setPhoto2] = useState(initialDailyPhotos[1] || "/assets/dest-leptis-arch.jpg");
-  const [photo3, setPhoto3] = useState(initialDailyPhotos[2] || "/assets/dest-leptis-forum.jpg");
-
   const [title, setTitle] = useState(trip.trip_title || trip.title || "");
-  const [desc, setDesc] = useState(trip.description || "");
-  const [destination, setDestination] = useState(trip.destination_city || trip.destination || "لبدة الكبرى");
+  const [desc, setDesc] = useState(trip.description);
+  const [destination, setDestination] = useState(trip.destination || "لبدة الكبرى");
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.price_per_seat));
-  const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
+  const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(
+    trip.bus_capacity === 50 || trip.max_capacity === 50 ? 50 : trip.bus_capacity === 15 || trip.max_capacity === 15 ? 15 : 25
+  );
+  const [selectedPlate, setSelectedPlate] = useState<string>(
+    (trip as any).vehicle_plate || trip.vehicle_plates?.[0] || vehicles[0]?.plate_number || ""
+  );
+
+  // Multi-select restaurants & cafes
+  const [selectedRestaurantIds, setSelectedRestaurantIds] = useState<string[]>(() => {
+    if ((trip as any).restaurant_ids && Array.isArray((trip as any).restaurant_ids) && (trip as any).restaurant_ids.length > 0) {
+      return (trip as any).restaurant_ids;
+    }
+    if ((trip as any).restaurant_id) return [(trip as any).restaurant_id];
+    return [];
+  });
+  const handleToggleRestaurant = (id: string) => {
+    setSelectedRestaurantIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(() => {
+    if ((trip as any).itinerary_steps) {
+      try {
+        const parsed = typeof (trip as any).itinerary_steps === "string" ? JSON.parse((trip as any).itinerary_steps) : (trip as any).itinerary_steps;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return DEFAULT_DAILY_ITINERARY_STEPS;
+  });
+
   const [guide, setGuide] = useState(trip.guide_license_number || trip.guide_license || "");
   const [recurringDays, setRecurringDays] = useState<string[]>(
     Array.isArray(trip.recurring_days)
       ? trip.recurring_days
       : typeof trip.recurring_days === "string"
-        ? trip.recurring_days.split(",")
-        : ["الأحد", "الأربعاء"]
+      ? trip.recurring_days.split(",")
+      : ["الأحد", "الأربعاء"]
   );
-  const [activities, setActivities] = useState((trip as any).activities || "");
-  const [isActive, setIsActive] = useState(trip.is_active ?? true);
-  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
+  const [images, setImages] = useState<string[]>(() => {
+    if ((trip as any).images && Array.isArray((trip as any).images) && (trip as any).images.length > 0) {
+      return (trip as any).images;
+    }
+    if (trip.gallery) {
+      const parts = (typeof trip.gallery === "string" ? trip.gallery.split(",") : trip.gallery).map((s: string) => s.trim()).filter(Boolean);
+      if (parts.length >= 5) return parts.slice(0, 5);
+      while (parts.length < 5) parts.push(parts[0] || trip.photo || "/assets/dest-leptis-theater.jpg");
+      return parts;
+    }
+    const p = trip.photo || "/assets/dest-leptis-theater.jpg";
+    return [p, "/assets/dest-leptis-arch.jpg", "/assets/dest-leptis-forum.jpg", "/assets/dest-leptis-coast.jpg", "/assets/hero-leptis.jpg"];
+  });
+  const [activities, setActivities] = useState((trip as any).activities || "جولة أثرية بمرشد موثق • شرح تاريخي مفصل • غداء طازج • جلسة تصوير");
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => g.verification_status !== "مرفوض");
   }, [guides]);
 
+  const selectedPrimaryRestaurant = useMemo(() => {
+    return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
+  }, [restaurants, selectedRestaurantIds]);
+
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
   const toggleDailyDay = (day: string) => {
     if (recurringDays.includes(day)) {
-      if (recurringDays.length <= 1) return;
+      if (recurringDays.length === 1) return;
       setRecurringDays(recurringDays.filter((d) => d !== day));
     } else {
       if (recurringDays.length >= 2) {
@@ -4395,20 +4764,15 @@ function DailyTripEditModal({
   };
 
   return (
-    <ModalShell title={`تعديل الرحلة اليومية: ${trip.trip_title || trip.title || ""}`} onClose={onClose}>
+    <ModalShell maxWidth="max-w-5xl" title={`تعديل الرحلة اليومية: ${trip.trip_title || trip.title || ""}`} onClose={onClose}>
       <form
         className="space-y-4 text-right text-xs"
         onSubmit={(e) => {
           e.preventDefault();
-          if (recurringDays.length !== 2) {
-            alert("يرجى اختيار يومين أسبوعياً للرحلة اليومية.");
+          if (recurringDays.length < 1 || recurringDays.length > 2) {
+            alert("يرجى اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية.");
             return;
           }
-
-          const allPhotos = [photo1, photo2, photo3].filter(Boolean);
-          const mainPhoto = allPhotos[0] || photo1;
-          const galleryJson = JSON.stringify(allPhotos);
-
           onSave({
             ...trip,
             trip_title: title,
@@ -4424,10 +4788,14 @@ function DailyTripEditModal({
             recurring_days: recurringDays.join(","),
             guide_license_number: guide,
             guide_license: guide,
-            is_active: isActive,
-            photo: mainPhoto,
-            gallery: galleryJson,
-            vehicle_plates: selVehicles,
+            vehicle_plate: selectedPlate || null,
+            vehicle_plates: selectedPlate ? [selectedPlate] : [],
+            restaurant_id: selectedRestaurantIds[0] || null,
+            restaurant_ids: selectedRestaurantIds,
+            itinerary_steps: itinerarySteps,
+            photo: images[0] || trip.photo || "/assets/dest-leptis-theater.jpg",
+            gallery: images.filter(Boolean).join(","),
+            images: images,
             activities: activities.trim() || null,
           } as any);
         }}
@@ -4449,27 +4817,13 @@ function DailyTripEditModal({
         </div>
         <Field label="الوصف" value={desc} onChange={setDesc} />
         <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
+        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
-          <div>
-            <label className="text-xs font-bold mb-1 block">حالة التفعيل</label>
-            <select
-              value={isActive ? "true" : "false"}
-              onChange={(e) => setIsActive(e.target.value === "true")}
-              className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-            >
-              <option value="true">نشطة ومعروضة</option>
-              <option value="false">موقوفة مؤقتاً</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 2 Days Selector */}
+        {/* 1 or 2 Days Selector */}
         <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
           <div className="font-black text-blue-900 text-xs flex justify-between">
-            <span>📅 جدول الأيام (يومان أسبوعياً):</span>
-            <span className="text-emerald-700 font-bold">المختار: {recurringDays.join(" و ")}</span>
+            <span>📅 جدول الأيام (يوم واحد أو يومين أسبوعياً):</span>
+            <span className="text-emerald-700">المختار: {recurringDays.join(" و ")}</span>
           </div>
           <div className="grid grid-cols-7 gap-1">
             {allWeekDays.map((d) => (
@@ -4477,8 +4831,9 @@ function DailyTripEditModal({
                 key={d}
                 type="button"
                 onClick={() => toggleDailyDay(d)}
-                className={`py-1.5 rounded-lg text-xs font-black border transition ${recurringDays.includes(d) ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-700 border-slate-200"
-                  }`}
+                className={`py-1.5 rounded-lg text-xs font-black border transition ${
+                  recurringDays.includes(d) ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
               >
                 {d}
               </button>
@@ -4486,28 +4841,30 @@ function DailyTripEditModal({
           </div>
         </div>
 
-        {/* Bus Capacity */}
-        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
-          <div className="font-black text-emerald-900 text-xs">🚌 سعة الحافلة (25 أو 50 راكب):</div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setBusCapacity(25)}
-              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
-            >
-              🚐 25 راكب (ميني باص)
-            </button>
-            <button
-              type="button"
-              onClick={() => setBusCapacity(50)}
-              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
-            >
-              🚍 50 راكب (حافلة كبرى)
-            </button>
-          </div>
-        </div>
+        {/* Bus Capacity & Fleet Selector */}
+        <TripVehicleAndDriverSelector
+          vehicles={vehicles}
+          drivers={drivers}
+          busCapacity={busCapacity}
+          onCapacityChange={(cap) => setBusCapacity(cap)}
+          selectedPlate={selectedPlate}
+          onSelectPlate={setSelectedPlate}
+        />
+
+        {/* Multi-Select Restaurants & Cafes Filtered by Destination City */}
+        <TripRestaurantSelector
+          restaurants={restaurants}
+          selectedIds={selectedRestaurantIds}
+          onToggleSelect={handleToggleRestaurant}
+          targetCity={destination}
+        />
+
+        {/* Step-by-Step Itinerary Editor with Add/Delete Stops */}
+        <TripItineraryTimelineEditor
+          steps={itinerarySteps}
+          onChange={setItinerarySteps}
+          selectedRestaurant={selectedPrimaryRestaurant}
+        />
 
         <div>
           <label className="text-xs font-bold mb-2 block">المرشد السياحي المعين</label>
@@ -4521,10 +4878,11 @@ function DailyTripEditModal({
               <div
                 key={g.license_number}
                 onClick={() => setGuide(g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${guide === g.license_number
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                  guide === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
-                  }`}
+                }`}
               >
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
                   {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
@@ -4547,17 +4905,8 @@ function DailyTripEditModal({
           </div>
         </div>
 
-        <div className="pt-2 border-t border-border space-y-2">
-          <div className="font-bold text-xs text-slate-800">📸 صور الرحلة اليومية (أضف أكثر من صورة للأنيميشن):</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <ImageFilePicker label="الصورة 1 (الغلاف الرئيسي)" value={photo1} onChange={setPhoto1} />
-            <ImageFilePicker label="الصورة 2 (معرض الصور)" value={photo2} onChange={setPhoto2} />
-            <ImageFilePicker label="الصورة 3 (معرض الصور)" value={photo3} onChange={setPhoto3} />
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-border">
-          <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
+        <div className="pt-2 border-t border-slate-200">
+          <TripImagesFiveManager images={images} onChange={setImages} />
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
@@ -4578,6 +4927,8 @@ function WeeklyTripEditModal({
   guides,
   vehicles,
   hotels,
+  restaurants = [],
+  drivers = [],
   onClose,
   onSave,
 }: {
@@ -4585,45 +4936,25 @@ function WeeklyTripEditModal({
   guides: Guide[];
   vehicles: Vehicle[];
   hotels: Hotel[];
+  restaurants?: Restaurant[];
+  drivers?: Driver[];
   onClose: () => void;
   onSave: (w: WeeklyTrip) => void;
 }) {
-  const parseGallery = (p?: string, g?: any) => {
-    if (g) {
-      try {
-        const parsed = typeof g === 'string' ? JSON.parse(g) : g;
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch { }
-    }
-    if (p) return p.includes(",") ? p.split(",") : [p];
-    return [];
-  };
-
-  const initialWeeklyPhotos = parseGallery(trip.photo, (trip as any).gallery);
-  const [photo1, setPhoto1] = useState(initialWeeklyPhotos[0] || trip.photo || "/assets/ai_ghadames.jpg");
-  const [photo2, setPhoto2] = useState(initialWeeklyPhotos[1] || "/assets/dest-ubari-gaberoun.jpg");
-  const [photo3, setPhoto3] = useState(initialWeeklyPhotos[2] || "/assets/dest-sahara-dunes.jpg");
-
   const [title, setTitle] = useState(trip.trip_title || trip.title || "");
-  const [desc, setDesc] = useState(trip.trip_description || trip.description || "");
-  const [multiDestinations, setMultiDestinations] = useState<string[]>(
-    trip.destinations || (trip.destination ? trip.destination.split(" + ") : [trip.destination_region || "أوباري"])
-  );
+  const [multiDestinations, setMultiDestinations] = useState<string[]>(trip.destinations || (trip.destination ? trip.destination.split(" + ") : ["أوباري"]));
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.seat_per_price));
-  const [busCapacity, setBusCapacity] = useState<25 | 50>(trip.bus_capacity || (trip.max_capacity === 50 ? 50 : 25));
-  const [weeklyDay, setWeeklyDay] = useState(trip.weekly_day || "الجمعة");
-  const [startDate, setStartDate] = useState(trip.start_date || "2026-09-01");
-  const [endDate, setEndDate] = useState(trip.end_date || "2026-09-06");
-  const [guide, setGuide] = useState(trip.guide_license_number || trip.guide_license || "");
-  const [hotelId, setHotelId] = useState(trip.hotel_id || "");
-  const [activities, setActivities] = useState((trip as any).activities || "");
-  const [isActive, setIsActive] = useState(trip.is_active ?? true);
-  const [selVehicles, setSelVehicles] = useState<string[]>(trip.vehicle_plates || []);
 
   const handleMultiDestToggle = (city: string) => {
     setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
   };
+  const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(
+    trip.bus_capacity === 50 || trip.max_capacity === 50 ? 50 : trip.bus_capacity === 15 || trip.max_capacity === 15 ? 15 : 25
+  );
+  const [weeklyDay, setWeeklyDay] = useState(trip.weekly_day || "الجمعة");
+  const [startDate, setStartDate] = useState(trip.start_date || "2026-09-01");
+  const [endDate, setEndDate] = useState(trip.end_date || "2026-09-06");
 
   const handleStartDateChange = (date: string) => {
     setStartDate(date);
@@ -4633,15 +4964,70 @@ function WeeklyTripEditModal({
       setWeeklyDay(days[d.getDay()]);
     }
   };
+  const [guide, setGuide] = useState(trip.guide_license_number || trip.guide_license || "");
+  
+  // Multi-select hotels
+  const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>(() => {
+    if ((trip as any).hotel_ids && Array.isArray((trip as any).hotel_ids) && (trip as any).hotel_ids.length > 0) {
+      return (trip as any).hotel_ids;
+    }
+    if (trip.hotel_id) return [trip.hotel_id];
+    return [];
+  });
+  const handleToggleHotel = (id: string) => {
+    setSelectedHotelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const [selectedPlate, setSelectedPlate] = useState<string>(
+    (trip as any).vehicle_plate || trip.vehicle_plates?.[0] || vehicles[0]?.plate_number || ""
+  );
+
+  // Multi-select restaurants & cafes
+  const [selectedRestaurantIds, setSelectedRestaurantIds] = useState<string[]>(() => {
+    if ((trip as any).restaurant_ids && Array.isArray((trip as any).restaurant_ids) && (trip as any).restaurant_ids.length > 0) {
+      return (trip as any).restaurant_ids;
+    }
+    if ((trip as any).restaurant_id) return [(trip as any).restaurant_id];
+    return [];
+  });
+  const handleToggleRestaurant = (id: string) => {
+    setSelectedRestaurantIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(() => {
+    if ((trip as any).itinerary_steps) {
+      try {
+        const parsed = typeof (trip as any).itinerary_steps === "string" ? JSON.parse((trip as any).itinerary_steps) : (trip as any).itinerary_steps;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return DEFAULT_DAILY_ITINERARY_STEPS;
+  });
+
+  const [images, setImages] = useState<string[]>(() => {
+    if ((trip as any).images && Array.isArray((trip as any).images) && (trip as any).images.length > 0) {
+      return (trip as any).images;
+    }
+    if (trip.gallery) {
+      const parts = (typeof trip.gallery === "string" ? trip.gallery.split(",") : trip.gallery).map((s: string) => s.trim()).filter(Boolean);
+      if (parts.length >= 5) return parts.slice(0, 5);
+      while (parts.length < 5) parts.push(parts[0] || trip.photo || "/assets/dest-ubari-gaberoun.jpg");
+      return parts;
+    }
+    const p = trip.photo || "/assets/dest-ubari-gaberoun.jpg";
+    return [p, "/assets/dest-ubari-ummalmaa.jpg", "/assets/dest-acacus-arch.jpg", "/assets/dest-sahara-dunes.jpg", "/assets/dest-ubari.jpg"];
+  });
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => g.verification_status !== "مرفوض");
   }, [guides]);
 
-  const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+  const selectedPrimaryRestaurant = useMemo(() => {
+    return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
+  }, [restaurants, selectedRestaurantIds]);
 
   return (
-    <ModalShell title={`تعديل الرحلة الأسبوعية: ${trip.trip_title || trip.title || ""}`} onClose={onClose}>
+    <ModalShell maxWidth="max-w-5xl" title={`تعديل الرحلة الأسبوعية: ${trip.trip_title || trip.title || ""}`} onClose={onClose}>
       <form
         className="space-y-4 text-right text-xs"
         onSubmit={(e) => {
@@ -4650,20 +5036,12 @@ function WeeklyTripEditModal({
             alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل!");
             return;
           }
-
-          const allPhotos = [photo1, photo2, photo3].filter(Boolean);
-          const mainPhoto = allPhotos[0] || photo1;
-          const galleryJson = JSON.stringify(allPhotos);
-
           onSave({
             ...trip,
             trip_title: title,
             title,
-            trip_description: desc,
-            description: desc,
             destinations: multiDestinations,
             destination: multiDestinations.join(" + "),
-            destination_region: multiDestinations.join(" + "),
             departure_city: departureCity,
             seat_per_price: +price,
             bus_capacity: busCapacity,
@@ -4674,17 +5052,20 @@ function WeeklyTripEditModal({
             end_date: endDate,
             guide_license_number: guide,
             guide_license: guide,
-            hotel_id: hotelId,
-            is_active: isActive,
-            photo: mainPhoto,
-            gallery: galleryJson,
-            vehicle_plates: selVehicles,
-            activities: activities.trim() || null,
-          } as any);
+            hotel_id: selectedHotelIds[0] || null,
+            hotel_ids: selectedHotelIds,
+            vehicle_plate: selectedPlate || null,
+            vehicle_plates: selectedPlate ? [selectedPlate] : [],
+            restaurant_id: selectedRestaurantIds[0] || null,
+            restaurant_ids: selectedRestaurantIds,
+            itinerary_steps: itinerarySteps,
+            photo: images[0] || trip.photo || "/assets/dest-ubari-gaberoun.jpg",
+            gallery: images.filter(Boolean).join(","),
+            images: images,
+          });
         }}
       >
         <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
@@ -4710,58 +5091,26 @@ function WeeklyTripEditModal({
             </div>
           </div>
         </div>
-
         <div className="flex flex-wrap gap-1.5">
           {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => (
             <button
               key={city}
               type="button"
               onClick={() => handleMultiDestToggle(city)}
-              className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${multiDestinations.includes(city) ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-                }`}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
+                multiDestinations.includes(city) ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+              }`}
             >
               {city} {multiDestinations.includes(city) && "✓"}
             </button>
           ))}
         </div>
+        <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
-        <Field label="وصف الرحلة وبرنامجها الأسبوعي" value={desc} onChange={setDesc} />
-
-        <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
-
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
-          <div>
-            <label className="text-xs font-bold mb-1 block">حالة التفعيل</label>
-            <select
-              value={isActive ? "true" : "false"}
-              onChange={(e) => setIsActive(e.target.value === "true")}
-              className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-            >
-              <option value="true">نشطة ومعروضة</option>
-              <option value="false">موقوفة مؤقتاً</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 1 Day Selector */}
         <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
           <div className="font-black text-amber-900 text-xs flex justify-between items-center">
             <span>🗓️ موعد الانطلاق (يوم واحد أسبوعياً):</span>
             <span className="px-3 py-1 bg-amber-200/50 rounded-lg text-amber-900 font-black">يتم تحديده تلقائياً: كل {weeklyDay}</span>
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {allWeekDays.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setWeeklyDay(d)}
-                className={`py-1.5 rounded-lg text-xs font-black border transition ${weeklyDay === d ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-slate-200"
-                  }`}
-              >
-                {d}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -4770,28 +5119,38 @@ function WeeklyTripEditModal({
           <Field label="تاريخ العودة" type="date" value={endDate} onChange={setEndDate} />
         </div>
 
-        {/* Bus Capacity */}
-        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
-          <div className="font-black text-emerald-900 text-xs">🚌 سعة الحافلة (25 أو 50 راكب):</div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setBusCapacity(25)}
-              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
-            >
-              🚐 25 راكب (ميني باص)
-            </button>
-            <button
-              type="button"
-              onClick={() => setBusCapacity(50)}
-              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
-            >
-              🚍 50 راكب (حافلة كبرى)
-            </button>
-          </div>
-        </div>
+        {/* Bus Capacity & Fleet */}
+        <TripVehicleAndDriverSelector
+          vehicles={vehicles}
+          drivers={drivers}
+          busCapacity={busCapacity}
+          onCapacityChange={(cap) => setBusCapacity(cap)}
+          selectedPlate={selectedPlate}
+          onSelectPlate={setSelectedPlate}
+        />
+
+        {/* Multi-Select Restaurants & Cafes Filtered by Destination Cities */}
+        <TripRestaurantSelector
+          restaurants={restaurants}
+          selectedIds={selectedRestaurantIds}
+          onToggleSelect={handleToggleRestaurant}
+          targetCities={multiDestinations}
+        />
+
+        {/* Multi-Select Hotels Filtered by Destination Cities */}
+        <TripHotelSelector
+          hotels={hotels}
+          selectedHotelIds={selectedHotelIds}
+          onToggleHotel={handleToggleHotel}
+          targetCities={multiDestinations}
+        />
+
+        {/* Dynamic Itinerary Timeline with Add/Delete Stops */}
+        <TripItineraryTimelineEditor
+          steps={itinerarySteps}
+          onChange={setItinerarySteps}
+          selectedRestaurant={selectedPrimaryRestaurant}
+        />
 
         <div>
           <label className="text-xs font-bold mb-2 block">المرشد السياحي المعين</label>
@@ -4805,10 +5164,11 @@ function WeeklyTripEditModal({
               <div
                 key={g.license_number}
                 onClick={() => setGuide(g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${guide === g.license_number
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                  guide === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
-                  }`}
+                }`}
               >
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
                   {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
@@ -4831,54 +5191,8 @@ function WeeklyTripEditModal({
           </div>
         </div>
 
-        {/* Hotel Selection */}
-        <div className="p-3.5 bg-sky-50/60 rounded-2xl border border-sky-200 space-y-2">
-          <div className="font-black text-sky-900 text-sm flex items-center gap-1.5 mb-1">
-            <span>🏨</span>
-            <span>تعيين فندق المبيت للرحلة</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-            {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).length === 0 && (
-              <div className="col-span-full text-center text-xs text-sky-700 py-3 font-bold bg-sky-100/50 rounded-xl">
-                لا توجد فنادق مسجلة في وجهات الرحلة.
-              </div>
-            )}
-            {hotels.filter(h => multiDestinations.some(d => d.includes(h.city) || h.city.includes(d))).map((h) => (
-              <div
-                key={h.id}
-                onClick={() => setHotelId(h.id)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${hotelId === h.id
-                    ? "bg-sky-50/50 border-sky-500 ring-1 ring-sky-500"
-                    : "bg-white border-slate-200 hover:border-sky-300"
-                  }`}
-              >
-                <img src={h.hotel_photo_1} alt={h.name} className="w-10 h-10 rounded-xl object-cover shadow-sm bg-slate-100" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-0.5">
-                    <div className="font-black text-xs text-slate-900 truncate">{h.name}</div>
-                    {hotelId === h.id && <div className="text-sky-600 text-xs">✅</div>}
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-bold mb-1">⭐ {h.rating_avg} ({h.stars} نجوم)</div>
-                  <div className="text-[9px] text-slate-500 leading-relaxed truncate">
-                    <span className="text-sky-700 font-black">المدينة:</span> {h.city} — {h.address}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-border space-y-2">
-          <div className="font-bold text-xs text-slate-800">📸 صور الرحلة الأسبوعية (أضف أكثر من صورة للأنيميشن):</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <ImageFilePicker label="الصورة 1 (الغلاف الرئيسي)" value={photo1} onChange={setPhoto1} />
-            <ImageFilePicker label="الصورة 2 (معرض الصور)" value={photo2} onChange={setPhoto2} />
-            <ImageFilePicker label="الصورة 3 (معرض الصور)" value={photo3} onChange={setPhoto3} />
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-border">
-          <VehiclesMultiSelect vehicles={vehicles} selected={selVehicles} onChange={setSelVehicles} />
+        <div className="pt-2 border-t border-slate-200">
+          <TripImagesFiveManager images={images} onChange={setImages} />
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
@@ -4886,7 +5200,7 @@ function WeeklyTripEditModal({
             إلغاء
           </button>
           <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
-            حفظ التعديلات
+            حفظ التغييرات
           </button>
         </div>
       </form>
@@ -4894,26 +5208,33 @@ function WeeklyTripEditModal({
   );
 }
 
-function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
-  const [guide, setGuide] = useState(trip.assigned_guide || guides[0]?.license_number || "");
+function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
+  // Tourist chose the guide (guide_license_number)
+  const initialGuideLic = trip.guide_license_number || trip.assigned_guide || guides[0]?.license_number || "";
+  const [guide, setGuide] = useState(initialGuideLic);
   const [vehicle, setVehicle] = useState(trip.assigned_vehicle || vehicles[0]?.plate_number || "");
-
+  const [servicesFee, setServicesFee] = useState("150"); // الخدمات المقدمة (ضيافة، تصاريح، لوجستيات)
+  
   const selectedGuide = guides.find(g => g.license_number === guide) || guides[0];
   const selectedVehicle = vehicles.find(v => v.plate_number === vehicle) || vehicles[0];
   const guideDailyRate = selectedGuide?.daily_rate || 150;
   const vehicleDailyRate = selectedVehicle?.daily_rate || 450;
   const durationDays = trip.duration_days || 1;
-  const autoCalculatedTotal = (guideDailyRate + vehicleDailyRate) * durationDays;
+  const servCost = Number(servicesFee) || 0;
+  
+  const totalGuideCost = guideDailyRate * durationDays;
+  const totalVehicleCost = vehicleDailyRate * durationDays;
+  const autoCalculatedTotal = totalGuideCost + totalVehicleCost + servCost;
 
   const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : String(autoCalculatedTotal));
-  const [plan, setPlan] = useState(trip.admin_itinerary_plan || `برنامج رحلة سياحية خاصة لمدة ${durationDays} أيام يشمل التنقلات والمرشد الخاص.`);
+  const [plan, setPlan] = useState(trip.admin_itinerary_plan || `برنامج رحلة سياحية خاصة لمدة ${durationDays} أيام يشمل المرشد السياحي المختار وسيارة النقل الخاصة والخدمات الميدانية.`);
 
   const applyAutoPrice = () => {
     setPrice(String(autoCalculatedTotal));
   };
 
   return (
-    <ModalShell title={`تقييم واحتساب تسعيرة الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
+    <ModalShell title={`احتساب تسعيرة الرحلة الخاصة واعتمادها: ${trip.private_trip_id}`} onClose={onClose}>
       <div className="space-y-4 text-right">
         {/* Tourist Request Details */}
         <div className="p-3.5 rounded-xl bg-muted/40 text-xs space-y-1.5 border border-border/70">
@@ -4922,17 +5243,24 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
             <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-black">⏱️ المدة: {durationDays} أيام</span>
           </div>
           <div className="flex gap-4 text-muted-foreground font-bold">
-            <span>📅 تاريخ الانطلاق المفضل: {trip.preferred_start_date}</span>
-            <span>👥 عدد المرافقين: {trip.number_of_companions}</span>
+            <span>📅 تاريخ الانطلاق: {trip.preferred_start_date}</span>
+            <span>👥 المرافقين: {trip.number_of_companions}</span>
           </div>
           <div className="mt-1 font-semibold text-muted-foreground p-2 rounded-lg bg-white border border-border/40">
             "{trip.customer_description}"
           </div>
+          {trip.customer_requirements && (
+            <div className="text-[11px] text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200">
+              <b>متطلبات السائح الخاصة:</b> {trip.customer_requirements}
+            </div>
+          )}
         </div>
 
-        {/* Guide Selection with Daily Rate */}
+        {/* Tourist Selected Guide Display & Confirmation */}
         <div>
-          <label className="text-xs font-black text-foreground mb-1 block">👨‍✈️ اختيار وتعيين المرشد المكلف (مع السعر اليومي):</label>
+          <label className="text-xs font-black text-foreground mb-1 block">
+            👨‍✈️ المرشد السياحي (الذي اختاره السائح):
+          </label>
           <select
             value={guide}
             onChange={e => setGuide(e.target.value)}
@@ -4940,15 +5268,20 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
           >
             {guides.map(g => (
               <option key={g.license_number} value={g.license_number}>
-                {g.full_name} ({g.license_number}) — {g.daily_rate} د.ل / اليوم
+                {g.full_name} ({g.license_number}) — {g.daily_rate || 150} د.ل / اليوم {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح)" : ""}
               </option>
             ))}
           </select>
+          {trip.guide_license_number && (
+            <p className="text-[11px] text-emerald-700 font-bold mt-1">
+              ✓ تم اختيار المرشد ({trip.guide_license_number}) بناءً على رغبة السائح.
+            </p>
+          )}
         </div>
 
-        {/* Vehicle Selection with Daily Rate */}
+        {/* Vehicle Selection */}
         <div>
-          <label className="text-xs font-black text-foreground mb-1 block">🚌 اختيار وتعيين المركبة أو الحافلة (مع السعر اليومي):</label>
+          <label className="text-xs font-black text-foreground mb-1 block">🚌 سيارة النقل المخصصة (تحديد الإدارة):</label>
           <select
             value={vehicle}
             onChange={e => setVehicle(e.target.value)}
@@ -4962,581 +5295,1059 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
           </select>
         </div>
 
+        {/* Services Fee */}
+        <div>
+          <label className="text-xs font-black text-foreground mb-1 block">🛠️ مصروفات الخدمات المقدمة (لوجستيات، تصاريح، ضيافة) (د.ل):</label>
+          <input
+            type="number"
+            value={servicesFee}
+            onChange={e => setServicesFee(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+          />
+        </div>
+
         {/* Breakdown Calculation Box */}
         <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/60 text-xs space-y-2">
           <div className="flex justify-between items-center">
-            <span className="font-black text-emerald-900">🧾 الحسبة التلقائية حسب أسعار اليوم الواحد:</span>
+            <span className="font-black text-emerald-900">🧾 تفاصيل جمع الحسبة التلقائية:</span>
             <button
               type="button"
               onClick={applyAutoPrice}
-              className="text-[11px] font-black text-emerald-700 underline hover:text-emerald-900"
+              className="text-[11px] font-black text-emerald-700 underline hover:text-emerald-900 cursor-pointer"
             >
-              🔄 تطبيق السعر المحسوب في الحقل
+              🔄 تطبيق السعر المحسوب في الإجمالي
             </button>
           </div>
           <div className="text-muted-foreground space-y-1">
             <div className="flex justify-between">
-              <span>أجر المرشد اليومي:</span>
-              <span className="font-bold text-foreground">{guideDailyRate} د.ل / يوم</span>
+              <span>مصروفات المرشد ({guideDailyRate} د.ل × {durationDays} يوم):</span>
+              <span className="font-bold text-foreground">{totalGuideCost} د.ل</span>
             </div>
             <div className="flex justify-between">
-              <span>أجر المركبة اليومي:</span>
-              <span className="font-bold text-foreground">{vehicleDailyRate} د.ل / يوم</span>
+              <span>مصروفات سيارة النقل ({vehicleDailyRate} د.ل × {durationDays} يوم):</span>
+              <span className="font-bold text-foreground">{totalVehicleCost} د.ل</span>
             </div>
             <div className="flex justify-between">
-              <span>إجمالي اليوم الواحد (مرشد + مركبة):</span>
-              <span className="font-bold text-foreground">{guideDailyRate + vehicleDailyRate} د.ل / يوم</span>
+              <span>مصروفات الخدمات المقدمة:</span>
+              <span className="font-bold text-foreground">{servCost} د.ل</span>
             </div>
             <div className="flex justify-between border-t border-emerald-200/80 pt-1.5 font-black text-emerald-900">
-              <span>الإجمالي التقديري لـ {durationDays} أيام:</span>
+              <span>المجموع الكلي التقديري:</span>
               <span className="text-sm font-black">{autoCalculatedTotal} د.ل</span>
             </div>
           </div>
         </div>
 
-        <Field label="السعر الإجمالي النهائي المعتمد للرحلة (د.ل)" type="number" value={price} onChange={setPrice} />
+        <Field label="السعر الإجمالي النهائي المعروض للسائح (د.ل)" type="number" value={price} onChange={setPrice} />
 
         <div>
-          <label className="text-xs font-bold mb-1 block">خطة مسار الرحلة الخاصة</label>
+          <label className="text-xs font-bold mb-1 block">برنامج ومسار الرحلة المقترح من الإدارة:</label>
           <textarea value={plan} onChange={e => setPlan(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right" />
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
-          <button onClick={() => onSave(trip.private_trip_id, "مرفوضة من الأدمن")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs">رفض الطلب</button>
-          <button onClick={() => onSave(trip.private_trip_id, "مؤكدة", +price, plan, guide, vehicle)} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow">تأكيد الموارد والسعر ({price} د.ل)</button>
+          <button onClick={() => onSave(trip.private_trip_id, "مرفوضة من الأدمن")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs hover:bg-red-50 cursor-pointer">
+            رفض الطلب
+          </button>
+          <button onClick={() => onSave(trip.private_trip_id, "تم التسعير - بانتظار موافقة السائح", +price, plan, guide, vehicle)} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow hover:opacity-95 cursor-pointer">
+            اعتماد الحسبة وإرسال التسعيرة للسائح ({price} د.ل) ↗
+          </button>
         </div>
       </div>
     </ModalShell>
   );
 }
 
-/* ---- INTERACTIVE WORKING HOURS CLOCK STEPPER (ساعة تزيد وتنقص) ---- */
-function WorkingHoursClockStepper({
-  value,
-  onChange,
-  label = "ساعات وأوقات العمل اليومية:",
+
+function HotelModal({
+  title,
+  hotel,
+  onClose,
+  onSave,
+  existingHotels = [],
 }: {
-  value: string;
-  onChange: (val: string) => void;
-  label?: string;
+  title: string;
+  hotel?: Hotel;
+  onClose: () => void;
+  onSave: (h: any) => void;
+  existingHotels?: Hotel[];
 }) {
-  const [is24Hours, setIs24Hours] = useState(value.includes("24"));
-  const [startHour, setStartHour] = useState(9);
-  const [startPeriod, setStartPeriod] = useState<"صباحاً" | "مساءً">("صباحاً");
-  const [endHour, setEndHour] = useState(12);
-  const [endPeriod, setEndPeriod] = useState<"صباحاً" | "مساءً" | "ليلاً">("ليلاً");
-
-  const emit = (sH: number, sP: "صباحاً" | "مساءً", eH: number, eP: "صباحاً" | "مساءً" | "ليلاً") => {
-    setIs24Hours(false);
-    const sStr = `${String(sH).padStart(2, "0")}:00 ${sP}`;
-    const eStr = `${String(eH).padStart(2, "0")}:00 ${eP}`;
-    onChange(`${sStr} — ${eStr}`);
-  };
-
-  const incStart = () => {
-    const next = startHour === 12 ? 1 : startHour + 1;
-    setStartHour(next);
-    emit(next, startPeriod, endHour, endPeriod);
-  };
-  const decStart = () => {
-    const prev = startHour === 1 ? 12 : startHour - 1;
-    setStartHour(prev);
-    emit(prev, startPeriod, endHour, endPeriod);
-  };
-  const incEnd = () => {
-    const next = endHour === 12 ? 1 : endHour + 1;
-    setEndHour(next);
-    emit(startHour, startPeriod, next, endPeriod);
-  };
-  const decEnd = () => {
-    const prev = endHour === 1 ? 12 : endHour - 1;
-    setEndHour(prev);
-    emit(startHour, startPeriod, prev, endPeriod);
-  };
-
-  return (
-    <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-2.5">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-          <span>⏰</span>
-          <span>{label}</span>
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !is24Hours;
-            setIs24Hours(next);
-            if (next) onChange("مفتوح 24 ساعة متواصلة");
-            else emit(startHour, startPeriod, endHour, endPeriod);
-          }}
-          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${is24Hours
-              ? "bg-amber-500 border-amber-600 text-white shadow-xs"
-              : "bg-white border-amber-200 text-slate-700 hover:bg-amber-100/60"
-            }`}
-        >
-          24 ساعة متواصلة {is24Hours ? "✓" : ""}
-        </button>
-      </div>
-
-      {!is24Hours && (
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          {/* من وقت الفتح */}
-          <div className="bg-white p-2.5 rounded-xl border border-amber-200 space-y-1.5 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 block">من (ساعة البداية / الدخول):</span>
-            <div className="flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={decStart}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
-                >
-                  -
-                </button>
-                <span className="w-8 text-center font-mono font-black text-xs text-foreground">
-                  {String(startHour).padStart(2, "0")}:00
-                </span>
-                <button
-                  type="button"
-                  onClick={incStart}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
-                >
-                  +
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const np = startPeriod === "صباحاً" ? "مساءً" : "صباحاً";
-                  setStartPeriod(np);
-                  emit(startHour, np, endHour, endPeriod);
-                }}
-                className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-900 rounded-md hover:bg-amber-200 cursor-pointer"
-              >
-                {startPeriod}
-              </button>
-            </div>
-          </div>
-
-          {/* إلى وقت الإغلاق */}
-          <div className="bg-white p-2.5 rounded-xl border border-amber-200 space-y-1.5 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 block">إلى (ساعة الإغلاق / المغادرة):</span>
-            <div className="flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={decEnd}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
-                >
-                  -
-                </button>
-                <span className="w-8 text-center font-mono font-black text-xs text-foreground">
-                  {String(endHour).padStart(2, "0")}:00
-                </span>
-                <button
-                  type="button"
-                  onClick={incEnd}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
-                >
-                  +
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const np = endPeriod === "ليلاً" ? "مساءً" : endPeriod === "مساءً" ? "صباحاً" : "ليلاً";
-                  setEndPeriod(np);
-                  emit(startHour, startPeriod, endHour, np);
-                }}
-                className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-900 rounded-md hover:bg-amber-200 cursor-pointer"
-              >
-                {endPeriod}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* القيمة المعتمدة */}
-      <div className="flex items-center justify-between pt-1 text-[11px] font-bold text-amber-900">
-        <span>القيمة المعتمدة:</span>
-        <span className="px-2.5 py-1 bg-white border border-amber-200 rounded-lg font-mono text-amber-950 font-bold shadow-2xs">
-          {value || "09:00 صباحاً — 12:00 ليلاً"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function HotelModal({ title, hotel, onClose, onSave }: { title: string; hotel?: Hotel; onClose: () => void; onSave: (h: any) => void }) {
-  const [hotelId] = useState(hotel?.id || `HTL-${Math.floor(100 + Math.random() * 900)}`);
+  const isNew = !hotel;
+  const [hotelIdInput, setHotelIdInput] = useState(hotel?.hotel_id || hotel?.id || "");
+  const [propertyType, setPropertyType] = useState<string>(hotel?.property_type || "hotel");
   const [name, setName] = useState(hotel?.name || "");
-  const [propertyType, setPropertyType] = useState(hotel?.property_type || "فندق");
   const [city, setCity] = useState(hotel?.city || "طرابلس");
   const [address, setAddress] = useState(hotel?.address || "");
   const [phone, setPhone] = useState(hotel?.phone || "");
-  const [stars, setStars] = useState(hotel?.stars ? String(hotel.stars) : "4");
-  const [status, setStatus] = useState(hotel?.partnership_status || "نشط");
-  const [contractEndDate, setContractEndDate] = useState((hotel as any)?.contract_end_date || (hotel as any)?.contract_date || "2027-12-31");
+  const [stars, setStars] = useState(hotel?.stars ? Number(hotel.stars) : 4);
+  const [status, setStatus] = useState<"نشط" | "موقوف">(hotel?.partnership_status === "موقوف" ? "موقوف" : "نشط");
+  const [discountPct, setDiscountPct] = useState(hotel?.discount_percentage || 15);
   const [description, setDescription] = useState(hotel?.description || "");
-  const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "24 ساعة (تسجيل الوصول: 02:00 م | المغادرة: 12:00 ظ)");
+  const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
+  const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "خدمة استقبال 24/7 (تسجيل وصول 14:00 - مغادرة 12:00)");
+  const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || ["مسبح", "واي فاي", "موقف"]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [contractStartDate] = useState(hotel?.contract_start_date || todayStr);
+  const [contractEndDate, setContractEndDate] = useState(hotel?.contract_end_date || "");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_hotel.jpg");
-  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/ai_hotel.jpg");
-  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/ai_hotel.jpg");
-  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/ai_ghadames.jpg");
-  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/ai_ghadames.jpg");
+  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/hotel_resort.jpg");
+  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/dest-tripoli.jpg");
+  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/dest-harbor-coast.jpg");
+  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/dest-ghadames-alleys.jpg");
+
+  const propertyOptions = [
+    { id: "hotel", label: "🏨 فندق فاخر", desc: "فنادق مصنفة وضيافة استثنائية" },
+    { id: "resort", label: "🏖️ منتجع سياحي", desc: "منتجعات ساحلية واستجمام وشواطئ" },
+    { id: "apartment", label: "🏢 شقق فندقية", desc: "أجنحة وشقق مفروشة بخصوصية عائلية" },
+    { id: "heritage", label: "⛺ مخيمات صحراوية", desc: "إقامة صحراوية وتخييم أصيل في الواحات والصحراء" },
+  ];
+
+  const libyanCities = [
+    "طرابلس", "بنغازي", "مصراتة", "الزاوية", "غدامس", "أوباري",
+    "سبها", "شحات", "الخمس", "زوارة", "درنة", "طبرق", "البيضاء", "صبراتة"
+  ];
+
+  const availableAmenities = [
+    { id: "مسبح", icon: "🏊" },
+    { id: "واي فاي", icon: "📶" },
+    { id: "موقف", icon: "🅿️" },
+    { id: "خدمة غرف", icon: "🛎️" },
+    { id: "صالة رياضية", icon: "🏋️" },
+    { id: "إطلالة بحرية", icon: "🌊" },
+    { id: "شاطئ خاص", icon: "🏖️" },
+    { id: "مطعم فاخر", icon: "🍽️" },
+  ];
+
+  const toggleAmenity = (id: string) => {
+    setAmenities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest("form");
+      if (!form) return;
+      const elements = Array.from(
+        form.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button[type="button"]'
+        )
+      );
+      const currentIndex = elements.indexOf(e.target as HTMLElement);
+      if (currentIndex > -1 && currentIndex < elements.length - 1) {
+        elements[currentIndex + 1].focus();
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !city || !address) return alert("يرجى إدخال البيانات الأساسية للفندق");
+    setErrorMsg(null);
+
+    const cleanId = hotelIdInput.trim();
+    if (!cleanId) {
+      setErrorMsg("يرجى إدخال ترقيم البلدية / رقم القيد البلدي (المفتاح الأساسي ID) لمنع التكرار");
+      return;
+    }
+
+    // Unique Primary Key Check
+    const isDup = existingHotels.some(
+      h => (String(h.hotel_id || h.id).trim() === cleanId) && h.id !== hotel?.id
+    );
+    if (isDup) {
+      setErrorMsg(`رقم القيد البلدي (${cleanId}) مسجل مسبقاً لمنشأة إقامة أخرى. ترقيم البلدية فريد وغير مكرر نهائياً.`);
+      return;
+    }
+
+    // Strict Field Validations
+    if (!name.trim() || name.trim().length < 3) {
+      setErrorMsg("يرجى إدخال اسم مكان الإقامة الرسمي بدقة (3 أحرف على الأقل)");
+      return;
+    }
+    if (!city.trim() || !address.trim() || address.trim().length < 4) {
+      setErrorMsg("يرجى إدخال المدينة والعنوان التفصيلي بدقة");
+      return;
+    }
+    const digitsOnly = phone.replace(/\D/g, "");
+    if (!phone.trim() || digitsOnly.length < 8) {
+      setErrorMsg("يرجى إدخال رقم هاتف اتصال معتمد وصحيح (8 أرقام على الأقل)");
+      return;
+    }
+    if (!contractEndDate) {
+      setErrorMsg("يرجى تحديد تاريخ نهاية العقد مع المنشأة");
+      return;
+    }
+    if (contractEndDate < contractStartDate) {
+      setErrorMsg("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ بداية العقد");
+      return;
+    }
+    if (!description.trim() || description.trim().length < 5) {
+      setErrorMsg("يرجى كتابة وصف ونبذة تعريفية وافية عن مكان الإقامة");
+      return;
+    }
+    if (!workingHours.trim()) {
+      setErrorMsg("يرجى تحديد أوقات العمل والاستقبال");
+      return;
+    }
+    if (Number(discountPct) < 0 || Number(discountPct) > 100) {
+      setErrorMsg("نسبة الخصم يجب أن تكون بين 0% و 100%");
+      return;
+    }
+    if (!p1 || !p2 || !p3 || !p4 || !p5) {
+      setErrorMsg("يرجى استكمال رفع الصور الخمسة بالكامل لمكان الإقامة");
+      return;
+    }
+
     onSave({
-      id: hotelId,
-      name,
+      id: cleanId,
+      hotel_id: cleanId,
+      name: name.trim(),
       property_type: propertyType,
-      city,
-      address,
-      phone,
-      stars: +stars,
+      city: city.trim(),
+      address: address.trim(),
+      phone: phone.trim(),
+      whatsapp: phone.trim(),
+      stars: Number(stars),
       partnership_status: status,
-      contract_date: contractEndDate,
+      contract_start_date: contractStartDate,
       contract_end_date: contractEndDate,
-      description,
-      working_hours: workingHours,
+      discount_percentage: Number(discountPct) || 15,
+      description: description.trim(),
+      google_maps_url: mapsUrl.trim(),
+      working_hours: workingHours.trim(),
+      amenities,
       hotel_photo_1: p1,
       hotel_photo_2: p2 || p1,
       hotel_photo_3: p3 || p1,
       hotel_photo_4: p4 || p1,
       hotel_photo_5: p5 || p1,
+      isNew,
     });
   };
 
   return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
-        <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-[11px] text-blue-900 font-semibold">
-          ℹ️ <b>دليل تعريفي استكشافي:</b> الفنادق للعرض والتعريف بالمنشأة ومميزاتها فقط دون حجز مباشر للغرف عبر المنصة.
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
+      <form className="space-y-4 text-right p-1" onSubmit={handleSubmit} onKeyDown={handleEnterKeyNext}>
+        {/* Validation Error Alert Banner */}
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs font-black flex items-center justify-between gap-2 shadow-xs animate-in fade-in duration-200">
+            <span className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <span>{errorMsg}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-red-500 hover:text-red-800 font-black px-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Notice Banner */}
+        <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs text-[#003580] flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <span className="font-black text-sm block">🏨 إدارة عقد وبيانات مكان الإقامة:</span>
+            <p className="text-[11px] text-blue-900/90 font-medium">
+              يبدأ العقد تلقائياً من يوم التسجيل، مع التحقق الإلزامي من كافة المتطلبات وترقيم البلدية الفريد.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-xl bg-[#003580] text-white text-[11px] font-black shrink-0">
+            خصم {discountPct}% معتمد
+          </span>
         </div>
 
-        {/* معرّف الفندق التلقائي */}
-        <div>
-          <label className="text-xs font-bold text-slate-700 block mb-1">معرّف الفندق</label>
+        {/* Municipal ID (Primary Key) */}
+        <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-300 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+              <span>🏛️</span>
+              <span>رقم القيد البلدي / ترقيم البلدية (المفتاح الأساسي ID) *</span>
+            </label>
+            <span className="text-[10px] font-black text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-lg">إلزامي لمنع التكرار</span>
+          </div>
           <input
             type="text"
-            value={hotelId}
-            disabled
-            readOnly
-            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100/90 text-slate-400 font-mono font-bold text-xs text-right cursor-not-allowed select-none opacity-80 backdrop-blur-sm"
+            value={hotelIdInput}
+            onChange={(e) => {
+              setHotelIdInput(e.target.value);
+              setErrorMsg(null);
+            }}
+            disabled={!isNew}
+            placeholder="مثال: HTL-TRP-2026 أو 10452..."
+            className={`w-full h-11 px-3.5 rounded-xl border text-xs font-black text-right transition ${
+              !isNew
+                ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
+                : "bg-white text-slate-900 border-amber-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
+            }`}
+          />
+          <p className="text-[10px] text-amber-800 font-bold">
+            {isNew
+              ? "⚠️ يتم إدخال ترقيم البلدية يدوياً بواسطة الإدارة ويمثل المفتاح الأساسي لمنع التكرار نهائياً في قاعدة البيانات."
+              : "🔒 ترقيم البلدية مسجل كمفتاح أساسي فريد غير قابل للتعديل بعد التثبيت."}
+          </p>
+        </div>
+
+        {/* Contract Dates & Activity Status */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-800 block">
+              📑 فترة العقد وحالة النشاط بالمنصة:
+            </label>
+            <span className="text-[10px] font-bold text-slate-500">
+              * البداية تلقائياً من يوم التسجيل
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                📅 تاريخ بداية العقد (يوم التسجيل)
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={contractStartDate || todayStr}
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-800 text-right outline-none cursor-default font-mono select-none"
+                />
+                <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
+                  تلقائي
+                </span>
+              </div>
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={contractEndDate}
+                onChange={e => {
+                  setContractEndDate(e.target.value);
+                  setErrorMsg(null);
+                }}
+                min={contractStartDate}
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-[#003580] font-mono focus:ring-1 focus:ring-[#003580]"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                ⚡ حالة المنشأة والعرض بالمنصة
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 h-10 p-1 bg-slate-200/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setStatus("نشط")}
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    status === "نشط"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🟢</span>
+                  <span>نشط</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus("موقوف")}
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    status === "موقوف"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🔴</span>
+                  <span>موقوف</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Category Selection */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-black text-slate-800 block">
+            ⭐ نوع مكان الإقامة (التصنيف بالمنصة):
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {propertyOptions.map((opt) => {
+              const isSelected = propertyType === opt.id;
+              return (
+                <div
+                  key={opt.id}
+                  onClick={() => setPropertyType(opt.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all text-center space-y-1 select-none ${
+                    isSelected
+                      ? "border-2 border-[#003580] bg-blue-50/80 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="text-sm font-black text-slate-900">{opt.label}</div>
+                  <div className="text-[10px] text-slate-500 leading-tight">{opt.desc}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Basic Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="sm:col-span-6">
+            <Field label="اسم مكان الإقامة الرسمي *" value={name} onChange={v => { setName(v); setErrorMsg(null); }} />
+          </div>
+          <div className="sm:col-span-3">
+            <label className="text-xs font-bold text-foreground mb-1 block">المدينة *</label>
+            <select
+              value={city}
+              onChange={e => setCity(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
+            >
+              {libyanCities.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-3">
+            <label className="text-xs font-bold text-foreground mb-1 block">التصنيف الفندقي</label>
+            <select
+              value={stars}
+              onChange={e => setStars(Number(e.target.value))}
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
+            >
+              <option value={5}>⭐⭐⭐⭐⭐ 5 نجوم (فاخر)</option>
+              <option value={4}>⭐⭐⭐⭐ 4 نجوم (ممتاز)</option>
+              <option value={3}>⭐⭐⭐ 3 نجوم (جيد جداً)</option>
+              <option value={2}>⭐⭐ 2 نجوم (اقتصادي)</option>
+              <option value={1}>⭐ نجمة واحدة</option>
+            </select>
+          </div>
+        </div>
+
+        <Field label="العنوان التفصيلي وموقع المنشأة *" value={address} onChange={v => { setAddress(v); setErrorMsg(null); }} />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              🏷️ نسبة الخصم المقدمة لرواد منصة دلّني (%) *
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={discountPct}
+                onChange={e => setDiscountPct(Number(e.target.value))}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
+              />
+              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+            </div>
+          </div>
+        </div>
+
+        <Field label="أوقات العمل وتسجيل الوصول والمغادرة *" value={workingHours} onChange={setWorkingHours} />
+
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📍 رابط موقع مكان الإقامة على خرائط Google Maps
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={mapsUrl}
+              onChange={e => setMapsUrl(e.target.value)}
+              placeholder="https://maps.google.com/?q=..."
+              className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-[#003580] text-right font-mono"
+            />
+            {mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700"
+              >
+                🗺️ فتح ↗
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Amenities */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-800 block">
+            🛎️ المرافق والخدمات المتاحة:
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {availableAmenities.map(am => {
+              const isChecked = amenities.includes(am.id);
+              return (
+                <button
+                  type="button"
+                  key={am.id}
+                  onClick={() => toggleAmenity(am.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                    isChecked
+                      ? "bg-[#003580] text-white border-[#003580] shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>{am.icon}</span>
+                  <span>{am.id}</span>
+                  {isChecked && <span className="text-[10px]">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📝 نبذة تعريفية موجزة ومميزات مكان الإقامة *
+          </label>
+          <textarea
+            value={description}
+            onChange={e => { setDescription(e.target.value); setErrorMsg(null); }}
+            rows={2}
+            placeholder="اكتب نبذة تعريفية عن المنشأة، موقعها، الغرف والأجنحة الفاخرة، والإطلالات..."
+            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-right outline-none focus:border-[#003580] leading-relaxed"
           />
         </div>
 
-        <Field label="اسم الفندق الرسمي" value={name} onChange={setName} placeholder="مثال: فندق الفندق الكبير طرابلس" />
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div>
-            <label className="text-xs font-bold block mb-1">نوع المنشأة الفندقية</label>
-            <select value={propertyType} onChange={e => setPropertyType(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right outline-none focus:border-primary">
-              <option value="فندق">🏨 فندق</option>
-              <option value="منتجع سياحي">🌴 منتجع سياحي</option>
-              <option value="شقق فندقية">🏢 شقق فندقية</option>
-              <option value="نزل سياحي">🏡 نزل سياحي</option>
-              <option value="مخيم سياحي">⛺ مخيم سياحي</option>
-            </select>
-          </div>
-          <div>
-            <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / غدامس..." />
-          </div>
-          <div>
-            <Field label="التصنيف بالنجوم (1-5)" type="number" value={stars} onChange={setStars} />
-          </div>
-        </div>
-
-        {/* حالة التعاقد والعرض وتاريخ انتهاء التعاقد */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs">
-          <div>
-            <label className="text-xs font-bold block mb-1 text-foreground">حالة العرض بالدليل السياحي</label>
-            <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary">
-              <option value="نشط">🟢 نشط (ظاهر بالمنصة)</option>
-              <option value="معلق">🟡 معلق (مخفي من المنصة)</option>
-              <option value="موقوف">🔴 غير نشط / موقوف (مخفي من المنصة)</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1 text-foreground">📅 تاريخ انتهاء التعاقد</label>
-            <input
-              type="date"
-              value={contractEndDate}
-              onChange={e => setContractEndDate(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
-            />
-          </div>
-        </div>
-
-        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع الرئيسي" />
-        <LibyanPhoneField label="هاتف الاستعلام والتواصل المباشر" value={phone} onChange={setPhone} />
-
-        {/* مواعيد وساعات العمل وتسجيل الوصول بأزرار تفاعلية */}
-        <WorkingHoursClockStepper label="مواعيد وساعات العمل وتسجيل الوصول:" value={workingHours} onChange={setWorkingHours} />
-
-        <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">نبذة ووصف الفندق والمميزات والخدمات</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="اكتب نبذة تعريفية عن الفندق وأجنحته والإطلالات والخدمات..." className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary" />
-        </div>
-
         {/* 5 Photos Section */}
-        <div className="pt-2 border-t border-border space-y-2">
-          <label className="text-xs font-black text-foreground block">🖼️ الصور الخمسة للفندق (معرض الصور بالدليل):</label>
-          <div className="space-y-2">
-            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية)" value={p1} onChange={setP1} />
-            <ImageFilePicker label="الصورة 2 (الأجنحة والغرف)" value={p2} onChange={setP2} />
-            <ImageFilePicker label="الصورة 3 (الاستقبال والمطعم)" value={p3} onChange={setP3} />
-            <ImageFilePicker label="الصورة 4 (المرافق والخدمات)" value={p4} onChange={setP4} />
-            <ImageFilePicker label="الصورة 5 (الإطلالة والمسبح)" value={p5} onChange={setP5} />
+        <div className="pt-3 border-t border-slate-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-900 block">
+              🖼️ معرض الصور الخمسة لمكان الإقامة (تظهر في الكرت والمعاينة):
+            </label>
+            <span className="text-[10px] text-slate-500 font-bold">5 صور مطلوبة *</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية للكرت)" value={p1} onChange={setP1} />
+            <ImageFilePicker label="الصورة 2 (الغرف والأجنحة الفندقية)" value={p2} onChange={setP2} />
+            <ImageFilePicker label="الصورة 3 (الاستقبال والبهو والمطعم)" value={p3} onChange={setP3} />
+            <ImageFilePicker label="الصورة 4 (المرافق والمسابح والخدمات)" value={p4} onChange={setP4} />
+          </div>
+          <div className="max-w-md mx-auto">
+            <ImageFilePicker label="الصورة 5 (الإطلالة الخارجية والحدائق)" value={p5} onChange={setP5} />
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 cursor-pointer">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 cursor-pointer">حفظ الفندق بالدليل ✓</button>
+        {/* Submit Actions */}
+        <div className="flex gap-2 justify-end pt-3 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 h-11 rounded-xl border border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md shadow-blue-950/20 cursor-pointer transition flex items-center gap-1.5"
+          >
+            <span>حفظ مكان الإقامة بالدليل ✓</span>
+          </button>
         </div>
       </form>
     </ModalShell>
   );
 }
 
-const PRESET_RESTAURANT_FEATURES = [
-  "📶 واي فاي مجاني",
-  "🚗 موقف سيارات مخصص",
-  "👨‍👩‍👧‍👦 قسم عائلات خاص ومريح",
-  "🌿 جلسات خارجية وشرفة",
-  "💳 دفع إلكتروني (بطاقة / سداد / إدفع لي)",
-  "🛵 خدمة توصيل سريعة",
-  "❄️ تكييف مركزي ممتاز",
-  "🕌 مصلى خاص",
-  "🎂 استضافة حفلات ومناسبات",
-  "♿ مجهز لذوي الاحتياجات الخاصة",
-  "🚭 منطقة خالية من التدخين",
-  "👶 مقاعد مخصصة للأطفال",
-  "📺 شاشات لمشاهدة المباريات",
-  "☕ قهوة مختصة وعصائر طازجة",
-  "🥐 بوفيه إفطار صباحي مفتوح",
-  "🍽️ خدمة حجز طاولات مسبق",
-];
-
-function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string; restaurant?: Restaurant; onClose: () => void; onSave: (r: any) => void }) {
-  const [facilityId] = useState(restaurant?.id || `FAC-${Math.floor(100 + Math.random() * 900)}`);
+function RestaurantModal({
+  title,
+  restaurant,
+  onClose,
+  onSave,
+  existingRestaurants = [],
+}: {
+  title: string;
+  restaurant?: Restaurant;
+  onClose: () => void;
+  onSave: (r: any) => void;
+  existingRestaurants?: Restaurant[];
+}) {
+  const isNew = !restaurant;
+  const [facilityIdInput, setFacilityIdInput] = useState(restaurant?.facility_id || restaurant?.id || "");
   const [name, setName] = useState(restaurant?.name || "");
-  const [type, setType] = useState(restaurant?.type || "مطعم مأكولات شعبية وتراثية");
+  const [category, setCategory] = useState<string>(restaurant?.category || "traditional");
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
+  const [status, setStatus] = useState<"نشط" | "موقوف">(restaurant?.partnership_status === "موقوف" ? "موقوف" : "نشط");
+  const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage || 20);
+  const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "11:00 ص – 11:30 م");
   const [description, setDescription] = useState(restaurant?.description || "");
-  const [features, setFeatures] = useState(restaurant?.features || "");
-  const [verificationStatus, setVerificationStatus] = useState(restaurant?.verification_status || "معتمد");
-  const [contractDate, setContractDate] = useState(restaurant?.contract_date ? String(restaurant.contract_date).split("T")[0] : "2027-12-31");
-  const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "09:00 صباحاً — 12:00 ليلاً");
-  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/ai_food.jpg");
-  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_food.jpg");
-  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/ai_food.jpg");
-  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/restaurant-libya.jpg");
-  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/cafe-libya.jpg");
+  const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
 
-  const toggleFeature = (feat: string) => {
-    const currentList = features
-      .split(/[،,\n]+/)
-      .map(s => s.trim())
-      .filter(Boolean);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [contractStartDate] = useState(restaurant?.contract_start_date || todayStr);
+  const [contractEndDate, setContractEndDate] = useState(restaurant?.contract_end_date || "");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    let updatedList: string[];
-    if (currentList.includes(feat)) {
-      updatedList = currentList.filter(f => f !== feat);
-    } else {
-      updatedList = [...currentList, feat];
-    }
-    setFeatures(updatedList.join("، "));
+  const categoryTypeMap: Record<string, string> = {
+    traditional: "مأكولات شعبية وتراثية",
+    seafood: "مأكولات بحرية وأسماك",
+    cafe: "كافيه ومقهى عصري",
+    fastfood: "وجبات سريعة وعالمية",
   };
 
-  const isFeatureActive = (feat: string) => {
-    const currentList = features
-      .split(/[،,\n]+/)
-      .map(s => s.trim())
-      .filter(Boolean);
-    return currentList.includes(feat);
+  const availableFeatures = [
+    { id: "واي فاي وإنترنت مجاني", icon: "📶" },
+    { id: "مواقف سيارات خاصة", icon: "🅿️" },
+    { id: "خدمة دفع إلكتروني (بطاقات)", icon: "💳" },
+    { id: "جلسات خارجية بالهواء الطلق", icon: "🌿" },
+  ];
+
+  const initialFeatures = Array.isArray(restaurant?.features)
+    ? restaurant.features
+    : typeof restaurant?.features === "string" && restaurant.features.trim()
+    ? (restaurant.features as string).split("،").map(s => s.trim())
+    : ["واي فاي وإنترنت مجاني", "مواقف سيارات خاصة", "خدمة دفع إلكتروني (بطاقات)", "جلسات خارجية بالهواء الطلق"];
+
+  const [features, setFeatures] = useState<string[]>(initialFeatures);
+
+  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/restaurant-libya.jpg");
+  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_food.jpg");
+  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/cafe-libya.jpg");
+  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/dest-tripoli-medina.jpg");
+  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/dest-harbor-coast.jpg");
+
+  const categoryOptions = [
+    { id: "traditional", label: "🍲 مطعم تراثي وشعبي", desc: "أكلات ليبية أصيلة (كسكسي، بازين، مبطن)" },
+    { id: "seafood", label: "🐟 مأكولات بحرية وأسماك", desc: "أسماك طازجة، جمبري، صيد يومي ومحار" },
+    { id: "cafe", label: "☕ كافيه ومقهى عصري", desc: "قهوة مختصة وجلسات هادئة" },
+    { id: "fastfood", label: "🍔 وجبات سريعة وعالمية", desc: "برجر، بيتزا، شاورما وأطباق عالمية" },
+  ];
+
+  const libyanCities = [
+    "طرابلس", "بنغازي", "مصراتة", "الزاوية", "غدامس", "أوباري",
+    "سبها", "شحات", "الخمس", "زوارة", "درنة", "طبرق", "البيضاء", "صبراتة"
+  ];
+
+  const toggleFeature = (id: string) => {
+    setFeatures(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleEnterKeyNext = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest("form");
+      if (!form) return;
+      const elements = Array.from(
+        form.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button[type="button"]'
+        )
+      );
+      const currentIndex = elements.indexOf(e.target as HTMLElement);
+      if (currentIndex > -1 && currentIndex < elements.length - 1) {
+        elements[currentIndex + 1].focus();
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !city.trim()) return alert("يرجى كتابة الاسم والمدينة للمطعم/المقهى");
+    setErrorMsg(null);
+
+    const cleanId = facilityIdInput.trim();
+    if (!cleanId) {
+      setErrorMsg("يرجى إدخال ترقيم البلدية / رقم القيد البلدي (المفتاح الأساسي ID) لمنع التكرار");
+      return;
+    }
+
+    // Unique Primary Key Check
+    const isDup = existingRestaurants.some(
+      r => (String(r.facility_id || r.id).trim() === cleanId) && r.id !== restaurant?.id
+    );
+    if (isDup) {
+      setErrorMsg(`رقم القيد البلدي (${cleanId}) مسجل مسبقاً لمنشأة أخرى. ترقيم البلدية فريد وغير مكرر نهائياً.`);
+      return;
+    }
+
+    // Strict Field Validations
+    if (!name.trim() || name.trim().length < 3) {
+      setErrorMsg("يرجى إدخال اسم المطعم أو المقهى بدقة (3 أحرف على الأقل)");
+      return;
+    }
+    if (!city.trim() || !address.trim() || address.trim().length < 4) {
+      setErrorMsg("يرجى إدخال المدينة والعنوان التفصيلي بدقة");
+      return;
+    }
+    const digitsOnly = phone.replace(/\D/g, "");
+    if (!phone.trim() || digitsOnly.length < 8) {
+      setErrorMsg("يرجى إدخال رقم هاتف اتصال معتمد وصحيح (8 أرقام على الأقل)");
+      return;
+    }
+    if (!contractEndDate) {
+      setErrorMsg("يرجى تحديد تاريخ نهاية العقد مع المطعم/المقهى");
+      return;
+    }
+    if (contractEndDate < contractStartDate) {
+      setErrorMsg("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ بداية العقد");
+      return;
+    }
+    if (!description.trim() || description.trim().length < 5) {
+      setErrorMsg("يرجى كتابة نبذة تعريفية ووصف وافٍ لقائمة المأكولات والمشروبات");
+      return;
+    }
+    if (!workingHours.trim()) {
+      setErrorMsg("يرجى تحديد أوقات وساعات العمل الرسمية");
+      return;
+    }
+    if (Number(discountPct) < 0 || Number(discountPct) > 100) {
+      setErrorMsg("نسبة الخصم يجب أن تكون بين 0% و 100%");
+      return;
+    }
+    if (!i1 || !i2 || !i3 || !i4 || !i5) {
+      setErrorMsg("يرجى استكمال رفع الصور الخمسة بالكامل للمطعم أو المقهى");
+      return;
+    }
+
     onSave({
-      id: facilityId,
+      id: cleanId,
+      facility_id: cleanId,
       name: name.trim(),
-      type,
+      category,
+      type: restaurant?.type || categoryTypeMap[category] || "مطعم وكافيه",
       city: city.trim(),
-      address: address.trim() || "العنوان الرئيسي",
-      phone: phone.trim() || "0910000000",
+      address: address.trim(),
+      phone: phone.trim(),
+      whatsapp: phone.trim(),
+      discount_percentage: Number(discountPct) || 20,
+      working_hours: workingHours.trim(),
+      features,
+      partnership_status: status,
+      contract_start_date: contractStartDate,
+      contract_end_date: contractEndDate,
+      google_maps_url: mapsUrl.trim(),
       description: description.trim(),
-      features: features.trim(),
-      verification_status: verificationStatus,
-      contract_date: contractDate,
-      working_hours: workingHours,
       facility_image_1: i1,
       facility_image_2: i2 || i1,
       facility_image_3: i3 || i1,
       facility_image_4: i4 || i1,
       facility_image_5: i5 || i1,
+      isNew,
     });
   };
 
   return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
-        <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-900 font-semibold">
-          ℹ️ <b>دليل تعريفي:</b> المطاعم والمقاهي للعرض والتعريف بنوع الطعام وساعات العمل والتواصل دون حجز مسبق.
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
+      <form className="space-y-4 text-right p-1" onSubmit={handleSubmit} onKeyDown={handleEnterKeyNext}>
+        {/* Validation Error Alert Banner */}
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs font-black flex items-center justify-between gap-2 shadow-xs animate-in fade-in duration-200">
+            <span className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <span>{errorMsg}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-red-500 hover:text-red-800 font-black px-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Notice Banner */}
+        <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-950 flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <span className="font-black text-sm block">🍽️ إدارة عقد وبيانات المطاعم والمقاهي بالدليل:</span>
+            <p className="text-[11px] text-amber-900/90 font-medium">
+              يبدأ العقد تلقائياً من يوم التسجيل، مع التحقق الإلزامي من كافة المتطلبات وترقيم البلدية الفريد.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-xl bg-amber-800 text-white text-[11px] font-black shrink-0">
+            خصم {discountPct}% لرواد دلّني
+          </span>
         </div>
 
-        {/* معرّف المطعم التلقائي */}
-        <div>
-          <label className="text-xs font-bold text-slate-700 block mb-1">معرّف المرفق</label>
+        {/* Municipal ID (Primary Key) */}
+        <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-300 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+              <span>🏛️</span>
+              <span>رقم القيد البلدي / ترقيم البلدية (المفتاح الأساسي ID) *</span>
+            </label>
+            <span className="text-[10px] font-black text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-lg">إلزامي لمنع التكرار</span>
+          </div>
           <input
             type="text"
-            value={facilityId}
-            disabled
-            readOnly
-            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100/90 text-slate-400 font-mono font-bold text-xs text-right cursor-not-allowed select-none opacity-80 backdrop-blur-sm"
+            value={facilityIdInput}
+            onChange={(e) => {
+              setFacilityIdInput(e.target.value);
+              setErrorMsg(null);
+            }}
+            disabled={!isNew}
+            placeholder="مثال: RST-TRP-2026 أو 20381..."
+            className={`w-full h-11 px-3.5 rounded-xl border text-xs font-black text-right transition ${
+              !isNew
+                ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
+                : "bg-white text-slate-900 border-amber-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
+            }`}
           />
+          <p className="text-[10px] text-amber-800 font-bold">
+            {isNew
+              ? "⚠️ يتم إدخال ترقيم البلدية يدوياً بواسطة الإدارة ويمثل المفتاح الأساسي لمنع التكرار نهائياً في قاعدة البيانات."
+              : "🔒 ترقيم البلدية مسجل كمفتاح أساسي فريد غير قابل للتعديل بعد التثبيت."}
+          </p>
         </div>
 
-        <Field label="اسم المطعم / المقهى" value={name} onChange={setName} placeholder="مثال: مطعم و كافيه السراياء التراثي" />
+        {/* Contract Dates & Activity Status */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-800 block">
+              📑 فترة العقد وحالة النشاط بالمنصة:
+            </label>
+            <span className="text-[10px] font-bold text-slate-500">
+              * البداية تلقائياً من يوم التسجيل
+            </span>
+          </div>
 
-        {/* نوع المرفق كومبوبوكس والمدينة */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div>
-            <label className="text-xs font-bold block mb-1 text-foreground">نوع وتصنيف المرفق</label>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                📅 تاريخ بداية العقد (يوم التسجيل)
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={contractStartDate || todayStr}
+                  readOnly
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-800 text-right outline-none cursor-default font-mono select-none"
+                />
+                <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
+                  تلقائي
+                </span>
+              </div>
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                🏁 تاريخ نهاية العقد <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={contractEndDate}
+                onChange={e => {
+                  setContractEndDate(e.target.value);
+                  setErrorMsg(null);
+                }}
+                min={contractStartDate}
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600 font-mono focus:ring-1 focus:ring-amber-600"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                ⚡ حالة المنشأة والعرض بالمنصة
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 h-10 p-1 bg-slate-200/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setStatus("نشط")}
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    status === "نشط"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🟢</span>
+                  <span>نشط</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus("موقوف")}
+                  className={`h-full rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    status === "موقوف"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🔴</span>
+                  <span>موقوف</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 1. Category Selection */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-black text-slate-800 block">
+            🍴 تصنيف ونوع المنشأة (مطعم أو كافيه):
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {categoryOptions.map((opt) => {
+              const isSelected = category === opt.id;
+              return (
+                <div
+                  key={opt.id}
+                  onClick={() => setCategory(opt.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all text-center space-y-1 select-none ${
+                    isSelected
+                      ? "border-2 border-amber-600 bg-amber-50/80 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="text-sm font-black text-slate-900">{opt.label}</div>
+                  <div className="text-[10px] text-slate-500 leading-tight">{opt.desc}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Basic Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="sm:col-span-8">
+            <Field label="اسم المطعم أو الكافيه الرسمي *" value={name} onChange={v => { setName(v); setErrorMsg(null); }} />
+          </div>
+          <div className="sm:col-span-4">
+            <label className="text-xs font-bold text-foreground mb-1 block">المدينة *</label>
             <select
-              value={type}
-              onChange={e => setType(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
+              value={city}
+              onChange={e => setCity(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-amber-600 bg-white"
             >
-              <option value="مطعم مأكولات شعبية وتراثية">🍲 مطعم مأكولات شعبية وتراثية</option>
-              <option value="مطعم مأكولات بحرية وأسماك طازجة">🐟 مطعم مأكولات بحرية وأسماك طازجة</option>
-              <option value="مطعم وجبات سريعة وعصرية (فاست فود)">🍔 مطعم وجبات سريعة وعصرية (فاست فود)</option>
-              <option value="مقهى ومشاريب راقية وقهوة مختصة">☕ مقهى ومشاريب راقية وقهوة مختصة</option>
-              <option value="مشاوي ولحوم وطنية على الفحم">🥩 مشاوي ولحوم وطنية على الفحم</option>
-              <option value="مطعم عائلي ومتنوع">🍽️ مطعم عائلي ومتنوع</option>
-              <option value="حلويات ومرطبات ومخبوزات">🍰 حلويات ومرطبات ومخبوزات</option>
+              {libyanCities.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <Field label="المدينة" value={city} onChange={setCity} placeholder="طرابلس / بنغازي / مصراتة..." />
         </div>
 
-        {/* حالة الاعتماد وتاريخ انتهاء التعاقد */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs">
+        <Field label="العنوان التفصيلي وموقع المنشأة *" value={address} onChange={v => { setAddress(v); setErrorMsg(null); }} />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
           <div>
-            <label className="text-xs font-bold block mb-1 text-foreground">حالة الاعتماد</label>
-            <select
-              value={verificationStatus}
-              onChange={e => setVerificationStatus(e.target.value as any)}
-              className="w-full h-10 px-2.5 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
-            >
-              <option value="معتمد">✅ معتمد</option>
-              <option value="قيد المراجعة">⏳ قيد المراجعة</option>
-              <option value="محجوب">🚫 محجوب</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1 text-foreground">📅 تاريخ انتهاء التعاقد</label>
-            <input
-              type="date"
-              value={contractDate}
-              onChange={e => setContractDate(e.target.value)}
-              className="w-full h-10 px-2.5 rounded-xl border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
-            />
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              🏷️ نسبة الخصم المقدمة لرواد منصة دلّني (%) *
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={discountPct}
+                onChange={e => setDiscountPct(Number(e.target.value))}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-amber-600 bg-white font-mono"
+              />
+              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+            </div>
           </div>
         </div>
 
-        <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع - المعلم القريب" />
-        <LibyanPhoneField label="هاتف التواصل والتوصيل والاستعلام" value={phone} onChange={setPhone} />
-
-        {/* ساعات العمل بالأزرار التفاعلية تزيد وتنقص من إلى */}
-        <WorkingHoursClockStepper value={workingHours} onChange={setWorkingHours} />
+        <Field label="ساعات وأوقات العمل اليومية *" value={workingHours} onChange={setWorkingHours} />
 
         <div>
-          <label className="text-xs font-bold text-foreground mb-1 block">نبذة ومميزات المطعم/المقهى والوجبات والمنيو</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="اكتب نبذة عن أصناف الوجبات والمشروبات والجلسات التراثية..." className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary" />
-        </div>
-
-        {/* حقل الخدمات والخصائص المتوفرة بالأزرار التفاعلية وتحتها نص ديناميكي */}
-        <div className="space-y-2 p-3.5 rounded-2xl bg-gradient-to-b from-slate-50 to-teal-50/20 border border-teal-100/90 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-foreground flex items-center gap-1.5">
-              <span>✨</span>
-              <span>الخدمات والخصائص المتوفرة:</span>
-              <span className="text-[10px] text-muted-foreground font-normal">(اضغط على أي زر لإضافته أو حذفه من النص أدناه)</span>
-            </label>
-            {features.trim().length > 0 && (
-              <button
-                type="button"
-                onClick={() => setFeatures("")}
-                className="text-[10px] text-red-600 hover:text-red-700 font-black hover:underline cursor-pointer bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md border border-red-200 transition"
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📍 رابط موقع المطعم/المقهى على خرائط Google Maps
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={mapsUrl}
+              onChange={e => setMapsUrl(e.target.value)}
+              placeholder="https://maps.google.com/?q=..."
+              className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-amber-600 text-right font-mono"
+            />
+            {mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 h-10 bg-amber-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-amber-700"
               >
-                مسح الكل ✕
-              </button>
+                🗺️ فتح ↗
+              </a>
             )}
           </div>
+        </div>
 
-          {/* Quick Clickable Buttons Grid */}
+        {/* Features */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-800 block">
+            🌿 الخدمات والمميزات المتاحة:
+          </label>
           <div className="flex flex-wrap gap-1.5">
-            {PRESET_RESTAURANT_FEATURES.map((feat) => {
-              const active = isFeatureActive(feat);
+            {availableFeatures.map(f => {
+              const isChecked = features.includes(f.id);
               return (
                 <button
-                  key={feat}
                   type="button"
-                  onClick={() => toggleFeature(feat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${active
-                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm ring-2 ring-emerald-400/40 scale-[1.02]"
-                      : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90 hover:border-slate-300"
-                    }`}
+                  key={f.id}
+                  onClick={() => toggleFeature(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                    isChecked
+                      ? "bg-amber-700 text-white border-amber-700 shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
                 >
-                  <span>{feat}</span>
-                  {active ? (
-                    <span className="text-[11px] font-black bg-white/20 rounded-full w-4 h-4 grid place-items-center">✓</span>
-                  ) : (
-                    <span className="text-slate-400 text-xs font-black">+</span>
-                  )}
+                  <span>{f.icon}</span>
+                  <span>{f.id}</span>
+                  {isChecked && <span className="text-[10px]">✓</span>}
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {/* Textarea Underneath */}
-          <div className="pt-1">
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">
-              📝 نص الخدمات والخصائص المحددة (ينضاف فيه ما تنقر عليه، ويمكنك التعديل أو كتابة بنود مخصصة):
-            </label>
-            <textarea
-              value={features}
-              onChange={(e) => setFeatures(e.target.value)}
-              rows={3}
-              placeholder="مثال: 📶 واي فاي مجاني، 🚗 موقف سيارات مخصص، 👨‍👩‍👧‍👦 قسم عائلات خاص ومريح..."
-              className="w-full p-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary leading-relaxed shadow-2xs"
-            />
-          </div>
+        {/* Description */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            📝 نبذة تعريفية ووصف لقائمة المأكولات والمشروبات *
+          </label>
+          <textarea
+            value={description}
+            onChange={e => { setDescription(e.target.value); setErrorMsg(null); }}
+            rows={2}
+            placeholder="اكتب نبذة عن أصناف الطعام، جودة المكونات، الأجواء العامة، والجلسات..."
+            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-right outline-none focus:border-amber-600 leading-relaxed"
+          />
         </div>
 
         {/* 5 Photos Section */}
-        <div className="pt-2 border-t border-border space-y-2">
-          <label className="text-xs font-black text-foreground block">🖼️ الصور الخمسة للمطعم/المقهى (معرض الصور):</label>
-          <div className="space-y-2">
-            <ImageFilePicker label="الصورة 1 (الواجهة والمظهر)" value={i1} onChange={setI1} />
-            <ImageFilePicker label="الصورة 2 (الجلسات الداخلية والسيور)" value={i2} onChange={setI2} />
-            <ImageFilePicker label="الصورة 3 (الأطباق والوجبات الرئيسية)" value={i3} onChange={setI3} />
-            <ImageFilePicker label="الصورة 4 (المشروبات والمأكولات)" value={i4} onChange={setI4} />
-            <ImageFilePicker label="الصورة 5 (المنيو والأجواء الخارجية)" value={i5} onChange={setI5} />
+        <div className="pt-3 border-t border-slate-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-900 block">
+              🖼️ معرض الصور الخمسة للمنشأة (تظهر في الكرت والمعاينة):
+            </label>
+            <span className="text-[10px] text-slate-500 font-bold">5 صور مطلوبة *</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية للكرت)" value={i1} onChange={setI1} />
+            <ImageFilePicker label="الصورة 2 (أطباق المأكولات والمشروبات)" value={i2} onChange={setI2} />
+            <ImageFilePicker label="الصورة 3 (الجلسات الداخلية والديكور)" value={i3} onChange={setI3} />
+            <ImageFilePicker label="الصورة 4 (الجلسات الخارجية أو الإطلالة)" value={i4} onChange={setI4} />
+          </div>
+          <div className="max-w-md mx-auto">
+            <ImageFilePicker label="الصورة 5 (الضيافة والتقديم)" value={i5} onChange={setI5} />
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 cursor-pointer">إلغاء</button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 cursor-pointer">حفظ المطعم/المقهى بالدليل ✓</button>
+        {/* Submit Actions */}
+        <div className="flex gap-2 justify-end pt-3 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 h-11 rounded-xl border border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md shadow-amber-900/20 cursor-pointer transition flex items-center gap-1.5"
+          >
+            <span>حفظ المطعم/المقهى بالدليل ✓</span>
+          </button>
         </div>
       </form>
     </ModalShell>
@@ -5597,64 +6408,268 @@ function AttractionModal({ title, attraction, onClose, onSave }: { title: string
 
 /* ---- OFFER MODALS ---- */
 
-function DailyOfferModal({ title, offer, dailyTrips, onClose, onSave }: { title: string; offer?: DailyOffer; dailyTrips: DailyTrip[]; onClose: () => void; onSave: (o: any) => void }) {
-  const [ot, setOt] = useState(offer?.title_offer || ""); const [desc, setDesc] = useState(offer?.description || "");
-  const [disc, setDisc] = useState(String(offer?.percent_discount || 10)); const [img, setImg] = useState(offer?.url_image_offer || "");
+function DailyOfferModal({
+  title,
+  offer,
+  dailyTrips,
+  onClose,
+  onSave,
+}: {
+  title: string;
+  offer?: DailyOffer;
+  dailyTrips: DailyTrip[];
+  onClose: () => void;
+  onSave: (o: any) => void;
+}) {
   const [tripId, setTripId] = useState(offer?.daily_trip_id || dailyTrips[0]?.id || "");
-  const [ds, setDs] = useState(offer?.date_start || "2026-08-01"); const [de, setDe] = useState(offer?.date_end || "2026-08-31");
+  const selectedTrip = dailyTrips.find(t => t.id === tripId) || dailyTrips[0];
+
+  const [ot, setOt] = useState(offer?.title_offer || (selectedTrip ? `عرض خاص: ${selectedTrip.title}` : ""));
+  const [desc, setDesc] = useState(offer?.description || (selectedTrip ? `خصم حصري ومميز على رحلة ${selectedTrip.title} المنشأة ضمن برنامج دلّني للسياحة اليومية.` : ""));
+  const [disc, setDisc] = useState(String(offer?.percent_discount || 15));
+  const [img, setImg] = useState(offer?.url_image_offer || selectedTrip?.photo || "");
+  const [ds, setDs] = useState(offer?.date_start || new Date().toISOString().slice(0, 10));
+  const [de, setDe] = useState(offer?.date_end || "2026-10-30");
+
+  const handleTripChange = (newTripId: string) => {
+    setTripId(newTripId);
+    const trip = dailyTrips.find(t => t.id === newTripId);
+    if (trip) {
+      if (!ot || ot.startsWith("عرض خاص:")) {
+        setOt(`عرض خاص: ${trip.title}`);
+      }
+      if (!desc || desc.includes("ضمن برنامج دلّني")) {
+        setDesc(`خصم حصري ومميز على رحلة ${trip.title} المنشأة ضمن برنامج دلّني للسياحة اليومية.`);
+      }
+      if (!img || img === "/assets/hero-leptis.jpg") {
+        setImg(trip.photo || "/assets/dest-leptis-theater.jpg");
+      }
+    }
+  };
+
   return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={e => { e.preventDefault(); onSave({ ...(offer ? { id: offer.id } : {}), title_offer: ot, description: desc, percent_discount: +disc, url_image_offer: img, daily_trip_id: tripId, date_start: ds, date_end: de }); }}>
-        <Field label="عنوان العرض" value={ot} onChange={setOt} />
-        <div><label className="text-xs font-bold mb-1 block">الوصف</label><textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" /></div>
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-2xl">
+      <form
+        className="space-y-3.5 text-right"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!tripId) {
+            alert("يرجى اختيار رحلة يومية منشأة لربط العرض بها.");
+            return;
+          }
+          onSave({
+            ...(offer ? { id: offer.id } : {}),
+            title_offer: ot,
+            description: desc,
+            percent_discount: +disc,
+            url_image_offer: img,
+            daily_trip_id: tripId,
+            date_start: ds,
+            date_end: de,
+          });
+        }}
+      >
+        {/* Notice of binding to created daily trip */}
+        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="font-black text-sm block">🏷️ ربط العرض بالرحلات اليومية المنشأة:</span>
+            <p className="text-[11px] text-emerald-800">
+              يتم تطبيق العرض الترويجي والخصم على الرحلات اليومية المسجلة مسبقاً في المنصة.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-black text-xs">
+            {dailyTrips.length} رحلة منشأة
+          </span>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">اختر الرحلة اليومية المنشأة المستهدفة بالعرض *</label>
+          <select
+            value={tripId}
+            onChange={(e) => handleTripChange(e.target.value)}
+            className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
+          >
+            {dailyTrips.length === 0 && <option value="">لا توجد رحلات يومية منشأة حالياً</option>}
+            {dailyTrips.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title} — وجهة: {t.destination || "ليبيا"} — انطلاق: {t.departure_city || "طرابلس"} ({t.price_per_seat} د.ل)
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Field label="عنوان العرض الترويجي" value={ot} onChange={setOt} />
+        <div>
+          <label className="text-xs font-bold mb-1 block">وصف وتفاصيل العرض</label>
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={2}
+            className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <Field label="نسبة الخصم % (1-100)" type="number" value={disc} onChange={setDisc} />
-          <div><label className="text-xs font-bold mb-1 block">الرحلة اليومية</label>
-            <select value={tripId} onChange={e => setTripId(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-              {dailyTrips.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-            </select>
+          <div className="pt-5 text-xs text-slate-500 font-bold">
+            {selectedTrip && (
+              <span className="text-emerald-700 font-black">
+                السعر بعد الخصم: {Math.round(selectedTrip.price_per_seat * (1 - (Number(disc) || 0) / 100))} د.ل (بدلاً من {selectedTrip.price_per_seat} د.ل)
+              </span>
+            )}
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ البداية" type="date" value={ds} onChange={setDs} />
-          <Field label="تاريخ الانتهاء" type="date" value={de} onChange={setDe} />
+          <Field label="تاريخ بداية العرض" type="date" value={ds} onChange={setDs} />
+          <Field label="تاريخ نهاية العرض" type="date" value={de} onChange={setDe} />
         </div>
-        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة العرض" value={img} onChange={setImg} /></div>
+
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="صورة وبوستر العرض اليومي" value={img} onChange={setImg} />
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ العرض</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+            إلغاء
+          </button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+            حفظ العرض اليومي
+          </button>
         </div>
       </form>
     </ModalShell>
   );
 }
 
-function WeeklyOfferModal({ title, offer, weeklyTrips, onClose, onSave }: { title: string; offer?: WeeklyOffer; weeklyTrips: WeeklyTrip[]; onClose: () => void; onSave: (o: any) => void }) {
-  const [ot, setOt] = useState(offer?.offer_title || ""); const [desc, setDesc] = useState(offer?.description || "");
-  const [disc, setDisc] = useState(String(offer?.percent_discount || 10)); const [img, setImg] = useState(offer?.offer_image_url || "");
+function WeeklyOfferModal({
+  title,
+  offer,
+  weeklyTrips,
+  onClose,
+  onSave,
+}: {
+  title: string;
+  offer?: WeeklyOffer;
+  weeklyTrips: WeeklyTrip[];
+  onClose: () => void;
+  onSave: (o: any) => void;
+}) {
   const [tripId, setTripId] = useState(offer?.weekly_trip_id || weeklyTrips[0]?.id || "");
-  const [ds, setDs] = useState(offer?.date_start || "2026-08-01"); const [de, setDe] = useState(offer?.date_end || "2026-09-30");
+  const selectedTrip = weeklyTrips.find(t => t.id === tripId) || weeklyTrips[0];
+
+  const [ot, setOt] = useState(offer?.offer_title || (selectedTrip ? `عرض الأسبوع: ${selectedTrip.title}` : ""));
+  const [desc, setDesc] = useState(offer?.description || (selectedTrip ? `خصم استثنائي على رحلة ${selectedTrip.title} المنشأة في دلّني شاملة المبيت والجولات.` : ""));
+  const [disc, setDisc] = useState(String(offer?.percent_discount || 15));
+  const [img, setImg] = useState(offer?.offer_image_url || selectedTrip?.photo || "");
+  const [ds, setDs] = useState(offer?.date_start || new Date().toISOString().slice(0, 10));
+  const [de, setDe] = useState(offer?.date_end || "2026-10-30");
+
+  const handleTripChange = (newTripId: string) => {
+    setTripId(newTripId);
+    const trip = weeklyTrips.find(t => t.id === newTripId);
+    if (trip) {
+      if (!ot || ot.startsWith("عرض الأسبوع:")) {
+        setOt(`عرض الأسبوع: ${trip.title}`);
+      }
+      if (!desc || desc.includes("شاملة المبيت")) {
+        setDesc(`خصم استثنائي على رحلة ${trip.title} المنشأة في دلّني شاملة المبيت والجولات.`);
+      }
+      if (!img || img === "/assets/hero-leptis.jpg") {
+        setImg(trip.photo || "/assets/dest-ubari-gaberoun.jpg");
+      }
+    }
+  };
+
   return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={e => { e.preventDefault(); onSave({ ...(offer ? { id: offer.id } : {}), offer_title: ot, description: desc, percent_discount: +disc, offer_image_url: img, weekly_trip_id: tripId, date_start: ds, date_end: de }); }}>
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-2xl">
+      <form
+        className="space-y-3.5 text-right"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!tripId) {
+            alert("يرجى اختيار رحلة أسبوعية منشأة لربط العرض بها.");
+            return;
+          }
+          onSave({
+            ...(offer ? { id: offer.id } : {}),
+            offer_title: ot,
+            description: desc,
+            percent_discount: +disc,
+            offer_image_url: img,
+            weekly_trip_id: tripId,
+            date_start: ds,
+            date_end: de,
+          });
+        }}
+      >
+        {/* Notice of binding to created weekly trip */}
+        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="font-black text-sm block">🗓️ ربط العرض بالرحلات الأسبوعية المنشأة:</span>
+            <p className="text-[11px] text-amber-800">
+              يتم تطبيق العرض الترويجي والخصم على الرحلات الأسبوعية المسجلة مسبقاً في المنصة.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-amber-700 text-white font-black text-xs">
+            {weeklyTrips.length} رحلة منشأة
+          </span>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">اختر الرحلة الأسبوعية المنشأة المستهدفة بالعرض *</label>
+          <select
+            value={tripId}
+            onChange={(e) => handleTripChange(e.target.value)}
+            className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
+          >
+            {weeklyTrips.length === 0 && <option value="">لا توجد رحلات أسبوعية منشأة حالياً</option>}
+            {weeklyTrips.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title} — وجهات: {t.destination || (t.destinations ? t.destinations.join(" + ") : "ليبيا")} — ({t.seat_per_price} د.ل)
+              </option>
+            ))}
+          </select>
+        </div>
+
         <Field label="عنوان العرض الأسبوعي" value={ot} onChange={setOt} />
-        <div><label className="text-xs font-bold mb-1 block">الوصف</label><textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" /></div>
+        <div>
+          <label className="text-xs font-bold mb-1 block">وصف وتفاصيل العرض</label>
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={2}
+            className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
-          <Field label="نسبة الخصم %" type="number" value={disc} onChange={setDisc} />
-          <div><label className="text-xs font-bold mb-1 block">الرحلة الأسبوعية</label>
-            <select value={tripId} onChange={e => setTripId(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-              {weeklyTrips.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-            </select>
+          <Field label="نسبة الخصم % (1-100)" type="number" value={disc} onChange={setDisc} />
+          <div className="pt-5 text-xs text-slate-500 font-bold">
+            {selectedTrip && (
+              <span className="text-amber-800 font-black">
+                السعر بعد الخصم: {Math.round(selectedTrip.seat_per_price * (1 - (Number(disc) || 0) / 100))} د.ل (بدلاً من {selectedTrip.seat_per_price} د.ل)
+              </span>
+            )}
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ البداية" type="date" value={ds} onChange={setDs} />
-          <Field label="تاريخ الانتهاء" type="date" value={de} onChange={setDe} />
+          <Field label="تاريخ بداية العرض" type="date" value={ds} onChange={setDs} />
+          <Field label="تاريخ نهاية العرض" type="date" value={de} onChange={setDe} />
         </div>
-        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة العرض الأسبوعي" value={img} onChange={setImg} /></div>
+
+        <div className="pt-2 border-t border-border">
+          <ImageFilePicker label="صورة وبوستر العرض الأسبوعي" value={img} onChange={setImg} />
+        </div>
+
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-glow">حفظ العرض الأسبوعي</button>
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+            إلغاء
+          </button>
+          <button className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-glow">
+            حفظ العرض الأسبوعي
+          </button>
         </div>
       </form>
     </ModalShell>
@@ -5694,6 +6709,232 @@ function FacilityOfferModal({ title, offer, restaurants, onClose, onSave }: { ti
 }
 
 /* ---- SHARED UI COMPONENTS ---- */
+
+function TripImagesFiveManager({
+  images,
+  onChange,
+}: {
+  images: string[];
+  onChange: (imgs: string[]) => void;
+}) {
+  const [activeSlot, setActiveSlot] = useState(0);
+
+  // Guarantee 5 slots
+  const safeImages = useMemo(() => {
+    const arr = [...(images || [])];
+    while (arr.length < 5) arr.push("");
+    return arr.slice(0, 5);
+  }, [images]);
+
+  const updateSlot = (idx: number, val: string) => {
+    const updated = [...safeImages];
+    updated[idx] = val;
+    onChange(updated);
+  };
+
+  const handleFileUpload = (idx: number, file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        updateSlot(idx, e.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const PRESET_PACKS = [
+    {
+      name: "🏛️ لبدة الكبرى",
+      photos: [
+        "/assets/dest-leptis-theater.jpg",
+        "/assets/dest-leptis-arch.jpg",
+        "/assets/dest-leptis-forum.jpg",
+        "/assets/dest-leptis-coast.jpg",
+        "/assets/hero-leptis.jpg",
+      ],
+    },
+    {
+      name: "🏛️ آثار صبراتة",
+      photos: [
+        "/assets/dest-sabratha-theater.jpg",
+        "/assets/dest-sabratha-coast.jpg",
+        "/assets/dest-sabratha-temple.jpg",
+        "/assets/dest-sabratha-ruins.jpg",
+        "/assets/dest-sabratha.jpg",
+      ],
+    },
+    {
+      name: "🏜️ أوباري والبحيرات",
+      photos: [
+        "/assets/dest-ubari-gaberoun.jpg",
+        "/assets/dest-ubari-ummalmaa.jpg",
+        "/assets/dest-acacus-arch.jpg",
+        "/assets/dest-sahara-dunes.jpg",
+        "/assets/dest-ubari.jpg",
+      ],
+    },
+    {
+      name: "🌴 واحة غدامس",
+      photos: [
+        "/assets/dest-ghadames-oasis.jpg",
+        "/assets/dest-ghadames-alleys.jpg",
+        "/assets/dest-ghadames.jpg",
+        "/assets/dest-ksar-desert.jpg",
+        "/assets/offer-desert.jpg",
+      ],
+    },
+    {
+      name: "⛰️ قورينا وشحات",
+      photos: [
+        "/assets/dest-cyrene-apollo.jpg",
+        "/assets/dest-cyrene.jpg",
+        "/assets/dest-cyrene-sanctuary.jpg",
+        "/assets/dest-cyrene-panorama.jpg",
+        "/assets/dest-jabal-akhdar-valley.jpg",
+      ],
+    },
+    {
+      name: "🏰 طرابلس القديمة",
+      photos: [
+        "/assets/dest-tripoli.jpg",
+        "/assets/dest-tripoli-castle.jpg",
+        "/assets/dest-tripoli-arch.jpg",
+        "/assets/dest-tripoli-medina.jpg",
+        "/assets/dest-tripoli-harbor.jpg",
+      ],
+    },
+  ];
+
+  const applyPreset = (photos: string[]) => {
+    onChange(photos.slice(0, 5));
+  };
+
+  const slotLabels = [
+    "صورة 1 (الغلاف الرئيسي للكرت)",
+    "صورة 2 (المعالم الرئيسية)",
+    "صورة 3 (الطبيعة والاستكشاف)",
+    "صورة 4 (الإقامة / الضيافة)",
+    "صورة 5 (التفاصيل والأنشطة)",
+  ];
+
+  return (
+    <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/90 space-y-3 text-right">
+      <div className="flex items-center justify-between">
+        <div className="font-black text-slate-800 text-xs flex items-center gap-1.5">
+          <span>📸</span>
+          <span>معرض صور الرحلة (5 صور إلزامية للتنقل بينها في كرت وصفحة الرحلة)</span>
+        </div>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+          {safeImages.filter(Boolean).length}/5 صور جاهزة
+        </span>
+      </div>
+
+      {/* Quick Preset Packs */}
+      <div>
+        <label className="text-[11px] font-bold text-slate-500 mb-1 block">
+          ⚡ تعبئة سريعة بحزم صور ليبية أصلية جاهزة:
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {PRESET_PACKS.map((pack) => (
+            <button
+              key={pack.name}
+              type="button"
+              onClick={() => applyPreset(pack.photos)}
+              className="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 text-[10px] font-black transition cursor-pointer shadow-2xs"
+            >
+              {pack.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 5 Thumbnails Strip */}
+      <div className="grid grid-cols-5 gap-2">
+        {safeImages.map((src, i) => (
+          <div
+            key={i}
+            onClick={() => setActiveSlot(i)}
+            className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition flex flex-col items-center justify-center h-20 bg-white ${
+              activeSlot === i
+                ? "border-blue-600 shadow-md ring-2 ring-blue-500/20"
+                : "border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            {src ? (
+              <img src={src} alt={`صورة ${i + 1}`} className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-1 text-center">
+                <span className="text-sm text-slate-400">📷</span>
+                <span className="text-[9px] text-slate-400 font-bold">صورة {i + 1}</span>
+              </div>
+            )}
+            <div className="absolute top-1 right-1 px-1.5 py-0.2 rounded-md bg-black/60 text-white text-[9px] font-black backdrop-blur-xs">
+              {i + 1}
+            </div>
+            {i === 0 && (
+              <div className="absolute bottom-0 inset-x-0 bg-blue-600/90 text-white text-[8px] font-black py-0.5 text-center">
+                الغلاف
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Active Slot Editor */}
+      <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-black text-slate-800">
+            تعديل: <span className="text-blue-700">{slotLabels[activeSlot]}</span>
+          </label>
+          {safeImages[activeSlot] && (
+            <button
+              type="button"
+              onClick={() => updateSlot(activeSlot, "")}
+              className="text-[10px] text-red-600 hover:text-red-700 font-bold cursor-pointer"
+            >
+              مسح الصورة
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {safeImages[activeSlot] ? (
+            <img
+              src={safeImages[activeSlot]}
+              alt=""
+              className="w-14 h-14 rounded-lg object-cover border border-slate-200 shadow-xs shrink-0"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-lg bg-slate-100 border border-dashed border-slate-300 grid place-items-center text-xs text-slate-400 shrink-0">
+              فارغ
+            </div>
+          )}
+
+          <div className="flex-1 space-y-1.5">
+            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-sea text-white text-xs font-black cursor-pointer hover:opacity-90 transition shadow-xs">
+              📁 اختيار ملف من الجهاز
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFileUpload(activeSlot, e.target.files?.[0])}
+              />
+            </label>
+
+            <input
+              type="text"
+              value={safeImages[activeSlot]}
+              onChange={(e) => updateSlot(activeSlot, e.target.value)}
+              placeholder="أو اكتب/الصق رابط الصورة أو مسارها..."
+              className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-200 bg-slate-50 outline-none text-right font-mono"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ImageFilePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -5757,8 +6998,6 @@ function Field({
   onKeyDown,
   placeholder,
   required,
-  min,
-  max,
 }: {
   label: string;
   type?: string;
@@ -5767,8 +7006,6 @@ function Field({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
-  min?: string | number;
-  max?: string | number;
 }) {
   return (
     <div>
@@ -5780,8 +7017,6 @@ function Field({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
-        min={min}
-        max={max}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
       />
     </div>

@@ -35,6 +35,12 @@ type Restaurant = {
   photos: string[];
   signatureDishes: string[];
   features: string[];
+  description?: string;
+  discountPct?: number;
+  partnership_status?: string;
+  whatsapp?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
 };
 
 function getRestaurants(lang: "ar" | "en"): Restaurant[] {
@@ -656,15 +662,6 @@ function RestaurantDetailsView({
       ? `يقدم ${restaurant.name} تجربة طعام استثنائية في قلب ${restaurant.city}، حيث تجتمع معايير الجودة والضيافة الأصيلة مع باقة من أشهى المأكولات والمشروبات المحضرة من مكونات طازجة يومياً لرواد منصة دلّني.`
       : `${restaurant.name} provides an exceptional dining experience in ${restaurant.city} with fresh local culinary traditions.`);
 
-  // Auto-advancing slideshow timer (يمشو بروحهم تلقائياً)
-  useEffect(() => {
-    if (lightboxOpen || photos.length <= 1) return;
-    const timer = setInterval(() => {
-      setActivePhoto((prev) => (prev + 1) % photos.length);
-    }, 2800);
-    return () => clearInterval(timer);
-  }, [lightboxOpen, photos.length]);
-
   const nextPhoto = () => setActivePhoto((prev) => (prev + 1) % photos.length);
   const prevPhoto = () => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length);
 
@@ -1281,18 +1278,22 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     priceRange: isAr ? "حسب الطلب" : "On Demand",
     hours: r.working_hours || (isAr ? "10:00 ص – 11:00 م" : "10:00 AM – 11:00 PM"),
     specialty: r.description || (isAr ? "تشكيلة فاخرة من المأكولات والمشاريب الطازجة" : "Fresh Food & Drinks"),
+    description: r.description || "",
+    discountPct: typeof r.discount_percentage === "number" ? r.discount_percentage : 20,
+    whatsapp: r.whatsapp || r.phone || "0910000000",
+    partnership_status: r.partnership_status || "شريك معتمد",
+    contract_start_date: r.contract_start_date || "",
+    contract_end_date: r.contract_end_date || "",
     photos: photos,
     signatureDishes: [
       isAr ? "الأطباق الرئيسية والوجبة الخاصة" : "Main House Specialties",
       isAr ? "المقبلات والمشروبات الطازجة" : "Fresh Appetizers & Beverages",
     ],
-    features: r.features
-      ? r.features.split("، ").filter(Boolean)
-      : [
-          isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
-          isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
-          isAr ? "خصم 20% لرواد دلّني" : "20% Dallani Perk",
-        ],
+    features: [
+      isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
+      isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
+      isAr ? `خصم ${r.discount_percentage || 20}% لرواد دلّني` : `${r.discount_percentage || 20}% Dallani Perk`,
+    ],
   };
 }
 
@@ -1320,46 +1321,10 @@ function RestaurantsPage() {
       try {
         const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
         if (Array.isArray(storedRests) && storedRests.length > 0) {
-          const visible = storedRests.filter((r: any) => (r.verification_status || "معتمد") === "معتمد");
-          const mapped = visible.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
+          const mapped = storedRests.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
           setCustomRestaurants(mapped);
         }
       } catch {}
-
-      fetch("http://127.0.0.1:8000/api/restaurants")
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data) && data.length > 0) {
-            const mappedApi = data.map((item: any) =>
-              mapAdminRestaurantToPublic(
-                {
-                  id: item.facility_id,
-                  name: item.facility_name,
-                  type: item.facility_type,
-                  city: item.city,
-                  address: item.address_details,
-                  phone: item.phone_number,
-                  description: item.description,
-                  google_maps_url: item.google_maps_url,
-                  working_hours: item.working_hours,
-                  facility_image_1: item.facility_image_1,
-                  facility_image_2: item.facility_image_2,
-                  facility_image_3: item.facility_image_3,
-                  facility_image_4: item.facility_image_4,
-                  facility_image_5: item.facility_image_5,
-                },
-                isAr
-              )
-            );
-
-            setCustomRestaurants((prev) => {
-              const ids = new Set(prev.map((p) => p.id));
-              const newFromApi = mappedApi.filter((m: any) => !ids.has(m.id));
-              return [...prev, ...newFromApi];
-            });
-          }
-        })
-        .catch(() => {});
     };
 
     loadCustom();
@@ -1404,6 +1369,8 @@ function RestaurantsPage() {
     if (!selectedCategory && !searchQuery.trim()) return [];
 
     return restaurants.filter((r) => {
+      // Exclude suspended/inactive restaurants from public platform display
+      if (r.partnership_status === "موقوف") return false;
       const matchCategory = !selectedCategory || selectedCategory === "all" || r.category === selectedCategory;
       const matchCity = city === "all" || r.city.toLowerCase().includes(city.toLowerCase());
       const q = searchQuery.trim().toLowerCase();
@@ -1580,9 +1547,9 @@ function RestaurantsPage() {
                 title: isAr ? "مأكولات بحرية" : "Fresh Seafood",
                 sub: isAr ? "أسماك طازجة، جمبري، وقار صيد اليوم" : "Fresh Daily Catch, Grilled Prawns",
                 count: restaurants.filter((x) => x.category === "seafood").length,
-                img: "/assets/dest-harbor-coast.jpg",
+                img: "/assets/seafood_category.jpg",
                 badge: isAr ? "صيد بحري طازج" : "Fresh Catch",
-                badgeBg: "bg-[#003580]",
+                badgeBg: "bg-gradient-to-r from-blue-700 to-sky-600",
                 border: "border-blue-500 ring-4 ring-blue-500/25",
               },
               {
@@ -1590,19 +1557,19 @@ function RestaurantsPage() {
                 title: isAr ? "مأكولات شعبية" : "Traditional Libyan",
                 sub: isAr ? "كسكسي، بازين، مبطن، حساء تراثي" : "Couscous, Bazin, Mbatten",
                 count: restaurants.filter((x) => x.category === "traditional").length,
-                img: "/assets/ai_food.jpg",
+                img: "/assets/restaurant-libya.jpg",
                 badge: isAr ? "أصالة وتراث ليبي" : "Heritage Libyan",
-                badgeBg: "bg-amber-700",
+                badgeBg: "bg-gradient-to-r from-amber-700 to-orange-700",
                 border: "border-amber-600 ring-4 ring-amber-600/25",
               },
               {
                 id: "fastfood",
                 title: isAr ? "الفاست فود (وجبات سريعة)" : "Fast Food & Burgers",
-                sub: isAr ? "سماش برجر، شاورما، كرانشي تاون" : "Smash Burgers, Crispy Rolls",
+                sub: isAr ? "سماش برجر، كرانشي تاون، شاورما" : "Smash Burgers, Crispy Rolls",
                 count: restaurants.filter((x) => x.category === "fastfood").length,
-                img: "/assets/restaurant-libya.jpg",
+                img: "/assets/fastfood_category.jpg",
                 badge: isAr ? "سريع وعصري" : "Fast & Casual",
-                badgeBg: "bg-[#D96B27]",
+                badgeBg: "bg-gradient-to-r from-[#D96B27] to-red-600",
                 border: "border-[#D96B27] ring-4 ring-[#D96B27]/25",
               },
               {
@@ -1612,8 +1579,8 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "cafe").length,
                 img: "/assets/cafe-libya.jpg",
                 badge: isAr ? "شاي باللوز وقهوة" : "Specialty Coffee",
-                badgeBg: "bg-teal-700",
-                border: "border-teal-600 ring-4 ring-teal-600/25",
+                badgeBg: "bg-gradient-to-r from-emerald-700 to-teal-600",
+                border: "border-emerald-600 ring-4 ring-emerald-600/25",
               },
             ].map((cat) => {
               const isSelected = selectedCategory === cat.id;
@@ -1621,8 +1588,7 @@ function RestaurantsPage() {
                 <div
                   key={cat.id}
                   onClick={() => {
-                    setSelectedCategory(cat.id);
-                    scrollToResults();
+                    setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
                   }}
                   className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
                     isSelected
@@ -1633,9 +1599,9 @@ function RestaurantsPage() {
                   <img
                     src={cat.img}
                     alt={cat.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-105 saturate-125 contrast-105"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-100"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
@@ -1654,12 +1620,11 @@ function RestaurantsPage() {
                     <h4 className="font-black text-lg sm:text-xl group-hover:text-amber-300 transition-colors leading-snug drop-shadow-sm">
                       {cat.title}
                     </h4>
-                    <p className="text-[11px] text-white/80 line-clamp-1 font-medium">
+                    <p className="text-[11px] text-white/85 line-clamp-1 font-medium">
                       {cat.sub}
                     </p>
                     <div className="text-xs text-amber-300 font-bold flex items-center justify-between pt-1">
                       <span>{cat.count} {isAr ? "أماكن معتمدة" : "spots"}</span>
-                      <span className="text-sm">➔</span>
                     </div>
                   </div>
                 </div>
@@ -1760,6 +1725,10 @@ function RestaurantsPage() {
                             <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                               مفتوح الآن · {r.hours}
                             </span>
+                            <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span>❤️</span>
+                              <span>{isFav ? (r.reviewsCount || 1200) + 1 : (r.reviewsCount || 1200)} {isAr ? "إعجاب" : "likes"}</span>
+                            </span>
                           </div>
 
                           <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
@@ -1834,5 +1803,3 @@ function RestaurantsPage() {
     </div>
   );
 }
-
-export default RestaurantsPage;

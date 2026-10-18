@@ -250,8 +250,8 @@ function speakStory(text: string, voiceLang: "ar" | "en" = "ar") {
 
     // Clean text: strip emojis, hashtags, bullets, and dashes for clear voice output
     const cleanText = text
-      .replace(/[—–\-]/g, "، ")
-      .replace(/[*#_~🎬✨📍🏛️🍽️💡🏨]/g, "")
+      .replace(/[—–-]/g, "، ")
+      .replace(/[*#_~]|🎬|✨|📍|🏛️|🍽️|💡|🏨/gu, "")
       .replace(/\s+/g, " ")
       .trim();
 
@@ -406,7 +406,7 @@ export function TripVideoShowcase({
         videoRef.current.muted = true;
       }
     }
-  }, [isPlaying, isEnded, audioMode, currentChapter, voiceLanguage, activeVideoSrc]);
+  }, [isPlaying, isEnded, audioMode, currentChapter, voiceLanguage, activeVideoSrc, current.ar, current.en]);
 
   // Clean up speech synthesis when unmounting
   useEffect(() => {

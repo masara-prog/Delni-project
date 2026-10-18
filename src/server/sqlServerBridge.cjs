@@ -241,7 +241,6 @@ const server = http.createServer(async (req, res) => {
           city,
           email,
           total_vehicles,
-          available_vehicles,
           contract_start_date,
           contract_end_date,
           verification_status,
@@ -257,7 +256,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const {
         contract_number, company_name, phone_number, address,
-        total_vehicles, available_vehicles, contract_start_date, contract_end_date,
+        total_vehicles, contract_start_date, contract_end_date,
         email, password, city, verification_status, isNew
       } = body;
 
@@ -283,8 +282,8 @@ const server = http.createServer(async (req, res) => {
       request.input('company_name', sql.NVarChar(150), String(company_name).trim());
       request.input('phone_number', sql.NVarChar(20), String(phone_number).trim());
       request.input('address', sql.NVarChar(255), String(address || '').trim());
-      request.input('total_vehicles', sql.Int, Number(total_vehicles) || 1);
-      request.input('available_vehicles', sql.Int, Number(available_vehicles) || 0);
+      const totVehicles = Number(total_vehicles) || 1;
+      request.input('total_vehicles', sql.Int, totVehicles);
       request.input('contract_start_date', sql.Date, contract_start_date || new Date());
       const rawPassword = body.password ? String(body.password).trim() : '';
       const shouldUpdatePass = rawPassword && rawPassword !== '••••••••' && rawPassword.length >= 4;
@@ -309,7 +308,6 @@ const server = http.createServer(async (req, res) => {
               address = @address,
               google_maps_url = CASE WHEN @google_maps_url <> '' THEN @google_maps_url ELSE google_maps_url END,
               total_vehicles = @total_vehicles,
-              available_vehicles = @available_vehicles,
               email = @email,
               city = @city,
               verification_status = @verification_status,
@@ -321,9 +319,9 @@ const server = http.createServer(async (req, res) => {
         ELSE
         BEGIN
           INSERT INTO transportation_companies 
-          (contract_number, company_name, phone_number, address, google_maps_url, total_vehicles, available_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+          (contract_number, company_name, phone_number, address, google_maps_url, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
           VALUES 
-          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, @available_vehicles, @contract_start_date, @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
+          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, @contract_start_date, @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
         END
       `);
 
@@ -419,9 +417,9 @@ const server = http.createServer(async (req, res) => {
           autoComp.input('c_phone', sql.NVarChar(20), `091${Math.floor(1000000 + Math.random() * 9000000)}`);
           await autoComp.query(`
             INSERT INTO transportation_companies 
-            (contract_number, company_name, phone_number, address, total_vehicles, available_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+            (contract_number, company_name, phone_number, address, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
             VALUES 
-            (@c_num, @c_name, @c_phone, N'طرابلس', 1, 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
+            (@c_num, @c_name, @c_phone, N'طرابلس', 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
           `);
         }
 
@@ -536,9 +534,6 @@ const server = http.createServer(async (req, res) => {
 
         await vReq.query(`
           UPDATE drivers SET assigned_vehicle_plate = NULL WHERE assigned_vehicle_plate = @plate_number;
-          DELETE FROM weekly_trip_vehicles WHERE plate_number = @plate_number;
-          DELETE FROM private_trip_vehicles WHERE plate_number = @plate_number;
-          DELETE FROM daily_trip_vehicles WHERE plate_number = @plate_number;
           DELETE FROM vehicles WHERE plate_number = @plate_number;
         `);
 
@@ -638,9 +633,9 @@ const server = http.createServer(async (req, res) => {
           .input('c_phone', sql.NVarChar(20), '0910000000')
           .query(`
             INSERT INTO transportation_companies 
-            (contract_number, company_name, phone_number, address, total_vehicles, available_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+            (contract_number, company_name, phone_number, address, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
             VALUES 
-            (@c_num, @c_name, @c_phone, N'ليبيا', 1, 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
+            (@c_num, @c_name, @c_phone, N'ليبيا', 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
           `);
       }
 
@@ -902,6 +897,16 @@ const server = http.createServer(async (req, res) => {
       const cleanName = String(hotel_name || name || '').trim();
       if (!cleanName) return sendJson(res, 400, { success: false, error: 'اسم الفندق مطلوب' });
 
+      // Check duplicate primary key / municipal ID on creation
+      if (body.isNew) {
+        const dupReq = db.request();
+        dupReq.input('chk_hid', sql.NVarChar(50), cleanId);
+        const dupRes = await dupReq.query('SELECT 1 FROM hotels WHERE hotel_id = @chk_hid');
+        if (dupRes.recordset.length > 0) {
+          return sendJson(res, 409, { success: false, error: 'رقم القيد البلدي مسجل مسبقاً لمكان إقامة آخر في قاعدة البيانات' });
+        }
+      }
+
       const request = db.request();
       request.input('hotel_id', sql.NVarChar(50), cleanId);
       request.input('hotel_name', sql.NVarChar(200), cleanName);
@@ -919,7 +924,14 @@ const server = http.createServer(async (req, res) => {
       request.input('property_type', sql.NVarChar(100), String(property_type || 'فندق').trim());
       request.input('amenities', sql.NVarChar(sql.MAX), String(amenities || '').trim());
       request.input('contract_date', sql.Date, contract_date || new Date());
+      request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
+      request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
+      request.input('description', sql.NVarChar(sql.MAX), String(body.description || '').trim());
+      request.input('working_hours', sql.NVarChar(150), String(body.working_hours || 'خدمة 24/7 على مدار الساعة').trim());
+      const cleanPhone = String(phone_number || phone || '0910000000').trim();
+      request.input('phone_number', sql.NVarChar(20), cleanPhone);
+      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @hotel_id)
@@ -939,7 +951,13 @@ const server = http.createServer(async (req, res) => {
               verification_status = @verification_status,
               property_type = @property_type,
               amenities = @amenities,
-              google_maps_url = @google_maps_url
+              google_maps_url = @google_maps_url,
+              description = @description,
+              working_hours = @working_hours,
+              discount_percentage = @discount_percentage,
+              whatsapp = @whatsapp,
+              contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
+              contract_end_date = @contract_end_date
           WHERE hotel_id = @hotel_id;
         END
         ELSE
@@ -947,11 +965,15 @@ const server = http.createServer(async (req, res) => {
           INSERT INTO hotels (
             hotel_id, hotel_name, city, address_details, phone_number, star_rating,
             partnership_status, hotel_photo_1, hotel_photo_2, hotel_photo_3, hotel_photo_4,
-            hotel_photo_5, verification_status, property_type, amenities, contract_date, google_maps_url
+            hotel_photo_5, verification_status, property_type, amenities, contract_date, google_maps_url,
+            description, working_hours, discount_percentage, whatsapp,
+            contract_start_date, contract_end_date
           ) VALUES (
             @hotel_id, @hotel_name, @city, @address_details, @phone_number, @star_rating,
             @partnership_status, @photo_1, @photo_2, @photo_3, @photo_4,
-            @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url
+            @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url,
+            @description, @working_hours, @discount_percentage, @whatsapp,
+            @contract_start_date, @contract_end_date
           );
         END
       `);
@@ -991,6 +1013,16 @@ const server = http.createServer(async (req, res) => {
       const cleanName = String(facility_name || name || '').trim();
       if (!cleanName) return sendJson(res, 400, { success: false, error: 'اسم المطعم/المقهى مطلوب' });
 
+      // Check duplicate primary key / municipal ID on creation
+      if (body.isNew) {
+        const dupReq = db.request();
+        dupReq.input('chk_fid', sql.NVarChar(50), cleanId);
+        const dupRes = await dupReq.query('SELECT 1 FROM restaurants_cafes WHERE facility_id = @chk_fid');
+        if (dupRes.recordset.length > 0) {
+          return sendJson(res, 409, { success: false, error: 'رقم القيد البلدي مسجل مسبقاً لمطعم أو مقهى آخر في قاعدة البيانات' });
+        }
+      }
+
       const request = db.request();
       request.input('facility_id', sql.NVarChar(50), cleanId);
       request.input('facility_name', sql.NVarChar(200), cleanName);
@@ -1008,7 +1040,12 @@ const server = http.createServer(async (req, res) => {
       request.input('working_hours', sql.NVarChar(100), String(working_hours || '09:00 ص - 12:00 م').trim());
       request.input('features', sql.NVarChar(sql.MAX), String(features || '').trim());
       request.input('contract_date', sql.Date, contract_date || new Date());
-      request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
+      request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
+      request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
+      request.input('partnership_status', sql.NVarChar(100), String(body.partnership_status || 'نشط').trim());
+      const cleanPhone = String(phone_number || phone || '0910000000').trim();
+      request.input('phone_number', sql.NVarChar(20), cleanPhone);
+      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM restaurants_cafes WHERE facility_id = @facility_id)
@@ -1028,7 +1065,12 @@ const server = http.createServer(async (req, res) => {
               verification_status = @verification_status,
               working_hours = @working_hours,
               features = @features,
-              google_maps_url = @google_maps_url
+              google_maps_url = @google_maps_url,
+              discount_percentage = @discount_percentage,
+              whatsapp = @whatsapp,
+              partnership_status = @partnership_status,
+              contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
+              contract_end_date = @contract_end_date
           WHERE facility_id = @facility_id;
         END
         ELSE
@@ -1037,12 +1079,16 @@ const server = http.createServer(async (req, res) => {
             facility_id, facility_name, facility_type, city, address_details,
             phone_number, description, facility_image_1, facility_image_2,
             facility_image_3, facility_image_4, facility_image_5,
-            verification_status, working_hours, features, contract_date, google_maps_url
+            verification_status, working_hours, features, contract_date, google_maps_url,
+            discount_percentage, whatsapp, partnership_status,
+            contract_start_date, contract_end_date
           ) VALUES (
             @facility_id, @facility_name, @facility_type, @city, @address_details,
             @phone_number, @description, @img_1, @img_2,
             @img_3, @img_4, @img_5,
-            @verification_status, @working_hours, @features, @contract_date, @google_maps_url
+            @verification_status, @working_hours, @features, @contract_date, @google_maps_url,
+            @discount_percentage, @whatsapp, @partnership_status,
+            @contract_start_date, @contract_end_date
           );
         END
       `);
@@ -1148,9 +1194,26 @@ const server = http.createServer(async (req, res) => {
                g.full_name as guide_name, 
                g.phone_number as guide_phone, 
                g.title as guide_title, 
-               g.avatar as guide_avatar
+               g.avatar as guide_avatar,
+               v.vehicle_type as vehicle_model,
+               v.seating_capacity as vehicle_capacity,
+               v.vehicle_image,
+               tc.company_name as transport_company_name,
+               d.full_name as driver_name,
+               d.phone_number as driver_phone,
+               d.driver_license_number,
+               r.facility_name as restaurant_name,
+               r.facility_type as restaurant_type,
+               r.city as restaurant_city,
+               r.address_details as restaurant_address,
+               r.phone_number as restaurant_phone,
+               r.facility_image_1 as restaurant_image
         FROM daily_trips dt
         LEFT JOIN tour_guides g ON dt.guide_license_number = g.license_number
+        LEFT JOIN vehicles v ON dt.vehicle_plate = v.plate_number
+        LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+        LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+        LEFT JOIN restaurants_cafes r ON dt.restaurant_id = r.facility_id
         ORDER BY dt.daily_trip_id DESC
       `);
       return sendJson(res, 200, { success: true, data: result.recordset });
@@ -1162,7 +1225,8 @@ const server = http.createServer(async (req, res) => {
       const {
         daily_trip_id, id, trip_title, title, description, price_per_seat, price,
         is_active, photo, max_capacity, available_seats, guide_license_number,
-        departure_city, destination_city, destination, recurring_days, activities, google_maps_url
+        departure_city, destination_city, destination, recurring_days, activities, google_maps_url,
+        vehicle_plate, vehicle_plates, restaurant_id, itinerary_steps
       } = body;
 
       const cleanId = String(daily_trip_id || id || `DT-${Date.now().toString().slice(-4)}`).trim();
@@ -1176,13 +1240,42 @@ const server = http.createServer(async (req, res) => {
         guideLic = firstGuide.recordset?.[0]?.license_number || 'G-1001';
       }
 
+      // Plate selection
+      let cleanPlate = vehicle_plate ? String(vehicle_plate).trim() : null;
+      if (!cleanPlate && Array.isArray(vehicle_plates) && vehicle_plates.length > 0) {
+        cleanPlate = String(vehicle_plates[0]).trim();
+      }
+
+      let cleanRestaurant = restaurant_id ? String(restaurant_id).trim() : null;
+      let cleanItinerary = null;
+      if (itinerary_steps) {
+        cleanItinerary = typeof itinerary_steps === 'string' ? itinerary_steps : JSON.stringify(itinerary_steps);
+      }
+
+      // Process 5-image gallery
+      let galleryStr = '';
+      if (Array.isArray(body.gallery)) galleryStr = body.gallery.filter(Boolean).join(',');
+      else if (Array.isArray(body.photos)) galleryStr = body.photos.filter(Boolean).join(',');
+      else if (Array.isArray(body.images)) galleryStr = body.images.filter(Boolean).join(',');
+      else if (typeof body.gallery === 'string') galleryStr = body.gallery.trim();
+
+      let photoVal = String(photo || '').trim();
+      if (!photoVal && galleryStr) {
+        photoVal = galleryStr.split(',')[0].trim();
+      }
+      if (!photoVal) photoVal = '/assets/dest-leptis-theater.jpg';
+      if (!galleryStr) {
+        galleryStr = [photoVal, photoVal, photoVal, photoVal, photoVal].join(',');
+      }
+
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
       request.input('title', sql.NVarChar(200), cleanTitle);
       request.input('description', sql.NVarChar(sql.MAX), String(description || 'رحلة يومية ممتعة').trim());
       request.input('price', sql.Decimal(10, 2), Number(price_per_seat || price) || 100);
       request.input('is_active', sql.Bit, is_active !== false ? 1 : 0);
-      request.input('photo', sql.NVarChar(sql.MAX), String(photo || '/assets/dest-leptis-theater.jpg').trim());
+      request.input('photo', sql.NVarChar(sql.MAX), photoVal);
+      request.input('gallery', sql.NVarChar(sql.MAX), galleryStr);
       request.input('max_cap', sql.Int, Number(max_capacity) || 25);
       request.input('avail_seats', sql.Int, Number(available_seats !== undefined ? available_seats : max_capacity) || 25);
       request.input('guide_lic', sql.VarChar(50), guideLic);
@@ -1191,6 +1284,9 @@ const server = http.createServer(async (req, res) => {
       request.input('recurring_days', sql.NVarChar(sql.MAX), String(recurring_days || 'السبت,الثلاثاء').trim());
       request.input('activities', sql.NVarChar(sql.MAX), String(activities || '').trim());
       request.input('maps_url', sql.NVarChar(500), String(google_maps_url || '').trim());
+      request.input('vehicle_plate', sql.NVarChar(50), cleanPlate);
+      request.input('restaurant_id', sql.NVarChar(50), cleanRestaurant);
+      request.input('itinerary_steps', sql.NVarChar(sql.MAX), cleanItinerary);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM daily_trips WHERE daily_trip_id = @id)
@@ -1201,6 +1297,7 @@ const server = http.createServer(async (req, res) => {
               price_per_seat = @price,
               is_active = @is_active,
               photo = CASE WHEN @photo <> '' THEN @photo ELSE photo END,
+              gallery = @gallery,
               max_capacity = @max_cap,
               available_seats = @avail_seats,
               guide_license_number = @guide_lic,
@@ -1208,19 +1305,24 @@ const server = http.createServer(async (req, res) => {
               destination_city = @destination,
               recurring_days = @recurring_days,
               activities = @activities,
-              google_maps_url = @maps_url
+              google_maps_url = @maps_url,
+              vehicle_plate = COALESCE(@vehicle_plate, vehicle_plate),
+              restaurant_id = COALESCE(@restaurant_id, restaurant_id),
+              itinerary_steps = COALESCE(@itinerary_steps, itinerary_steps)
           WHERE daily_trip_id = @id;
         END
         ELSE
         BEGIN
           INSERT INTO daily_trips (
             daily_trip_id, trip_title, description, price_per_seat, is_active,
-            photo, max_capacity, available_seats, guide_license_number,
-            departure_city, destination_city, recurring_days, activities, google_maps_url
+            photo, gallery, max_capacity, available_seats, guide_license_number,
+            departure_city, destination_city, recurring_days, activities, google_maps_url,
+            vehicle_plate, restaurant_id, itinerary_steps
           ) VALUES (
             @id, @title, @description, @price, @is_active,
-            @photo, @max_cap, @avail_seats, @guide_lic,
-            @departure, @destination, @recurring_days, @activities, @maps_url
+            @photo, @gallery, @max_cap, @avail_seats, @guide_lic,
+            @departure, @destination, @recurring_days, @activities, @maps_url,
+            @vehicle_plate, @restaurant_id, @itinerary_steps
           );
         END
       `);
@@ -1249,9 +1351,26 @@ const server = http.createServer(async (req, res) => {
                g.full_name as guide_name, 
                g.phone_number as guide_phone, 
                g.title as guide_title, 
-               g.avatar as guide_avatar
+               g.avatar as guide_avatar,
+               v.vehicle_type as vehicle_model,
+               v.seating_capacity as vehicle_capacity,
+               v.vehicle_image,
+               tc.company_name as transport_company_name,
+               d.full_name as driver_name,
+               d.phone_number as driver_phone,
+               d.driver_license_number,
+               r.facility_name as restaurant_name,
+               r.facility_type as restaurant_type,
+               r.city as restaurant_city,
+               r.address_details as restaurant_address,
+               r.phone_number as restaurant_phone,
+               r.facility_image_1 as restaurant_image
         FROM weekly_trips wt
         LEFT JOIN tour_guides g ON wt.guide_license_number = g.license_number
+        LEFT JOIN vehicles v ON wt.vehicle_plate = v.plate_number
+        LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+        LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+        LEFT JOIN restaurants_cafes r ON wt.restaurant_id = r.facility_id
         ORDER BY wt.weekly_trip_id DESC
       `);
       return sendJson(res, 200, { success: true, data: result.recordset });
@@ -1264,7 +1383,8 @@ const server = http.createServer(async (req, res) => {
         weekly_trip_id, id, trip_title, title, start_date, end_date,
         max_capacity, available_seats, seat_per_price, price,
         trip_description, description, guide_license_number, is_active,
-        departure_city, destination_region, destination, photo, gallery, google_maps_url
+        departure_city, destination_region, destination, photo, gallery, google_maps_url,
+        vehicle_plate, vehicle_plates, restaurant_id, itinerary_steps
       } = body;
 
       const cleanId = String(weekly_trip_id || id || `WT-${Date.now().toString().slice(-4)}`).trim();
@@ -1275,6 +1395,33 @@ const server = http.createServer(async (req, res) => {
       if (!guideLic) {
         const firstGuide = await db.request().query('SELECT TOP 1 license_number FROM tour_guides');
         guideLic = firstGuide.recordset?.[0]?.license_number || 'G-1001';
+      }
+
+      let cleanPlate = vehicle_plate ? String(vehicle_plate).trim() : null;
+      if (!cleanPlate && Array.isArray(vehicle_plates) && vehicle_plates.length > 0) {
+        cleanPlate = String(vehicle_plates[0]).trim();
+      }
+
+      let cleanRestaurant = restaurant_id ? String(restaurant_id).trim() : null;
+      let cleanItinerary = null;
+      if (itinerary_steps) {
+        cleanItinerary = typeof itinerary_steps === 'string' ? itinerary_steps : JSON.stringify(itinerary_steps);
+      }
+
+      // Process 5-image gallery
+      let galleryStr = '';
+      if (Array.isArray(body.gallery)) galleryStr = body.gallery.filter(Boolean).join(',');
+      else if (Array.isArray(body.photos)) galleryStr = body.photos.filter(Boolean).join(',');
+      else if (Array.isArray(body.images)) galleryStr = body.images.filter(Boolean).join(',');
+      else if (typeof body.gallery === 'string') galleryStr = body.gallery.trim();
+
+      let photoVal = String(photo || '').trim();
+      if (!photoVal && galleryStr) {
+        photoVal = galleryStr.split(',')[0].trim();
+      }
+      if (!photoVal) photoVal = '/assets/dest-ubari-gaberoun.jpg';
+      if (!galleryStr) {
+        galleryStr = [photoVal, photoVal, photoVal, photoVal, photoVal].join(',');
       }
 
       const request = db.request();
@@ -1290,9 +1437,12 @@ const server = http.createServer(async (req, res) => {
       request.input('is_active', sql.Bit, is_active !== false ? 1 : 0);
       request.input('departure', sql.NVarChar(100), String(departure_city || 'طرابلس').trim());
       request.input('destination', sql.NVarChar(100), String(destination_region || destination || 'الصحراء والواحات').trim());
-      request.input('photo', sql.NVarChar(sql.MAX), String(photo || '/assets/dest-ubari-gaberoun.jpg').trim());
-      request.input('gallery', sql.NVarChar(sql.MAX), String(gallery || '').trim());
+      request.input('photo', sql.NVarChar(sql.MAX), photoVal);
+      request.input('gallery', sql.NVarChar(sql.MAX), galleryStr);
       request.input('maps_url', sql.NVarChar(500), String(google_maps_url || '').trim());
+      request.input('vehicle_plate', sql.NVarChar(50), cleanPlate);
+      request.input('restaurant_id', sql.NVarChar(50), cleanRestaurant);
+      request.input('itinerary_steps', sql.NVarChar(sql.MAX), cleanItinerary);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM weekly_trips WHERE weekly_trip_id = @id)
@@ -1311,7 +1461,10 @@ const server = http.createServer(async (req, res) => {
               destination_region = @destination,
               photo = CASE WHEN @photo <> '' THEN @photo ELSE photo END,
               gallery = @gallery,
-              google_maps_url = @maps_url
+              google_maps_url = @maps_url,
+              vehicle_plate = COALESCE(@vehicle_plate, vehicle_plate),
+              restaurant_id = COALESCE(@restaurant_id, restaurant_id),
+              itinerary_steps = COALESCE(@itinerary_steps, itinerary_steps)
           WHERE weekly_trip_id = @id;
         END
         ELSE
@@ -1319,14 +1472,39 @@ const server = http.createServer(async (req, res) => {
           INSERT INTO weekly_trips (
             weekly_trip_id, trip_title, start_date, end_date, max_capacity,
             available_seats, seat_per_price, trip_description, guide_license_number,
-            is_active, departure_city, destination_region, photo, gallery, google_maps_url
+            is_active, departure_city, destination_region, photo, gallery, google_maps_url,
+            vehicle_plate, restaurant_id, itinerary_steps
           ) VALUES (
             @id, @title, @start_date, @end_date, @max_cap,
             @avail_seats, @price, @desc, @guide_lic,
-            @is_active, @departure, @destination, @photo, @gallery, @maps_url
+            @is_active, @departure, @destination, @photo, @gallery, @maps_url,
+            @vehicle_plate, @restaurant_id, @itinerary_steps
           );
         END
       `);
+
+      // Sync hotels_trip_weekly junction table for multi-hotel support
+      const hotelList = Array.isArray(body.hotel_ids)
+        ? body.hotel_ids
+        : (body.hotel_id ? [body.hotel_id] : []);
+      if (hotelList.length > 0) {
+        try {
+          const delHReq = db.request();
+          delHReq.input('wt_id', sql.VarChar(50), cleanId);
+          await delHReq.query('DELETE FROM hotels_trip_weekly WHERE weekly_trip_id = @wt_id');
+          for (const hId of hotelList) {
+            const cleanHId = String(hId || '').trim();
+            if (cleanHId) {
+              const insHReq = db.request();
+              insHReq.input('wt_id', sql.VarChar(50), cleanId);
+              insHReq.input('h_id', sql.NVarChar(50), cleanHId);
+              await insHReq.query('IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @h_id) INSERT INTO hotels_trip_weekly (hotel_id, weekly_trip_id) VALUES (@h_id, @wt_id)');
+            }
+          }
+        } catch (hErr) {
+          console.warn('[hotels_trip_weekly sync warning]:', hErr.message);
+        }
+      }
 
       return sendJson(res, 201, { success: true, message: 'تم حفظ الرحلة الأسبوعية في DelniDB بنجاح', trip_id: cleanId });
     }
@@ -1339,10 +1517,111 @@ const server = http.createServer(async (req, res) => {
       const request = db.request();
       request.input('id', sql.VarChar(50), id);
       await request.query(`
+        DELETE FROM hotels_trip_weekly WHERE weekly_trip_id = @id;
         DELETE FROM bookings_weekly WHERE weekly_trip_id = @id;
         DELETE FROM weekly_trips WHERE weekly_trip_id = @id;
       `);
       return sendJson(res, 200, { success: true, message: 'تم حذف الرحلة الأسبوعية وحجوزاتها بنجاح من DelniDB' });
+    }
+
+    // 14.5 Private Trips: GET
+    if (pathname === '/api/db/private_trips' && req.method === 'GET') {
+      const result = await db.request().query(`
+        SELECT pt.*, 
+               g.full_name as guide_name, 
+               g.phone_number as guide_phone 
+        FROM private_trips pt
+        LEFT JOIN tour_guides g ON pt.guide_license_number = g.license_number
+        ORDER BY pt.preferred_start_date DESC
+      `);
+      return sendJson(res, 200, { success: true, data: result.recordset });
+    }
+
+    // 14.6 Private Trips: POST (Create / Review / Update)
+    if (pathname === '/api/db/private_trips' && req.method === 'POST') {
+      const body = await readBody(req);
+      const {
+        private_trip_id,
+        status_order,
+        customer_name,
+        customer_phone,
+        preferred_start_date,
+        duration_days,
+        number_of_companions,
+        guide_license_number,
+        customer_description,
+        customer_requirements,
+        tourist_id,
+        quoted_price,
+        admin_itinerary_plan,
+      } = body;
+
+      const cleanId = String(private_trip_id || `PRV-${Date.now().toString().slice(-5)}`).trim();
+      const cleanStatus = String(status_order || 'بانتظار تسعير الإدارة').trim();
+
+      const request = db.request();
+      request.input('id', sql.VarChar(50), cleanId);
+      request.input('status', sql.NVarChar(50), cleanStatus);
+      request.input('cust_name', sql.NVarChar(100), String(customer_name || 'سائح دلّني').trim());
+      request.input('cust_phone', sql.VarChar(20), String(customer_phone || '').trim());
+      request.input('start_date', sql.Date, preferred_start_date ? new Date(preferred_start_date) : new Date());
+      request.input('duration', sql.Int, Number(duration_days) || 1);
+      request.input('companions', sql.Int, Number(number_of_companions) || 1);
+      request.input('guide_lic', sql.NVarChar(50), guide_license_number ? String(guide_license_number).trim() : null);
+      request.input('desc', sql.NVarChar(sql.MAX), String(customer_description || 'برنامج رحلة خاصة بالمعالم السياحية').trim());
+      request.input('reqs', sql.NVarChar(sql.MAX), String(customer_requirements || '').trim());
+      request.input('tourist_id', sql.VarChar(50), tourist_id ? String(tourist_id).trim() : null);
+      request.input('price', sql.Decimal(10, 2), quoted_price !== null && quoted_price !== undefined ? Number(quoted_price) : null);
+      request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan).trim() : null);
+
+      await request.query(`
+        IF EXISTS (SELECT 1 FROM private_trips WHERE private_trip_id = @id)
+        BEGIN
+          UPDATE private_trips
+          SET status_order = @status,
+              customer_name = @cust_name,
+              customer_phone = @cust_phone,
+              preferred_start_date = @start_date,
+              duration_days = @duration,
+              number_of_companions = @companions,
+              guide_license_number = @guide_lic,
+              customer_description = @desc,
+              customer_requirements = @reqs,
+              tourist_id = @tourist_id,
+              quoted_price = @price,
+              admin_itinerary_plan = @plan
+          WHERE private_trip_id = @id;
+        END
+        ELSE
+        BEGIN
+          INSERT INTO private_trips (
+            private_trip_id, status_order, customer_name, customer_phone,
+            preferred_start_date, duration_days, number_of_companions,
+            guide_license_number, customer_description, customer_requirements,
+            tourist_id, quoted_price, admin_itinerary_plan
+          ) VALUES (
+            @id, @status, @cust_name, @cust_phone,
+            @start_date, @duration, @companions,
+            @guide_lic, @desc, @reqs,
+            @tourist_id, @price, @plan
+          );
+        END
+      `);
+
+      return sendJson(res, 201, { success: true, message: 'تم حفظ طلب الرحلة الخاصة بنجاح في DelniDB', trip_id: cleanId });
+    }
+
+    // 14.7 Private Trips: DELETE
+    if (pathname === '/api/db/private_trips' && req.method === 'DELETE') {
+      const id = url.searchParams.get('private_trip_id') || url.searchParams.get('id');
+      if (!id) return sendJson(res, 400, { success: false, error: 'معرف الرحلة الخاصة مطلوب للحذف' });
+
+      const request = db.request();
+      request.input('id', sql.VarChar(50), id);
+      await request.query(`
+        DELETE FROM private_trips WHERE private_trip_id = @id;
+      `);
+      return sendJson(res, 200, { success: true, message: 'تم حذف طلب الرحلة الخاصة بنجاح من DelniDB' });
     }
 
     // 15. Daily Bookings: GET
@@ -1393,7 +1672,7 @@ const server = http.createServer(async (req, res) => {
       request.input('seats', sql.Int, seatsCount);
       request.input('status', sql.VarChar(20), String(booking_status || 'مؤكد').trim());
       request.input('price', sql.Decimal(10, 2), Number(total_price) || 100);
-      request.input('notes', sql.Text, String(booking_notes || '').trim());
+      request.input('notes', sql.NVarChar(sql.MAX), String(booking_notes || '').trim());
       request.input('passengers', sql.NVarChar(sql.MAX), String(passengers_names || '').trim());
       request.input('pay_status', sql.VarChar(20), String(payment_status || 'مدفوع').trim());
       request.input('attended', sql.Bit, attended ? 1 : 0);
@@ -1476,7 +1755,7 @@ const server = http.createServer(async (req, res) => {
       request.input('seats', sql.Int, seatsCount);
       request.input('status', sql.VarChar(20), String(booking_status || 'مؤكد').trim());
       request.input('price', sql.Decimal(10, 2), Number(total_price) || 1200);
-      request.input('notes', sql.Text, String(booking_notes || '').trim());
+      request.input('notes', sql.NVarChar(sql.MAX), String(booking_notes || '').trim());
       request.input('passengers', sql.NVarChar(sql.MAX), String(passengers_names || '').trim());
       request.input('pay_status', sql.VarChar(20), String(payment_status || 'مدفوع').trim());
       request.input('attended', sql.Bit, attended ? 1 : 0);
@@ -1545,12 +1824,12 @@ const server = http.createServer(async (req, res) => {
       request.input('duration', sql.Int, Number(duration_days) || 3);
       request.input('companions', sql.Int, Number(number_of_companions) || 2);
       request.input('price', sql.Decimal(10, 2), quoted_price ? Number(quoted_price) : null);
-      request.input('plan', sql.Text, admin_itinerary_plan ? String(admin_itinerary_plan) : null);
+      request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan) : null);
       request.input('guide_lic', sql.VarChar(50), guide_license_number ? String(guide_license_number) : null);
       request.input('tourist_id', sql.VarChar(50), tourist_id ? String(tourist_id) : null);
       request.input('cust_name', sql.VarChar(100), customer_name ? String(customer_name) : null);
       request.input('cust_phone', sql.VarChar(20), customer_phone ? String(customer_phone) : null);
-      request.input('reqs', sql.Text, customer_requirements ? String(customer_requirements) : null);
+      request.input('reqs', sql.NVarChar(sql.MAX), customer_requirements ? String(customer_requirements) : null);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM private_trips WHERE private_trip_id = @id)
@@ -1609,8 +1888,36 @@ const server = http.createServer(async (req, res) => {
         db.request().query('SELECT * FROM transportation_companies ORDER BY company_name ASC'),
         db.request().query('SELECT * FROM drivers ORDER BY full_name ASC'),
         db.request().query('SELECT * FROM vehicles ORDER BY plate_number ASC'),
-        db.request().query('SELECT dt.*, g.full_name as guide_name FROM daily_trips dt LEFT JOIN tour_guides g ON dt.guide_license_number = g.license_number ORDER BY dt.daily_trip_id DESC'),
-        db.request().query('SELECT wt.*, g.full_name as guide_name FROM weekly_trips wt LEFT JOIN tour_guides g ON wt.guide_license_number = g.license_number ORDER BY wt.weekly_trip_id DESC'),
+        db.request().query(`
+          SELECT dt.*, 
+                 g.full_name as guide_name, g.phone_number as guide_phone, g.title as guide_title, g.avatar as guide_avatar,
+                 v.vehicle_type as vehicle_model, v.seating_capacity as vehicle_capacity, v.vehicle_image,
+                 tc.company_name as transport_company_name,
+                 d.full_name as driver_name, d.phone_number as driver_phone, d.driver_license_number,
+                 r.facility_name as restaurant_name, r.facility_type as restaurant_type, r.city as restaurant_city, r.address_details as restaurant_address, r.phone_number as restaurant_phone
+          FROM daily_trips dt
+          LEFT JOIN tour_guides g ON dt.guide_license_number = g.license_number
+          LEFT JOIN vehicles v ON dt.vehicle_plate = v.plate_number
+          LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+          LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+          LEFT JOIN restaurants_cafes r ON dt.restaurant_id = r.facility_id
+          ORDER BY dt.daily_trip_id DESC
+        `),
+        db.request().query(`
+          SELECT wt.*, 
+                 g.full_name as guide_name, g.phone_number as guide_phone, g.title as guide_title, g.avatar as guide_avatar,
+                 v.vehicle_type as vehicle_model, v.seating_capacity as vehicle_capacity, v.vehicle_image,
+                 tc.company_name as transport_company_name,
+                 d.full_name as driver_name, d.phone_number as driver_phone, d.driver_license_number,
+                 r.facility_name as restaurant_name, r.facility_type as restaurant_type, r.city as restaurant_city, r.address_details as restaurant_address, r.phone_number as restaurant_phone
+          FROM weekly_trips wt
+          LEFT JOIN tour_guides g ON wt.guide_license_number = g.license_number
+          LEFT JOIN vehicles v ON wt.vehicle_plate = v.plate_number
+          LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+          LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+          LEFT JOIN restaurants_cafes r ON wt.restaurant_id = r.facility_id
+          ORDER BY wt.weekly_trip_id DESC
+        `),
         db.request().query('SELECT b.*, t.full_name as tourist_name, dt.trip_title FROM bookings_daily b LEFT JOIN tourists t ON b.tourist_id = t.tourist_id LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id ORDER BY b.booking_date DESC'),
         db.request().query('SELECT b.*, t.full_name as tourist_name, wt.trip_title FROM bookings_weekly b LEFT JOIN tourists t ON b.tourist_id = t.tourist_id LEFT JOIN weekly_trips wt ON b.weekly_trip_id = wt.weekly_trip_id ORDER BY b.booking_date DESC'),
         db.request().query('SELECT * FROM private_trips ORDER BY private_trip_id DESC'),

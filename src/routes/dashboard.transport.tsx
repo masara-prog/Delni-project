@@ -68,7 +68,6 @@ function TransportDashboard() {
         address: data.address || "",
         city: data.city || "طرابلس",
         total_vehicles: Number(data.total_vehicles) || 0,
-        available_vehicles: Number(data.available_vehicles) || 0,
         verification_status: data.verification_status || data.status || "موثق",
         contract_start_date: data.contract_start_date || "",
         contract_end_date: data.contract_end_date || "",
@@ -84,7 +83,6 @@ function TransportDashboard() {
       address: first?.address || "",
       city: first?.city || "طرابلس",
       total_vehicles: Number(first?.total_vehicles) || 0,
-      available_vehicles: Number(first?.available_vehicles) || 0,
       verification_status: first?.verification_status || "بانتظار التوثيق",
       contract_start_date: first?.contract_start_date || "",
       contract_end_date: first?.contract_end_date || "",
@@ -102,6 +100,7 @@ function TransportDashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
     return getVehicles(companyInfo.contract_number) as Vehicle[];
   });
+  const [previewInsuranceDoc, setPreviewInsuranceDoc] = useState<string | null>(null);
 
   // Reload data when company or active changes
   useEffect(() => {
@@ -565,7 +564,13 @@ function TransportDashboard() {
                       {v.insurance_image && (
                         <div className="mt-1 flex items-center gap-1.5 text-primary text-[11px] font-bold">
                           <span>📄 صورة الوثيقة:</span>
-                          <a href={v.insurance_image} target="_blank" rel="noreferrer" className="underline hover:text-primary-dark">معاينة وثيقة التأمين ↗</a>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewInsuranceDoc(v.insurance_image || "/assets/test-enhanced.jpg")}
+                            className="underline hover:text-primary-dark cursor-pointer bg-transparent border-0 p-0 text-primary font-bold text-[11px]"
+                          >
+                            معاينة وثيقة التأمين ↗
+                          </button>
                         </div>
                       )}
                     </div>
@@ -847,6 +852,51 @@ function TransportDashboard() {
           onClose={() => setEditingVehicle(null)}
           onSave={handleUpdateVehicle}
         />
+      )}
+
+      {previewInsuranceDoc && (
+        <div
+          className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+          onClick={() => setPreviewInsuranceDoc(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-200 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 bg-[#003580] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🛡️</span>
+                <span className="font-black text-sm">معاينة ورقة وثيقة التأمين</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewInsuranceDoc(null)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center font-black transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 max-h-[72vh] overflow-auto flex items-center justify-center bg-slate-100">
+              <img
+                src={previewInsuranceDoc}
+                alt="وثيقة التأمين"
+                className="max-h-[68vh] w-auto max-w-full object-contain rounded-xl shadow-md border border-slate-300"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/assets/test-enhanced.jpg";
+                }}
+              />
+            </div>
+            <div className="p-3.5 bg-white border-t border-slate-200 flex justify-end items-center">
+              <button
+                type="button"
+                onClick={() => setPreviewInsuranceDoc(null)}
+                className="px-4 py-1.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </DashboardShell>
   );

@@ -56,7 +56,6 @@ export interface TransportationCompany {
   email?: string | null; // VARCHAR(100)
   password?: string | null; // VARCHAR(255)
   city?: string | null; // VARCHAR(50)
-  available_vehicles?: number | null; // INT
   contract_start_date?: string | null; // DATE
   contract_end_date?: string | null; // DATE
 }
@@ -220,7 +219,7 @@ export interface WeeklyTrip {
    ========================================================= */
 export interface PrivateTrip {
   private_trip_id: string; // VARCHAR(50) PRIMARY KEY
-  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية"; // VARCHAR(25)
+  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | "ملغاة من السائح" | string; // VARCHAR(25)
   customer_description: string; // VARCHAR(100)
   preferred_start_date: string; // DATE
   duration_days: number; // INT (CHECK > 0)
@@ -234,6 +233,7 @@ export interface PrivateTrip {
   customer_requirements?: string | null; // TEXT
   assigned_guide_license?: string | null; // VARCHAR(50) NULL FK -> TourGuides
   assigned_vehicle_plate?: string | null; // VARCHAR(30) NULL FK -> Vehicles
+  guide_name?: string | null;
 }
 
 /* =========================================================
@@ -296,34 +296,7 @@ export interface OfferFacility {
   badge?: string | null; // VARCHAR(50)
 }
 
-/* =========================================================
-   18, 19, 20. ربط السيارات بالرحلات (Vehicle Allocations)
-   ========================================================= */
-export interface DailyTripVehicle {
-  daily_alloc_id: string; // VARCHAR(50) PRIMARY KEY
-  daily_trip_id: string; // VARCHAR(50) FK
-  plate_number: string; // VARCHAR(30) FK
-  allocation_date: string; // DATE
-  status: string; // VARCHAR(20)
-}
-
-export interface WeeklyTripVehicle {
-  weekly_alloc_id: string; // VARCHAR(50) PRIMARY KEY
-  weekly_trip_id: string; // VARCHAR(50) FK
-  plate_number: string; // VARCHAR(30) FK
-  start_date: string; // DATE
-  end_date: string; // DATE
-  status: string; // VARCHAR(20)
-}
-
-export interface PrivateTripVehicle {
-  private_alloc_id: string; // VARCHAR(50) PRIMARY KEY
-  private_trip_id: string; // VARCHAR(50) FK
-  plate_number: string; // VARCHAR(30) FK
-  start_date: string; // DATE
-  end_date: string; // DATE
-  allocation_status: string; // VARCHAR(25)
-}
+// Note: Multi-vehicle trip allocation tables (daily_trip_vehicles, weekly_trip_vehicles, private_trip_vehicles) were removed as each trip directly assigns single vehicles.
 
 /* =========================================================
    21, 22. الحجوزات (Bookings)

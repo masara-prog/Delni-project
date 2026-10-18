@@ -157,7 +157,7 @@ function GuidesPage() {
     }, 100);
   };
 
-  const handleFilterSelect = (setter: Function, value: any) => {
+  const handleFilterSelect = (setter: (val: any) => void, value: any) => {
     setter(value);
     scrollToCards();
   };
@@ -215,7 +215,7 @@ function GuidesPage() {
 
       return true;
     });
-  }, [searchQuery, genderFilter, langFilter, regionFilter, expFilter, workDaysFilter]);
+  }, [guidesSource, searchQuery, genderFilter, langFilter, regionFilter, expFilter, workDaysFilter]);
 
   return (
     <div className="min-h-screen bg-background" dir={dir}>
