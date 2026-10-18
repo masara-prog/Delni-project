@@ -101,7 +101,7 @@ function GuidesPage() {
   }, []);
 
   const guidesSource = useMemo(() => {
-    return dbGuides;
+    return dbGuides.length > 0 ? dbGuides : TOUR_GUIDES_DATA;
   }, [dbGuides]);
 
   // Filters State
@@ -211,7 +211,7 @@ function GuidesPage() {
       if (expFilter === "9+" && g.experienceYears < 9) return false;
 
       // Work Days
-      if (workDaysFilter === "full" && !g.workingDays.includes("طوال أيام الأسبوع")) return false;
+      if (workDaysFilter === "full" && !g.workingDays.includes("طوال أيام الأسبوع") && !g.workingDays.includes("السبت") && !g.workingDays.includes("sat")) return false;
 
       return true;
     });
@@ -552,6 +552,7 @@ function GuidesPage() {
                 setLangFilter("all");
                 setRegionFilter("all");
                 setExpFilter("all");
+                setWorkDaysFilter("all");
               }}
               className="mt-6 px-6 py-2.5 rounded-xl bg-[#1B5A78] text-white font-bold text-xs hover:bg-[#13445C] transition cursor-pointer"
             >

@@ -1189,6 +1189,18 @@ export async function apiDeleteGuide(licenseNumber: string) {
  */
 export async function apiGetDailyTrips(): Promise<any[]> {
   try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.data || []);
+    }
+  } catch (err) {
+    console.error("apiGetDailyTrips failed:", err);
+  }
+
+  try {
     const res = await fetch(`${BACKEND_API_URL}/daily_trips`);
     if (res.ok) {
       const json = await res.json();
@@ -1200,6 +1212,20 @@ export async function apiGetDailyTrips(): Promise<any[]> {
 
 export async function apiCreateDailyTrip(data: any) {
   try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (res.ok && (json.status === "success" || json.trip)) {
+      return { status: "success", trip: json.trip || data, ...json };
+    }
+  } catch (err) {
+    console.error("apiCreateDailyTrip error:", err);
+  }
+
+  try {
     const res = await fetch(`${BACKEND_API_URL}/daily_trips`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1209,13 +1235,25 @@ export async function apiCreateDailyTrip(data: any) {
     if (res.ok && json.success) {
       return { status: "success", trip: { ...data, daily_trip_id: json.trip_id || data.daily_trip_id || data.id }, ...json };
     }
-    return { status: "error", message: json.error || "فشل حفظ الرحلة" };
+    return { status: "error", message: json?.error || "فشل حفظ الرحلة" };
   } catch {
     return null;
   }
 }
 
 export async function apiUpdateDailyTrip(id: string, data: any) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return { status: "success", ...json };
+    }
+  } catch { }
+
   try {
     const res = await fetch(`${BACKEND_API_URL}/daily_trips`, {
       method: "POST",
@@ -1232,6 +1270,14 @@ export async function apiUpdateDailyTrip(id: string, data: any) {
 
 export async function apiDeleteDailyTrip(id: string) {
   try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) return await res.json();
+  } catch { }
+
+  try {
     const res = await fetch(`${BACKEND_API_URL}/daily_trips?daily_trip_id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
@@ -1241,6 +1287,18 @@ export async function apiDeleteDailyTrip(id: string) {
 }
 
 export async function apiGetWeeklyTrips(): Promise<any[]> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.data || []);
+    }
+  } catch (err) {
+    console.error("apiGetWeeklyTrips failed:", err);
+  }
+
   try {
     const res = await fetch(`${BACKEND_API_URL}/weekly_trips`);
     if (res.ok) {
@@ -1353,6 +1411,21 @@ export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
 }
 
 export async function apiGetGuidesCatalog(): Promise<GuideRecord[]> {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/guides`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.guides || data.data || []);
+      if (list.length > 0) {
+        return list;
+      }
+    }
+  } catch (err) {
+    console.error("apiGetGuidesCatalog fetch error:", err);
+  }
+
   const guides = getAllGuides();
   return guides.filter((g) => g.verification_status === "موثق");
 }
