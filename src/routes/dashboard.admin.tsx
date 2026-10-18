@@ -1588,76 +1588,138 @@ function AdminDashboard() {
 
       {/* GUIDES TAB */}
       {active === "guides" && (
-        <SectionCard title="معاينة وثائق المرشدين واعتمادهم">
-          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right">
-            📌 يعرض هذا القسم فقط المرشدين الحقيقيين المسجلين في قاعدة بيانات دِلني (DelniDB).
+        <SectionCard 
+          title="سجل وجدول المرشدين السياحيين المسجلين في المنصة"
+          action={
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground">
+                إجمالي المرشدين: <span className="font-mono text-primary font-black">{guides.length}</span> (
+                <span className="text-emerald-600">{guides.filter(g => g.verification_status === "موثق").length} معتمد</span> — 
+                <span className="text-amber-600 mr-1">{guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length} بانتظار الاعتماد</span>
+                )
+              </span>
+            </div>
+          }
+        >
+          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right flex flex-wrap justify-between items-center gap-2">
+            <span>📌 جدول تفصيلي شامل لكافة المرشدين السياحيين المسجلين في قاعدة بيانات دِلني (سواء تم اعتمادهم وتوثيقهم أو بانتظار موافقة الإدارة).</span>
           </div>
+
           {guides.length === 0 ? (
             <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
               لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
-              {guides.map((g) => (
-                <div key={g.license_number} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+            <div className="overflow-x-auto text-right">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/60">
+                    <th className="py-3 px-3 font-bold">المرشد السياحي</th>
+                    <th className="py-3 px-3 font-bold">رقم الرخصة</th>
+                    <th className="py-3 px-3 font-bold">الهاتف والبريد</th>
+                    <th className="py-3 px-3 font-bold">الخبرة والأجر</th>
+                    <th className="py-3 px-3 font-bold">وثيقة الترخيص المرفقة</th>
+                    <th className="py-3 px-3 font-bold">حالة الحساب</th>
+                    <th className="py-3 px-3 font-bold text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {guides.map((g) => (
+                    <tr key={g.license_number} className="hover:bg-slate-50/70 transition">
+                      {/* Name & Avatar */}
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2.5">
                           {g.avatar ? (
-                            <img src={g.avatar} alt={g.full_name} className="w-9 h-9 rounded-full object-cover border shrink-0" />
+                            <img src={g.avatar} alt={g.full_name} className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" />
                           ) : (
-                            <div className="w-9 h-9 rounded-full bg-slate-100 grid place-items-center text-sm shrink-0 border">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 grid place-items-center text-base shrink-0 border border-slate-200">
                               👤
                             </div>
                           )}
                           <div className="min-w-0">
-                            <h3 className="font-black text-foreground text-sm truncate">{g.full_name}</h3>
-                            {g.title && <div className="text-[11px] text-primary font-bold truncate">{g.title}</div>}
+                            <div className="font-black text-foreground text-sm">{g.full_name}</div>
+                            {g.title && <div className="text-[11px] text-primary font-bold">{g.title}</div>}
                           </div>
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-1">رقم الرخصة: <span className="font-mono font-bold text-slate-800">{g.license_number}</span></div>
-                        {g.email && <div className="text-[11px] text-slate-600 font-semibold mt-0.5 truncate">✉️ {g.email}</div>}
-                        {g.phone_number && <div className="text-[11px] text-slate-600 font-semibold mt-0.5">📱 {g.phone_number}</div>}
-                      </div>
-                      <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
-                        {g.verification_status || "بانتظار التوثيق"}
-                      </Badge>
-                    </div>
+                      </td>
 
-                    {g.bio && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{g.bio}</p>}
+                      {/* License Number */}
+                      <td className="py-3 px-3 font-mono text-xs font-bold text-slate-800">
+                        <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                          {g.license_number}
+                        </span>
+                      </td>
 
-                    <div className="text-xs space-y-1.5 pt-1 border-t border-slate-100">
-                      <div className="font-bold text-foreground truncate">📜 {g.certificate}</div>
-                      {g.certificate_name && (
-                        <div className="text-[11px] text-primary font-black bg-primary/5 px-2 py-0.5 rounded border border-primary/20 inline-flex items-center gap-1">
-                          <span>📎 ملف الشهادة المرفق:</span>
-                          <span className="underline">{g.certificate_name}</span>
+                      {/* Contact Info */}
+                      <td className="py-3 px-3">
+                        <div className="text-xs font-semibold text-slate-700">{g.phone_number || "—"}</div>
+                        {g.email && <div className="text-[11px] text-muted-foreground">{g.email}</div>}
+                      </td>
+
+                      {/* Experience & Daily Rate */}
+                      <td className="py-3 px-3">
+                        <div className="text-xs font-bold text-foreground">
+                          {g.years_of_experience ? `${g.years_of_experience} سنوات خبرة` : "—"}
                         </div>
-                      )}
-                      <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
-                      <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block">
-                        💰 أجر المرشد اليومي: {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
-                      </div>
-                    </div>
-                  </div>
+                        <div className="text-[11px] font-black text-emerald-700">
+                          {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                        </div>
+                      </td>
 
-                  <div className="pt-3 flex gap-2 border-t border-slate-100">
-                    <button 
-                      onClick={() => setViewingGuide(g)} 
-                      className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
-                    >
-                      معاينة الوثائق والاعتماد 📄
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteGuide(g.license_number)} 
-                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-black transition cursor-pointer border border-red-200"
-                    >
-                      حذف
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      {/* Certificate Document */}
+                      <td className="py-3 px-3">
+                        {g.digital_certificate_file || g.certificate_name ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold text-slate-800 truncate max-w-[170px]" title={g.certificate_name || g.certificate}>
+                              📄 {g.certificate_name || "مستند ترخيص"}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 font-bold">✓ وثيقة مرفوعة</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">لا يوجد ملف مرفق</span>
+                        )}
+                      </td>
+
+                      {/* Verification Status Badge */}
+                      <td className="py-3 px-3">
+                        <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
+                          {g.verification_status || "بانتظار التوثيق"}
+                        </Badge>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setViewingGuide(g)}
+                            className="px-3 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-black shadow-xs hover:opacity-95 transition cursor-pointer flex items-center gap-1"
+                            title="معاينة الوثائق واعتماد الحساب"
+                          >
+                            <span>فحص واعتماد</span>
+                            <span>📄</span>
+                          </button>
+                          {g.verification_status !== "موثق" && (
+                            <button
+                              onClick={() => handleVerifyGuide(g.license_number, "موثق")}
+                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-black transition cursor-pointer"
+                              title="اعتماد فوري"
+                            >
+                              قبول ✓
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteGuide(g.license_number)}
+                            className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-black transition cursor-pointer"
+                            title="حذف المرشد نهائياً"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </SectionCard>
