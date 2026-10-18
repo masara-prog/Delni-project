@@ -2,6 +2,8 @@ import React from "react";
 import { X, Award, Star, ShieldCheck, Languages, CheckCircle2, MapPin, Calendar, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
+import { formatOperatingRegions } from "@/lib/guidesData";
+
 export type GuideCVData = {
   id?: string;
   name: string;
@@ -19,17 +21,6 @@ export type GuideCVData = {
   operatingRegions?: string[];
   workingDays?: string[];
   primaryRegion?: string;
-};
-
-const REGIONS_LABELS: Record<string, string> = {
-  tripoli: "طرابلس وضواحيها",
-  leptis: "لبدة الكبرى والخمس",
-  sabratha: "صبراتة والساحل الغربي",
-  cyrene: "شحات وقورينا (الجبل الأخضر)",
-  benghazi: "بنغازي والمنطقة الشرقية",
-  ghadames: "غدامس والواحات",
-  ubari: "أوباري وفزان",
-  acacus: "جبال أكاكوس وغات",
 };
 
 interface GuideCVModalProps {
@@ -50,11 +41,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
       : `${guide.workingDays.length} أيام/أسبوع`
     : "طوال الأسبوع";
 
-  const regionDisplay = guide.primaryRegion && REGIONS_LABELS[guide.primaryRegion]
-    ? REGIONS_LABELS[guide.primaryRegion]
-    : guide.operatingRegions?.[0]
-    ? REGIONS_LABELS[guide.operatingRegions[0]] || guide.operatingRegions[0]
-    : "جميع مناطق ليبيا";
+  const regionDisplay = formatOperatingRegions(guide.operatingRegions || (guide.primaryRegion ? [guide.primaryRegion] : []));
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0F172A]/75 backdrop-blur-md grid place-items-center p-4 animate-in fade-in duration-200" dir="rtl">

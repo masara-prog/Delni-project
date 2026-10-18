@@ -34,7 +34,7 @@ export const Route = createFileRoute("/guides")({
   component: GuidesPage,
 });
 
-import { TourGuide, TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { TourGuide, TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
 import { apiGetGuidesCatalog } from "@/lib/api";
 
 function GuidesPage() {
@@ -51,9 +51,21 @@ function GuidesPage() {
         const mapped: TourGuide[] = data.map((g: any, idx: number) => {
           let opRegions: string[] = [];
           try {
-            opRegions = typeof g.operating_regions === 'string' ? JSON.parse(g.operating_regions) : (g.operating_regions || []);
+            if (Array.isArray(g.operating_regions)) {
+              opRegions = g.operating_regions;
+            } else if (typeof g.operating_regions === 'string') {
+              const trimmed = g.operating_regions.trim();
+              if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                opRegions = JSON.parse(trimmed);
+              } else if (trimmed.length > 0) {
+                opRegions = trimmed.split(",").map((s: string) => s.trim());
+              }
+            }
           } catch {
             opRegions = [];
+          }
+          if (opRegions.length === 0 && g.primaryRegion) {
+            opRegions = [g.primaryRegion];
           }
 
           let wDays: string[] = [];
@@ -499,10 +511,10 @@ function GuidesPage() {
                         {guide.title}
                       </p>
 
-                      {/* Location / Work Place (مكان العمل) */}
-                      <div className="flex items-center gap-1.5 text-xs font-black text-[#EA580C] mt-1.5">
+                      {/* Location / Work Place (مكان العمل ونطاق الإرشاد) */}
+                      <div className="flex items-center gap-1.5 text-xs font-black text-[#EA580C] mt-1.5" title={formatOperatingRegions(guide.operatingRegions)}>
                         <MapPin className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
-                        <span className="truncate">{REGIONS_MAP[guide.primaryRegion]}</span>
+                        <span className="truncate">{formatOperatingRegions(guide.operatingRegions)}</span>
                       </div>
                     </div>
 

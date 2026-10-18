@@ -245,6 +245,29 @@ export const REGIONS_MAP: Record<string, string> = {
   cyrene: "شحات وقورينا (الجبل الأخضر)",
   benghazi: "بنغازي والمنطقة الشرقية",
   ghadames: "غدامس والواحات",
-  ubari: "أوباري وفزان",
+  ubari: "أوباري وفزان والبحيرات",
   acacus: "جبال أكاكوس وغات",
+  sousa: "سوسة وأبولونيا الأثرية",
+  tobruk: "طبرق والمعالم التاريخية",
 };
+
+export function formatOperatingRegions(regions?: string[] | string): string {
+  if (!regions) return "طرابلس وضواحيها";
+  let list: string[] = [];
+  if (Array.isArray(regions)) {
+    list = regions;
+  } else if (typeof regions === "string") {
+    try {
+      const parsed = JSON.parse(regions);
+      if (Array.isArray(parsed)) list = parsed;
+      else list = regions.split(",").map(s => s.trim());
+    } catch {
+      list = regions.split(",").map(s => s.trim());
+    }
+  }
+  const translated = list
+    .filter(Boolean)
+    .map(r => REGIONS_MAP[r] || r);
+  return translated.length > 0 ? translated.join(" • ") : "طرابلس وضواحيها";
+}
+

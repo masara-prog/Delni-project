@@ -26,7 +26,7 @@ import {
   sendToSecureBackend,
   deleteFromSecureBackend
 } from "@/lib/api";
-import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
 import { getChatSessions, sendAdminReply } from "@/lib/supportChat";
 import type {
   TransportationCompany,
@@ -489,8 +489,8 @@ function AdminDashboard() {
           email: g.email,
           daily_rate: Number(g.price_per_day) || 150,
           price_per_day: Number(g.price_per_day) || 150,
-          primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : (g.primaryRegion || "tripoli"),
-          operating_regions: g.operating_regions || "tripoli",
+          primaryRegion: g.primaryRegion || (typeof g.operating_regions === 'string' ? g.operating_regions : (g.operating_regions?.[0] || "tripoli")),
+          operating_regions: g.operating_regions || "",
           working_days: g.working_days || "الأحد,الأربعاء",
           total_tours_completed: Number(g.total_tours_completed) || 0,
         }));
@@ -1494,6 +1494,7 @@ function AdminDashboard() {
                   <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/60">
                     <th className="py-3 px-3 font-bold">المرشد السياحي</th>
                     <th className="py-3 px-3 font-bold">رقم الرخصة</th>
+                    <th className="py-3 px-3 font-bold">نطاق العمل والمدن</th>
                     <th className="py-3 px-3 font-bold">الهاتف والبريد</th>
                     <th className="py-3 px-3 font-bold">الخبرة والأجر</th>
                     <th className="py-3 px-3 font-bold">وثيقة الترخيص المرفقة</th>
@@ -1525,6 +1526,13 @@ function AdminDashboard() {
                       <td className="py-3 px-3 font-mono text-xs font-bold text-slate-800">
                         <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">
                           {g.license_number}
+                        </span>
+                      </td>
+
+                      {/* Operating Regions */}
+                      <td className="py-3 px-3 max-w-[220px]">
+                        <span className="text-xs font-bold text-[#EA580C] bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200/60 block truncate" title={formatOperatingRegions(g.operating_regions)}>
+                          📍 {formatOperatingRegions(g.operating_regions)}
                         </span>
                       </td>
 
@@ -3322,6 +3330,10 @@ function GuideVerificationModal({
             <div>
               <b>السعر اليومي المقترح:</b>{" "}
               <span className="text-emerald-700 font-bold">{guide.daily_rate || guide.price_per_day || 150} د.ل / اليوم</span>
+            </div>
+            <div className="sm:col-span-2">
+              <b>مكان العمل والمدن:</b>{" "}
+              <span className="text-[#EA580C] font-bold">{formatOperatingRegions(guide.operating_regions)}</span>
             </div>
           </div>
           {guide.bio && (
