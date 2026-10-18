@@ -20,17 +20,12 @@ class BookingWeekly extends Model
         'number_of_seats',
         'total_price',
         'booking_status',
-        'booking_notes',
-        'passengers_names',
-        'payment_status',
-        'attended',
     ];
 
     protected $casts = [
         'booking_date' => 'datetime',
         'number_of_seats' => 'integer',
         'total_price' => 'decimal:2',
-        'attended' => 'boolean',
     ];
 
     public function tourist()

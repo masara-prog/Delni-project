@@ -41,19 +41,19 @@ Route::prefix('auth')->group(function () {
 // --- Public / Catalog Routes ---
 Route::get('/trips/daily', [TripController::class, 'dailyTrips']);
 Route::post('/trips/daily', [TripController::class, 'storeDailyTrip']);
-Route::put('/trips/daily/{id}', [TripController::class, 'updateDailyTrip']);
-Route::post('/trips/daily/{id}', [TripController::class, 'updateDailyTrip']);
 Route::delete('/trips/daily/{id}', [TripController::class, 'deleteDailyTrip']);
 Route::get('/trips/weekly', [TripController::class, 'weeklyTrips']);
 Route::post('/trips/weekly', [TripController::class, 'storeWeeklyTrip']);
-Route::put('/trips/weekly/{id}', [TripController::class, 'updateWeeklyTrip']);
-Route::post('/trips/weekly/{id}', [TripController::class, 'updateWeeklyTrip']);
 Route::delete('/trips/weekly/{id}', [TripController::class, 'deleteWeeklyTrip']);
 Route::post('/trips/private/request', [TripController::class, 'requestPrivateTrip']);
 
 Route::get('/places', [TripController::class, 'places']);
 Route::get('/hotels', [TripController::class, 'hotels']);
+Route::post('/hotels', [TripController::class, 'storeHotel']);
+Route::delete('/hotels/{id}', [TripController::class, 'deleteHotel']);
 Route::get('/restaurants', [TripController::class, 'restaurants']);
+Route::post('/restaurants', [TripController::class, 'storeRestaurant']);
+Route::delete('/restaurants/{id}', [TripController::class, 'deleteRestaurant']);
 Route::get('/guides', [TripController::class, 'guides']);
 
 // --- Bookings & Manifests ---
