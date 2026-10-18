@@ -2,10 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { 
-  getStoredSession, 
-  apiGetAdminDashboard, 
-  apiVerifyGuide, 
+import {
+  getStoredSession,
+  apiGetAdminDashboard,
+  apiVerifyGuide,
   apiDeleteGuide,
   apiCreateDailyTrip,
   apiUpdateDailyTrip,
@@ -13,8 +13,9 @@ import {
   apiCreateWeeklyTrip,
   apiUpdateWeeklyTrip,
   apiDeleteWeeklyTrip,
-  getAllGuides, 
-  updateGuideVerification, 
+  getAllGuides,
+  saveAllGuides,
+  updateGuideVerification,
   deleteGuideAccount,
   getTransportCompanies,
   saveTransportCompanies,
@@ -26,7 +27,7 @@ import {
   sendToSecureBackend,
   deleteFromSecureBackend
 } from "@/lib/api";
-import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
+import { formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -56,59 +57,59 @@ export const Route = createFileRoute("/dashboard/admin")({
 });
 
 /* ============ TYPES ============ */
-type Company = { 
-  id?: string | null; 
-  contract_number: string; 
-  name: string; 
+type Company = {
+  id?: string | null;
+  contract_number: string;
+  name: string;
   company_name?: string;
-  phone: string; 
+  phone: string;
   phone_number?: string;
-  address: string; 
+  address: string;
   city?: string | null;
-  email?: string | null; 
-  pass?: string | null; 
-  password?: string | null; 
-  total_vehicles?: number | null; 
-  available_cars?: number | null; 
-  available_vehicles?: number | null; 
-  contract_start_date?: string | null; 
-  contract_end_date?: string | null; 
+  email?: string | null;
+  pass?: string | null;
+  password?: string | null;
+  total_vehicles?: number | null;
+  available_cars?: number | null;
+  available_vehicles?: number | null;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
   status?: "موثق" | "بانتظار" | "مرفوض" | string;
   verification_status?: "موثق" | "بانتظار التوثيق" | "بانتظار" | "مرفوض" | string | null;
   google_maps_url?: string | null;
 };
 
-type Driver = { 
-  driver_license_number: string; 
-  full_name: string; 
-  phone_number: string; 
-  national_id_or_passport?: string; 
-  license_date_valid?: string; 
-  contract_number?: string; 
-  assigned_vehicle_plate?: string | null; 
-  email?: string; 
-  company_name?: string | null; 
+type Driver = {
+  driver_license_number: string;
+  full_name: string;
+  phone_number: string;
+  national_id_or_passport?: string;
+  license_date_valid?: string;
+  contract_number?: string;
+  assigned_vehicle_plate?: string | null;
+  email?: string;
+  company_name?: string | null;
   account_status?: "نشط" | "معلق" | "موقوف" | string | null;
   operational_status?: string | null;
 };
 
-type Guide = { 
-  license_number: string; 
-  full_name: string; 
+type Guide = {
+  license_number: string;
+  full_name: string;
   title?: string;
   avatar?: string;
-  phone_number: string; 
-  years_of_experience: number; 
-  certificate: string; 
+  phone_number: string;
+  years_of_experience: number;
+  certificate: string;
   certificate_name?: string;
-  digital_certificate_file?: string; 
-  bio?: string; 
-  speaks_english?: boolean; 
-  speaks_french?: boolean; 
-  speaks_italian?: boolean; 
-  verification_status?: "موثق" | "بانتظار التوثيق" | "مرفوض" | string; 
-  email?: string; 
-  daily_rate?: number; 
+  digital_certificate_file?: string;
+  bio?: string;
+  speaks_english?: boolean;
+  speaks_french?: boolean;
+  speaks_italian?: boolean;
+  verification_status?: "موثق" | "بانتظار التوثيق" | "مرفوض" | string;
+  email?: string;
+  daily_rate?: number;
   price_per_day?: number;
   primaryRegion?: string;
   operating_regions?: string | string[];
@@ -116,103 +117,112 @@ type Guide = {
   total_tours_completed?: number;
 };
 
-type Vehicle = { 
-  plate_number: string; 
-  company_id?: string | null; 
+type Vehicle = {
+  plate_number: string;
+  company_id?: string | null;
   contract_number?: string | null;
-  company_name?: string | null; 
-  vehicle_type: string; 
-  capacity?: number | null; 
+  company_name?: string | null;
+  vehicle_type: string;
+  capacity?: number | null;
   seating_capacity?: number | null;
-  daily_rate?: number | null; 
-  status?: "جاهزة" | "في رحلة" | "صيانة" | string | null; 
+  daily_rate?: number | null;
+  status?: "جاهزة" | "في رحلة" | "صيانة" | string | null;
   vehicle_status?: string | null;
 };
 
-type DailyTrip = { 
-  id: string; 
+type DailyTrip = {
+  id: string;
   daily_trip_id?: string;
-  title: string; 
+  title: string;
   trip_title?: string;
-  description: string; 
-  price_per_seat: number; 
-  max_capacity: number; 
-  available_seats: number; 
-  bookings_count: number; 
-  rating_avg: number; 
-  guide_license?: string; 
+  description: string;
+  price_per_seat: number;
+  max_capacity: number;
+  available_seats: number;
+  bookings_count: number;
+  rating_avg: number;
+  guide_license?: string;
   guide_license_number?: string;
-  vehicle_plates?: string[]; 
-  is_active: boolean; 
-  photo?: string; 
-  recurring_days?: string[] | string; 
-  bus_capacity?: 25 | 50; 
-  destination?: string; 
+  vehicle_plates?: string[];
+  is_active: boolean;
+  photo?: string;
+  recurring_days?: string[] | string;
+  bus_capacity?: 25 | 50;
+  destination?: string;
   destination_city?: string;
-  departure_city?: string; 
+  departure_city?: string;
 };
 
-type WeeklyTrip = { 
-  id: string; 
+type WeeklyTrip = {
+  id: string;
   weekly_trip_id?: string;
-  title: string; 
+  title: string;
   trip_title?: string;
   trip_description?: string;
   description?: string;
-  start_date: string; 
-  end_date: string; 
-  seat_per_price: number; 
-  max_capacity: number; 
-  available_seats?: number; 
-  bookings_count: number; 
-  rating_avg: number; 
-  guide_license?: string; 
+  start_date: string;
+  end_date: string;
+  seat_per_price: number;
+  max_capacity: number;
+  available_seats?: number;
+  bookings_count: number;
+  rating_avg: number;
+  guide_license?: string;
   guide_license_number?: string;
-  vehicle_plates?: string[]; 
-  is_active: boolean; 
-  photo?: string; 
-  weekly_day?: string; 
-  bus_capacity?: 25 | 50; 
-  destinations?: string[]; 
+  vehicle_plates?: string[];
+  is_active: boolean;
+  photo?: string;
+  weekly_day?: string;
+  bus_capacity?: 25 | 50;
+  destinations?: string[];
   destination_region?: string;
-  departure_city?: string; 
-  destination?: string; 
-  hotel_id?: string; 
+  departure_city?: string;
+  destination?: string;
+  hotel_id?: string;
 };
 
-type PrivateTripRequest = { 
-  private_trip_id: string; 
-  customer_name: string; 
-  customer_phone: string; 
-  customer_description: string; 
-  preferred_start_date: string; 
-  duration_days: number; 
-  number_of_companions: number; 
-  quoted_price?: number; 
-  admin_itinerary_plan?: string; 
-  assigned_guide?: string; 
+type PrivateTripRequest = {
+  private_trip_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_description: string;
+  preferred_start_date: string;
+  duration_days: number;
+  number_of_companions: number;
+  quoted_price?: number;
+  admin_itinerary_plan?: string;
+  assigned_guide?: string;
   assigned_guide_license?: string;
   guide_license_number?: string;
-  assigned_vehicle?: string; 
+  tourist_id?: string;
+  customer_requirements?: string;
+  assigned_vehicle?: string;
   assigned_vehicle_plate?: string;
-  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
+  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string;
+};
+
+type Tourist = {
+  tourist_id: string;
+  full_name: string;
+  phone_number?: string;
+  email?: string;
 };
 
 type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف"; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: string };
 type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; verification_status?: string; contract_date?: string; features?: string };
-type Attraction = { 
-  id: string; 
+type Attraction = {
+  id: string;
   place_id?: string;
-  name: string; 
+  name: string;
   place_name?: string;
-  city: string; 
-  category: string; 
-  description: string; 
-  place_image: string; 
-  visitors_count: number; 
-  latitude?: number; 
-  longitude?: number; 
-  google_maps_url?: string; 
+  city: string;
+  category: string;
+  description: string;
+  place_image: string;
+  visitors_count: number;
+  latitude?: number;
+  longitude?: number;
+  google_maps_url?: string;
   is_unesco?: boolean;
   unesco_year?: number;
 };
@@ -275,7 +285,7 @@ function AdminDashboard() {
             saveTransportCompanies(compData.data);
           }
         }
-      } catch {}
+      } catch { }
 
       try {
         const vehRes = await fetch("http://127.0.0.1:5001/api/db/vehicles", { signal: AbortSignal.timeout(3000) });
@@ -285,7 +295,7 @@ function AdminDashboard() {
             setVehicles(vehData.data);
           }
         }
-      } catch {}
+      } catch { }
 
       try {
         const dRes = await fetch("http://127.0.0.1:5001/api/db/drivers", { signal: AbortSignal.timeout(3000) });
@@ -295,7 +305,7 @@ function AdminDashboard() {
             setDrivers(dData.data);
           }
         }
-      } catch {}
+      } catch { }
 
       try {
         const gRes = await fetch("http://127.0.0.1:5001/api/db/guides", { signal: AbortSignal.timeout(3000) });
@@ -311,7 +321,7 @@ function AdminDashboard() {
             setGuides(mapped);
           }
         }
-      } catch {}
+      } catch { }
 
       try {
         const hRes = await fetch("http://127.0.0.1:5001/api/db/hotels", { signal: AbortSignal.timeout(3000) });
@@ -329,7 +339,7 @@ function AdminDashboard() {
             setHotels(mapped);
           }
         }
-      } catch {}
+      } catch { }
 
       try {
         const rRes = await fetch("http://127.0.0.1:5001/api/db/restaurants", { signal: AbortSignal.timeout(3000) });
@@ -347,7 +357,7 @@ function AdminDashboard() {
             setRestaurants(mapped);
           }
         }
-      } catch {}
+      } catch { }
 
       try {
         const pRes = await fetch("http://127.0.0.1:5001/api/db/places", { signal: AbortSignal.timeout(3000) });
@@ -362,7 +372,7 @@ function AdminDashboard() {
             setAttractions(mapped);
           }
         }
-      } catch {}
+      } catch { }
     }
     syncFromDb();
     return () => { isMounted = false; };
@@ -382,7 +392,38 @@ function AdminDashboard() {
     return getDrivers();
   });
 
-  const [guides, setGuides] = useState<Guide[]>([]);
+  const [guides, setGuides] = useState<Guide[]>(() => {
+    const loaded = getAllGuides();
+    if (loaded && loaded.length > 0) {
+      return loaded.map((g: any) => ({
+        license_number: g.license_number,
+        full_name: g.full_name,
+        title: g.title || "",
+        avatar: g.avatar || "",
+        phone_number: g.phone_number,
+        years_of_experience: Number(g.years_of_experience) || 2,
+        certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
+        certificate_name: g.certificate_name,
+        digital_certificate_file: g.digital_certificate_file,
+        bio: g.bio || "",
+        speaks_english: Boolean(g.speaks_english),
+        speaks_french: Boolean(g.speaks_french),
+        speaks_italian: Boolean(g.speaks_italian),
+        verification_status: g.verification_status || "قيد المراجعة",
+        email: g.email || "",
+        daily_rate: Number(g.price_per_day) || 150,
+        price_per_day: Number(g.price_per_day) || 150,
+        primaryRegion: g.primaryRegion || "tripoli",
+        operating_regions: g.operating_regions || "tripoli",
+        working_days: g.working_days || "الأحد,الأربعاء",
+        total_tours_completed: Number(g.total_tours_completed) || 0,
+      }));
+    }
+    return [];
+  });
+
+  const [editingGuide, setEditingGuide] = useState<Guide | null>(null);
+  const [guideStatusFilter, setGuideStatusFilter] = useState<"الكل" | "بانتظار التوثيق" | "موثق" | "مرفوض">("الكل");
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => getVehicles());
@@ -410,6 +451,9 @@ function AdminDashboard() {
   /* DelniDB places_tourist */
   const [attractions, setAttractions] = useState<Attraction[]>([]);
 
+  /* DelniDB tourists */
+  const [tourists, setTourists] = useState<Tourist[]>([]);
+
   const [reviews, setReviews] = useState<ItemReview[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
@@ -427,6 +471,7 @@ function AdminDashboard() {
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [viewingGuide, setViewingGuide] = useState<Guide | null>(null);
+  const [showAddGuide, setShowAddGuide] = useState(false);
   const [showAddTrip, setShowAddTrip] = useState<"daily" | "weekly" | null>(null);
   const [editingDailyTrip, setEditingDailyTrip] = useState<DailyTrip | null>(null);
   const [editingWeeklyTrip, setEditingWeeklyTrip] = useState<WeeklyTrip | null>(null);
@@ -465,10 +510,34 @@ function AdminDashboard() {
     deleteFromSecureBackend("companies", "contract_number", contractOrId);
   };
   const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
-    setGuides(guides.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
+    setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
     updateGuideVerification(lic, status);
+
     const targetGuide = guides.find(g => g.license_number === lic);
+
+    // Sync with backend API (creates in DB if not existing, or updates status)
+    try {
+      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(lic)}/verify`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verification_status: status,
+          full_name: targetGuide?.full_name,
+          phone_number: targetGuide?.phone_number,
+          email: targetGuide?.email,
+          years_of_experience: targetGuide?.years_of_experience,
+          price_per_day: targetGuide?.daily_rate || targetGuide?.price_per_day,
+          bio: targetGuide?.bio,
+          title: targetGuide?.title,
+          certificate: targetGuide?.certificate,
+          certificate_name: targetGuide?.certificate_name,
+          digital_certificate_file: targetGuide?.digital_certificate_file,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to sync guide verification status with backend:", e);
+    }
     sendToSecureBackend("guides", {
       license_number: lic,
       full_name: targetGuide?.full_name || "مرشد سياحي",
@@ -487,6 +556,81 @@ function AdminDashboard() {
       alert("تم حذف المرشد السياحي بنجاح من قاعدة البيانات");
     } catch (err: any) {
       alert("حدث خطأ أثناء حذف المرشد: " + (err.message || "فشلت العملية"));
+    }
+  };
+
+  const handleAddGuide = async (newG: Guide) => {
+    setGuides(prev => [newG, ...prev.filter(g => g.license_number !== newG.license_number)]);
+    setShowAddGuide(false);
+
+    // Update LocalStorage
+    try {
+      const stored = getAllGuides();
+      const recordToAdd: any = {
+        ...newG,
+        email: newG.email || `${newG.license_number.toLowerCase()}@dalni.ly`,
+      };
+      saveAllGuides([recordToAdd, ...stored.filter((g: any) => g.license_number !== newG.license_number)]);
+    } catch { }
+
+    // Direct persist to backend
+    try {
+      await fetch("http://127.0.0.1:8000/api/auth/register/guide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license_number: newG.license_number,
+          full_name: newG.full_name,
+          phone_number: newG.phone_number,
+          email: newG.email,
+          years_of_experience: newG.years_of_experience,
+          price_per_day: newG.daily_rate || newG.price_per_day || 150,
+          bio: newG.bio || "",
+          title: newG.title || "مرشد سياحي معتمد",
+          certificate: newG.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
+          certificate_name: newG.certificate_name,
+          digital_certificate_file: newG.digital_certificate_file,
+          verification_status: newG.verification_status || "موثق",
+          password: "password123",
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to add guide to backend:", e);
+    }
+  };
+
+  const handleUpdateGuide = async (updated: Guide) => {
+    setGuides(prev => prev.map(g => g.license_number === updated.license_number ? updated : g));
+    setEditingGuide(null);
+
+    // Update LocalStorage
+    try {
+      const stored = getAllGuides();
+      const next = stored.map((g: any) => g.license_number === updated.license_number ? { ...g, ...updated } : g);
+      saveAllGuides(next);
+    } catch { }
+
+    // Update Backend Database
+    try {
+      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(updated.license_number)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: updated.full_name,
+          title: updated.title,
+          phone_number: updated.phone_number,
+          email: updated.email,
+          years_of_experience: updated.years_of_experience,
+          price_per_day: updated.daily_rate || updated.price_per_day,
+          bio: updated.bio,
+          certificate: updated.certificate,
+          verification_status: updated.verification_status,
+          operating_regions: Array.isArray(updated.operating_regions) ? updated.operating_regions.join(",") : updated.operating_regions,
+          working_days: Array.isArray(updated.working_days) ? updated.working_days.join(",") : updated.working_days,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to update guide in DB:", e);
     }
   };
 
@@ -550,7 +694,11 @@ function AdminDashboard() {
           working_days: g.working_days || "الأحد,الأربعاء",
           total_tours_completed: Number(g.total_tours_completed) || 0,
         }));
-        setGuides(dbGuides);
+        setGuides(prev => {
+          const dbLicenses = new Set(dbGuides.map(g => g.license_number));
+          const nonDuplicates = prev.filter(p => !dbLicenses.has(p.license_number));
+          return [...dbGuides, ...nonDuplicates];
+        });
       }
 
       if (res.daily_trips) {
@@ -724,6 +872,15 @@ function AdminDashboard() {
           is_unesco: p.is_unesco,
           unesco_year: p.unesco_year,
           entry_fee: p.entry_fee || "مجاني",
+        })));
+      }
+
+      if (res.tourists && Array.isArray(res.tourists)) {
+        setTourists(res.tourists.map((t: any) => ({
+          tourist_id: t.tourist_id,
+          full_name: t.full_name,
+          phone_number: t.phone_number || "",
+          email: t.email || "",
         })));
       }
     }
@@ -901,7 +1058,25 @@ function AdminDashboard() {
     setPrivateTrips(privateTrips.map(p => p.private_trip_id === id ? { ...p, status_order: status, quoted_price: price, admin_itinerary_plan: plan, assigned_guide: guide, assigned_vehicle: vehicle } : p));
     setEvaluatingPrivateTrip(null);
   };
-  const handleAddPrivateTrip = (p: any) => { setPrivateTrips([...privateTrips, p]); setShowAddPrivateTrip(false); };
+  const handleAddPrivateTrip = async (p: any) => {
+    setPrivateTrips(prev => [p, ...prev]);
+    setShowAddPrivateTrip(false);
+
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
+      localStorage.setItem("dalni_private_trips", JSON.stringify([p, ...stored.filter((x: any) => x.private_trip_id !== p.private_trip_id)]));
+    } catch { }
+
+    try {
+      await fetch("http://127.0.0.1:8000/api/trips/private/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      });
+    } catch (e) {
+      console.error("Failed to sync private trip with DB:", e);
+    }
+  };
   const handleDeletePrivate = (id: string) => { if (confirm("هل تريد حذف طلب الرحلة الخاصة؟")) setPrivateTrips(privateTrips.filter(p => p.private_trip_id !== id)); };
   useEffect(() => {
     try {
@@ -920,7 +1095,7 @@ function AdminDashboard() {
           return [...storedRests.filter((r: any) => !ids.has(r.id)), ...prev];
         });
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const handleAddHotel = (h: any) => {
@@ -932,7 +1107,7 @@ function AdminDashboard() {
     try {
       const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
       localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...stored.filter((x: any) => x.id !== hotelId)]));
-    } catch {}
+    } catch { }
 
     fetch("http://127.0.0.1:8000/api/hotels", {
       method: "POST",
@@ -948,7 +1123,7 @@ function AdminDashboard() {
         property_type: "فندق",
         hotel_photo_1: h.hotel_photo_1 || "/assets/ai_city.jpg",
       }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
   const handleUpdateHotel = (h: Hotel) => { setHotels(hotels.map(x => x.id === h.id ? h : x)); setEditingHotel(null); };
   const handleDeleteHotel = (id: string) => { if (confirm("هل تريد حذف الفندق؟")) setHotels(hotels.filter(h => h.id !== id)); };
@@ -960,7 +1135,7 @@ function AdminDashboard() {
     try {
       const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
       localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests.filter((x: any) => x.id !== newRest.id)]));
-    } catch {}
+    } catch { }
 
     fetch("http://127.0.0.1:8000/api/restaurants", {
       method: "POST",
@@ -980,7 +1155,7 @@ function AdminDashboard() {
         working_hours: r.working_hours || "",
         facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
       }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
   const handleUpdateRestaurant = (r: Restaurant) => {
     setRestaurants(restaurants.map(x => x.id === r.id ? r : x));
@@ -989,7 +1164,7 @@ function AdminDashboard() {
       const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
       const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
       localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
-    } catch {}
+    } catch { }
 
     fetch("http://127.0.0.1:8000/api/restaurants", {
       method: "POST",
@@ -1009,7 +1184,7 @@ function AdminDashboard() {
         working_hours: r.working_hours || "",
         facility_image_1: r.facility_image_1 || "/assets/ai_food.jpg",
       }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
   const handleDeleteRestaurant = (id: string) => {
     if (confirm("هل تريد حذف المطعم؟")) {
@@ -1017,15 +1192,15 @@ function AdminDashboard() {
       try {
         const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
         localStorage.setItem("dalni_restaurants", JSON.stringify(storedRests.filter((r: any) => r.id !== id)));
-      } catch {}
+      } catch { }
       deleteFromSecureBackend("restaurants", "facility_id", id);
     }
   };
-  const handleAddAttraction = (a: any) => { 
+  const handleAddAttraction = (a: any) => {
     const placeId = a.place_id || a.id || `A-0${attractions.length + 1}`;
     const newPlace = { id: placeId, place_id: placeId, visitors_count: 0, ...a };
-    setAttractions([...attractions, newPlace]); 
-    setShowAddAttraction(false); 
+    setAttractions([...attractions, newPlace]);
+    setShowAddAttraction(false);
     sendToSecureBackend("places", {
       place_id: placeId,
       place_name: newPlace.name || newPlace.place_name,
@@ -1042,9 +1217,9 @@ function AdminDashboard() {
       gallery: newPlace.gallery,
     });
   };
-  const handleUpdateAttraction = (a: Attraction) => { 
-    setAttractions(attractions.map(x => x.id === a.id ? a : x)); 
-    setEditingAttraction(null); 
+  const handleUpdateAttraction = (a: Attraction) => {
+    setAttractions(attractions.map(x => x.id === a.id ? a : x));
+    setEditingAttraction(null);
     sendToSecureBackend("places", {
       place_id: a.id || (a as any).place_id,
       place_name: a.name || (a as any).place_name,
@@ -1061,9 +1236,9 @@ function AdminDashboard() {
       gallery: (a as any).gallery,
     });
   };
-  const handleDeleteAttraction = (id: string) => { 
+  const handleDeleteAttraction = (id: string) => {
     if (confirm("هل تريد حذف المعلم السياحي؟")) {
-      setAttractions(attractions.filter(a => a.id !== id)); 
+      setAttractions(attractions.filter(a => a.id !== id));
       deleteFromSecureBackend("places", "place_id", id);
     }
   };
@@ -1195,7 +1370,7 @@ function AdminDashboard() {
                 <QuickAction icon="🗓️" label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
                 <QuickAction icon="🏨" label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
                 <QuickAction icon="🍽️" label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
-                          <QuickAction icon="👑" label={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClick={() => setShowAddPrivateTrip(true)} />
+                <QuickAction icon="👑" label={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClick={() => setShowAddPrivateTrip(true)} />
                 <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
                 <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
                 <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
@@ -1287,81 +1462,184 @@ function AdminDashboard() {
       )}
 
       {/* GUIDES TAB */}
-      {active === "guides" && (
-        <SectionCard title="معاينة وثائق المرشدين واعتمادهم">
-          <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right">
-            📌 يعرض هذا القسم فقط المرشدين الحقيقيين المسجلين في قاعدة بيانات دِلني (DelniDB).
-          </div>
-          {guides.length === 0 ? (
-            <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
-              لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً.
+      {active === "guides" && (() => {
+        const filteredGuides = guides.filter(g => {
+          if (guideStatusFilter === "الكل") return true;
+          if (guideStatusFilter === "بانتظار التوثيق") return !g.verification_status || g.verification_status === "بانتظار التوثيق" || g.verification_status === "قيد المراجعة";
+          if (guideStatusFilter === "موثق") return g.verification_status === "موثق";
+          if (guideStatusFilter === "مرفوض") return g.verification_status === "مرفوض";
+          return true;
+        });
+
+        const pendingCount = guides.filter(g => !g.verification_status || g.verification_status === "بانتظار التوثيق" || g.verification_status === "قيد المراجعة").length;
+        const verifiedCount = guides.filter(g => g.verification_status === "موثق").length;
+        const rejectedCount = guides.filter(g => g.verification_status === "مرفوض").length;
+
+        return (
+          <SectionCard
+            title="جدول اعتماد وتوثيق المرشدين السياحيين"
+            action={
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setGuideStatusFilter("الكل")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                    guideStatusFilter === "الكل"
+                      ? "bg-primary text-white shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  الكل ({guides.length})
+                </button>
+                <button
+                  onClick={() => setGuideStatusFilter("بانتظار التوثيق")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                    guideStatusFilter === "بانتظار التوثيق"
+                      ? "bg-amber-500 text-white shadow-xs"
+                      : "bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200"
+                  }`}
+                >
+                  ⏳ بانتظار الاعتماد ({pendingCount})
+                </button>
+                <button
+                  onClick={() => setGuideStatusFilter("موثق")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                    guideStatusFilter === "موثق"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  }`}
+                >
+                  ✅ المعتمدون والموثقون ({verifiedCount})
+                </button>
+                {rejectedCount > 0 && (
+                  <button
+                    onClick={() => setGuideStatusFilter("مرفوض")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                      guideStatusFilter === "مرفوض"
+                        ? "bg-red-600 text-white shadow-xs"
+                        : "bg-red-50 hover:bg-red-100 text-red-800 border border-red-200"
+                    }`}
+                  >
+                    ❌ مرفوض ({rejectedCount})
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowAddGuide(true)}
+                  className="px-3.5 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
+                >
+                  + إضافة مرشد سياحي جديد
+                </button>
+              </div>
+            }
+          >
+            <div className="mb-4 p-3 rounded-xl bg-sun-soft/30 border border-sun/20 text-xs text-muted-foreground font-semibold text-right flex items-center justify-between flex-wrap gap-2">
+              <span>📌 جدول بيانات المرشدين السياحيين المعتمدين والمسجلين. يتم تخزين المرشدين بشكل دائم في هذا الجدول وفي قاعدة البيانات حتى بعد قبولهم وتوثيقهم.</span>
+              <span className="text-[11px] font-bold text-foreground">إجمالي المرشدين: <span className="font-mono text-primary font-black">{guides.length}</span></span>
             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
-              {guides.map((g) => (
-                <div key={g.license_number} className="p-5 rounded-2xl border border-border bg-white shadow-soft space-y-3 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          {g.avatar ? (
-                            <img src={g.avatar} alt={g.full_name} className="w-9 h-9 rounded-full object-cover border shrink-0" />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-slate-100 grid place-items-center text-sm shrink-0 border">
-                              👤
+
+            {filteredGuides.length === 0 ? (
+              <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
+                {guides.length === 0
+                  ? "لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً."
+                  : `لا توجد نتائج مطابقة لفلتر (${guideStatusFilter}).`}
+              </div>
+            ) : (
+              <div className="overflow-x-auto text-right bg-white rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/70">
+                      <th className="py-3 px-3 font-black">المرشد السياحي</th>
+                      <th className="py-3 px-3 font-black">رقم الرخصة</th>
+                      <th className="py-3 px-3 font-black">بيانات الاتصال</th>
+                      <th className="py-3 px-3 font-black">الخبرة والترخيص</th>
+                      <th className="py-3 px-3 font-black">السعر اليومي</th>
+                      <th className="py-3 px-3 font-black">حالة التوثيق</th>
+                      <th className="py-3 px-3 font-black text-center">الإجراءات والعمليات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredGuides.map((g) => (
+                      <tr key={g.license_number} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2.5">
+                            {g.avatar ? (
+                              <img src={g.avatar} alt={g.full_name} className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-slate-100 grid place-items-center text-sm shrink-0 border border-slate-200">
+                                👤
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-black text-foreground text-sm">{g.full_name}</div>
+                              {g.title && <div className="text-[11px] text-primary font-bold">{g.title}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-xs text-slate-800">
+                          <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200 inline-block">
+                            {g.license_number}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-xs">
+                          {g.phone_number && <div className="font-semibold text-slate-700">📱 {g.phone_number}</div>}
+                          {g.email && <div className="text-muted-foreground mt-0.5 truncate max-w-[170px]" title={g.email}>✉️ {g.email}</div>}
+                        </td>
+                        <td className="py-3 px-3 text-xs">
+                          <div className="font-bold text-slate-800 flex items-center gap-1">
+                            <span>📜</span>
+                            <span className="truncate max-w-[180px]" title={g.certificate}>{g.certificate}</span>
+                          </div>
+                          {g.certificate_name && (
+                            <div className="text-[10px] text-primary font-black mt-0.5">
+                              📎 {g.certificate_name}
                             </div>
                           )}
-                          <div className="min-w-0">
-                            <h3 className="font-black text-foreground text-sm truncate">{g.full_name}</h3>
-                            {g.title && <div className="text-[11px] text-primary font-bold truncate">{g.title}</div>}
+                          <div className="text-[11px] text-muted-foreground mt-0.5">⏳ {g.years_of_experience} سنوات خبرة</div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black inline-block whitespace-nowrap">
+                            {g.daily_rate || g.price_per_day || 150} د.ل / يوم
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
+                            {g.verification_status || "بانتظار التوثيق"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <button
+                              onClick={() => setViewingGuide(g)}
+                              className="px-2.5 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer flex items-center gap-1"
+                              title="معاينة وفحص الوثائق واعتماد المرشد"
+                            >
+                              <span>📄</span>
+                              <span>معاينة واعتماد</span>
+                            </button>
+                            <button
+                              onClick={() => setEditingGuide(g)}
+                              className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-black transition cursor-pointer border border-amber-200"
+                              title="تعديل بيانات المرشد"
+                            >
+                              ✏️ تعديل
+                            </button>
+                            <button
+                              onClick={() => handleDeleteGuide(g.license_number)}
+                              className="px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-black transition cursor-pointer border border-red-200"
+                              title="حذف المرشد نهائياً"
+                            >
+                              حذف
+                            </button>
                           </div>
-                        </div>
-                        <div className="text-[11px] text-muted-foreground mt-1">رقم الرخصة: <span className="font-mono font-bold text-slate-800">{g.license_number}</span></div>
-                        {g.email && <div className="text-[11px] text-slate-600 font-semibold mt-0.5 truncate">✉️ {g.email}</div>}
-                        {g.phone_number && <div className="text-[11px] text-slate-600 font-semibold mt-0.5">📱 {g.phone_number}</div>}
-                      </div>
-                      <Badge tone={g.verification_status === "موثق" ? "green" : g.verification_status === "مرفوض" ? "red" : "sun"}>
-                        {g.verification_status || "بانتظار التوثيق"}
-                      </Badge>
-                    </div>
-
-                    {g.bio && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{g.bio}</p>}
-
-                    <div className="text-xs space-y-1.5 pt-1 border-t border-slate-100">
-                      <div className="font-bold text-foreground truncate">📜 {g.certificate}</div>
-                      {g.certificate_name && (
-                        <div className="text-[11px] text-primary font-black bg-primary/5 px-2 py-0.5 rounded border border-primary/20 inline-flex items-center gap-1">
-                          <span>📎 ملف الشهادة المرفق:</span>
-                          <span className="underline">{g.certificate_name}</span>
-                        </div>
-                      )}
-                      <div className="font-bold text-foreground">⏳ الخبرة: <span className="font-normal text-muted-foreground">{g.years_of_experience} سنوات</span></div>
-                      <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block">
-                        💰 أجر المرشد اليومي: {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 flex gap-2 border-t border-slate-100">
-                    <button 
-                      onClick={() => setViewingGuide(g)} 
-                      className="flex-1 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
-                    >
-                      معاينة الوثائق والاعتماد 📄
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteGuide(g.license_number)} 
-                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-black transition cursor-pointer border border-red-200"
-                    >
-                      حذف
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+        );
+      })()}
 
       {/* TRIPS TAB */}
       {active === "trips" && (
@@ -1732,26 +2010,87 @@ function AdminDashboard() {
 
       {/* PRIVATE TRIPS */}
       {active === "private_trips" && (
-        <SectionCard title="إدارة الرحلات الخاصة VIP">
+        <SectionCard
+          title="إدارة الرحلات الخاصة VIP"
+          action={
+            <button
+              onClick={() => setShowAddPrivateTrip(true)}
+              className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow flex items-center gap-1.5 hover:opacity-95 transition-opacity"
+            >
+              <span>+</span>
+              <span>{isAr ? "إضافة رحلة خاصة جديدة" : "Add New Private Trip"}</span>
+            </button>
+          }
+        >
           <div className="space-y-4 text-right">
-            {privateTrips.map((pt) => (
-              <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-black text-foreground text-base">{pt.customer_name} ({pt.customer_phone})</h3>
-                  <Badge tone={pt.status_order === "مؤكدة" ? "green" : "sun"}>{pt.status_order}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl">" {pt.customer_description} "</p>
-                <div className="flex gap-4 text-xs font-bold text-muted-foreground">
-                  <span>📅 {pt.preferred_start_date}</span>
-                  <span>⏱️ {pt.duration_days} أيام</span>
-                  <span>👥 {pt.number_of_companions} رفيق</span>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => handleDeletePrivate(pt.private_trip_id)} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black">حذف</button>
-                  <button onClick={() => setEvaluatingPrivateTrip(pt)} className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow">تقييم وتحديد السعر والحافلة والمرشد</button>
-                </div>
+            {privateTrips.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-xs font-bold border border-dashed rounded-2xl">
+                {isAr ? "لا توجد طلبات رحلات خاصة مسجلة حالياً." : "No private trips registered."}
               </div>
-            ))}
+            ) : (
+              privateTrips.map((pt) => (
+                <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3 shadow-2xs">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-muted font-bold text-muted-foreground">{pt.private_trip_id}</span>
+                        <h3 className="font-black text-foreground text-base">{pt.customer_name} ({pt.customer_phone})</h3>
+                      </div>
+                      {pt.tourist_id && (
+                        <div className="text-[11px] font-bold text-muted-foreground mt-0.5">
+                          👤 معرّف السائح: <span className="font-mono">{pt.tourist_id}</span>
+                        </div>
+                      )}
+                    </div>
+                    <Badge tone={pt.status_order === "مؤكدة" ? "green" : pt.status_order === "مرفوضة من الأدمن" ? "red" : "sun"}>
+                      {pt.status_order}
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl border border-border/50">
+                    <span className="font-black text-foreground">وصف الطلب: </span>" {pt.customer_description} "
+                  </p>
+
+                  {pt.customer_requirements && (
+                    <div className="text-xs text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-200">
+                      <span className="font-black">📌 المتطلبات والاشتراطات: </span>
+                      <span>{pt.customer_requirements}</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground pt-1">
+                    <span>📅 تاريخ الانطلاق: <strong className="text-foreground">{pt.preferred_start_date}</strong></span>
+                    <span>⏱️ المدة: <strong className="text-foreground">{pt.duration_days} أيام</strong></span>
+                    <span>👥 المرافقين: <strong className="text-foreground">{pt.number_of_companions}</strong></span>
+                    {pt.quoted_price ? (
+                      <span className="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                        💰 السعر المعتمد: <strong>{pt.quoted_price} د.ل</strong>
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                        ⏳ بانتظار التسعير
+                      </span>
+                    )}
+                  </div>
+
+                  {pt.admin_itinerary_plan && (
+                    <div className="text-xs text-muted-foreground bg-emerald-50/40 p-2.5 rounded-xl border border-emerald-200/60">
+                      <span className="font-black text-emerald-900">🗺️ خطة الإدارة: </span>
+                      <span>{pt.admin_itinerary_plan}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
+                    <button onClick={() => handleDeletePrivate(pt.private_trip_id)} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50">
+                      حذف
+                    </button>
+                    <button onClick={() => setEvaluatingPrivateTrip(pt)} className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95">
+                      تقييم وتحديد السعر والحافلة والمرشد
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </SectionCard>
       )}
@@ -1857,13 +2196,12 @@ function AdminDashboard() {
                       <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {r.city} — {r.address}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
-                        r.verification_status === "معتمد"
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${r.verification_status === "معتمد"
                           ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                           : r.verification_status === "قيد المراجعة"
-                          ? "bg-amber-50 text-amber-800 border-amber-200"
-                          : "bg-red-50 text-red-700 border-red-200"
-                      }`}>
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : "bg-red-50 text-red-700 border-red-200"
+                        }`}>
                         {r.verification_status || "معتمد"}
                       </span>
                       {r.contract_date && (
@@ -2137,13 +2475,12 @@ function AdminDashboard() {
                   <div className="flex-1 p-4 space-y-3 overflow-y-auto" style={{ background: "rgba(250,248,245,0.5)" }}>
                     {session.messages.map(msg => (
                       <div key={msg.id} className={`flex ${msg.from === "user" ? "justify-start" : "justify-end"}`}>
-                        <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs font-semibold ${
-                          msg.from === "user"
+                        <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs font-semibold ${msg.from === "user"
                             ? "bg-white border border-border text-foreground rounded-br-sm"
                             : msg.from === "admin"
-                            ? "bg-emerald-600 text-white rounded-bl-sm"
-                            : "bg-gradient-sea text-white rounded-bl-sm"
-                        }`}>
+                              ? "bg-emerald-600 text-white rounded-bl-sm"
+                              : "bg-gradient-sea text-white rounded-bl-sm"
+                          }`}>
                           {msg.from !== "user" && (
                             <div className="text-[10px] opacity-70 mb-0.5">
                               {msg.from === "admin" ? "👤 مشرف" : "🤖 دلّني بوت"}
@@ -2191,6 +2528,8 @@ function AdminDashboard() {
       {showAddCompany && <AddCompanyModal companies={companies} onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
       {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
       {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
+      {editingGuide && <EditGuideModal guide={editingGuide} onClose={() => setEditingGuide(null)} onSave={handleUpdateGuide} />}
+      {showAddGuide && <AddGuideModal existingGuides={guides} onClose={() => setShowAddGuide(false)} onAdd={handleAddGuide} />}
       {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
       {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
       {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
@@ -2207,7 +2546,7 @@ function AdminDashboard() {
       {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
       {showAddFacilityOffer && <FacilityOfferModal title="إضافة عرض مطعم/كافيه" restaurants={restaurants} onClose={() => setShowAddFacilityOffer(false)} onSave={handleAddFacilityOffer} />}
       {editingFacilityOffer && <FacilityOfferModal title="تعديل عرض المطعم" offer={editingFacilityOffer} restaurants={restaurants} onClose={() => setEditingFacilityOffer(null)} onSave={handleUpdateFacilityOffer} />}
-      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
+      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} tourists={tourists} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
     </DashboardShell>
   );
 }
@@ -2237,14 +2576,12 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
             key={v.plate_number}
             type="button"
             onClick={() => toggle(v.plate_number)}
-            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition-all ${
-              selected.includes(v.plate_number) ? "border-primary bg-primary/5 shadow-xs" : "border-border hover:bg-muted/30"
-            }`}
+            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition-all ${selected.includes(v.plate_number) ? "border-primary bg-primary/5 shadow-xs" : "border-border hover:bg-muted/30"
+              }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition-all ${
-                selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
-              }`}>
+              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition-all ${selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
+                }`}>
                 {selected.includes(v.plate_number) && "✓"}
               </div>
               <div className="min-w-0">
@@ -2255,9 +2592,8 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
                 <div className="text-[10px] text-muted-foreground truncate mt-0.5">{v.vehicle_type} · 👥 سعة {v.capacity} مقعد</div>
               </div>
             </div>
-            <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${
-              v.status === "جاهزة" ? "bg-emerald-100 text-emerald-700" : v.status === "في رحلة" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-            }`}>{v.status}</span>
+            <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${v.status === "جاهزة" ? "bg-emerald-100 text-emerald-700" : v.status === "في رحلة" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+              }`}>{v.status}</span>
           </button>
         ))}
       </div>
@@ -2272,78 +2608,256 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
 
 /* ============ MODALS ============ */
 
-function AddPrivateTripModal({ onClose, onAdd, guides }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[] }) {
+function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClose: () => void; onAdd: (p: any) => void; guides: Guide[]; tourists?: Tourist[] }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+
+  // Database fields for private_trips
+  const [tripId] = useState(() => `${Math.floor(1000 + Math.random() * 9000)}`);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [duration, setDuration] = useState("1");
-  const [companions, setCompanions] = useState("1");
-  const [guideLicense, setGuideLicense] = useState("");
-  const [price, setPrice] = useState("");
-  const [plan, setPlan] = useState("");
-  const [status, setStatus] = useState("قيد الدراسة");
+  const [customerDescription, setCustomerDescription] = useState("");
+  const [preferredStartDate, setPreferredStartDate] = useState("");
+  const [durationDays, setDurationDays] = useState("1");
+  const [numberOfCompanions, setNumberOfCompanions] = useState("0");
+  const [quotedPrice, setQuotedPrice] = useState("");
+  const [adminItineraryPlan, setAdminItineraryPlan] = useState("");
+  const [guideLicenseNumber, setGuideLicenseNumber] = useState("");
+  const [touristId, setTouristId] = useState("");
+  const [customerRequirements, setCustomerRequirements] = useState("");
+  const [statusOrder, setStatusOrder] = useState<string>("قيد الدراسة");
+
+  // Selection from existing registered tourists
+  const handleSelectTourist = (selectedId: string) => {
+    if (!selectedId) {
+      setTouristId("");
+      return;
+    }
+    const found = tourists.find(t => t.tourist_id === selectedId);
+    if (found) {
+      setTouristId(found.tourist_id);
+      setCustomerName(found.full_name);
+      if (found.phone_number) {
+        setCustomerPhone(found.phone_number);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !customerPhone) return alert(isAr ? "يرجى إدخال الاسم ورقم الهاتف" : "Please enter name and phone");
+    if (!customerName.trim() || !customerPhone.trim()) {
+      return alert(isAr ? "يرجى إدخال اسم العميل ورقم الهاتف" : "Please enter customer name and phone");
+    }
+
+    const fullId = `PT-${tripId}`;
+
     const newTrip = {
-      private_trip_id: `PT-${Math.floor(Math.random() * 900) + 100}`,
+      private_trip_id: fullId,
+      status_order: statusOrder,
+      customer_description: customerDescription || (isAr ? "طلب رحلة خاصة جديدة" : "New private trip request"),
+      preferred_start_date: preferredStartDate || new Date().toISOString().split("T")[0],
+      duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
+      number_of_companions: Math.max(0, parseInt(numberOfCompanions, 10) || 0),
+      quoted_price: quotedPrice ? parseFloat(quotedPrice) : null,
+      admin_itinerary_plan: adminItineraryPlan || null,
+      guide_license_number: guideLicenseNumber || null,
+      assigned_guide: guideLicenseNumber || null,
+      assigned_guide_license: guideLicenseNumber || null,
+      tourist_id: touristId || null,
       customer_name: customerName,
       customer_phone: customerPhone,
-      customer_description: description,
-      preferred_start_date: startDate,
-      duration_days: Number(duration),
-      number_of_companions: Number(companions),
-      assigned_guide: guideLicense || undefined,
-      quoted_price: price ? Number(price) : undefined,
-      admin_itinerary_plan: plan || undefined,
-      status_order: status,
+      customer_requirements: customerRequirements || null,
     };
+
     onAdd(newTrip);
-    onClose();
   };
+
   return (
-    <ModalShell title={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
-        <Field label={isAr ? "اسم العميل" : "Customer Name"} value={customerName} onChange={setCustomerName} />
-        <LibyanPhoneField label={isAr ? "هاتف العميل" : "Customer Phone"} value={customerPhone} onChange={setCustomerPhone} />
-        <Field label={isAr ? "وصف الطلب" : "Description"} value={description} onChange={setDescription} />
-        <Field label={isAr ? "تاريخ البدء" : "Start Date"} type="date" value={startDate} onChange={setStartDate} />
-        <Field label={isAr ? "عدد أيام الرحلة" : "Duration (days)"} type="number" value={duration} onChange={v => setDuration(v)} />
-        <Field label={isAr ? "عدد المصاحبين" : "Companions"} type="number" value={companions} onChange={v => setCompanions(v)} />
-        {/* Guide selection */}
-        <select
-          value={guideLicense}
-          onChange={e => setGuideLicense(e.target.value)}
-          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-        >
-          <option value="">{isAr ? "اختر مرشدًا" : "Select Guide"}</option>
-          {guides.map(g => (
-            <option key={g.license_number} value={g.license_number}>
-              {g.full_name} ({g.license_number})
-            </option>
-          ))}
-        </select>
-        <Field label={isAr ? "السعر المقترح" : "Proposed Price"} type="number" value={price} onChange={v => setPrice(v)} />
-        <Field label={isAr ? "خطة الترتيب" : "Itinerary Plan"} value={plan} onChange={setPlan} />
-        <select
-          value={status}
-          onChange={e => setStatus(e.target.value as any)}
-          className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right"
-        >
-          <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
-          <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
-          <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
-          <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
-        </select>
+    <ModalShell title={isAr ? "إضافة طلب رحلة خاصة" : "Add Private Trip"} onClose={onClose}>
+      <form className="space-y-3.5 text-right" onSubmit={handleSubmit}>
+
+        {/* معرف الرحلة والحالة */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-xl border border-border/60">
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
+              {isAr ? "معرّف الرحلة" : "Trip ID"}
+            </label>
+            <input
+              type="text"
+              readOnly
+              value={tripId}
+              className="w-full h-9 px-3 rounded-xl border border-border bg-muted/60 text-xs font-mono font-bold text-foreground text-center"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
+              {isAr ? "حالة الطلب" : "Order Status"}
+            </label>
+            <select
+              value={statusOrder}
+              onChange={e => setStatusOrder(e.target.value)}
+              className="w-full h-9 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            >
+              <option value="قيد الدراسة">{isAr ? "قيد الدراسة" : "Under Review"}</option>
+              <option value="مؤكدة">{isAr ? "مؤكدة" : "Confirmed"}</option>
+              <option value="مرفوضة من الأدمن">{isAr ? "مرفوضة من الأدمن" : "Rejected by Admin"}</option>
+              <option value="ملغية">{isAr ? "ملغية" : "Cancelled"}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* اختيار سريع للسائح المسجل بالبحث أو القائمة */}
+        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+              <span>🔍</span>
+              {isAr ? "اختيار سائح مسجل (تعبئة الـ ID والبيانات تلقائياً):" : "Select Registered Tourist (Auto-fills ID & Info):"}
+            </span>
+            {touristId && (
+              <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                ID: {touristId}
+              </span>
+            )}
+          </div>
+          <select
+            value={touristId}
+            onChange={e => handleSelectTourist(e.target.value)}
+            className="w-full h-9 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+          >
+            <option value="">{isAr ? "— اختر سائحاً من المسجلين في النظام أو املأ البيانات يدوياً —" : "— Select tourist or enter manually —"}</option>
+            {tourists.map(t => (
+              <option key={t.tourist_id} value={t.tourist_id}>
+                {t.full_name} {t.phone_number ? `(${t.phone_number})` : ""} — [ID: {t.tourist_id}]
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* بيانات العميل والتواصل */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field
+            label={isAr ? "اسم العميل / السائح *" : "Customer Name *"}
+            placeholder={isAr ? "مثال: عبد الرحمن الطرابلسي" : "e.g. John Doe"}
+            value={customerName}
+            onChange={setCustomerName}
+          />
+          <LibyanPhoneField
+            label={isAr ? "هاتف التواصل *" : "Customer Phone *"}
+            value={customerPhone}
+            onChange={setCustomerPhone}
+          />
+          <Field
+            label={isAr ? "معرّف السائح (Tourists ID)" : "Tourist ID"}
+            placeholder={isAr ? "اختياري أو يملأ تلقائياً" : "Optional or Auto"}
+            value={touristId}
+            onChange={setTouristId}
+          />
+        </div>
+
+        {/* التواريخ والمدة والمرافقين */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field
+            label={isAr ? "تاريخ البدء المفضل" : "Preferred Start Date"}
+            type="date"
+            value={preferredStartDate}
+            onChange={setPreferredStartDate}
+          />
+          <Field
+            label={isAr ? "مدة الرحلة (بالأيام)" : "Duration (days)"}
+            type="number"
+            min="1"
+            value={durationDays}
+            onChange={v => setDurationDays(v)}
+          />
+          <Field
+            label={isAr ? "عدد المرافقين" : "Companions Count"}
+            type="number"
+            min="0"
+            value={numberOfCompanions}
+            onChange={v => setNumberOfCompanions(v)}
+          />
+        </div>
+
+        {/* وصف العميل للرحلة */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            {isAr ? "وصف العميل للرحلة" : "Trip Description"}
+          </label>
+          <textarea
+            value={customerDescription}
+            onChange={e => setCustomerDescription(e.target.value)}
+            rows={2}
+            placeholder={isAr ? "تفاصيل الوجهات المرغوبة، المدن، طبيعة الجولة..." : "Trip details..."}
+            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        {/* المتطلبات الخاصة */}
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            {isAr ? "المتطلبات والاشتراطات الخاصة" : "Special Requirements"}
+          </label>
+          <textarea
+            value={customerRequirements}
+            onChange={e => setCustomerRequirements(e.target.value)}
+            rows={2}
+            placeholder={isAr ? "نوع السيارة (4x4)، لغة المرشد المطلوبة، وجبات معينة..." : "Special requirements..."}
+            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        {/* بيانات الإدارة: المرشد والسعر وخطة السير */}
+        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
+          <div className="text-xs font-black text-primary">⚙️ تخصيص الإدارة وتعيين المرشد والسعر:</div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold text-foreground block mb-1">
+                {isAr ? "تعيين المرشد السياحي المعتمد للرحلة" : "Assigned Tour Guide"}
+              </label>
+              <select
+                value={guideLicenseNumber}
+                onChange={e => setGuideLicenseNumber(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right shadow-2xs focus:border-primary"
+              >
+                <option value="">{isAr ? "بدون تعيين مرشد حالياً (يحدد لاحقاً)" : "None (Assign Later)"}</option>
+                {guides.map(g => (
+                  <option key={g.license_number} value={g.license_number}>
+                    {g.full_name} ({g.license_number}) {g.daily_rate ? `— ${g.daily_rate} د.ل/يوم` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Field
+              label={isAr ? "السعر الإجمالي المعتمد (د.ل)" : "Quoted Price (LYD)"}
+              type="number"
+              placeholder={isAr ? "يحدد بعد دراسة التكاليف" : "Quoted price"}
+              value={quotedPrice}
+              onChange={v => setQuotedPrice(v)}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-foreground block mb-1">
+              {isAr ? "خطة سير الرحلة وبرنامج الإدارة" : "Admin Itinerary Plan"}
+            </label>
+            <textarea
+              value={adminItineraryPlan}
+              onChange={e => setAdminItineraryPlan(e.target.value)}
+              rows={2}
+              placeholder={isAr ? "البرنامج المعتمد، توقيت التحرك، نقاط التجمع..." : "Detailed itinerary plan..."}
+              className="w-full p-2.5 rounded-xl border border-border bg-white text-xs font-semibold text-right focus:border-primary focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* أزرار الإجراء */}
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border border-border hover:bg-muted font-black text-xs transition-colors">
             {isAr ? "إلغاء" : "Cancel"}
           </button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
-            {isAr ? "حفظ الرحلة" : "Save Trip"}
+          <button type="submit" className="px-6 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition-opacity">
+            {isAr ? "حفظ طلب الرحلة الخاصة" : "Save Private Trip"}
           </button>
         </div>
       </form>
@@ -2362,10 +2876,10 @@ function LocationMapPickerModal({
   onSelect: (url: string) => void;
   onClose: () => void;
 }) {
-  const defaultCoords = initialCity === "بنغازي" 
-    ? { lat: 32.1194, lng: 20.0868 } 
+  const defaultCoords = initialCity === "بنغازي"
+    ? { lat: 32.1194, lng: 20.0868 }
     : { lat: 32.8872, lng: 13.1913 };
-    
+
   let initLat = defaultCoords.lat;
   let initLng = defaultCoords.lng;
   if (currentUrl) {
@@ -2620,7 +3134,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
           </div>
           <Field label="اسم شركة النقل *" value={name} onChange={setName} placeholder="شركة السهم الذهبي للنقل" required />
           <LibyanPhoneField label="الهاتف *" value={phone} onChange={setPhone} />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-bold block mb-1">المدينة *</label>
@@ -2673,7 +3187,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
           <Field label="البريد الإلكتروني للشركة *" type="email" value={email} onChange={setEmail} placeholder="transport@company.ly" required />
           <Field label="كلمة المرور *" type="password" value={pass} onChange={setPass} placeholder="6 خانات على الأقل" required />
-          
+
           <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-right">
             <p className="text-[10px] text-amber-800 font-bold mb-1">
               * <b>عدد مركبات الأسطول:</b> إجمالي المركبات التي تملكها الشركة (يجب أن يكون 1 على الأقل).
@@ -2682,7 +3196,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
               * <b>عدد السيارات المتاحة:</b> المركبات الجاهزة حالياً للتشغيل (لا تتجاوز الأسطول).
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
             <Field label="عدد مركبات الأسطول *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
             <Field label="عدد السيارات المتاحة *" type="number" value={String(availableCars)} onChange={v => setAvailableCars(v)} required />
@@ -3122,6 +3636,301 @@ function GuideVerificationModal({
   );
 }
 
+function EditGuideModal({
+  guide,
+  onClose,
+  onSave,
+}: {
+  guide: Guide;
+  onClose: () => void;
+  onSave: (updated: Guide) => void;
+}) {
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+
+  const [fullName, setFullName] = useState(guide.full_name || "");
+  const [title, setTitle] = useState(guide.title || "");
+  const [phone, setPhone] = useState(guide.phone_number || "");
+  const [email, setEmail] = useState(guide.email || "");
+  const [experienceYears, setExperienceYears] = useState(String(guide.years_of_experience || 2));
+  const [dailyRate, setDailyRate] = useState(String(guide.daily_rate || guide.price_per_day || 150));
+  const [verificationStatus, setVerificationStatus] = useState(guide.verification_status || "موثق");
+  const [bio, setBio] = useState(guide.bio || "");
+  const [certificate, setCertificate] = useState(guide.certificate || "");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !phone.trim()) {
+      return alert(isAr ? "يرجى إدخال اسم المرشد ورقم الهاتف" : "Please enter guide name and phone");
+    }
+
+    const updated: Guide = {
+      ...guide,
+      full_name: fullName,
+      title,
+      phone_number: phone,
+      email,
+      years_of_experience: Number(experienceYears) || 0,
+      daily_rate: Number(dailyRate) || 150,
+      price_per_day: Number(dailyRate) || 150,
+      verification_status: verificationStatus,
+      bio,
+      certificate,
+    };
+
+    onSave(updated);
+  };
+
+  return (
+    <ModalShell
+      title={isAr ? `تعديل بيانات المرشد: ${guide.full_name} (${guide.license_number})` : `Edit Guide: ${guide.full_name}`}
+      onClose={onClose}
+    >
+      <form onSubmit={handleSubmit} className="space-y-3.5 text-right">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label={isAr ? "الاسم الكامل للمرشد *" : "Full Name *"} value={fullName} onChange={setFullName} />
+          <Field label={isAr ? "المسمى / التخصص" : "Title / Specialty"} placeholder="خبير الآثار الرومانية والتراث..." value={title} onChange={setTitle} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <LibyanPhoneField label={isAr ? "رقم الهاتف *" : "Phone *"} value={phone} onChange={setPhone} />
+          <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" value={email} onChange={setEmail} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label={isAr ? "سنوات الخبرة" : "Experience (years)"} type="number" value={experienceYears} onChange={v => setExperienceYears(v)} />
+          <Field label={isAr ? "الأجر اليومي (د.ل)" : "Daily Rate (LYD)"} type="number" value={dailyRate} onChange={v => setDailyRate(v)} />
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "حالة الاعتماد" : "Status"}</label>
+            <select
+              value={verificationStatus}
+              onChange={e => setVerificationStatus(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            >
+              <option value="موثق">{isAr ? "✅ موثق ومعتمد" : "Verified"}</option>
+              <option value="بانتظار التوثيق">{isAr ? "⏳ بانتظار التوثيق" : "Pending"}</option>
+              <option value="مرفوض">{isAr ? "❌ مرفوض" : "Rejected"}</option>
+            </select>
+          </div>
+        </div>
+
+        <Field label={isAr ? "المؤهل والشهادات الرسمية" : "Certificate"} value={certificate} onChange={setCertificate} />
+
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "نبذة تعريفية عن المرشد" : "Bio"}</label>
+          <textarea
+            value={bio}
+            onChange={e => setBio(e.target.value)}
+            rows={3}
+            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end pt-2 border-t border-border">
+          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border border-border text-xs font-black">
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+          <button type="submit" className="px-6 h-10 rounded-xl bg-gradient-sea text-white text-xs font-black shadow-glow hover:opacity-95">
+            {isAr ? "حفظ التعديلات" : "Save Changes"}
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+function AddGuideModal({
+  existingGuides = [],
+  onClose,
+  onAdd,
+}: {
+  existingGuides?: Guide[];
+  onClose: () => void;
+  onAdd: (g: Guide) => void;
+}) {
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [title, setTitle] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [experienceYears, setExperienceYears] = useState("3");
+  const [dailyRate, setDailyRate] = useState("150");
+  const [verificationStatus, setVerificationStatus] = useState("موثق");
+  const [certificate, setCertificate] = useState("ترخيص رسمي صادر من وزارة السياحة والآثار");
+  const [bio, setBio] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    const cleanLic = licenseNumber.trim();
+    if (!cleanLic) {
+      setErrorMsg("يرجى إدخال رقم الرخصة السياحية (حقل إلزامي)");
+      return;
+    }
+    if (existingGuides.some(g => g.license_number.toLowerCase() === cleanLic.toLowerCase())) {
+      setErrorMsg("رقم الرخصة هذا مسجل مسبقاً لمرشد آخر في المنصة");
+      return;
+    }
+    if (!fullName.trim()) {
+      setErrorMsg("يرجى إدخال الاسم الكامل للمرشد السياحي");
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMsg("يرجى إدخال رقم هاتف المرشد السياحي");
+      return;
+    }
+
+    const newGuide: Guide = {
+      license_number: cleanLic,
+      full_name: fullName.trim(),
+      title: title.trim() || "مرشد سياحي معتمد",
+      phone_number: phone.trim(),
+      email: email.trim() || `${cleanLic.toLowerCase()}@dalni.ly`,
+      years_of_experience: Number(experienceYears) || 2,
+      daily_rate: Number(dailyRate) || 150,
+      price_per_day: Number(dailyRate) || 150,
+      verification_status: verificationStatus,
+      certificate: certificate.trim() || "ترخيص رسمي صادر من وزارة السياحة والآثار",
+      bio: bio.trim() || "مرشد سياحي معتمد ومسجل في منصة دِلني.",
+      speaks_english: true,
+      speaks_french: false,
+      speaks_italian: false,
+      working_days: "السبت,الأحد,الاثنين,الثلاثاء,الأربعاء,الخميس,الجمعة",
+      operating_regions: "tripoli",
+      total_tours_completed: 0,
+    };
+
+    onAdd(newGuide);
+  };
+
+  return (
+    <ModalShell
+      title={isAr ? "➕ إضافة مرشد سياحي جديد إلى قاعدة البيانات" : "Add New Tour Guide"}
+      onClose={onClose}
+    >
+      <form onSubmit={handleSubmit} className="space-y-3.5 text-right">
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field
+            label={isAr ? "رقم الرخصة السياحية *" : "License Number *"}
+            placeholder="مثال: G-105 أو 8931"
+            value={licenseNumber}
+            onChange={setLicenseNumber}
+            required
+          />
+          <Field
+            label={isAr ? "الاسم الكامل للمرشد *" : "Full Name *"}
+            placeholder="مثال: أحمد عبد الله المحمودي"
+            value={fullName}
+            onChange={setFullName}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field
+            label={isAr ? "المسمى / التخصص" : "Title / Specialty"}
+            placeholder="مرشد آثار وتاريخ، صحراء، غوص..."
+            value={title}
+            onChange={setTitle}
+          />
+          <LibyanPhoneField
+            label={isAr ? "رقم الهاتف *" : "Phone *"}
+            value={phone}
+            onChange={setPhone}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field
+            label={isAr ? "البريد الإلكتروني" : "Email"}
+            type="email"
+            placeholder="guide@dalni.ly"
+            value={email}
+            onChange={setEmail}
+          />
+          <Field
+            label={isAr ? "سنوات الخبرة" : "Experience (years)"}
+            type="number"
+            min="1"
+            value={experienceYears}
+            onChange={v => setExperienceYears(v)}
+          />
+          <Field
+            label={isAr ? "الأجر اليومي (د.ل)" : "Daily Rate (LYD)"}
+            type="number"
+            min="0"
+            value={dailyRate}
+            onChange={v => setDailyRate(v)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              {isAr ? "حالة التوثيق الأولية *" : "Initial Verification Status *"}
+            </label>
+            <select
+              value={verificationStatus}
+              onChange={e => setVerificationStatus(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            >
+              <option value="موثق">{isAr ? "✅ معتمد وموثق مباشرة" : "Verified"}</option>
+              <option value="بانتظار التوثيق">{isAr ? "⏳ بانتظار التوثيق والمراجعة" : "Pending"}</option>
+            </select>
+          </div>
+          <Field
+            label={isAr ? "المؤهل والشهادات الرسمية" : "Certificate"}
+            placeholder="ترخيص صادر من وزارة السياحة..."
+            value={certificate}
+            onChange={setCertificate}
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-foreground mb-1 block">
+            {isAr ? "نبذة تعريفية عن المرشد" : "Bio"}
+          </label>
+          <textarea
+            value={bio}
+            onChange={e => setBio(e.target.value)}
+            rows={2}
+            placeholder="نبذة مختصرة عن خبرات المرشد ومناطقه المفضلة..."
+            className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 h-10 rounded-xl border border-border text-xs font-black hover:bg-slate-50 transition cursor-pointer"
+          >
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-10 rounded-xl bg-gradient-sea text-white text-xs font-black shadow-glow hover:opacity-95 transition cursor-pointer"
+          >
+            {isAr ? "حفظ المرشد في قاعدة البيانات ✓" : "Save Guide ✓"}
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
 function CreateTripModal({
   type,
   guides,
@@ -3301,7 +4110,7 @@ function CreateTripModal({
       onClose={onClose}
     >
       <form className="space-y-5 text-right text-xs" onSubmit={handleSubmit}>
-        
+
         {/* 1. Basic Info */}
         <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
           <div className="font-black text-slate-800 text-sm flex items-center gap-1.5">
@@ -3358,9 +4167,8 @@ function CreateTripModal({
                   key={city}
                   type="button"
                   onClick={() => isDaily ? setDestination(city) : handleMultiDestToggle(city)}
-                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
-                    isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                    }`}
                 >
                   {city} {isSelected && !isDaily && "✓"}
                 </button>
@@ -3369,12 +4177,12 @@ function CreateTripModal({
           </div>
 
           <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} onKeyDown={handleEnterKeyNext} />
-          
-          <Field 
-            label="الأنشطة المتاحة ضمن الرحلة (افصل بينها بنقطة • أو فاصلة)" 
-            value={activities} 
-            onChange={setActivities} 
-            onKeyDown={handleEnterKeyNext} 
+
+          <Field
+            label="الأنشطة المتاحة ضمن الرحلة (افصل بينها بنقطة • أو فاصلة)"
+            value={activities}
+            onChange={setActivities}
+            onKeyDown={handleEnterKeyNext}
           />
 
           <div className="grid grid-cols-2 gap-2">
@@ -3403,9 +4211,8 @@ function CreateTripModal({
                     <span>📅</span>
                     <span>اختيار يومي الانطلاق للرحلة</span>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
-                    recurringDays.length === 2 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                  }`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${recurringDays.length === 2 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                    }`}>
                     {recurringDays.length === 2 ? "✓ تم الاختيار" : "اختر يومين"}
                   </span>
                 </div>
@@ -3418,11 +4225,10 @@ function CreateTripModal({
                         key={d}
                         type="button"
                         onClick={() => toggleDailyDay(d)}
-                        className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${
-                          isSel
+                        className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${isSel
                             ? "bg-blue-600 text-white border-blue-700 shadow-md scale-105"
                             : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
-                        }`}
+                          }`}
                       >
                         <span>{isSel ? "✓" : ""}</span>
                         <span>{d}</span>
@@ -3451,11 +4257,10 @@ function CreateTripModal({
                     key={d}
                     type="button"
                     onClick={() => setWeeklyDay(d)}
-                    className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${
-                      weeklyDay === d
+                    className={`py-2 px-1 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center gap-1 ${weeklyDay === d
                         ? "bg-amber-600 text-white border-amber-700 shadow-sm"
                         : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <span>{weeklyDay === d ? "✓" : "○"}</span>
                     <span>{d}</span>
@@ -3489,11 +4294,10 @@ function CreateTripModal({
                 setBusCapacity(25);
                 setSelVehicles(["طرابلس 8291"]);
               }}
-              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${
-                busCapacity === 25
+              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${busCapacity === 25
                   ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
                   : "bg-white/60 border-slate-200 hover:border-emerald-300"
-              }`}
+                }`}
             >
               <div className="text-3xl">🚐</div>
               <div>
@@ -3508,11 +4312,10 @@ function CreateTripModal({
                 setBusCapacity(50);
                 setSelVehicles(["طرابلس 4517"]);
               }}
-              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${
-                busCapacity === 50
+              className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3 ${busCapacity === 50
                   ? "bg-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20"
                   : "bg-white/60 border-slate-200 hover:border-emerald-300"
-              }`}
+                }`}
             >
               <div className="text-3xl">🚍</div>
               <div>
@@ -3545,11 +4348,10 @@ function CreateTripModal({
               <div
                 key={g.license_number}
                 onClick={() => setGuideLic(prev => prev === g.license_number ? "" : g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guideLic === g.license_number
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${guideLic === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
                   {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
@@ -3570,7 +4372,7 @@ function CreateTripModal({
               </div>
             ))}
           </div>
-          
+
           {selectedGuideObj && (
             <div className="flex items-center gap-2 mt-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm overflow-hidden shrink-0 border border-emerald-300">
@@ -3601,11 +4403,10 @@ function CreateTripModal({
                 <div
                   key={h.id}
                   onClick={() => setHotelId(h.id)}
-                  className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                    hotelId === h.id
+                  className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${hotelId === h.id
                       ? "bg-sky-50/50 border-sky-500 ring-1 ring-sky-500"
                       : "bg-white border-slate-200 hover:border-sky-300"
-                  }`}
+                    }`}
                 >
                   <img src={h.hotel_photo_1} alt={h.name} className="w-10 h-10 rounded-xl object-cover shadow-sm bg-slate-100" />
                   <div className="flex-1 min-w-0">
@@ -3670,7 +4471,7 @@ function DailyTripEditModal({
       try {
         const parsed = typeof g === 'string' ? JSON.parse(g) : g;
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {}
+      } catch { }
     }
     if (p) return p.includes(",") ? p.split(",") : [p];
     return [];
@@ -3692,8 +4493,8 @@ function DailyTripEditModal({
     Array.isArray(trip.recurring_days)
       ? trip.recurring_days
       : typeof trip.recurring_days === "string"
-      ? trip.recurring_days.split(",")
-      : ["الأحد", "الأربعاء"]
+        ? trip.recurring_days.split(",")
+        : ["الأحد", "الأربعاء"]
   );
   const [activities, setActivities] = useState((trip as any).activities || "");
   const [isActive, setIsActive] = useState(trip.is_active ?? true);
@@ -3773,7 +4574,7 @@ function DailyTripEditModal({
         </div>
         <Field label="الوصف" value={desc} onChange={setDesc} />
         <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
-        
+
         <div className="grid grid-cols-2 gap-2">
           <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
           <div>
@@ -3801,9 +4602,8 @@ function DailyTripEditModal({
                 key={d}
                 type="button"
                 onClick={() => toggleDailyDay(d)}
-                className={`py-1.5 rounded-lg text-xs font-black border transition ${
-                  recurringDays.includes(d) ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
+                className={`py-1.5 rounded-lg text-xs font-black border transition ${recurringDays.includes(d) ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-700 border-slate-200"
+                  }`}
               >
                 {d}
               </button>
@@ -3818,18 +4618,16 @@ function DailyTripEditModal({
             <button
               type="button"
               onClick={() => setBusCapacity(25)}
-              className={`py-2 rounded-xl border font-black text-xs ${
-                busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-              }`}
+              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
             >
               🚐 25 راكب (ميني باص)
             </button>
             <button
               type="button"
               onClick={() => setBusCapacity(50)}
-              className={`py-2 rounded-xl border font-black text-xs ${
-                busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-              }`}
+              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
             >
               🚍 50 راكب (حافلة كبرى)
             </button>
@@ -3848,11 +4646,10 @@ function DailyTripEditModal({
               <div
                 key={g.license_number}
                 onClick={() => setGuide(g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guide === g.license_number
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${guide === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
                   {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
@@ -3921,7 +4718,7 @@ function WeeklyTripEditModal({
       try {
         const parsed = typeof g === 'string' ? JSON.parse(g) : g;
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {}
+      } catch { }
     }
     if (p) return p.includes(",") ? p.split(",") : [p];
     return [];
@@ -4012,7 +4809,7 @@ function WeeklyTripEditModal({
         }}
       >
         <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
@@ -4045,9 +4842,8 @@ function WeeklyTripEditModal({
               key={city}
               type="button"
               onClick={() => handleMultiDestToggle(city)}
-              className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
-                multiDestinations.includes(city) ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-              }`}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${multiDestinations.includes(city) ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                }`}
             >
               {city} {multiDestinations.includes(city) && "✓"}
             </button>
@@ -4085,9 +4881,8 @@ function WeeklyTripEditModal({
                 key={d}
                 type="button"
                 onClick={() => setWeeklyDay(d)}
-                className={`py-1.5 rounded-lg text-xs font-black border transition ${
-                  weeklyDay === d ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-slate-200"
-                }`}
+                className={`py-1.5 rounded-lg text-xs font-black border transition ${weeklyDay === d ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-slate-200"
+                  }`}
               >
                 {d}
               </button>
@@ -4107,18 +4902,16 @@ function WeeklyTripEditModal({
             <button
               type="button"
               onClick={() => setBusCapacity(25)}
-              className={`py-2 rounded-xl border font-black text-xs ${
-                busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-              }`}
+              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 25 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
             >
               🚐 25 راكب (ميني باص)
             </button>
             <button
               type="button"
               onClick={() => setBusCapacity(50)}
-              className={`py-2 rounded-xl border font-black text-xs ${
-                busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
-              }`}
+              className={`py-2 rounded-xl border font-black text-xs ${busCapacity === 50 ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-700 border-slate-200"
+                }`}
             >
               🚍 50 راكب (حافلة كبرى)
             </button>
@@ -4137,11 +4930,10 @@ function WeeklyTripEditModal({
               <div
                 key={g.license_number}
                 onClick={() => setGuide(g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guide === g.license_number
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${guide === g.license_number
                     ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
                     : "bg-white border-slate-200 hover:border-amber-300"
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
                   {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
@@ -4180,11 +4972,10 @@ function WeeklyTripEditModal({
               <div
                 key={h.id}
                 onClick={() => setHotelId(h.id)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  hotelId === h.id
+                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${hotelId === h.id
                     ? "bg-sky-50/50 border-sky-500 ring-1 ring-sky-500"
                     : "bg-white border-slate-200 hover:border-sky-300"
-                }`}
+                  }`}
               >
                 <img src={h.hotel_photo_1} alt={h.name} className="w-10 h-10 rounded-xl object-cover shadow-sm bg-slate-100" />
                 <div className="flex-1 min-w-0">
@@ -4231,7 +5022,7 @@ function WeeklyTripEditModal({
 function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (id: string, status: "مؤكدة" | "مرفوضة من الأدمن", price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
   const [guide, setGuide] = useState(trip.assigned_guide || guides[0]?.license_number || "");
   const [vehicle, setVehicle] = useState(trip.assigned_vehicle || vehicles[0]?.plate_number || "");
-  
+
   const selectedGuide = guides.find(g => g.license_number === guide) || guides[0];
   const selectedVehicle = vehicles.find(v => v.plate_number === vehicle) || vehicles[0];
   const guideDailyRate = selectedGuide?.daily_rate || 150;
@@ -4403,11 +5194,10 @@ function WorkingHoursClockStepper({
             if (next) onChange("مفتوح 24 ساعة متواصلة");
             else emit(startHour, startPeriod, endHour, endPeriod);
           }}
-          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-            is24Hours
+          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${is24Hours
               ? "bg-amber-500 border-amber-600 text-white shadow-xs"
               : "bg-white border-amber-200 text-slate-700 hover:bg-amber-100/60"
-          }`}
+            }`}
         >
           24 ساعة متواصلة {is24Hours ? "✓" : ""}
         </button>
@@ -4826,11 +5616,10 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
                   key={feat}
                   type="button"
                   onClick={() => toggleFeature(feat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
-                    active
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${active
                       ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm ring-2 ring-emerald-400/40 scale-[1.02]"
                       : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90 hover:border-slate-300"
-                  }`}
+                    }`}
                 >
                   <span>{feat}</span>
                   {active ? (
@@ -5093,6 +5882,8 @@ function Field({
   onKeyDown,
   placeholder,
   required,
+  min,
+  max,
 }: {
   label: string;
   type?: string;
@@ -5101,6 +5892,8 @@ function Field({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
+  min?: string | number;
+  max?: string | number;
 }) {
   return (
     <div>
@@ -5112,6 +5905,8 @@ function Field({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
+        min={min}
+        max={max}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
       />
     </div>

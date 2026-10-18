@@ -128,7 +128,7 @@ if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEYS.VEHICLES, "[]");
       localStorage.setItem(STORAGE_KEYS.DRIVERS, "[]");
       localStorage.setItem("dalni_companies_wiped_clean_v1", "true");
-    } catch {}
+    } catch { }
   }
 }
 
@@ -201,7 +201,7 @@ export async function checkBackendHealth(): Promise<{ online: boolean; database?
       if (res.ok) {
         return { online: true, database: "Microsoft SQL Server (DelniDB) - متصل وآمن" };
       }
-    } catch {}
+    } catch { }
   }
   return { online: true, database: "محلي (Safe Fallback)" };
 }
@@ -677,7 +677,7 @@ export async function apiLogin(params: {
         return { status: "error", message: errData.error };
       }
     }
-  } catch {}
+  } catch { }
 
   // 2. Local Fallback Verification (Zero Mock Users)
   // Admin Login
@@ -703,8 +703,8 @@ export async function apiLogin(params: {
     const companies = getTransportCompanies();
     const found = companies.find(
       c => (c.email && c.email.toLowerCase() === cleanLogin) ||
-           (c.contract_number && c.contract_number.toLowerCase() === cleanLogin) ||
-           (c.phone_number && c.phone_number.includes(cleanLogin))
+        (c.contract_number && c.contract_number.toLowerCase() === cleanLogin) ||
+        (c.phone_number && c.phone_number.includes(cleanLogin))
     );
     if (!found) {
       return { status: "error", message: "حساب شركة النقل غير متوفر في المنصة. يرجى التأكد من البريد أو التسجيل أولاً." };
@@ -725,8 +725,8 @@ export async function apiLogin(params: {
     const drivers = getDrivers();
     const found = drivers.find(
       d => (d.email && d.email.toLowerCase() === cleanLogin) ||
-           (d.driver_license_number && d.driver_license_number.toLowerCase() === cleanLogin) ||
-           (d.phone_number && d.phone_number.includes(cleanLogin))
+        (d.driver_license_number && d.driver_license_number.toLowerCase() === cleanLogin) ||
+        (d.phone_number && d.phone_number.includes(cleanLogin))
     );
     if (!found) {
       return { status: "error", message: "حساب السائق غير متوفر في المنصة. يرجى التواصل مع شركة النقل لتسجيلك." };
@@ -747,8 +747,8 @@ export async function apiLogin(params: {
     const guides = getAllGuides();
     const found = guides.find(
       g => (g.email && g.email.toLowerCase() === cleanLogin) ||
-           (g.license_number && g.license_number.toLowerCase() === cleanLogin) ||
-           (g.phone_number && g.phone_number.includes(cleanLogin))
+        (g.license_number && g.license_number.toLowerCase() === cleanLogin) ||
+        (g.phone_number && g.phone_number.includes(cleanLogin))
     );
     if (!found) {
       return { status: "error", message: "حساب المرشد السياحي غير متوفر في المنصة. يرجى التقدم بطلب انضمام أولاً." };
@@ -784,7 +784,7 @@ export function getStoredSession() {
   let user = null;
   try {
     if (userJson) user = JSON.parse(userJson);
-  } catch {}
+  } catch { }
   return { token, role, user };
 }
 
@@ -819,7 +819,7 @@ export async function apiRegisterTourist(params: {
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]");
     users.push(user);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-  } catch {}
+  } catch { }
 
   localStorage.setItem(STORAGE_KEYS.TOKEN, `tourist-token-${Date.now()}`);
   localStorage.setItem(STORAGE_KEYS.ROLE, "tourist");
@@ -841,8 +841,8 @@ export async function apiRegisterTourist(params: {
         phone_number: params.phone_number,
         password: params.password,
       }),
-    }).catch(() => {});
-  } catch {}
+    }).catch(() => { });
+  } catch { }
 
   // Async Safe Sync to Backend API (Microsoft SQL Server)
   sendToSecureBackend("tourists", {
@@ -887,7 +887,7 @@ export async function apiUpdateTouristProfile(params: {
       const data = await res.json();
       return data;
     }
-  } catch {}
+  } catch { }
 
   return { status: "success", message: "تم تحديث الملف الشخصي بنجاح", user: updated };
 }
@@ -1011,7 +1011,48 @@ export async function apiRegisterGuide(params: {
   }
   saveAllGuides(guides);
 
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
+  // Directly persist to Laravel API (Microsoft SQL Server DelniDB)
+  try {
+    const laravelRes = await fetch(`http://127.0.0.1:8000/api/auth/register/guide`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        license_number: params.license_number,
+        full_name: params.full_name,
+        phone_number: params.phone_number,
+        years_of_experience: params.years_of_experience || 2,
+        email: params.email,
+        password: params.password || "123456",
+        gender: params.gender || "male",
+        price_per_day: params.price_per_day || 150,
+        bio: params.bio || "",
+        title: params.title || "مرشد سياحي معتمد",
+        certificate: params.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
+        certificate_name: params.certificate_name,
+        digital_certificate_file: params.digital_certificate_file,
+        working_days: params.working_days,
+        operating_regions: params.operating_regions,
+        speaks_english: Boolean(params.speaks_english),
+        speaks_french: Boolean(params.speaks_french),
+        speaks_italian: Boolean(params.speaks_italian),
+      }),
+    });
+    const resData = await laravelRes.json();
+    if (!laravelRes.ok && resData.message) {
+      console.warn("Laravel guide register warning:", resData);
+      return {
+        status: "error",
+        message: resData.message || (resData.errors ? Object.values(resData.errors).flat().join(" - ") : "فشل التسجيل في قاعدة البيانات"),
+      };
+    }
+  } catch (e) {
+    console.error("Failed to connect to backend for guide registration:", e);
+  }
+
+  // Also notify background bridge if present
   sendToSecureBackend("guides", {
     license_number: params.license_number,
     full_name: params.full_name,
@@ -1057,7 +1098,7 @@ export async function apiGetTouristBookings(touristId: string) {
         privateTrips: [],
       };
     }
-  } catch {}
+  } catch { }
 
   try {
     const daily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
@@ -1086,7 +1127,7 @@ export async function apiGetAdminDashboard(): Promise<any> {
         return json;
       }
     }
-  } catch {}
+  } catch { }
 
   try {
     const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
@@ -1095,7 +1136,7 @@ export async function apiGetAdminDashboard(): Promise<any> {
     if (res.ok) {
       return await res.json();
     }
-  } catch {}
+  } catch { }
 
   const guides = getAllGuides();
   const companies = getTransportCompanies();
@@ -1139,7 +1180,7 @@ export async function apiDeleteGuide(licenseNumber: string) {
       method: "DELETE",
     });
     if (res.ok) return await res.json();
-  } catch {}
+  } catch { }
   return deleteGuideAccount(licenseNumber);
 }
 
@@ -1153,7 +1194,7 @@ export async function apiGetDailyTrips(): Promise<any[]> {
       const json = await res.json();
       return json.data || [];
     }
-  } catch {}
+  } catch { }
   return [];
 }
 
@@ -1185,7 +1226,7 @@ export async function apiUpdateDailyTrip(id: string, data: any) {
     if (res.ok && json.success) {
       return { status: "success", ...json };
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -1195,7 +1236,7 @@ export async function apiDeleteDailyTrip(id: string) {
       method: "DELETE",
     });
     if (res.ok) return await res.json();
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -1206,7 +1247,7 @@ export async function apiGetWeeklyTrips(): Promise<any[]> {
       const json = await res.json();
       return json.data || [];
     }
-  } catch {}
+  } catch { }
   return [];
 }
 
@@ -1238,7 +1279,7 @@ export async function apiUpdateWeeklyTrip(id: string, data: any) {
     if (res.ok && json.success) {
       return { status: "success", ...json };
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -1248,7 +1289,7 @@ export async function apiDeleteWeeklyTrip(id: string) {
       method: "DELETE",
     });
     if (res.ok) return await res.json();
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -1259,7 +1300,7 @@ export async function apiGetHotels(): Promise<any[]> {
       const json = await res.json();
       return json.data || [];
     }
-  } catch {}
+  } catch { }
   return [];
 }
 
@@ -1270,7 +1311,7 @@ export async function apiGetRestaurants(): Promise<any[]> {
       const json = await res.json();
       return json.data || [];
     }
-  } catch {}
+  } catch { }
   return [];
 }
 

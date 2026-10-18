@@ -1449,15 +1449,19 @@ export function PrivateTripModal({
     try {
       const existing = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
       existing.unshift({
-        request_id: `PV-${Date.now()}`,
+        private_trip_id: `PT-${Date.now().toString().slice(-4)}`,
+        status_order: "قيد الدراسة",
         customer_name: customerName || "عميل دلّني VIP",
         customer_phone: phone,
         preferred_start_date: startDate || new Date().toISOString().split("T")[0],
         duration_days: durationDays,
-        number_of_companions: parseInt(persons, 10) || 1,
-        customer_requirements: `المعالم: ${destination}. المركبة: ${selectedVehicle.name}. المرشد: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات: ${notes}`,
-        status: "قيد المراجعة",
-        created_at: new Date().toISOString(),
+        number_of_companions: parseInt(persons, 10) || 0,
+        customer_description: `وجهات ومعالم الجولة: ${destination}. السيارة المطلوبة: ${selectedVehicle.name}`,
+        customer_requirements: `المرشد المفضل: ${selectedGuide ? selectedGuide.name : 'بدون مرشد'}. ملاحظات واشتراطات خاصة: ${notes || 'لا توجد'}`,
+        quoted_price: null,
+        admin_itinerary_plan: null,
+        guide_license_number: selectedGuide ? selectedGuide.id : null,
+        tourist_id: null,
       });
       localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
     } catch {}
