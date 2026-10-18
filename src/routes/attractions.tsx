@@ -89,7 +89,7 @@ import {
 export { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem, type CityDestinationItem };
 
 
-export function AttractionsPage() {
+function AttractionsPage() {
   const { language, dir } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("all");

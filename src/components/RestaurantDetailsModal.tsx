@@ -17,8 +17,12 @@ export type RestaurantData = {
   hours: string;
   specialty: string;
   photos: string[];
-  signatureDishes: string[];
-  features: string[];
+  signatureDishes?: string[];
+  features?: string[];
+  description?: string;
+  discountPct?: number;
+  partnership_status?: string;
+  whatsapp?: string;
 };
 
 export function RestaurantDetailsModal({
@@ -33,12 +37,12 @@ export function RestaurantDetailsModal({
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
   const [activePhoto, setActivePhoto] = useState(0);
-  const [activeTab, setActiveTab] = useState<"overview" | "menu" | "features" | "location" | "reviews">("overview");
   const [isLiked, setIsLiked] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
 
+  // Fallback high quality Libyan dining images
   const defaultPhotos = [
     "/assets/restaurant-libya.jpg",
     "/assets/ai_food.jpg",
@@ -52,22 +56,21 @@ export function RestaurantDetailsModal({
   useEffect(() => {
     if (open) {
       setActivePhoto(0);
-      setActiveTab("overview");
       setIsLiked(false);
       setAutoPlay(true);
     }
   }, [open, restaurant]);
 
-  // Slideshow timer
+  // Slideshow auto-advance every 3s (matches HotelDetailsModal)
   useEffect(() => {
     if (!open || !autoPlay || lightboxOpen || photos.length <= 1) return;
     const timer = setInterval(() => {
       setActivePhoto((prev) => (prev + 1) % photos.length);
-    }, 3200);
+    }, 3000);
     return () => clearInterval(timer);
   }, [open, autoPlay, lightboxOpen, photos.length]);
 
-  // Keyboard navigation
+  // Keyboard navigation & lock body scroll
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -93,18 +96,22 @@ export function RestaurantDetailsModal({
 
   if (!open || !restaurant) return null;
 
+  const discountPct = restaurant.discountPct || 15;
+  const partnershipStatus = restaurant.partnership_status || "شريك معتمد";
+
   const photoCaptions = [
-    { title: isAr ? "الجلسات والأجواء العامة" : "Ambiance & Seating", icon: "✨" },
-    { title: isAr ? "أجواء التقديم والضيافة" : "Dining & Hospitality", icon: "🍽️" },
-    { title: isAr ? "المشروبات والحلويات التراثية" : "Beverages & Desserts", icon: "☕" },
-    { title: isAr ? "الموقع والواجهة الخارجية" : "Exterior & Venue", icon: "🏛️" },
+    { title: isAr ? "الجلسات والأجواء العامة" : "Ambiance & Dining Hall", icon: "✨" },
+    { title: isAr ? "الأطباق والوجبات الطازجة" : "Specialty Dishes & Menu", icon: "🍽️" },
+    { title: isAr ? "المشروبات والضيافة الليبية" : "Beverages & Traditional Tea", icon: "☕" },
+    { title: isAr ? "الواجهة والموقع الخارجي" : "Exterior & Venue", icon: "🏛️" },
+    { title: isAr ? "جلسات العائلات والخصوصية" : "Family & Private Seating", icon: "👨‍👩‍👧‍👦" },
   ];
 
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
         title: restaurant.name,
-        text: `${restaurant.name} في ${restaurant.city} على منصة دلّني`,
+        text: `${restaurant.name} في ${restaurant.city} على منصة دلّني السياحية`,
         url: window.location.href,
       }).catch(() => {});
     } else {
@@ -114,31 +121,33 @@ export function RestaurantDetailsModal({
     }
   };
 
+  const whatsappPhone = restaurant.whatsapp || restaurant.phone.replace(/[^0-9]/g, "");
+
   return (
     <>
-      {/* ── BACKDROP OVERLAY ── */}
+      {/* ── BACKDROP OVERLAY WITH BLUR ── */}
       <div
         className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto bg-black/75 backdrop-blur-md transition-all duration-300 animate-in fade-in"
         dir={dir}
         onClick={onClose}
       >
-        {/* ── MODAL CONTAINER ── */}
+        {/* ── MODAL CONTAINER (Compact, Exactly like HotelDetailsModal) ── */}
         <div
-          className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto overflow-x-hidden z-10 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex flex-col my-auto transition-transform duration-300 scale-100 animate-in zoom-in-95"
+          className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-3xl w-full z-10 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex flex-col my-auto transition-transform duration-300 scale-100 animate-in zoom-in-95 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Top Decorative Banner */}
+          {/* Top Decorative Perk Strip */}
           <div className="bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-amber-600 text-white px-4 py-2 text-xs font-black flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>🍽️ {isAr ? "مطعم ومقهى سياحي معتمد لدى منصة دلّني" : "Verified Tourism Dining Partner"}</span>
+              <span className={`w-2 h-2 rounded-full ${partnershipStatus === "غير نشط" ? "bg-slate-400" : "bg-emerald-400 animate-ping"}`} />
+              <span>🍽️ {isAr ? `مطعم ومقهى سياحي معتمد (${partnershipStatus})` : `Verified Partner (${partnershipStatus})`}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold">
-              <span>☕ {isAr ? "ضيافة شاي باللوز مجاناً لرواد دلّني" : "Free Mint/Almond Tea Perk"}</span>
+              <span>🏷️ {isAr ? `خصم حصري ${discountPct}% لرواد دلّني` : `Exclusive ${discountPct}% Perk`}</span>
             </div>
           </div>
 
-          {/* Floating Action Controls */}
+          {/* Close & Share Floating Bar */}
           <div className="absolute top-12 left-4 z-30 flex items-center gap-2">
             <button
               type="button"
@@ -166,445 +175,283 @@ export function RestaurantDetailsModal({
             </button>
           </div>
 
-          {/* ── 1. CINEMATIC SLIDESHOW STAGE WITH AUTOMATIC SMOOTH AUTO-TRANSITION (NO ARROWS) ── */}
+          {/* ── 1. CINEMATIC SLIDESHOW STAGE (Compact & Crisp: h-56 sm:h-64) ── */}
           <div
-            className="relative h-80 sm:h-96 md:h-[420px] w-full bg-slate-950 overflow-hidden group select-none shrink-0"
+            className="relative h-56 sm:h-64 w-full bg-slate-950 overflow-hidden group select-none shrink-0"
+            onMouseEnter={() => setAutoPlay(false)}
+            onMouseLeave={() => setAutoPlay(true)}
           >
-            {/* Ambient Blurred Background for perfect lighting and zero distortion */}
+            {/* Ambient Blurred Background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <img
                 src={photos[activePhoto]}
                 alt=""
-                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition-all duration-1000"
+                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition-all duration-700"
                 aria-hidden="true"
               />
             </div>
 
-            {/* Main Stage Image (Smooth fade transition) */}
+            {/* Main Stage Image */}
             <img
-              key={activePhoto}
               src={photos[activePhoto]}
               alt={restaurant.name}
-              className="relative z-10 w-full h-full object-cover object-center transition-all duration-700 ease-in-out transform scale-100 cursor-pointer animate-in fade-in zoom-in-95"
+              className="relative z-10 w-full h-full object-cover object-center transition-all duration-500 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
               onClick={() => setLightboxOpen(true)}
             />
 
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-black/40 pointer-events-none z-10" />
 
-            {/* Auto-Slide Progress Dots (Clean, elegant, non-intrusive) */}
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] text-white/90 font-bold ml-1">{isAr ? "عرض تلقائي" : "Auto"}</span>
-              <div className="flex items-center gap-1 mr-1">
-                {photos.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActivePhoto(idx)}
-                    className={`transition-all duration-300 rounded-full cursor-pointer ${
-                      activePhoto === idx ? "w-5 h-2 bg-amber-400 shadow-xs" : "w-2 h-2 bg-white/40 hover:bg-white/70"
-                    }`}
-                    aria-label={`Photo ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
             {/* Photo Caption & Identity */}
-            <div className="absolute bottom-14 sm:bottom-16 right-4 left-4 z-20 flex flex-wrap items-end justify-between gap-3 text-white pointer-events-none">
+            <div className="absolute bottom-3 right-4 left-4 z-20 flex flex-wrap items-end justify-between gap-3 text-white pointer-events-none">
               <div className="space-y-1 pointer-events-auto">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-xs font-bold text-amber-300">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[11px] font-bold text-amber-300">
                   <span>{photoCaptions[activePhoto % photoCaptions.length]?.icon}</span>
                   <span>{photoCaptions[activePhoto % photoCaptions.length]?.title}</span>
                 </div>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white drop-shadow-md">
+                <h3 className="text-xl sm:text-2xl font-black text-white drop-shadow-md">
                   {restaurant.name}
                 </h3>
                 <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <span>📍 {restaurant.city}</span>
+                  <span>📍 {restaurant.address || restaurant.city}</span>
                   <span>·</span>
-                  <span className="text-amber-400 font-bold">★ {restaurant.rating}</span>
+                  <span className="text-amber-400 font-bold">★ {restaurant.rating || 5.0}</span>
                   <span>·</span>
                   <span className="text-emerald-400 font-bold">{restaurant.type}</span>
                 </div>
               </div>
 
-              {/* Lightbox Zoom Button */}
+              {/* Lightbox Zoom Button & Auto-slideshow indicator dots */}
               <div className="flex items-center gap-2 pointer-events-auto">
+                <div className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-2 py-1 rounded-full border border-white/15">
+                  {photos.map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        activePhoto === idx ? "w-4 bg-amber-400" : "w-1.5 bg-white/40"
+                      }`}
+                    />
+                  ))}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setLightboxOpen(true)}
-                  className="px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-xs font-black text-white flex items-center gap-1.5 transition hover:scale-105 cursor-pointer shadow-lg"
+                  className="px-2.5 py-1 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-[11px] font-black text-white flex items-center gap-1 transition hover:scale-105 cursor-pointer shadow-lg"
                 >
-                  <span>🔍 {isAr ? "معاينة الصور" : "Zoom"}</span>
-                  <span className="bg-[#D96B27] px-2 py-0.5 rounded-full text-[10px]">
-                    {activePhoto + 1} / {photos.length}
-                  </span>
+                  <span>🔍 {isAr ? "تكبير" : "Zoom"}</span>
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Visual Thumbnail Navigation Strip (Fixed Stable Thumbnails) */}
-            <div className="absolute bottom-2 right-0 left-0 z-20 flex justify-center gap-2 px-4 overflow-x-auto py-1 pointer-events-auto">
-              {photos.map((p, idx) => (
-                <button
+          {/* ── 2. COMPACT OVERVIEW & WORKING HOURS FIRST (No scroll, purely display) ── */}
+          <div className="p-4 sm:p-5 space-y-3.5">
+            {/* Hours & Location Cards Grid (Primary View: ساعات العمل هيا الواجهة الأولى) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Working Hours */}
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-800/60 border border-amber-100 dark:border-slate-700 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#D96B27] text-white flex items-center justify-center text-base shrink-0 shadow-sm">
+                  ⏱️
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-500 dark:text-slate-400">
+                    {isAr ? "ساعات وفترات العمل:" : "Working Hours:"}
+                  </div>
+                  <div className="text-xs font-black text-amber-700 dark:text-amber-300">
+                    {restaurant.hours || (isAr ? "09:00 ص — 12:00 م" : "09:00 AM — 12:00 AM")}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold">
+                    {isAr ? "مفتوح يومياً لخدمتكم" : "Open daily"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cuisine & Specialty */}
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm">
+                  🍲
+                </div>
+                <div className="truncate">
+                  <div className="text-[10px] font-black text-slate-500 dark:text-slate-400">
+                    {isAr ? "نوع المأكولات والتخصص:" : "Cuisine & Specialty:"}
+                  </div>
+                  <div className="text-xs font-black text-blue-700 dark:text-blue-300 truncate">
+                    {restaurant.type}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold truncate">
+                    {restaurant.specialty || (isAr ? "أطباق طازجة ومشروبات" : "Fresh Food & Drinks")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Location & City */}
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-100 dark:border-slate-700 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm">
+                  📍
+                </div>
+                <div className="truncate">
+                  <div className="text-[10px] font-black text-emerald-800 dark:text-emerald-400">
+                    {isAr ? "المدينة والموقع:" : "City & Location:"}
+                  </div>
+                  <div className="text-xs font-black text-emerald-700 dark:text-emerald-300 truncate">
+                    {restaurant.city}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold truncate">
+                    {restaurant.address || restaurant.city}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Concise Bio ("نبذة تعريفية سريعة ومختصرة") */}
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
+              <div className="text-xs font-black text-[#D96B27] dark:text-amber-400 flex items-center gap-1.5">
+                <span>🍽️</span>
+                <span>{isAr ? "نبذة تعريفية سريعة:" : "Quick Overview:"}</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                {restaurant.description
+                  ? restaurant.description.slice(0, 160) + (restaurant.description.length > 160 ? "..." : "")
+                  : isAr
+                  ? `أحد أرقى المطاعم والمقاهي في ${restaurant.city}، يقدم تشكيلة من أشهى الأطباق التراثية والمأكولات الطازجة مع ضيافة مجانية وخصم 15% لرواد منصة دلّني.`
+                  : `Premier dining and cafe venue in ${restaurant.city} offering authentic Libyan cuisine and fresh beverages.`}
+              </p>
+            </div>
+
+            {/* Quick Amenities / Dining Perks Pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { label: isAr ? "شاي باللوز مجاناً" : "Free Almond Tea", icon: "☕" },
+                { label: isAr ? "جلسات عائلية مريحة" : "Family Seating", icon: "👨‍👩‍👧‍👦" },
+                { label: isAr ? "واي فاي سريع مجاني" : "Free WiFi", icon: "📶" },
+                { label: isAr ? "تكييف هادئ" : "Climate Control", icon: "❄️" },
+                { label: isAr ? "موقف سيارات" : "Parking", icon: "🅿️" },
+                { label: isAr ? "دفع إلكتروني (سداد/تداول)" : "Digital Pay", icon: "💳" },
+              ].map((am, idx) => (
+                <span
                   key={idx}
-                  type="button"
-                  onClick={() => setActivePhoto(idx)}
-                  className={`w-14 h-9 sm:w-16 sm:h-10 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer shadow-md shrink-0 ${
-                    activePhoto === idx ? "border-amber-400 scale-105 ring-2 ring-amber-400/50" : "border-white/30 opacity-60 hover:opacity-100"
-                  }`}
-                  aria-label={`Photo ${idx + 1}`}
+                  className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold flex items-center gap-1 shadow-xs"
                 >
-                  <img src={p} alt="" className="w-full h-full object-cover" />
-                </button>
+                  <span>{am.icon}</span>
+                  <span>{am.label}</span>
+                </span>
               ))}
             </div>
           </div>
 
-          {/* ── 2. DYNAMIC TABBED NAVIGATION ── */}
-          {/* ── 2. DYNAMIC TABBED NAVIGATION ── */}
-          <div className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 sticky top-0 z-20 backdrop-blur-md">
-            <div className="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar text-xs sm:text-sm font-black">
-              {[
-                { id: "overview", label: isAr ? "🍽️ نوع الطعام وتجربة التذوق" : "Cuisine & Dining", icon: "🍽️" },
-                { id: "location", label: isAr ? "📍 الموقع وساعات العمل" : "Location & Hours", icon: "📍" },
-                { id: "reviews", label: isAr ? "⭐ تقييمات الذواقة" : "Reviews", icon: "⭐" },
-              ].map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`px-5 py-2.5 rounded-2xl whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-                      isActive
-                        ? "bg-[#D96B27] text-white shadow-md shadow-orange-900/20 scale-102"
-                        : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 hover:text-slate-900"
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── 3. TAB CONTENT ── */}
-          <div className="p-4 sm:p-6 md:p-8 space-y-6 flex-1">
-            {/* OVERVIEW TAB */}
-            {activeTab === "overview" && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Informational Directory Notice */}
-                <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200 font-bold">
-                  <span className="text-xl shrink-0">ℹ️</span>
-                  <span>
-                    {isAr
-                      ? "دليل تعريفي استكشافي: توفر منصة دلّني هذا العرض لتعريف الزوار بنوع الطعام وأوقات العمل ووسائل الاتصال المباشر بالمطعم."
-                      : "Directory Showcase: Dallani provides this guide to introduce visitors to cuisine types, hours, and direct venue contacts."}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Heart Rating Card (التقييم عن طريق القلب) */}
-                  <div
-                    onClick={() => setIsLiked(!isLiked)}
-                    className="p-4 rounded-2xl bg-gradient-to-br from-rose-50 to-red-50 dark:from-slate-800 dark:to-slate-800/60 border border-red-200 dark:border-slate-700 flex items-center justify-between cursor-pointer group transition-all hover:scale-102"
-                  >
-                    <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-bold">{isAr ? "تقييم الذواقة والرواد" : "Guest Rating"}</div>
-                      <div className="text-xl font-black text-red-600 flex items-center gap-1.5 mt-0.5">
-                        <span>{isLiked ? (restaurant.reviewsCount || 1400) + 1 : (restaurant.reviewsCount || 1400)}</span>
-                        <span className="text-xs font-bold text-slate-500">{isAr ? "إعجاب وتقييم" : "likes"}</span>
-                      </div>
-                      <div className="text-[11px] text-red-500 font-bold flex items-center gap-1">
-                        <span>{isLiked ? "❤️ تم تسجيل إعجابك" : "🤍 اضغط للتقييم بالقلب"}</span>
-                      </div>
-                    </div>
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-lg transition-transform group-hover:scale-110 ${
-                      isLiked ? "bg-red-500 text-white shadow-red-500/30" : "bg-white dark:bg-slate-700 text-red-500 border border-red-200"
-                    }`}>
-                      ❤️
-                    </div>
-                  </div>
-
-
-
-                  {/* Hours */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-100 dark:border-slate-700 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-emerald-800 dark:text-emerald-400 font-black">{isAr ? "أوقات العمل اليومية" : "Opening Hours"}</div>
-                      <div className="text-base font-black text-emerald-700 dark:text-emerald-300">{restaurant.hours}</div>
-                      <div className="text-[11px] text-slate-500 font-bold">{isAr ? "مفتوح طوال أيام الأسبوع" : "Open 7 Days a Week"}</div>
-                    </div>
-                    <div className="text-3xl">⏱️</div>
-                  </div>
-                </div>
-
-                {/* 🍲 PROMINENT CUISINE & FOOD TYPE SECTION */}
-                <div className="space-y-4 p-5 rounded-2xl bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 dark:from-slate-800/60 dark:to-slate-800/30 border border-orange-200/70 dark:border-slate-700">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-100 dark:border-slate-700/60 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">🍲</span>
-                      <div>
-                        <h4 className="text-base font-black text-[#D96B27]">
-                          {isAr ? "نوع وتصنيف الطعام المقدم" : "Cuisine Type & Specialty"}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {isAr ? "طبيعة المأكولات ونوع الطلبات المقدمة" : "Food category and specialties"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="px-3 py-1 rounded-xl bg-[#D96B27] text-white text-xs font-black shadow-xs">
-                      {restaurant.type || (isAr ? "مأكولات شعبية وتراثية" : "Traditional Dining")}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-slate-700 text-[#D96B27] flex items-center justify-center font-black text-xl shrink-0">
-                        🥩
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-500 dark:text-slate-400">
-                          {isAr ? "نوع الطلبات والمأكولات:" : "Order & Cuisine Type:"}
-                        </div>
-                        <div className="text-sm text-[#003580] dark:text-blue-300 font-black mt-0.5">
-                          {restaurant.type}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-slate-700 text-amber-700 flex items-center justify-center font-black text-xl shrink-0">
-                        🔥
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-500 dark:text-slate-400">
-                          {isAr ? "التخصص والطلب الأكثر طلباً:" : "Signature Dish / Specialty:"}
-                        </div>
-                        <div className="text-sm text-[#D96B27] font-black mt-0.5">
-                          {restaurant.specialty}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Culinary Story */}
-                <div className="space-y-3 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
-                  <h4 className="text-base font-black text-[#D96B27] flex items-center gap-2">
-                    <span>📖</span>
-                    <span>{isAr ? "عن المطعم وتجربة التذوق" : "Culinary Heritage & Dining Experience"}</span>
-                  </h4>
-                  <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
-                    {isAr
-                      ? `يقدم ${restaurant.name} تجربة طعام استثنائية في قلب ${restaurant.city}. يشتهر بـ (${restaurant.specialty}) مع التزام صارم بأعلى معايير الجودة والنظافة وكرم الضيافة الليبية. يتميز المطعم بجلسات مريحة وتصميم يجمع بين الأصالة والحداثة، مما يجعله وجهة مثالية للعائلات والوفود السياحية وزوار المدينة.`
-                      : `${restaurant.name} provides an exceptional Libyan dining experience in ${restaurant.city}, renowned for ${restaurant.specialty}.`}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* LOCATION TAB */}
-            {activeTab === "location" && (
-              <div className="space-y-5 animate-in fade-in duration-300">
-                <div className="p-6 rounded-3xl bg-gradient-to-br from-amber-900 via-slate-900 to-slate-950 text-white border border-white/10 relative overflow-hidden shadow-xl space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-amber-300 text-xs font-black">
-                        <span>📍</span>
-                        <span>{restaurant.city}</span>
-                      </div>
-                      <h5 className="text-xl font-black">{restaurant.name}</h5>
-                      <p className="text-xs text-slate-300 font-medium">{restaurant.address}</p>
-                    </div>
-
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        restaurant.mapsQuery || `${restaurant.name} ${restaurant.city} ليبيا`
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xl shadow-amber-500/25 active:scale-95 cursor-pointer shrink-0"
-                    >
-                      <span>🗺️ {isAr ? "فتح المسار في خرائط Google" : "Open in Google Maps"}</span>
-                      <span>↗</span>
-                    </a>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
-                      <span className="text-amber-400 font-black">⏱️ {isAr ? "ساعات الدوام:" : "Working Hours:"}</span>
-                      <p className="text-slate-300">{restaurant.hours}</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
-                      <span className="text-emerald-400 font-black">📞 {isAr ? "هاتف الحجز المباشر:" : "Phone:"}</span>
-                      <p className="text-slate-300">{restaurant.phone}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* REVIEWS TAB */}
-            {activeTab === "reviews" && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="flex items-center gap-4 p-5 rounded-2xl bg-orange-50/70 dark:bg-slate-800/50 border border-orange-100 dark:border-slate-700">
-                  <div className="w-16 h-16 rounded-2xl bg-[#D96B27] text-white font-black text-3xl flex items-center justify-center shadow-lg shadow-orange-900/30">
-                    {restaurant.rating}
-                  </div>
-                  <div>
-                    <div className="text-lg font-black text-[#D96B27]">{restaurant.ratingWord}</div>
-                    <div className="text-xs text-slate-500">
-                      {isAr ? `استناداً إلى ${restaurant.reviewsCount} تقييم حقيقي من رواد دلّني` : `Based on ${restaurant.reviewsCount} verified reviews`}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    {
-                      name: isAr ? "صلاح الورفلي" : "Salah W.",
-                      date: isAr ? "قبل يومين" : "2 days ago",
-                      rate: 5,
-                      comment: isAr ? "الأكل لذيذ جداً والخدمة سريعة ونظيفة، طعم الكسكسي بالبصلة أصيل والشاي باللوز كان ضيافة ممتازة." : "Delicious Libyan traditional meals and great hospitality.",
-                    },
-                    {
-                      name: isAr ? "فاطمة الترهوني" : "Fatima T.",
-                      date: isAr ? "قبل 5 أيام" : "5 days ago",
-                      rate: 5,
-                      comment: isAr ? "مكان عائلي مريح وهادئ، الأسعار مناسبة جداً والأجواء رائعة. نكرر الزيارة بالتأكيد." : "Very cozy and family friendly!",
-                    },
-                  ].map((rev, idx) => (
-                    <div key={idx} className="p-4 rounded-2xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-1.5 shadow-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-black text-xs text-slate-800 dark:text-slate-100">{rev.name}</span>
-                        <span className="text-amber-400 text-xs">{"★".repeat(rev.rate)}</span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">"{rev.comment}"</p>
-                      <div className="text-[10px] text-slate-400">{rev.date}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── 4. STICKY BOTTOM LUXURY CONCIERGE BAR ── */}
-          {/* ── 4. STICKY BOTTOM ACTION BAR (Directory Showcase & Direct Venue Contact) ── */}
-          <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl z-30">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-xl shrink-0">
+          {/* ── 3. BOTTOM ACTION BAR (Direct Dining Contact - Links Icon Removed) ── */}
+          <div className="bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 p-3 sm:px-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl z-30">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700 flex items-center justify-center text-base shrink-0">
                 🍽️
               </div>
               <div>
-                <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <span>{isAr ? "دليل سياحي تعريفي بالأماكن (عرض فقط)" : "Tourism Directory Showcase (Display Only)"}</span>
-                  <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black">
-                    {isAr ? "استعلام مباشر" : "Direct Contact"}
+                <div className="text-[11px] font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>{isAr ? "دليل سياحي تعريفي (عرض فقط)" : "Tourism Directory Showcase"}</span>
+                  <span className="px-2 py-0.2 rounded-full bg-amber-100 text-amber-800 text-[9px] font-black">
+                    {isAr ? "استعلام مباشر" : "Direct"}
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-500 font-bold">
-                  {isAr ? "المنصة تقدم دليلاً للتعريف بالمنشأة — يمكنك التواصل مباشرة عبر الهاتف والواتساب" : "Contact the venue management directly for inquiries"}
+                <div className="text-[10px] text-slate-500 font-bold">
+                  {isAr ? "تواصل مباشرة مع إدارة المطعم دون وسيط" : "Contact restaurant directly"}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {/* WhatsApp direct contact */}
+              {whatsappPhone && (
+                <a
+                  href={`https://wa.me/218${whatsappPhone.replace(/^0/, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
+                >
+                  <span>💬</span>
+                  <span>{isAr ? "واتساب" : "WhatsApp"}</span>
+                </a>
+              )}
+
+              {/* Direct phone call */}
               <a
                 href={`tel:${restaurant.phone}`}
-                className="flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-90 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
               >
                 <span>📞</span>
-                <span>{isAr ? `اتصال (${restaurant.phone})` : `Call ${restaurant.phone}`}</span>
+                <span>{restaurant.phone || (isAr ? "اتصال" : "Call")}</span>
               </a>
 
-              <a
-                href={`https://wa.me/218${restaurant.phone.replace(/^0+/, "")}?text=${encodeURIComponent(
-                  `مرحباً، أود الاستفسار عن نوع الطعام وساعات العمل لدى ${restaurant.name} بعد الاطلاع عليه عبر منصة دلّني السياحية.`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 cursor-pointer"
-              >
-                <span>💬</span>
-                <span>{isAr ? "واتساب المطعم" : "WhatsApp"}</span>
-              </a>
-
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  restaurant.mapsQuery || `${restaurant.name} ${restaurant.city} ليبيا`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition active:scale-95 cursor-pointer"
-                title={isAr ? "فتح في الخرائط" : "Open in Maps"}
-              >
-                <span>📍</span>
-              </a>
+              {/* Google Maps link */}
+              {restaurant.mapsQuery && (
+                <a
+                  href={
+                    restaurant.mapsQuery.startsWith("http")
+                      ? restaurant.mapsQuery
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.mapsQuery)}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs transition flex items-center gap-1 border border-slate-200 dark:border-slate-700"
+                >
+                  <span>🗺️</span>
+                  <span>{isAr ? "الخريطة" : "Map"}</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── 5. FULL-SCREEN LIGHTBOX ── */}
+      {/* ── 4. LIGHTBOX ZOOM MODAL (High-Res View) ── */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-[150] bg-black/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-200 select-none"
+          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-4 animate-in fade-in duration-200 select-none"
           onClick={() => setLightboxOpen(false)}
+          dir={dir}
         >
-          <div className="flex items-center justify-between text-white max-w-6xl mx-auto w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="space-y-0.5">
-              <h3 className="font-black text-base sm:text-lg">{restaurant.name}</h3>
-              <p className="text-xs text-slate-400 font-medium">
-                {photoCaptions[activePhoto % photoCaptions.length]?.title} ({activePhoto + 1} / {photos.length})
-              </p>
+          {/* Top Bar */}
+          <div className="w-full flex items-center justify-between text-white z-10 p-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-black text-amber-400">
+                {restaurant.name} · {restaurant.city}
+              </span>
+              <span className="text-xs text-slate-400">
+                ({activePhoto + 1} / {photos.length})
+              </span>
             </div>
             <button
               type="button"
               onClick={() => setLightboxOpen(false)}
-              className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl font-black transition-colors cursor-pointer"
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white font-black text-xl flex items-center justify-center transition cursor-pointer"
             >
               ✕
             </button>
           </div>
 
-          <div className="relative max-w-5xl mx-auto w-full my-auto flex items-center justify-center max-h-[72vh]" onClick={(e) => e.stopPropagation()}>
+          {/* Main Zoomed Photo */}
+          <div className="relative flex-1 flex items-center justify-center w-full max-w-5xl my-auto">
             <img
               src={photos[activePhoto]}
               alt={restaurant.name}
-              className="max-h-[72vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/20"
+              className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
+              onClick={(e) => e.stopPropagation()}
             />
-            <button
-              type="button"
-              onClick={() => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length)}
-              className="absolute left-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
-            >
-              {dir === "rtl" ? "→" : "←"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActivePhoto((prev) => (prev + 1) % photos.length)}
-              className="absolute right-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
-            >
-              {dir === "rtl" ? "←" : "→"}
-            </button>
           </div>
 
-          <div className="max-w-xl mx-auto w-full flex items-center justify-center gap-2 overflow-x-auto py-2" onClick={(e) => e.stopPropagation()}>
+          {/* Bottom Thumbnails */}
+          <div className="flex items-center gap-2 overflow-x-auto p-2 max-w-full z-10" onClick={(e) => e.stopPropagation()}>
             {photos.map((p, idx) => (
-              <div
+              <button
                 key={idx}
+                type="button"
                 onClick={() => setActivePhoto(idx)}
-                className={`w-16 h-12 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
-                  activePhoto === idx ? "border-amber-400 scale-110 shadow-lg" : "border-white/20 opacity-60 hover:opacity-100"
+                className={`w-16 h-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                  activePhoto === idx ? "border-amber-400 scale-105" : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
                 <img src={p} alt="" className="w-full h-full object-cover" />
-              </div>
+              </button>
             ))}
           </div>
         </div>

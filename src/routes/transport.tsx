@@ -1241,5 +1241,3 @@ function TransportPage() {
     </div>
   );
 }
-
-export default TransportPage;

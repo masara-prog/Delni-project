@@ -210,7 +210,7 @@ type PrivateTripRequest = {
 };
 
 type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[] };
-type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string };
+type Restaurant = { id: string; name: string; type: string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string };
 type Attraction = { 
   id: string; 
   place_id?: string;
@@ -1197,6 +1197,9 @@ function AdminDashboard() {
       verification_status: newRest.verification_status || "موثق",
       working_hours: newRest.working_hours,
       features: newRest.features,
+      google_maps_url: newRest.google_maps_url,
+      discount_percentage: newRest.discount_percentage || 20,
+      whatsapp: newRest.whatsapp,
     });
   };
   const handleUpdateRestaurant = (r: Restaurant) => {
@@ -1224,6 +1227,9 @@ function AdminDashboard() {
       verification_status: (r as any).verification_status,
       working_hours: r.working_hours,
       features: (r as any).features,
+      google_maps_url: r.google_maps_url,
+      discount_percentage: (r as any).discount_percentage || 20,
+      whatsapp: (r as any).whatsapp,
     });
   };
   const handleDeleteRestaurant = (id: string) => {
@@ -5391,6 +5397,8 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
   const [city, setCity] = useState(restaurant?.city || "طرابلس");
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
+  const [whatsapp, setWhatsapp] = useState(restaurant?.whatsapp || "");
+  const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage || 20);
   const [description, setDescription] = useState(restaurant?.description || "");
   const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
   const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "09:00 صباحاً — 12:00 ليلاً");
@@ -5410,6 +5418,8 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
       city,
       address,
       phone,
+      whatsapp: (whatsapp || phone).trim(),
+      discount_percentage: Number(discountPct) || 20,
       description,
       google_maps_url: mapsUrl,
       working_hours: workingHours,
@@ -5433,8 +5443,14 @@ function RestaurantModal({ title, restaurant, onClose, onSave }: { title: string
           <Field label="المدينة" value={city} onChange={setCity} />
         </div>
         <Field label="العنوان التفصيلي" value={address} onChange={setAddress} placeholder="المنطقة - الشارع - المعلم القريب" />
-        <LibyanPhoneField label="هاتف التواصل والتوصيل والاستعلام" value={phone} onChange={setPhone} />
-        <Field label="⏰ ساعات وفترات العمل اليومية" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 08:00 صباحاً — 12:00 ليلاً" />
+        <div className="grid grid-cols-2 gap-2">
+          <LibyanPhoneField label="هاتف التواصل والاستعلام" value={phone} onChange={setPhone} />
+          <LibyanPhoneField label="رقم الواتساب للتواصل المباشر" value={whatsapp} onChange={setWhatsapp} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="⏰ ساعات وفترات العمل اليومية" value={workingHours} onChange={setWorkingHours} placeholder="مثال: 08:00 صباحاً — 12:00 ليلاً" />
+          <Field label="🏷️ نسبة الخصم لرواد دلّني (%)" type="number" value={discountPct.toString()} onChange={v => setDiscountPct(Number(v))} />
+        </div>
 
         {/* Google Maps URL */}
         <div>

@@ -1441,8 +1441,8 @@ export function PrivateTripModal({
       setStep("form");
       const session = getStoredSession();
       if (session?.user) {
-        if (!customerName) setCustomerName(session.user.name || "");
-        if (!phone) setPhone(session.user.phone || "");
+        setCustomerName((prev) => prev || session.user.name || "");
+        setPhone((prev) => prev || session.user.phone || "");
       }
       if (initialDestination) {
         const clean = initialDestination.toLowerCase();

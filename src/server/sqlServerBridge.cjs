@@ -920,6 +920,10 @@ const server = http.createServer(async (req, res) => {
       request.input('amenities', sql.NVarChar(sql.MAX), String(amenities || '').trim());
       request.input('contract_date', sql.Date, contract_date || new Date());
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
+      request.input('description', sql.NVarChar(sql.MAX), String(body.description || '').trim());
+      request.input('working_hours', sql.NVarChar(150), String(body.working_hours || 'خدمة 24/7 على مدار الساعة').trim());
+      request.input('discount_percentage', sql.Int, Number(body.discount_percentage) || 15);
+      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || '').trim());
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @hotel_id)
@@ -939,7 +943,11 @@ const server = http.createServer(async (req, res) => {
               verification_status = @verification_status,
               property_type = @property_type,
               amenities = @amenities,
-              google_maps_url = @google_maps_url
+              google_maps_url = @google_maps_url,
+              description = @description,
+              working_hours = @working_hours,
+              discount_percentage = @discount_percentage,
+              whatsapp = @whatsapp
           WHERE hotel_id = @hotel_id;
         END
         ELSE
@@ -947,11 +955,13 @@ const server = http.createServer(async (req, res) => {
           INSERT INTO hotels (
             hotel_id, hotel_name, city, address_details, phone_number, star_rating,
             partnership_status, hotel_photo_1, hotel_photo_2, hotel_photo_3, hotel_photo_4,
-            hotel_photo_5, verification_status, property_type, amenities, contract_date, google_maps_url
+            hotel_photo_5, verification_status, property_type, amenities, contract_date, google_maps_url,
+            description, working_hours, discount_percentage, whatsapp
           ) VALUES (
             @hotel_id, @hotel_name, @city, @address_details, @phone_number, @star_rating,
             @partnership_status, @photo_1, @photo_2, @photo_3, @photo_4,
-            @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url
+            @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url,
+            @description, @working_hours, @discount_percentage, @whatsapp
           );
         END
       `);
@@ -1009,6 +1019,8 @@ const server = http.createServer(async (req, res) => {
       request.input('features', sql.NVarChar(sql.MAX), String(features || '').trim());
       request.input('contract_date', sql.Date, contract_date || new Date());
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
+      request.input('discount_percentage', sql.Int, Number(body.discount_percentage) || 20);
+      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || '').trim());
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM restaurants_cafes WHERE facility_id = @facility_id)
@@ -1028,7 +1040,9 @@ const server = http.createServer(async (req, res) => {
               verification_status = @verification_status,
               working_hours = @working_hours,
               features = @features,
-              google_maps_url = @google_maps_url
+              google_maps_url = @google_maps_url,
+              discount_percentage = @discount_percentage,
+              whatsapp = @whatsapp
           WHERE facility_id = @facility_id;
         END
         ELSE
@@ -1037,12 +1051,14 @@ const server = http.createServer(async (req, res) => {
             facility_id, facility_name, facility_type, city, address_details,
             phone_number, description, facility_image_1, facility_image_2,
             facility_image_3, facility_image_4, facility_image_5,
-            verification_status, working_hours, features, contract_date, google_maps_url
+            verification_status, working_hours, features, contract_date, google_maps_url,
+            discount_percentage, whatsapp
           ) VALUES (
             @facility_id, @facility_name, @facility_type, @city, @address_details,
             @phone_number, @description, @img_1, @img_2,
             @img_3, @img_4, @img_5,
-            @verification_status, @working_hours, @features, @contract_date, @google_maps_url
+            @verification_status, @working_hours, @features, @contract_date, @google_maps_url,
+            @discount_percentage, @whatsapp
           );
         END
       `);
@@ -1603,7 +1619,7 @@ const server = http.createServer(async (req, res) => {
       request.input('seats', sql.Int, seatsCount);
       request.input('status', sql.VarChar(20), String(booking_status || 'مؤكد').trim());
       request.input('price', sql.Decimal(10, 2), Number(total_price) || 100);
-      request.input('notes', sql.Text, String(booking_notes || '').trim());
+      request.input('notes', sql.NVarChar(sql.MAX), String(booking_notes || '').trim());
       request.input('passengers', sql.NVarChar(sql.MAX), String(passengers_names || '').trim());
       request.input('pay_status', sql.VarChar(20), String(payment_status || 'مدفوع').trim());
       request.input('attended', sql.Bit, attended ? 1 : 0);
@@ -1686,7 +1702,7 @@ const server = http.createServer(async (req, res) => {
       request.input('seats', sql.Int, seatsCount);
       request.input('status', sql.VarChar(20), String(booking_status || 'مؤكد').trim());
       request.input('price', sql.Decimal(10, 2), Number(total_price) || 1200);
-      request.input('notes', sql.Text, String(booking_notes || '').trim());
+      request.input('notes', sql.NVarChar(sql.MAX), String(booking_notes || '').trim());
       request.input('passengers', sql.NVarChar(sql.MAX), String(passengers_names || '').trim());
       request.input('pay_status', sql.VarChar(20), String(payment_status || 'مدفوع').trim());
       request.input('attended', sql.Bit, attended ? 1 : 0);
@@ -1755,12 +1771,12 @@ const server = http.createServer(async (req, res) => {
       request.input('duration', sql.Int, Number(duration_days) || 3);
       request.input('companions', sql.Int, Number(number_of_companions) || 2);
       request.input('price', sql.Decimal(10, 2), quoted_price ? Number(quoted_price) : null);
-      request.input('plan', sql.Text, admin_itinerary_plan ? String(admin_itinerary_plan) : null);
+      request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan) : null);
       request.input('guide_lic', sql.VarChar(50), guide_license_number ? String(guide_license_number) : null);
       request.input('tourist_id', sql.VarChar(50), tourist_id ? String(tourist_id) : null);
       request.input('cust_name', sql.VarChar(100), customer_name ? String(customer_name) : null);
       request.input('cust_phone', sql.VarChar(20), customer_phone ? String(customer_phone) : null);
-      request.input('reqs', sql.Text, customer_requirements ? String(customer_requirements) : null);
+      request.input('reqs', sql.NVarChar(sql.MAX), customer_requirements ? String(customer_requirements) : null);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM private_trips WHERE private_trip_id = @id)

@@ -35,6 +35,10 @@ type Restaurant = {
   photos: string[];
   signatureDishes: string[];
   features: string[];
+  description?: string;
+  discountPct?: number;
+  partnership_status?: string;
+  whatsapp?: string;
 };
 
 function getRestaurants(lang: "ar" | "en"): Restaurant[] {
@@ -1272,6 +1276,10 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     priceRange: isAr ? "حسب الطلب" : "On Demand",
     hours: r.working_hours || (isAr ? "10:00 ص – 11:00 م" : "10:00 AM – 11:00 PM"),
     specialty: r.description || (isAr ? "تشكيلة فاخرة من المأكولات والمشاريب الطازجة" : "Fresh Food & Drinks"),
+    description: r.description || "",
+    discountPct: typeof r.discount_percentage === "number" ? r.discount_percentage : 20,
+    whatsapp: r.whatsapp || r.phone || "0910000000",
+    partnership_status: r.partnership_status || "شريك معتمد",
     photos: photos,
     signatureDishes: [
       isAr ? "الأطباق الرئيسية والوجبة الخاصة" : "Main House Specialties",
@@ -1280,7 +1288,7 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     features: [
       isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
       isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
-      isAr ? "خصم 20% لرواد دلّني" : "20% Dallani Perk",
+      isAr ? `خصم ${r.discount_percentage || 20}% لرواد دلّني` : `${r.discount_percentage || 20}% Dallani Perk`,
     ],
   };
 }
@@ -1789,5 +1797,3 @@ function RestaurantsPage() {
     </div>
   );
 }
-
-export default RestaurantsPage;

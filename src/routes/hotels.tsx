@@ -1926,5 +1926,3 @@ function HotelsPage() {
     </div>
   );
 }
-
-export default HotelsPage;
