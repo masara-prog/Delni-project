@@ -80,11 +80,17 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
         <div className="px-6 sm:px-8 -mt-14 sm:-mt-16 shrink-0">
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div className="relative">
-              <img
-                src={guide.avatar || defaultAvatar}
-                alt={guide.name}
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-white shadow-xl bg-white"
-              />
+              {guide.avatar ? (
+                <img
+                  src={guide.avatar}
+                  alt={guide.name}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-white shadow-xl bg-white"
+                />
+              ) : (
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-100 border-4 border-white shadow-xl flex flex-col items-center justify-center text-slate-500">
+                  <span className="text-3xl sm:text-4xl">👤</span>
+                </div>
+              )}
               <span className="absolute bottom-1 left-1 w-6 h-6 rounded-full bg-[#1B5A78] text-white grid place-items-center text-xs font-black border-2 border-white shadow-xs" title="معتمد">
                 ✓
               </span>

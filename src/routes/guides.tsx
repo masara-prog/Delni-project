@@ -75,7 +75,7 @@ function GuidesPage() {
             licenseNumber: g.license_number || `LIC-${idx}`,
             name: g.full_name || "مرشد سياحي معتمد",
             gender: g.gender === "female" ? "female" : "male",
-            avatar: g.avatar || (g.gender === "female" ? "/assets/guide-souad.jpg" : "/assets/guide-mohammed.jpg"),
+            avatar: g.avatar || "",
             title: g.title || (g.gender === "female" ? "مرشدة سياحية معتمدة" : "مرشد سياحي معتمد"),
             experienceYears: Number(g.years_of_experience) || 0,
             rating: 5.0,
@@ -452,13 +452,20 @@ function GuidesPage() {
                     viewMode === "grid" ? "w-full" : "w-72 sm:w-[285px] shrink-0 snap-start"
                   } bg-white rounded-[24px] shadow-card hover:shadow-2xl hover:-translate-y-1.5 border border-[#E8E2D6] transition-all duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
                 >
-                  {/* Top Image Section with DISTINCT Photo */}
-                  <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-stone-100">
-                    <img
-                      src={guide.avatar}
-                      alt={guide.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  {/* Top Image Section with Guide Photo */}
+                  <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100 flex items-center justify-center">
+                    {guide.avatar ? (
+                      <img
+                        src={guide.avatar}
+                        alt={guide.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#1B5A78]/10 via-slate-100 to-[#1B5A78]/20 flex flex-col items-center justify-center text-slate-400 group-hover:scale-105 transition-transform duration-300">
+                        <span className="text-5xl">👤</span>
+                        <span className="text-xs font-black text-slate-500 mt-2">مرشد سياحي مسجل</span>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
                     {/* Floating Heart Favorite Button */}
