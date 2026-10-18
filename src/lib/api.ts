@@ -635,18 +635,55 @@ export async function apiLogin(params: {
     return { status: "error", message: "يرجى كتابة البريد الإلكتروني وكلمة المرور" };
   }
 
-  // 1. Try Live Microsoft SQL Server Bridge Authentication first
+  // 1. Try Live Laravel API first
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ role, login: cleanLogin, password: rawPassword }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.status === "success" && data.token) {
+      const userObj = { ...data.user, role: data.role || role };
+      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
+      localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
+      window.dispatchEvent(new Event("storage"));
+      return {
+        status: "success",
+        message: data.message || "تم تسجيل الدخول بنجاح",
+        user: userObj,
+        role: userObj.role,
+        token: data.token,
+      };
+    } else if (data?.message) {
+      return {
+        status: "error",
+        message: data.message,
+      };
+    }
+  } catch (err) {
+    console.error("Laravel login error:", err);
+  }
+
+  // 2. Try Live Microsoft SQL Server Bridge Authentication
   try {
     const dbRes = await fetch("http://127.0.0.1:5001/api/db/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, login: cleanLogin, password: rawPassword }),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(3000),
     });
 
     if (dbRes.ok) {
       const dbData = await dbRes.json();
       if (dbData.success && dbData.user) {
+        if (role === "guide" && dbData.user.verification_status !== "موثق") {
+          return {
+            status: "error",
+            message: "طلب انضمامك كمرشد سياحي ما زال قيد المراجعة والتدقيق من قبل الإدارة. يرجى الانتظار حتى يتم اعتماد حسابك.",
+          };
+        }
         const userObj = { ...dbData.user, role: dbData.role || role };
         localStorage.setItem(STORAGE_KEYS.TOKEN, `token-${Date.now()}`);
         localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
@@ -746,6 +783,12 @@ export async function apiLogin(params: {
     );
     if (!found) {
       return { status: "error", message: "حساب المرشد السياحي غير متوفر في المنصة. يرجى التقدم بطلب انضمام أولاً." };
+    }
+    if (found.verification_status !== "موثق") {
+      return {
+        status: "error",
+        message: "طلب انضمامك كمرشد سياحي ما زال قيد المراجعة والتدقيق من قبل الإدارة. يرجى الانتظار حتى يتم اعتماد حسابك.",
+      };
     }
     if (found.password && found.password !== rawPassword && found.password !== "••••••••") {
       return { status: "error", message: "كلمة المرور غير صحيحة" };
@@ -976,7 +1019,7 @@ export async function apiRegisterGuide(params: {
     license_number: params.license_number,
     full_name: params.full_name,
     title: params.title || "مرشد سياحي معتمد",
-    avatar: params.avatar || (params.gender === "female" ? "/assets/avatars/guide-f1.jpg" : "/assets/avatars/guide-m1.jpg"),
+    avatar: params.avatar || "",
     phone_number: params.phone_number,
     years_of_experience: params.years_of_experience || 2,
     certificate: params.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
@@ -1024,6 +1067,7 @@ export async function apiRegisterGuide(params: {
         price_per_day: params.price_per_day || 150,
         bio: params.bio || "",
         title: params.title || "مرشد سياحي معتمد",
+        avatar: params.avatar || null,
         certificate: params.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
         certificate_name: params.certificate_name,
         digital_certificate_file: params.digital_certificate_file,
@@ -1056,18 +1100,15 @@ export async function apiRegisterGuide(params: {
     years_of_experience: params.years_of_experience,
     price_per_day: params.price_per_day,
     bio: params.bio,
+    avatar: params.avatar,
     digital_certificate_file: params.digital_certificate_file,
+    verification_status: "بانتظار التوثيق",
   });
-
-  localStorage.setItem(STORAGE_KEYS.TOKEN, `guide-token-${Date.now()}`);
-  localStorage.setItem(STORAGE_KEYS.ROLE, "guide");
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(newGuide));
 
   return {
     status: "success",
     message: "تم إرسال طلب انضمام المرشد بنجاح وهو الآن قيد مراجعة وتدقيق الإدارة",
     user: newGuide,
-    token: "guide_token",
   };
 }
 

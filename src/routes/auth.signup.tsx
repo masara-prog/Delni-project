@@ -276,20 +276,26 @@ function SignupPage() {
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-black text-[#0F172A]">تم إرسال طلب تسجيل المرشد بنجاح! 📋</h1>
+              <h1 className="text-2xl font-black text-[#0F172A]">تم إرسال طلب انضمامك كمرشد سياحي! 📋</h1>
               <p className="mt-2 text-sm text-[#5A6A85] leading-relaxed font-medium">
-                تم استلام بياناتك ورخصة الإرشاد بنجاح. طلبك الآن <b>قيد المراجعة والتدقيق</b> من قبل إدارة منصة دَلِّني للتحقق من الرخصة والاعتماد، ويمكنك الانتقال إلى لوحة حسابك لمتابعة الحالة.
+                شكراً لتسجيلك في منصة دَلِّني. تم استلام بياناتك وصورتك ورخصة الإرشاد بنجاح. طلبك الآن <b>قيد المراجعة والتدقيق</b> من قبل إدارة المنصة للتحقق من الرخصة والاعتماد، ولا يمكنك تسجيل الدخول حتى تتم الموافقة على حسابك وتوثيقه.
               </p>
               <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-                <span>حالة الحساب: قيد المراجعة والتدقيق من قبل الإدارة</span>
+                <span>حالة الحساب: قيد المراجعة — سيتم تفعيل الدخول فور اعتمادك من الإدارة</span>
               </div>
-              <div className="mt-6">
+              <div className="mt-6 flex flex-col gap-2">
                 <Link
-                  to="/dashboard/guide"
+                  to="/auth/login"
                   className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-base shadow-soft transition cursor-pointer"
                 >
-                  موافق (OK)
+                  العودة لتسجيل الدخول 🔑
+                </Link>
+                <Link
+                  to="/"
+                  className="w-full h-10 inline-flex items-center justify-center rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                >
+                  الرئيسية 🏠
                 </Link>
               </div>
             </>
