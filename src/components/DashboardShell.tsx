@@ -268,12 +268,14 @@ export function StatCard({
   hint,
   icon,
   tone = "sea",
+  onClick,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   icon: string;
   tone?: "sea" | "sun" | "clay" | "green";
+  onClick?: () => void;
 }) {
   const tones: Record<string, string> = {
     sea: "bg-gradient-sea text-white",
@@ -282,14 +284,21 @@ export function StatCard({
     green: "bg-emerald-500 text-white",
   };
   return (
-    <div className="p-5 rounded-2xl bg-white border border-border shadow-soft hover:shadow-card transition-shadow">
+    <div
+      onClick={onClick}
+      className={`p-5 rounded-2xl bg-white border border-border shadow-soft transition-all duration-200 ${
+        onClick
+          ? "cursor-pointer hover:shadow-card hover:-translate-y-0.5 hover:border-primary/40 active:translate-y-0 select-none group"
+          : "hover:shadow-card"
+      }`}
+    >
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs font-bold text-muted-foreground">{label}</div>
-          <div className="text-2xl md:text-3xl font-black text-foreground mt-1">{value}</div>
+          <div className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">{label}</div>
+          <div className="text-2xl md:text-3xl font-black text-foreground mt-1 group-hover:text-primary transition-colors">{value}</div>
           {hint && <div className="text-[11px] text-muted-foreground mt-1">{hint}</div>}
         </div>
-        <div className={`w-11 h-11 rounded-xl grid place-items-center text-xl ${tones[tone]} shadow-soft`}>{icon}</div>
+        <div className={`w-11 h-11 rounded-xl grid place-items-center text-xl ${tones[tone]} shadow-soft transition-transform group-hover:scale-110`}>{icon}</div>
       </div>
     </div>
   );
