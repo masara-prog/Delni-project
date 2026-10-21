@@ -245,16 +245,6 @@ function LoginPage() {
             })}
           </div>
 
-          {/* Admin Info Notice */}
-          {role === "admin" && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
-              <div className="flex items-center gap-1.5 font-black text-amber-950 mb-1">
-                <span>👑</span>
-                <span>بيانات دخول مدير النظام (الأدمن):</span>
-              </div>
-              <div>• البريد: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin@dalni.ly</code> | كلمة المرور: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 dir-ltr inline-block">admin123</code></div>
-            </div>
-          )}
 
           {/* Transport Info Notice */}
           {role === "transport" && (

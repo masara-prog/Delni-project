@@ -375,19 +375,19 @@ function GuideDashboard() {
       onNavigate={setActive}
     >
       {/* Calm, Eye-Friendly Executive Welcome Banner */}
-      <div className="rounded-2xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-xs mb-6 relative overflow-hidden text-right">
-        <div className="absolute top-0 left-0 w-80 h-80 bg-[#1B5A78]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-sm mb-6 relative overflow-hidden text-right">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#D96B27]/15 to-[#1B5A78]/20 rounded-full blur-3xl pointer-events-none" />
         <div className="relative flex flex-wrap items-center gap-4 justify-between">
           <div>
             <div className="text-xs text-stone-400 font-medium">مرحباً بك 👋</div>
-            <h1 className="text-xl md:text-2xl font-bold mt-1 text-white tracking-tight">{guideInfo.full_name}</h1>
+            <h1 className="text-xl md:text-2xl font-black mt-1 text-white tracking-tight">{guideInfo.full_name}</h1>
             <p className="mt-1 text-xs text-stone-300 font-medium">
               ترخيص المزاولة:{" "}
-              <span className="font-mono text-amber-300 font-bold">{guideInfo.license_number || "قيد المراجعة"}</span> · إجمالي
-              الجولات المنفذة: <span className="text-amber-300 font-bold">{guideInfo.total_tours_completed || 0}</span> رحلة
+              <span className="font-mono text-[#D96B27] font-bold">{guideInfo.license_number || "قيد المراجعة"}</span> · إجمالي
+              الجولات المنفذة: <span className="text-[#D96B27] font-bold">{guideInfo.total_tours_completed || 0}</span> رحلة
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
-              <span className="text-[11px] bg-white/10 text-stone-200 px-2.5 py-0.5 rounded-md font-medium border border-white/10">
+              <span className="text-[11px] bg-white/10 text-stone-200 px-2.5 py-0.5 rounded-lg font-medium border border-white/10">
                 🗣️{" "}
                 {[
                   guideInfo.speaks_english && "الإنجليزية",
@@ -398,7 +398,7 @@ function GuideDashboard() {
                   .join("، ") || "العربية فقط"}
               </span>
               {guideInfo.primaryRegion && (
-                <span className="text-[11px] bg-white/10 text-stone-200 px-2.5 py-0.5 rounded-md font-medium border border-white/10">
+                <span className="text-[11px] bg-white/10 text-stone-200 px-2.5 py-0.5 rounded-lg font-medium border border-white/10">
                   📍 {guideInfo.primaryRegion}
                 </span>
               )}
@@ -413,11 +413,13 @@ function GuideDashboard() {
 
       {/* Verification Status Banner if pending */}
       {!isVerified && (
-        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-right flex items-start gap-3 text-amber-950 animate-in fade-in">
-          <span className="text-2xl shrink-0 mt-0.5">⏳</span>
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-orange-50/90 via-amber-50/70 to-orange-50/90 border border-orange-200/80 text-right flex items-start gap-3.5 text-stone-900 shadow-xs animate-in fade-in">
+          <div className="w-9 h-9 rounded-xl bg-[#D96B27]/15 text-[#D96B27] grid place-items-center text-lg shrink-0 mt-0.5 shadow-2xs">
+            ⏳
+          </div>
           <div>
-            <h3 className="font-bold text-sm text-amber-900">حسابك قيد المراجعة والتدقيق من قبل إدارة المنصة</h3>
-            <p className="text-xs text-amber-800 mt-1 leading-relaxed font-medium">
+            <h3 className="font-black text-sm text-[#0F172A]">حسابك قيد المراجعة والتدقيق من قبل إدارة المنصة</h3>
+            <p className="text-xs text-stone-600 mt-1 leading-relaxed font-medium">
               تم استلام وثائقك وبيانات ترخيص الإرشاد بنجاح. يقوم فريق إدارة دَلِّني حالياً بمراجعة رخصة الإرشاد السياحي واعتماد حسابك. فور الاعتماد سيصبح ملفك نشطاً في قائمة المرشدين العامة وستتمكن من استلام وإدارة الرحلات السياحية.
             </p>
           </div>
