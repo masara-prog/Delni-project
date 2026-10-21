@@ -183,10 +183,12 @@ type WeeklyTrip = {
   departure_city?: string; 
   destination?: string; 
   hotel_id?: string; 
+  hotel_ids?: string[];
   gallery?: string;
   images?: string[];
   vehicle_plate?: string | null;
   restaurant_id?: string | null;
+  restaurant_ids?: string[];
   itinerary_steps?: any;
 };
 
