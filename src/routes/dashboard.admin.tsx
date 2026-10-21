@@ -209,8 +209,8 @@ type PrivateTripRequest = {
   status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
 };
 
-type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
-type Restaurant = { id: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
+type Hotel = { id: string; hotel_id?: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
+type Restaurant = { id: string; facility_id?: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
 type Attraction = { 
   id: string; 
   place_id?: string;
@@ -230,7 +230,7 @@ type Attraction = {
 type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
-type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر"; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
+type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر" | string; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
 
 type DailyOffer = OfferDailyTrip & {
   id?: string;
@@ -5237,7 +5237,7 @@ function WeeklyTripEditModal({
             end_date: endDate,
             guide_license_number: guide,
             guide_license: guide,
-            hotel_id: selectedHotelIds[0] || null,
+            hotel_id: selectedHotelIds[0] || undefined,
             hotel_ids: selectedHotelIds,
             vehicle_plate: selectedPlate || null,
             vehicle_plates: selectedPlate ? [selectedPlate] : [],
@@ -7183,6 +7183,8 @@ function Field({
   onKeyDown,
   placeholder,
   required,
+  min,
+  max,
 }: {
   label: string;
   type?: string;
@@ -7191,6 +7193,8 @@ function Field({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
+  min?: string | number;
+  max?: string | number;
 }) {
   return (
     <div>
@@ -7202,6 +7206,8 @@ function Field({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
+        min={min}
+        max={max}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
       />
     </div>
