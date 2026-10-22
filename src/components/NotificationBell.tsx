@@ -114,20 +114,18 @@ export function NotificationBell() {
       {/* Notifications Dropdown Drawer */}
       {isOpen && (
         <div
-          className={`absolute ${
-            isAr ? "left-0 sm:left-auto sm:right-0" : "right-0 sm:right-auto sm:left-0"
-          } mt-2 w-80 sm:w-96 max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[120] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}
+          className="absolute left-0 mt-2 w-80 sm:w-[390px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[120] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
           dir={isAr ? "rtl" : "ltr"}
         >
           {/* Header */}
-          <div className="p-4 bg-gradient-to-r from-slate-900 to-[#1B5A78] text-white flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">🔔</span>
-              <div>
-                <h4 className="font-black text-xs sm:text-sm text-white">
+          <div className="p-3.5 bg-gradient-to-r from-slate-900 to-[#1B5A78] text-white flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base shrink-0">🔔</span>
+              <div className="min-w-0">
+                <h4 className="font-black text-xs sm:text-sm text-white truncate">
                   {isAr ? "التنبيهات والإشعارات الحية" : "Live Notifications"}
                 </h4>
-                <p className="text-[10px] text-teal-200/80 font-medium">
+                <p className="text-[10px] text-teal-200/90 font-medium truncate">
                   {isAr ? "متابعة الحجوزات، التأكيدات، والرسائل" : "Bookings, confirmations & alerts"}
                 </p>
               </div>
@@ -137,11 +135,11 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={handleMarkAll}
-                className="text-[10px] font-black bg-white/15 hover:bg-white/25 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                className="text-[10px] font-black bg-white/20 hover:bg-white/30 text-white px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
                 title={isAr ? "تحديد كافة الإشعارات كمقروءة" : "Mark all as read"}
               >
                 <Check className="w-3 h-3" />
-                <span>{isAr ? "تحديد الكل كمقروء" : "Mark read"}</span>
+                <span className="whitespace-nowrap">{isAr ? "تحديد الكل كمقروء" : "Mark read"}</span>
               </button>
             )}
           </div>
@@ -168,16 +166,16 @@ export function NotificationBell() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <h5 className={`text-xs font-bold truncate ${!item.read ? "text-[#0F172A] font-black" : "text-slate-700"}`}>
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <h5 className={`text-xs font-bold leading-tight ${!item.read ? "text-[#0F172A] font-black" : "text-slate-700"}`}>
                         {item.title}
                       </h5>
-                      <span className="text-[9px] text-slate-400 font-mono shrink-0">
+                      <span className="text-[10px] text-slate-500 font-semibold shrink-0 whitespace-nowrap">
                         {item.time}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {item.body}
                     </p>
 

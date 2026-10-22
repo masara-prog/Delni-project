@@ -46,7 +46,7 @@ const landmarkSamples = [
 ];
 
 import { useLanguage } from "@/lib/i18n";
-import { sendUserMessage } from "@/lib/supportChat";
+import { getOrCreateUserSession, sendUserMessage, type ChatSession } from "@/lib/supportChat";
 
 const now = () => new Date().toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" });
 
@@ -55,6 +55,70 @@ export function FloatingChat() {
   const { t, language, dir } = useLanguage();
   const [open, setOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+
+  // User session resolution for live support synchronization with Admin Dashboard
+  const getSessionInfo = () => {
+    try {
+      if (typeof window !== "undefined") {
+        const u = localStorage.getItem("dalni_user");
+        if (u) {
+          const parsed = JSON.parse(u);
+          const name = parsed.full_name || parsed.name || "مستخدم دلّني";
+          const role = parsed.role === "guide" ? "مرشد سياحي" : parsed.role === "company" ? "شركة نقل" : parsed.role === "driver" ? "سائق" : "سائح";
+          const id = `session-${parsed.role || 'tourist'}-${name.replace(/\s+/g, '_')}`;
+          return { name, role, id };
+        }
+      }
+    } catch {}
+    return { name: "زائر شات دلني", role: "سائح", id: "session-visitor-chat" };
+  };
+
+  const [supportSession, setSupportSession] = useState<ChatSession | null>(null);
+  const [supportInput, setSupportInput] = useState("");
+
+  // Sync with live support chat system
+  useEffect(() => {
+    if (!supportOpen) return;
+    const { name, role, id } = getSessionInfo();
+    const cur = getOrCreateUserSession(id, name, role);
+    setSupportSession(cur);
+
+    const handleSync = (e: any) => {
+      const all: ChatSession[] = e?.detail || [];
+      const updated = all.find((s) => s.id === id || s.user_name === name);
+      if (updated) setSupportSession(updated);
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "dalni_chat_sessions" && e.newValue) {
+        try {
+          const all: ChatSession[] = JSON.parse(e.newValue);
+          const updated = all.find((s) => s.id === id || s.user_name === name);
+          if (updated) setSupportSession(updated);
+        } catch {}
+      }
+    };
+
+    window.addEventListener("dalni_chat_sync", handleSync);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("dalni_chat_sync", handleSync);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [supportOpen]);
+
+  const handleSupportSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    const txt = supportInput.trim();
+    if (!txt) return;
+
+    const { name, role, id } = getSessionInfo();
+    const updated = sendUserMessage(id, name, role, txt);
+    setSupportSession({ ...updated });
+    setSupportInput("");
+  };
+
   const [messages, setMessages] = useState<Msg[]>([
     { 
       id: 1, 
@@ -65,47 +129,6 @@ export function FloatingChat() {
         : "Welcome to Libya Journeys Pro Smart AI 🤖👋\nI am your travel assistant: Feel free to ask about any trip, hotel, attraction, or upload a photo to identify landmarks!" 
     },
   ]);
-  const [supportMessages, setSupportMessages] = useState<Msg[]>([
-    {
-      id: 1,
-      from: "admin",
-      time: now(),
-      text: language === 'ar' ? "مرحباً بك في مركز دعم دلّني! كيف يمكنني مساعدتك اليوم؟ 😊" : "Welcome to Dallani Support! How can I help you today? 😊"
-    }
-  ]);
-  const [supportInput, setSupportInput] = useState("");
-  const [supportTyping, setSupportTyping] = useState(false);
-
-  const handleSupportSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    const txt = supportInput.trim();
-    if (!txt) return;
-
-    const userMsg: Msg = { id: Date.now(), from: "user", text: txt, time: now() };
-    setSupportMessages((prev) => [...prev, userMsg]);
-    setSupportInput("");
-    setSupportTyping(true);
-
-    // Save to shared live chat sessions for Admin Dashboard
-    try {
-      sendUserMessage("floating-chat-visitor", "زائر شات دلني", "سائح", txt);
-    } catch {}
-
-    setTimeout(() => {
-      setSupportTyping(false);
-      setSupportMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          from: "admin",
-          text: language === 'ar' 
-            ? "شكراً لتواصلك! تم استلام رسالتك وتمريرها لمسؤول الدعم والإدارة فوراً ⏳" 
-            : "Thank you! Your message has been received and forwarded to our support team ⏳",
-          time: now()
-        }
-      ]);
-    }, 1000);
-  };
 
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -120,9 +143,12 @@ export function FloatingChat() {
 
   useEffect(() => {
     supportScrollRef.current?.scrollTo({ top: supportScrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [supportMessages, supportTyping, supportOpen]);
+  }, [supportSession?.messages, supportOpen]);
 
-  if (path.startsWith("/support")) return null;
+  // Hide in /dashboard/admin and /support completely
+  if (path.startsWith("/support") || path.startsWith("/dashboard/admin") || path.includes("/dashboard/admin")) {
+    return null;
+  }
 
   const handleSend = (text: string) => {
     const t = text.trim();
@@ -281,28 +307,23 @@ export function FloatingChat() {
           </div>
           
           <div ref={supportScrollRef} className="flex-1 p-4 bg-[#FAFAF8] overflow-y-auto space-y-3">
-            {supportMessages.map((m) => (
-              <div key={m.id} className={`flex ${m.from === "user" ? "justify-start" : "justify-end"}`}>
+            {(supportSession?.messages || []).map((m, idx) => (
+              <div key={m.id || idx} className={`flex ${m.from === "user" ? "justify-start" : "justify-end"}`}>
                 <div className={`max-w-[85%] p-3 text-xs md:text-sm rounded-2xl shadow-xs ${
                   m.from === "user"
                     ? "bg-[#003580] text-white font-bold rounded-bl-none"
                     : "bg-white border border-[#E6E1D6] text-[#0B132B] rounded-br-none font-semibold"
                 }`}>
-                  <div>{m.text}</div>
-                  <div className={`text-[9px] mt-1.5 ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[10px] font-black opacity-80">
+                      {m.from === "user" ? "أنت" : "فريق الإدارة والدعم 👑"}
+                    </span>
+                    <span className={`text-[9px] ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</span>
+                  </div>
+                  <div className="leading-relaxed whitespace-pre-wrap">{m.text}</div>
                 </div>
               </div>
             ))}
-
-            {supportTyping && (
-              <div className="flex justify-end">
-                <div className="bg-white border border-[#E6E1D6] p-2.5 rounded-2xl text-stone-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" style={{ animationDelay: "0.15s" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" style={{ animationDelay: "0.3s" }} />
-                </div>
-              </div>
-            )}
           </div>
 
           <form onSubmit={handleSupportSend} className="p-3 bg-white border-t border-[#E6E1D6] flex gap-2">

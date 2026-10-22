@@ -31,7 +31,7 @@ import {
   deleteFromSecureBackend
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
-import { getChatSessions, sendAdminReply } from "@/lib/supportChat";
+import { getChatSessions, saveChatSessions, sendAdminReply } from "@/lib/supportChat";
 import { notifyTicketVerified } from "@/lib/notifications";
 import type {
   TransportationCompany,
@@ -1610,7 +1610,7 @@ function AdminDashboard() {
     { id: "entities", label: isAr ? "المرافق والوجهات" : "Entities & Stays", icon: "🏛️" },
     { id: "reviews", label: isAr ? "التقييمات والمراجعات" : "Reviews & Ratings", icon: "⭐" },
     { id: "analytics", label: isAr ? "إحصائيات الأكثر حجزاً وتقييماً" : "Analytics & Stats", icon: "📈" },
-    { id: "inquiries_chat", label: isAr ? "الاستفسارات والشات بوت" : "Inquiries & AI Chat", icon: "💬", badge: 2 },
+    { id: "inquiries_chat", label: isAr ? "الاستفسارات والشات بوت" : "Inquiries & AI Chat", icon: "💬", badge: chatSessions.filter(s => s.unread).length || undefined },
   ];
 
   /* ============ RENDER ============ */
@@ -3141,23 +3141,61 @@ function AdminDashboard() {
         <div className="grid lg:grid-cols-5 gap-6 text-right">
           {/* Left panel */}
           <div className="lg:col-span-2 space-y-4">
-            <SectionCard title="محادثات الشات بوت 🤖">
-              <div className="space-y-2">
+            <SectionCard
+              title={
+                <div className="flex items-center justify-between w-full">
+                  <span>محادثات الشات بوت 🤖</span>
+                  {chatSessions.filter(s => s.unread).length > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-red-500 text-white text-[11px] font-black shadow-xs animate-pulse">
+                      {chatSessions.filter(s => s.unread).length} غير مقروءة
+                    </span>
+                  )}
+                </div>
+              }
+            >
+              <div className="space-y-2.5">
                 {chatSessions.map(s => (
                   <button
                     key={s.id}
-                    onClick={() => { setActiveChatId(s.id); setChatSessions(prev => prev.map(x => x.id === s.id ? { ...x, unread: false } : x)); }}
-                    className={`w-full text-right p-3 rounded-xl border transition-all ${activeChatId === s.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"}`}
+                    onClick={() => {
+                      setActiveChatId(s.id);
+                      const updated = chatSessions.map(x => x.id === s.id ? { ...x, unread: false } : x);
+                      setChatSessions(updated);
+                      saveChatSessions(updated);
+                    }}
+                    className={`w-full text-right p-3.5 rounded-xl border transition-all cursor-pointer ${
+                      activeChatId === s.id
+                        ? "border-primary bg-primary/10 shadow-xs"
+                        : s.unread
+                        ? "border-red-300 bg-red-50/40 border-r-4 border-r-red-500 hover:bg-red-50/60"
+                        : "border-border hover:bg-muted/30"
+                    }`}
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="font-black text-foreground text-xs">{s.user_name}</span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-xs ${s.unread ? "font-black text-[#0F172A]" : "font-bold text-foreground"}`}>
+                        {s.user_name}
+                      </span>
                       <div className="flex items-center gap-1.5">
-                        {s.unread && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
-                        <span className="text-[10px] text-muted-foreground">{s.time}</span>
+                        {s.unread && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-xs animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                            <span>جديد</span>
+                          </span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground font-semibold">{s.time}</span>
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 truncate">{s.last_message}</div>
-                    <Badge tone={s.user_type === "سائح" ? "sea" : "sun"}>{s.user_type}</Badge>
+                    <div className={`text-xs mt-0.5 truncate ${s.unread ? "font-black text-slate-900" : "text-muted-foreground"}`}>
+                      {s.last_message}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <Badge tone={s.user_type === "سائح" ? "sea" : "sun"}>{s.user_type}</Badge>
+                      {s.unread && (
+                        <span className="text-[10px] font-black text-red-600 bg-red-100/60 px-2 py-0.5 rounded-md">
+                          بانتظار رد الإدارة ⏳
+                        </span>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
