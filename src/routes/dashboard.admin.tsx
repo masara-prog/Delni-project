@@ -247,7 +247,7 @@ type Attraction = {
 type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
-type ChatSession = { id: string; user_name: string; user_type: string; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
+type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر" | string; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
 
 type DailyOffer = OfferDailyTrip & {
   id?: string;
@@ -6386,7 +6386,7 @@ function WeeklyTripEditModal({
             end_date: endDate,
             guide_license_number: guide,
             guide_license: guide,
-            hotel_id: selectedHotelIds[0] || null,
+            hotel_id: selectedHotelIds[0] || undefined,
             hotel_ids: selectedHotelIds,
             vehicle_plate: selectedPlate || null,
             vehicle_plates: selectedPlate ? [selectedPlate] : [],

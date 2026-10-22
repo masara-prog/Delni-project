@@ -10,7 +10,7 @@ import destAcacus from "@/assets/dest-acacus.jpg";
 import destTripoli from "@/assets/dest-tripoli.jpg";
 import { BackHome } from "@/components/BackHome";
 import { useLanguage } from "@/lib/i18n";
-import { MapPin, Award, FileText, Check, Camera, DollarSign, X, Trash2, Plus } from "lucide-react";
+import { MapPin, Award, FileText, Check, Camera, DollarSign, X, Trash2, Plus, User, Phone, Mail, Lock, Shield, Sparkles, UploadCloud, ChevronLeft, ChevronRight, Compass } from "lucide-react";
 import { apiRegisterTourist, apiRegisterGuide } from "@/lib/api";
 
 export const Route = createFileRoute("/auth/signup")({
@@ -262,40 +262,40 @@ function SignupPage() {
           {submitted === "tourist" ? (
             <>
               <h1 className="mt-2 text-2xl font-black text-[#0F172A]">تم إنشاء حسابك بنجاح! 🎉</h1>
-              <p className="mt-2 text-sm text-[#5A6A85] leading-relaxed font-medium">
+              <p className="mt-2 text-sm text-[#64748B] leading-relaxed font-medium">
                 أهلاً بك في منصة دَلِّني. تم تسجيل حسابك بنجاح! يمكنك الآن استكشاف وحجز كافة الرحلات والمعالم السياحية.
               </p>
               <div className="mt-6">
                 <Link
                   to="/trips"
-                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black shadow-soft transition text-base cursor-pointer"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black shadow-lg hover:shadow-xl transition-all text-base cursor-pointer"
                 >
-                  موافق (OK)
+                  استكشف الرحلات السياحية الآن 🧭
                 </Link>
               </div>
             </>
           ) : (
             <>
               <h1 className="text-2xl font-black text-[#0F172A]">تم إرسال طلب انضمامك كمرشد سياحي! 📋</h1>
-              <p className="mt-2 text-sm text-[#5A6A85] leading-relaxed font-medium">
+              <p className="mt-2 text-sm text-[#64748B] leading-relaxed font-medium">
                 شكراً لتسجيلك في منصة دَلِّني. تم استلام بياناتك وصورتك ورخصة الإرشاد بنجاح. طلبك الآن <b>قيد المراجعة والتدقيق</b> من قبل إدارة المنصة للتحقق من الرخصة والاعتماد، ولا يمكنك تسجيل الدخول حتى تتم الموافقة على حسابك وتوثيقه.
               </p>
-              <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <div className="mt-4 p-3.5 rounded-2xl bg-[#D96B27]/10 border border-[#D96B27]/30 text-xs font-bold text-[#D96B27] flex items-center justify-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D96B27] animate-pulse" />
                 <span>حالة الحساب: قيد المراجعة — سيتم تفعيل الدخول فور اعتمادك من الإدارة</span>
               </div>
               <div className="mt-6 flex flex-col gap-2">
                 <Link
                   to="/auth/login"
-                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-base shadow-soft transition cursor-pointer"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-base shadow-lg hover:shadow-xl transition-all cursor-pointer"
                 >
-                  العودة لتسجيل الدخول 🔑
+                  الانتقال لتسجيل الدخول 🔑
                 </Link>
                 <Link
                   to="/"
                   className="w-full h-10 inline-flex items-center justify-center rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
                 >
-                  الرئيسية 🏠
+                  العودة للرئيسية 🏠
                 </Link>
               </div>
             </>
@@ -397,51 +397,94 @@ function SignupPage() {
               <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#1B5A78] hover:scale-105 transition-all text-[#1B5A78]" />
             </div>
 
-            <div className="mb-5 text-right">
+            <div className="mb-4 text-right">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#D96B27]/15 to-[#1B5A78]/15 text-[#D96B27] text-xs font-black border border-[#D96B27]/30 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-[#D96B27]" />
+                <span>منصة دَلِّني — السياحة الليبية بأبهى صورها</span>
+              </div>
               <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] flex items-center justify-start gap-2 tracking-tight">
                 <span>إنشاء حساب جديد</span>
                 <span className="text-xl sm:text-2xl">✨</span>
               </h1>
-              <p className="text-[#718096] text-xs sm:text-sm font-semibold mt-1 text-right">
-                اختر نوع الحساب وأكمل بياناتك للبدء.
+              <p className="text-[#64748B] text-xs sm:text-sm font-semibold mt-1 text-right">
+                اختر نوع الحساب واملأ بياناتك بسهولة لبدء تجربتك السياحية الرائعة.
               </p>
             </div>
 
-          {/* Account Role Selector - Compact */}
-          <div className="grid grid-cols-2 gap-2.5 mb-4">
-            {roles.map((r) => {
-              const isSelected = role === r.id;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setRole(r.id)}
-                  className={`p-2.5 sm:p-3 rounded-2xl bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-2 ${
-                    isSelected
-                      ? "border-2 border-[#1B5A78] shadow-sm ring-1 ring-[#1B5A78]/20 bg-[#1B5A78]/5"
-                      : "border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/40"
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="font-black text-xs sm:text-sm text-[#0F172A] truncate">
-                      {r.label}
+            {/* Interactive Top Destination Showcase Bar */}
+            <div className="mb-5 p-3 rounded-2xl bg-gradient-to-r from-[#1B5A78] via-[#13445C] to-[#0F172A] text-white shadow-md relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#D96B27]/25 rounded-full blur-2xl pointer-events-none" />
+              <div className="relative z-1 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D96B27] to-[#EA580C] grid place-items-center text-white shrink-0 shadow-sm">
+                    <Compass className="w-5 h-5 animate-spin" style={{ animationDuration: "12s" }} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                      <span>وجهة سياحية مميزة</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D96B27] animate-ping" />
                     </div>
-                    <div className="text-[10px] sm:text-xs text-[#718096] font-medium truncate mt-0.5">
-                      {r.desc}
+                    <div className="text-xs sm:text-sm font-black text-white truncate">
+                      {currentSlide.titleAr}
                     </div>
                   </div>
-                  <span className="text-xl sm:text-2xl shrink-0">{r.emoji}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {errorMsg && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 flex items-center gap-2">
-              <span>⚠️</span>
-              <span>{errorMsg}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {LANDMARK_SLIDES.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setSlideIdx(i)}
+                      className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                        i === slideIdx ? "w-6 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/80"
+                      }`}
+                      title={s.titleAr}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Account Role Selector - Modernized with Orange Hover & Active Accent */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {roles.map((r) => {
+                const isSelected = role === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRole(r.id)}
+                    className={`p-3.5 rounded-2xl text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-2.5 ${
+                      isSelected
+                        ? "bg-white border-2 border-[#D96B27] shadow-md ring-4 ring-[#D96B27]/15"
+                        : "bg-white/80 border border-[#E2E8F0] shadow-2xs hover:border-[#D96B27]/50 hover:bg-white"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-black text-xs sm:text-sm ${isSelected ? "text-[#D96B27]" : "text-[#0F172A]"}`}>
+                          {r.label}
+                        </span>
+                        {isSelected && (
+                          <span className="w-2 h-2 rounded-full bg-[#D96B27]" />
+                        )}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-[#64748B] font-medium truncate mt-0.5">
+                        {r.desc}
+                      </div>
+                    </div>
+                    <span className="text-2xl shrink-0 p-1 rounded-xl bg-[#FAF7F2] border border-[#E2E8F0]">{r.emoji}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {errorMsg && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 flex items-center gap-2 shadow-xs">
+                <span>⚠️</span>
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
           {role === "tourist" ? (
             <form className="space-y-3.5 text-right" onSubmit={async (e) => {
@@ -466,28 +509,72 @@ function SignupPage() {
                 setErrorMsg("تعذر إتمام عملية التسجيل، يرجى التأكد من تشغيل الخادم والاتصال بالشبكة.");
               }
             }}>
-              <Field label="الاسم بالكامل" value={tourist.fullName} onChange={(v) => setTourist({ ...tourist, fullName: v })} onKeyDown={handleEnterKeyNext} placeholder="محمد أحمد" required />
+              <Field
+                label="الاسم بالكامل"
+                value={tourist.fullName}
+                onChange={(v) => setTourist({ ...tourist, fullName: v })}
+                onKeyDown={handleEnterKeyNext}
+                placeholder="محمد أحمد"
+                required
+                icon={User}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="رقم الهاتف للتواصل" type="tel" value={tourist.phone} onChange={(v) => setTourist({ ...tourist, phone: v })} onKeyDown={handleEnterKeyNext} placeholder="0912345678" required />
-                <Field label="رقم جواز السفر / الرقم الوطني" value={tourist.passport} onChange={(v) => setTourist({ ...tourist, passport: v })} onKeyDown={handleEnterKeyNext} placeholder="A12345678" required />
+                <Field
+                  label="رقم الهاتف للتواصل"
+                  type="tel"
+                  value={tourist.phone}
+                  onChange={(v) => setTourist({ ...tourist, phone: v })}
+                  onKeyDown={handleEnterKeyNext}
+                  placeholder="0912345678"
+                  required
+                  icon={Phone}
+                />
+                <Field
+                  label="رقم جواز السفر / الرقم الوطني"
+                  value={tourist.passport}
+                  onChange={(v) => setTourist({ ...tourist, passport: v })}
+                  onKeyDown={handleEnterKeyNext}
+                  placeholder="A12345678"
+                  required
+                  icon={Shield}
+                />
               </div>
-              <Field label="البريد الإلكتروني" type="email" value={tourist.email} onChange={(v) => setTourist({ ...tourist, email: v })} onKeyDown={handleEnterKeyNext} placeholder="example@dalni.ly" required />
-              <Field label="كلمة المرور" type="password" value={tourist.password} onChange={(v) => setTourist({ ...tourist, password: v })} onKeyDown={handleEnterKeyNext} placeholder="٨ أحرف على الأقل" required />
+              <Field
+                label="البريد الإلكتروني"
+                type="email"
+                value={tourist.email}
+                onChange={(v) => setTourist({ ...tourist, email: v })}
+                onKeyDown={handleEnterKeyNext}
+                placeholder="example@dalni.ly"
+                required
+                icon={Mail}
+              />
+              <Field
+                label="كلمة المرور"
+                type="password"
+                value={tourist.password}
+                onChange={(v) => setTourist({ ...tourist, password: v })}
+                onKeyDown={handleEnterKeyNext}
+                placeholder="٨ أحرف على الأقل"
+                required
+                icon={Lock}
+              />
 
-              <div className="flex items-center justify-start gap-2 pt-0.5">
-                <label className="flex items-start gap-2 text-xs text-[#718096] font-semibold cursor-pointer select-none">
-                  <input type="checkbox" className="w-4 h-4 mt-0.5 rounded border-2 border-[#CBD5E0] accent-[#1B5A78] cursor-pointer" required />
+              <div className="flex items-center justify-start gap-2 pt-1">
+                <label className="flex items-start gap-2 text-xs text-[#64748B] font-semibold cursor-pointer select-none">
+                  <input type="checkbox" className="w-4 h-4 mt-0.5 rounded border-2 border-[#CBD5E0] accent-[#D96B27] cursor-pointer" required />
                   <span>
-                    أوافق على <a href="#" className="text-[#1B5A78] font-bold hover:underline">الشروط والأحكام</a> و <a href="#" className="text-[#1B5A78] font-bold hover:underline">سياسة الخصوصية</a>.
+                    أوافق على <a href="#" className="text-[#D96B27] font-bold hover:underline">الشروط والأحكام</a> و <a href="#" className="text-[#D96B27] font-bold hover:underline">سياسة الخصوصية</a> لمنصة دَلِّني.
                   </span>
                 </label>
               </div>
 
               <button
                 type="submit"
-                className="w-full h-12 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-sm sm:text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer mt-1"
+                className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer mt-2 flex items-center justify-center gap-2"
               >
-                إنشاء الحساب والتسجيل ←
+                <span>إنشاء الحساب والتسجيل الآن</span>
+                <span className="text-lg">←</span>
               </button>
             </form>
           ) : (
@@ -527,7 +614,7 @@ function SignupPage() {
               {/* STEP 1: Personal & License Information & Photo & Cost */}
               {guideStep === 1 && (
                 <form
-                  className="space-y-3 text-right animate-in fade-in duration-200"
+                  className="space-y-3.5 text-right animate-in fade-in duration-200"
                   onSubmit={(e) => {
                     e.preventDefault();
                     setErrorMsg("");
@@ -535,29 +622,40 @@ function SignupPage() {
                     setGuideStep(2);
                   }}
                 >
-                  {/* Compact Avatar Photo Upload Bar */}
-                  <div className="p-2.5 bg-white rounded-xl border border-[#E2E8F0] flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  {/* Modern Guide Avatar Upload Zone with Brand Orange Accents (No default placeholder image) */}
+                  <div className="p-3.5 bg-white rounded-2xl border border-[#E2E8F0] shadow-xs flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="relative shrink-0">
                         {guide.avatar ? (
-                          <img src={guide.avatar} alt="Guide Avatar" className="w-11 h-11 rounded-xl object-cover border-2 border-[#1B5A78] shadow-xs" />
+                          <img
+                            src={guide.avatar}
+                            alt="Guide Avatar"
+                            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#D96B27] shadow-sm"
+                          />
                         ) : (
-                          <div className="w-11 h-11 rounded-xl bg-[#1B5A78]/10 border border-[#1B5A78]/20 grid place-items-center text-lg shrink-0">
-                            👤
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FAF7F2] to-[#F1ECE1] border-2 border-dashed border-[#D96B27]/40 flex flex-col items-center justify-center text-[#D96B27] shrink-0 shadow-2xs">
+                            <Camera className="w-5 h-5 text-[#D96B27]" />
+                            <span className="text-[9px] font-bold mt-0.5 text-[#64748B]">صورة شخصية</span>
                           </div>
+                        )}
+                        {guide.avatar && (
+                          <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white grid place-items-center text-[9px] text-white font-bold">
+                            ✓
+                          </span>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-[#0F172A] flex items-center gap-1">
-                          <span>الصورة الشخصية للمرشد</span>
-                          <span className="text-red-500">*</span>
+                        <div className="text-xs sm:text-sm font-black text-[#0F172A] flex items-center gap-1.5">
+                          <span>الصورة الشخصية الرسمية</span>
+                          <span className="text-red-500 font-black">*</span>
                         </div>
-                        <p className="text-[10px] text-[#718096] truncate">
-                          {guide.avatar ? "تم اختيار الصورة الشخصية بنجاح" : "صورة رسمية تظهر في ملفك التعريفي"}
+                        <p className="text-[11px] text-[#64748B] font-medium truncate mt-0.5">
+                          {guide.avatar ? "تم رفع الصورة بنجاح وتثبيتها بملفك" : "ارفع صورتك الرسمية لتظهر في ملفك للمسافرين"}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-2 shrink-0">
                       <label className="cursor-pointer shrink-0">
                         <input
                           type="file"
@@ -575,16 +673,16 @@ function SignupPage() {
                             }
                           }}
                         />
-                        <div className="h-9 px-3 rounded-lg border border-[#1B5A78]/30 bg-[#1B5A78]/5 hover:bg-[#1B5A78]/15 text-[#1B5A78] flex items-center gap-1.5 transition font-bold text-xs">
-                          <Camera className="w-3.5 h-3.5" />
-                          <span>{guide.avatar ? "تغيير" : "رفع صورة"}</span>
+                        <div className="h-10 px-3.5 rounded-xl border border-[#D96B27]/40 bg-gradient-to-r from-[#D96B27]/10 to-[#EA580C]/10 hover:from-[#D96B27]/20 hover:to-[#EA580C]/20 text-[#D96B27] flex items-center gap-1.5 transition font-black text-xs shadow-2xs">
+                          <UploadCloud className="w-4 h-4" />
+                          <span>{guide.avatar ? "استبدال" : "اختيار صورة"}</span>
                         </div>
                       </label>
                       {guide.avatar && (
                         <button
                           type="button"
                           onClick={() => setGuide((g) => ({ ...g, avatar: "" }))}
-                          className="h-9 px-2.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          className="h-10 px-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                           title="إلغاء الصورة المختارة"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -595,7 +693,7 @@ function SignupPage() {
                   </div>
 
                   {/* 2-Column: Full Name + Professional Title */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field
                       label="الاسم بالكامل للمرشد"
                       value={guide.fullName}
@@ -603,6 +701,7 @@ function SignupPage() {
                       onKeyDown={handleEnterKeyNext}
                       placeholder="أحمد محمد"
                       required
+                      icon={User}
                     />
                     <Field
                       label="المسمى المهني واللقب"
@@ -611,11 +710,12 @@ function SignupPage() {
                       onKeyDown={handleEnterKeyNext}
                       placeholder="مثال: خبير الآثار والتراث الروماني"
                       required
+                      icon={Award}
                     />
                   </div>
 
                   {/* 2-Column: License Number + Phone Number */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field
                       label="رقم ترخيص مزاولة الإرشاد"
                       value={guide.licenseNumber}
@@ -623,6 +723,7 @@ function SignupPage() {
                       onKeyDown={handleEnterKeyNext}
                       placeholder="G-4421"
                       required
+                      icon={FileText}
                     />
                     <Field
                       label="رقم الهاتف للتواصل"
@@ -632,31 +733,12 @@ function SignupPage() {
                       onKeyDown={handleEnterKeyNext}
                       placeholder="0912345678"
                       required
-                    />
-                  </div>
-
-                  {/* 2-Column: Email + Password for Guide Login */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <Field
-                      label="البريد الإلكتروني لتسجيل الدخول"
-                      type="email"
-                      value={guide.email}
-                      onChange={(v) => setGuide({ ...guide, email: v })}
-                      placeholder="guide@dalni.ly"
-                      required
-                    />
-                    <Field
-                      label="كلمة المرور للحساب"
-                      type="password"
-                      value={guide.password}
-                      onChange={(v) => setGuide({ ...guide, password: v })}
-                      placeholder="••••••••"
-                      required
+                      icon={Phone}
                     />
                   </div>
 
                   {/* 2-Column: Daily Rate (Cost) + Years of Experience */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field
                       label="التكلفة اليومية للإرشاد (د.ل)"
                       type="number"
@@ -666,6 +748,7 @@ function SignupPage() {
                       placeholder="150"
                       required
                       suffix="د.ل / اليوم"
+                      icon={DollarSign}
                     />
                     <Field
                       label="سنوات الخبرة السياحية"
@@ -676,22 +759,23 @@ function SignupPage() {
                       placeholder="5"
                       required
                       suffix="سنوات"
+                      icon={Award}
                     />
                   </div>
 
                   {/* Gender Segmented Toggle */}
                   <div>
-                    <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
-                      جنس المرشد <span className="text-red-500">*</span>
+                    <label className="text-xs font-bold text-[#0F172A] mb-1.5 block text-right">
+                      جنس المرشد <span className="text-red-500 font-black">*</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-1.5 h-11 p-1 bg-white rounded-xl border border-[#E2E8F0]">
+                    <div className="grid grid-cols-2 gap-2 h-11 p-1 bg-white rounded-2xl border border-[#E2E8F0]">
                       <button
                         type="button"
                         onClick={() => setGuide({ ...guide, gender: "male" })}
-                        className={`rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                        className={`rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                           guide.gender === "male"
-                            ? "bg-[#1B5A78] text-white shadow-xs"
-                            : "text-[#718096] hover:text-[#0F172A]"
+                            ? "bg-[#D96B27] text-white shadow-xs font-black"
+                            : "text-[#64748B] hover:text-[#0F172A]"
                         }`}
                       >
                         <span>ذكر</span>
@@ -700,10 +784,10 @@ function SignupPage() {
                       <button
                         type="button"
                         onClick={() => setGuide({ ...guide, gender: "female" })}
-                        className={`rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                        className={`rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                           guide.gender === "female"
-                            ? "bg-[#1B5A78] text-white shadow-xs"
-                            : "text-[#718096] hover:text-[#0F172A]"
+                            ? "bg-[#D96B27] text-white shadow-xs font-black"
+                            : "text-[#64748B] hover:text-[#0F172A]"
                         }`}
                       >
                         <span>أنثى</span>
@@ -712,26 +796,29 @@ function SignupPage() {
                     </div>
                   </div>
 
-                  {/* Bio Field - Compact 2 Rows */}
+                  {/* Bio Field */}
                   <div>
-                    <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
-                      نبذة تعريفية عن خبرتك السياحية <span className="text-red-500">*</span>
+                    <label className="text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-start gap-1.5 text-right">
+                      <FileText className="w-3.5 h-3.5 text-[#D96B27]" />
+                      <span>نبذة تعريفية عن خبرتك السياحية</span>
+                      <span className="text-red-500 font-black">*</span>
                     </label>
                     <textarea
                       rows={2}
                       value={guide.bio}
                       onChange={(e) => setGuide({ ...guide, bio: e.target.value })}
-                      placeholder="اكتب نبذة موجزة عن الجولات والمناطق التي ترشد بها واهتماماتك..."
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] bg-white focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 outline-none transition text-xs font-semibold text-[#0F172A] text-right resize-none"
+                      placeholder="اكتب نبذة موجزة عن الجولات والمناطق التي ترشد بها واهتماماتك السياحية..."
+                      className="w-full px-4 py-3 rounded-2xl border border-[#E2E8F0] bg-white hover:border-[#D96B27]/50 focus:border-[#D96B27] focus:ring-4 focus:ring-[#D96B27]/15 outline-none transition text-xs sm:text-sm font-semibold text-[#0F172A] placeholder:text-[#94A3B8] text-right resize-none shadow-2xs"
                       required
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full h-11 sm:h-12 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs sm:text-sm shadow-md hover:-translate-y-0.5 transition cursor-pointer mt-1"
+                    className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer mt-1 flex items-center justify-center gap-2"
                   >
-                    التالي: نطاق العمل والمستندات (خطوة 2 من 2) ←
+                    <span>المتابعة إلى نطاق العمل والمستندات (خطوة 2 من 2)</span>
+                    <span className="text-base">←</span>
                   </button>
                 </form>
               )}
@@ -778,33 +865,35 @@ function SignupPage() {
                 >
                   {/* Operating Regions */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-bold text-[#0F172A]">
-                        مناطق ووجهات الإرشاد السياحي: <span className="text-red-500">*</span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
+                        <span>مناطق ووجهات الإرشاد السياحي:</span>
+                        <span className="text-red-500 font-black">*</span>
                       </label>
                       <button
                         type="button"
                         onClick={toggleAllRegions}
-                        className="text-[11px] font-bold text-[#1B5A78] hover:underline cursor-pointer"
+                        className="text-[11px] font-bold text-[#D96B27] hover:underline cursor-pointer"
                       >
-                        {guide.operatingRegions.length === REGIONS_LIST.length ? "إلغاء الكل" : "تحديد الكل"}
+                        {guide.operatingRegions.length === REGIONS_LIST.length ? "إلغاء الكل" : "تحديد كافة المناطق"}
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-1.5 p-2 bg-white rounded-xl border border-[#E2E8F0] max-h-36 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-2 p-2.5 bg-white rounded-2xl border border-[#E2E8F0] max-h-40 overflow-y-auto shadow-2xs">
                       {REGIONS_LIST.map((reg) => {
                         const isChecked = guide.operatingRegions.includes(reg.id);
                         return (
                           <div
                             key={reg.id}
                             onClick={() => toggleRegion(reg.id)}
-                            className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-right transition-all cursor-pointer select-none text-[11px] font-bold ${
+                            className={`flex items-center gap-2 p-2 rounded-xl border text-right transition-all cursor-pointer select-none text-[11px] font-bold ${
                               isChecked
-                                ? "border-[#1B5A78] bg-[#1B5A78]/10 text-[#1B5A78]"
-                                : "border-[#E2E8F0] bg-white text-[#718096] hover:border-stone-300"
+                                ? "border-[#D96B27] bg-[#D96B27]/10 text-[#D96B27] shadow-xs"
+                                : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#D96B27]/40"
                             }`}
                           >
-                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 text-[9px] ${isChecked ? "bg-[#1B5A78] border-[#1B5A78] text-white" : "border-[#CBD5E0]"}`}>
+                            <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 text-[10px] font-black ${isChecked ? "bg-[#D96B27] border-[#D96B27] text-white" : "border-[#CBD5E0]"}`}>
                               {isChecked && "✓"}
                             </div>
                             <span className="truncate flex-1">{reg.nameAr}</span>
@@ -816,19 +905,19 @@ function SignupPage() {
 
                   {/* Working Days */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-bold text-[#0F172A]">
-                        أيام الجاهزية للجولات: <span className="text-red-500">*</span>
+                        أيام الجاهزية للجولات السياحية: <span className="text-red-500 font-black">*</span>
                       </label>
                       <button
                         type="button"
                         onClick={toggleAllDays}
-                        className="text-[11px] font-bold text-[#1B5A78] hover:underline cursor-pointer"
+                        className="text-[11px] font-bold text-[#D96B27] hover:underline cursor-pointer"
                       >
-                        {guide.workingDays.length === WEEKDAYS.length ? "أيام محددة" : "طوال الأسبوع"}
+                        {guide.workingDays.length === WEEKDAYS.length ? "أيام محددة" : "طوال أيام الأسبوع"}
                       </button>
                     </div>
-                    <div className="grid grid-cols-7 gap-1 p-1.5 bg-white rounded-xl border border-[#E2E8F0]">
+                    <div className="grid grid-cols-7 gap-1.5 p-2 bg-white rounded-2xl border border-[#E2E8F0] shadow-2xs">
                       {WEEKDAYS.map((day) => {
                         const isChecked = guide.workingDays.includes(day.id);
                         return (
@@ -836,13 +925,13 @@ function SignupPage() {
                             key={day.id}
                             type="button"
                             onClick={() => toggleDay(day.id)}
-                            className={`py-1.5 px-0.5 rounded-lg border text-center transition-all cursor-pointer ${
+                            className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer ${
                               isChecked
-                                ? "bg-[#1B5A78] border-[#1B5A78] text-white shadow-2xs"
-                                : "bg-white border-[#E2E8F0] text-[#718096] hover:bg-stone-50"
+                                ? "bg-[#D96B27] border-[#D96B27] text-white shadow-2xs font-black"
+                                : "bg-white border-[#E2E8F0] text-[#64748B] hover:bg-stone-50 font-bold"
                             }`}
                           >
-                            <span className="text-[11px] font-black block">{day.nameAr}</span>
+                            <span className="text-[11px] block">{day.nameAr}</span>
                           </button>
                         );
                       })}
@@ -851,7 +940,7 @@ function SignupPage() {
 
                   {/* Languages */}
                   <div>
-                    <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">اللغات المتقنة:</label>
+                    <label className="text-xs font-bold text-[#0F172A] mb-1.5 block text-right">اللغات المتقنة:</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { key: "speaksEnglish" as const, labelAr: "الإنجليزية", code: "EN" },
@@ -864,18 +953,18 @@ function SignupPage() {
                             key={lang.key}
                             type="button"
                             onClick={() => setGuide({ ...guide, [lang.key]: !isSelected })}
-                            className={`flex items-center justify-between p-2 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                            className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
                               isSelected
-                                ? "border-[#1B5A78] bg-[#1B5A78]/10 text-[#1B5A78]"
-                                : "border-[#E2E8F0] bg-white text-[#718096] hover:border-stone-300"
+                                ? "border-[#D96B27] bg-[#D96B27]/10 text-[#D96B27] shadow-xs font-black"
+                                : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#D96B27]/40"
                             }`}
                           >
                             <span className="flex items-center gap-1.5">
-                              <span className="text-[9px] font-black px-1 py-0.5 rounded bg-[#FAF7F2] text-[#0F172A]">{lang.code}</span>
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#FAF7F2] text-[#0F172A]">{lang.code}</span>
                               <span className="text-xs">{lang.labelAr}</span>
                             </span>
-                            <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] ${
-                              isSelected ? "bg-[#1B5A78] text-white border-[#1B5A78]" : "border-[#CBD5E0]"
+                            <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                              isSelected ? "bg-[#D96B27] text-white border-[#D96B27]" : "border-[#CBD5E0]"
                             }`}>
                               {isSelected && "✓"}
                             </span>
@@ -888,8 +977,10 @@ function SignupPage() {
                   {/* Certificate Upload with Cancellation and Replacement */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-[#0F172A] text-right">
-                        إرفاق صورة أو ملف الترخيص / الشهادة <span className="text-red-500">*</span>
+                      <label className="text-xs font-bold text-[#0F172A] text-right flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[#D96B27]" />
+                        <span>إرفاق صورة أو مستند الترخيص الرسمي / الشهادة</span>
+                        <span className="text-red-500 font-black">*</span>
                       </label>
                       {guide.certs.length > 0 && (
                         <button
@@ -928,37 +1019,37 @@ function SignupPage() {
                             }
                           }}
                         />
-                        <div className="p-3.5 rounded-xl border-2 border-dashed border-[#CBD5E1] bg-white hover:border-[#1B5A78] hover:bg-[#1B5A78]/5 transition flex flex-col items-center justify-center gap-1.5 text-center group">
-                          <div className="w-9 h-9 rounded-full bg-[#1B5A78]/10 group-hover:bg-[#1B5A78]/20 text-[#1B5A78] grid place-items-center transition">
-                            <FileText className="w-4 h-4" />
+                        <div className="p-4 rounded-2xl border-2 border-dashed border-[#D96B27]/40 bg-white hover:border-[#D96B27] hover:bg-[#D96B27]/5 transition flex flex-col items-center justify-center gap-2 text-center group cursor-pointer shadow-2xs">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#D96B27]/15 to-[#EA580C]/15 text-[#D96B27] grid place-items-center transition group-hover:scale-110">
+                            <UploadCloud className="w-5 h-5" />
                           </div>
-                          <span className="font-bold text-xs text-[#0F172A]">
-                            انقر هنا لاختيار ملف الشهادة أو الترخيص من جهازك
+                          <span className="font-bold text-xs sm:text-sm text-[#0F172A]">
+                            انقر هنا لرفع صورة الترخيص السياحي أو الشهادة المعتمدة
                           </span>
-                          <span className="text-[10px] text-[#718096]">
-                            يدعم صور (JPG, PNG) أو مستندات PDF
+                          <span className="text-[10px] text-[#64748B]">
+                            يدعم ملفات الصور (JPG, PNG) أو مستندات PDF
                           </span>
                         </div>
                       </label>
                     ) : (
-                      <div className="space-y-2 p-2.5 rounded-xl border border-[#CBD5E1] bg-slate-50/70">
-                        <div className="flex flex-col gap-1.5">
+                      <div className="space-y-2 p-3 rounded-2xl border border-[#E2E8F0] bg-slate-50/70">
+                        <div className="flex flex-col gap-2">
                           {guide.certs.map((c, i) => (
                             <div
                               key={i}
-                              className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/30 transition"
+                              className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs hover:border-[#D96B27]/40 transition"
                             >
-                              <div className="flex items-center gap-2 min-w-0 pr-1">
-                                <span className="w-6 h-6 rounded-md bg-[#1B5A78]/10 text-[#1B5A78] grid place-items-center shrink-0">
-                                  <FileText className="w-3.5 h-3.5" />
+                              <div className="flex items-center gap-2.5 min-w-0 pr-1">
+                                <span className="w-7 h-7 rounded-lg bg-[#D96B27]/10 text-[#D96B27] grid place-items-center shrink-0">
+                                  <FileText className="w-4 h-4" />
                                 </span>
                                 <div className="min-w-0 text-right">
                                   <div className="text-xs font-bold text-[#0F172A] truncate max-w-[200px] sm:max-w-[260px]" title={c}>
                                     {c}
                                   </div>
                                   <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                                    <Check className="w-2.5 h-2.5" />
-                                    <span>جاهز للإرفاق</span>
+                                    <Check className="w-3 h-3" />
+                                    <span>جاهز للإرفاق والاعتماد</span>
                                   </div>
                                 </div>
                               </div>
@@ -971,7 +1062,7 @@ function SignupPage() {
                                     certDataUrls: g.certDataUrls.filter((_, idx) => idx !== i),
                                   }))
                                 }
-                                className="h-7 px-2.5 rounded-md bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 border border-red-200/60"
+                                className="h-8 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 border border-red-200/60"
                                 title="إلغاء واختيار ملف آخر"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -982,10 +1073,10 @@ function SignupPage() {
                         </div>
 
                         {/* Button to add or replace files */}
-                        <div className="pt-1.5 flex items-center justify-between border-t border-[#E2E8F0]">
-                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#1B5A78]/30 hover:border-[#1B5A78] text-[#1B5A78] text-xs font-bold transition hover:bg-[#1B5A78]/5 shadow-2xs">
+                        <div className="pt-2 flex items-center justify-between border-t border-[#E2E8F0]">
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#D96B27]/40 hover:border-[#D96B27] text-[#D96B27] text-xs font-bold transition hover:bg-[#D96B27]/5 shadow-2xs">
                             <Plus className="w-3.5 h-3.5" />
-                            <span>إضافة ملف إضافي</span>
+                            <span>إضافة مستند إضافي</span>
                             <input
                               type="file"
                               multiple
@@ -1010,8 +1101,8 @@ function SignupPage() {
                               }}
                             />
                           </label>
-                          <span className="text-[10px] text-[#718096]">
-                            يمكنك إلغاء أو استبدال أي ملف بحرية
+                          <span className="text-[10px] text-[#64748B]">
+                            يمكنك إضافة أو استبدال أي ملف بسهولة
                           </span>
                         </div>
                       </div>
@@ -1019,41 +1110,44 @@ function SignupPage() {
                   </div>
 
                   {/* Credentials: Email + Password in 2-Column Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field
-                      label="البريد الإلكتروني"
+                      label="البريد الإلكتروني لتسجيل الدخول"
                       type="email"
                       value={guide.email}
                       onChange={(v) => setGuide({ ...guide, email: v })}
                       onKeyDown={handleEnterKeyNext}
                       placeholder="guide@dalni.ly"
                       required
+                      icon={Mail}
                     />
                     <Field
-                      label="كلمة المرور"
+                      label="كلمة المرور للحساب"
                       type="password"
                       value={guide.password}
                       onChange={(v) => setGuide({ ...guide, password: v })}
                       onKeyDown={handleEnterKeyNext}
                       placeholder="٨ أحرف على الأقل"
                       required
+                      icon={Lock}
                     />
                   </div>
 
                   {/* Step 2 Action Buttons */}
-                  <div className="grid grid-cols-3 gap-2.5 pt-1">
+                  <div className="grid grid-cols-3 gap-3 pt-2">
                     <button
                       type="button"
                       onClick={() => setGuideStep(1)}
-                      className="py-2.5 px-3 rounded-xl border border-[#E2E8F0] bg-white hover:bg-[#F3ECE1] text-[#0F172A] font-black text-xs transition cursor-pointer"
+                      className="py-3 px-3 rounded-2xl border border-[#E2E8F0] bg-white hover:bg-[#F3ECE1] text-[#0F172A] font-black text-xs transition cursor-pointer shadow-2xs"
                     >
                       → السابق
                     </button>
                     <button
                       type="submit"
-                      className="col-span-2 py-2.5 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs sm:text-sm shadow-md hover:-translate-y-0.5 transition cursor-pointer"
+                      className="col-span-2 py-3 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer flex items-center justify-center gap-2"
                     >
-                      إرسال طلب التسجيل والاعتماد ✨
+                      <span>إرسال طلب التسجيل والاعتماد</span>
+                      <span className="text-base">✨</span>
                     </button>
                   </div>
                 </form>
@@ -1062,10 +1156,10 @@ function SignupPage() {
           )}
 
           {/* Right-aligned Footer Link */}
-          <div className="mt-4 text-right text-xs text-[#718096] font-medium">
-            لديك حساب بالفعل؟{" "}
-            <Link to="/auth/login" className="text-[#1B5A78] font-black hover:underline mr-1">
-              تسجيل الدخول
+          <div className="mt-5 text-right text-xs text-[#64748B] font-medium">
+            لديك حساب مسجل بالفعل؟{" "}
+            <Link to="/auth/login" className="text-[#D96B27] font-black hover:underline mr-1">
+              تسجيل الدخول إلى حسابك ←
             </Link>
           </div>
         </div>
@@ -1084,6 +1178,7 @@ function Field({
   onKeyDown,
   required,
   suffix,
+  icon: Icon,
 }: {
   label: string;
   type?: string;
@@ -1093,6 +1188,7 @@ function Field({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   required?: boolean;
   suffix?: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }) {
   const isNumber = type === "number";
 
@@ -1104,10 +1200,11 @@ function Field({
   };
 
   return (
-    <div>
-      <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
+    <div className="text-right">
+      <label className="text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-start gap-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-[#D96B27]" />}
+        <span>{label}</span>
+        {required && <span className="text-red-500 font-black">*</span>}
       </label>
       <div className="flex items-stretch rounded-xl border border-[#E2E8F0] bg-white focus-within:border-[#1B5A78] focus-within:ring-2 focus-within:ring-[#1B5A78]/15 transition overflow-hidden shadow-xs">
         {/* Left Side (Addon): Unit Suffix Badge & Dedicated Stepper Buttons */}
