@@ -4,6 +4,8 @@
  * Synchronizes user messages and admin replies across all dashboards & pages
  */
 
+import { notifyChatbotUserMessage, notifyAdminChatReply } from "./notifications";
+
 export type ChatMessage = {
   id: string;
   from: "user" | "bot" | "admin";
@@ -148,6 +150,11 @@ export function sendUserMessage(sessionId: string, userName: string, userRole: s
 
   saveChatSessions(updated);
 
+  // Trigger admin notification for new user chatbot message
+  try {
+    notifyChatbotUserMessage(userName, userRole, text);
+  } catch {}
+
   // Also sync ticket into dalni_support_tickets
   try {
     const tickets = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
@@ -176,23 +183,25 @@ export function sendAdminReply(sessionId: string, text: string): ChatSession | n
     time
   };
 
-  let target: ChatSession | null = null;
   const updated = sessions.map(s => {
     if (s.id === sessionId) {
-      target = {
+      return {
         ...s,
         last_message: `مشرف: ${text.trim()}`,
         time,
         unread: false,
         messages: [...s.messages, adminMsg]
       };
-      return target;
     }
     return s;
   });
 
+  const target = updated.find(s => s.id === sessionId) || null;
   if (target) {
     saveChatSessions(updated);
+    try {
+      notifyAdminChatReply(target.user_name, text, target.id);
+    } catch {}
   }
   return target;
 }

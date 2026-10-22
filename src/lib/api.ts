@@ -641,6 +641,7 @@ export async function apiLogin(params: {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ role, login: cleanLogin, password: rawPassword }),
+      signal: AbortSignal.timeout(1000),
     });
     const data = await res.json().catch(() => null);
     if (res.ok && data?.status === "success" && data.token) {
@@ -662,9 +663,7 @@ export async function apiLogin(params: {
         message: data.message,
       };
     }
-  } catch (err) {
-    console.error("Laravel login error:", err);
-  }
+  } catch { }
 
   // 2. Try Live Microsoft SQL Server Bridge Authentication
   try {
@@ -919,6 +918,7 @@ export async function apiUpdateTouristProfile(params: {
         Accept: "application/json",
       },
       body: JSON.stringify(params),
+      signal: AbortSignal.timeout(1000),
     });
     if (res.ok) {
       const data = await res.json();
@@ -1155,27 +1155,23 @@ export async function apiGetTouristBookings(touristId: string) {
 
 export async function apiGetAdminDashboard(): Promise<any> {
   try {
-    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
-      headers: { Accept: "application/json" },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      console.log("apiGetAdminDashboard: Successfully received from Laravel:", data);
-      return data;
-    } else {
-      console.error("apiGetAdminDashboard: Laravel returned status", res.status);
-    }
-  } catch (err) {
-    console.error("apiGetAdminDashboard: Failed to fetch from Laravel:", err);
-  }
-
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`);
+    const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`, { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
       const json = await res.json();
       if (json && json.success) {
         return json;
       }
+    }
+  } catch { }
+
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(1000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
     }
   } catch { }
 
@@ -1230,8 +1226,17 @@ export async function apiDeleteGuide(licenseNumber: string) {
  */
 export async function apiGetDailyTrips(): Promise<any[]> {
   try {
+    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch { }
+
+  try {
     const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(1000),
     });
     if (res.ok) {
       const json = await res.json();
@@ -1240,14 +1245,6 @@ export async function apiGetDailyTrips(): Promise<any[]> {
   } catch (err) {
     console.error("apiGetDailyTrips failed:", err);
   }
-
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_trips`);
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch { }
   return [];
 }
 
@@ -1329,8 +1326,17 @@ export async function apiDeleteDailyTrip(id: string) {
 
 export async function apiGetWeeklyTrips(): Promise<any[]> {
   try {
+    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch { }
+
+  try {
     const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(1000),
     });
     if (res.ok) {
       const json = await res.json();
@@ -1339,14 +1345,6 @@ export async function apiGetWeeklyTrips(): Promise<any[]> {
   } catch (err) {
     console.error("apiGetWeeklyTrips failed:", err);
   }
-
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`);
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch { }
   return [];
 }
 
@@ -1392,6 +1390,72 @@ export async function apiDeleteWeeklyTrip(id: string) {
   return null;
 }
 
+/**
+ * Daily & Weekly Trip Offers API functions connecting to DelniDB
+ */
+export async function apiGetDailyOffers(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/daily_offers`, { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch (err) {
+    console.error("apiGetDailyOffers error:", err);
+  }
+  return [];
+}
+
+export async function apiCreateDailyOffer(payload: any): Promise<any> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/daily_offers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("apiCreateDailyOffer error:", err);
+    return { success: false, error: err };
+  }
+}
+
+export async function apiDeleteDailyOffer(id: string): Promise<boolean> {
+  return await deleteFromSecureBackend("daily_offers", "offer_daily_id", id);
+}
+
+export async function apiGetWeeklyOffers(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/weekly_offers`, { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch (err) {
+    console.error("apiGetWeeklyOffers error:", err);
+  }
+  return [];
+}
+
+export async function apiCreateWeeklyOffer(payload: any): Promise<any> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/weekly_offers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("apiCreateWeeklyOffer error:", err);
+    return { success: false, error: err };
+  }
+}
+
+export async function apiDeleteWeeklyOffer(id: string): Promise<boolean> {
+  return await deleteFromSecureBackend("weekly_offers", "offer_weekly_id", id);
+}
+
+
 export async function apiGetHotels(): Promise<any[]> {
   try {
     const res = await fetch(`${BACKEND_API_URL}/hotels`);
@@ -1421,6 +1485,7 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/dashboard/guide/${encodeURIComponent(licenseNumber)}`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(1000),
     });
     if (res.ok) {
       const liveData = await res.json();
@@ -1493,8 +1558,19 @@ export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
 
 export async function apiGetGuidesCatalog(): Promise<GuideRecord[]> {
   try {
+    const res = await fetch(`${BACKEND_API_URL}/guides`, { signal: AbortSignal.timeout(2000) });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+        return json.data;
+      }
+    }
+  } catch { }
+
+  try {
     const res = await fetch(`${LARAVEL_API_URL}/guides`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(1000),
     });
     if (res.ok) {
       const data = await res.json();
@@ -1503,9 +1579,7 @@ export async function apiGetGuidesCatalog(): Promise<GuideRecord[]> {
         return list;
       }
     }
-  } catch (err) {
-    console.error("apiGetGuidesCatalog fetch error:", err);
-  }
+  } catch { }
 
   const guides = getAllGuides();
   return guides.filter((g) => g.verification_status === "موثق");
@@ -1560,3 +1634,17 @@ export async function sendAIChatMessage(message: string): Promise<{
     suggested_trips: ["جولة لبدة الكبرى اليومية", "مغامرة أوباري الصحراوية"],
   };
 }
+
+export async function apiGetPlaces(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/places`);
+    if (res.ok) {
+      const json = await res.json();
+      return Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+    }
+  } catch (err) {
+    console.error("apiGetPlaces fetch error:", err);
+  }
+  return [];
+}
+

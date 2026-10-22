@@ -66,7 +66,15 @@ import { GuideCVModal, GuideCVData } from "@/components/GuideCVModal";
 import { VehicleDetailsModal, VehicleData } from "@/components/VehicleDetailsModal";
 import { Footer } from "@/components/Footer";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
-import { apiGetDailyTrips, apiGetWeeklyTrips } from "@/lib/api";
+import { 
+  apiGetDailyTrips, 
+  apiGetWeeklyTrips, 
+  apiGetHotels, 
+  apiGetRestaurants, 
+  apiGetDailyOffers, 
+  apiGetWeeklyOffers 
+} from "@/lib/api";
+import { UtensilsCrossed } from "lucide-react";
 
 export const Route = createFileRoute("/trips")({
   head: () => ({
@@ -195,21 +203,84 @@ export type PrivateTemplate = {
 
 export type Trip = DailyTrip | WeeklyTrip | PrivateTemplate;
 
-export function getTripImages(t: Trip | any): string[] {
-  if (Array.isArray(t?.images) && t.images.length > 0) {
-    const list = t.images.filter(Boolean);
-    while (list.length < 5) list.push(list[0] || t.img || heroImg);
-    return list.slice(0, 5);
+export function safeParseGallery(gallery: any): string[] {
+  if (!gallery) return [];
+  if (Array.isArray(gallery)) {
+    return gallery.map((s) => String(s).trim()).filter(Boolean);
   }
-  if (t?.gallery) {
-    const list = (typeof t.gallery === "string" ? t.gallery.split(",") : t.gallery).map((s: string) => s.trim()).filter(Boolean);
-    if (list.length > 0) {
-      while (list.length < 5) list.push(list[0] || t.img || heroImg);
-      return list.slice(0, 5);
+  if (typeof gallery !== "string") return [];
+  const str = gallery.trim();
+  if (!str) return [];
+
+  if (str.startsWith("[") && str.endsWith("]")) {
+    try {
+      const p = JSON.parse(str);
+      if (Array.isArray(p)) return p.map((s) => String(s).trim()).filter(Boolean);
+    } catch {}
+  }
+  if (str.includes("|||")) {
+    return str.split("|||").map((s) => s.trim()).filter(Boolean);
+  }
+  if (str.includes("data:image")) {
+    const images: string[] = [];
+    const parts = str.split(/,(?=(?:data:image|\/assets|\/|https?:\/\/))/);
+    for (let i = 0; i < parts.length; i++) {
+      let p = parts[i].trim();
+      if (p.startsWith("data:image") && p.includes(";base64") && !p.includes(";base64,") && parts[i + 1]) {
+        p = p + "," + parts[i + 1].trim();
+        i++;
+      }
+      if (p && (p.startsWith("data:image") || p.startsWith("/assets") || p.startsWith("/") || p.startsWith("http"))) {
+        images.push(p);
+      }
     }
+    if (images.length > 0) return images;
+  }
+  return str.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+export function getTripImages(t: Trip | any): string[] {
+  if (!t) return [heroImg];
+
+  const validImgs: string[] = [];
+
+  const isValidUrl = (url: any) =>
+    url && typeof url === "string" && url.trim().length > 10 &&
+    (url.startsWith("data:image") || url.startsWith("/assets") || url.startsWith("/") || url.startsWith("http"));
+
+  // 1. Check primary photo / img
+  if (isValidUrl(t.photo) && !validImgs.includes(t.photo.trim())) {
+    validImgs.push(t.photo.trim());
+  }
+  if (isValidUrl(t.img) && !validImgs.includes(t.img.trim())) {
+    validImgs.push(t.img.trim());
   }
 
-  // Authentic Libyan presets per trip ID
+  // 2. Check images array
+  if (Array.isArray(t.images)) {
+    t.images.forEach((img: any) => {
+      if (isValidUrl(img) && !validImgs.includes(img.trim())) {
+        validImgs.push(img.trim());
+      }
+    });
+  }
+
+  // 3. Check gallery string or array
+  if (t.gallery) {
+    const list = safeParseGallery(t.gallery);
+    list.forEach((img: string) => {
+      if (isValidUrl(img) && !validImgs.includes(img)) {
+        validImgs.push(img);
+      }
+    });
+  }
+
+  // If valid images were added to the trip, return them directly
+  if (validImgs.length > 0) {
+    return validImgs;
+  }
+
+  // Curated Libyan fallback presets
   const PRESETS: Record<string, string[]> = {
     d1: [heroImg, destLeptisTheater, destLeptisArch, destLeptisForum, destLeptisCoast],
     d2: [destTripoli, destTripoliCastle, destTripoliArch, destTripoliMedina, destTripoliHarbor],
@@ -226,15 +297,14 @@ export function getTripImages(t: Trip | any): string[] {
   if (t?.id && PRESETS[t.id]) return PRESETS[t.id];
 
   const title = String(t?.title || t?.trip_title || "").toLowerCase();
-  if (title.includes("لبدة") || title.includes("رومان")) return [heroImg, destLeptisTheater, destLeptisArch, destLeptisForum, destLeptisCoast];
-  if (title.includes("صبراتة")) return [destSabratah, destSabrathaTheater, destSabrathaCoast, destSabrathaTemple, destSabrathaRuins];
-  if (title.includes("أوباري") || title.includes("صحراء") || title.includes("رمال")) return [destUbariGaberoun, destUbari, destUbariUmmAlMaa, destAcacusArch, destSaharaDunes];
-  if (title.includes("غدامس")) return [destGhadamesOasis, destGhadames, destGhadamesAlleys, destKsarDesert, offerDesert];
-  if (title.includes("شحات") || title.includes("قورينا") || title.includes("أخضر")) return [destCyreneApollo, destCyrene, destCyreneSanctuary, destCyrenePanorama, destJabalAkhdarValley];
-  if (title.includes("طرابلس")) return [destTripoli, destTripoliCastle, destTripoliArch, destTripoliMedina, destTripoliHarbor];
+  if (title.includes("لبدة") || title.includes("رومان") || title.includes("الخمس")) return [heroImg, destLeptisTheater, destLeptisArch];
+  if (title.includes("صبراتة")) return [destSabratah, destSabrathaTheater, destSabrathaCoast];
+  if (title.includes("أوباري") || title.includes("صحراء") || title.includes("رمال")) return [destUbariGaberoun, destUbari, destUbariUmmAlMaa];
+  if (title.includes("غدامس")) return [destGhadamesOasis, destGhadames, destGhadamesAlleys];
+  if (title.includes("شحات") || title.includes("قورينا") || title.includes("أخضر")) return [destCyreneApollo, destCyrene, destCyreneSanctuary];
+  if (title.includes("طرابلس")) return [destTripoli, destTripoliCastle, destTripoliArch];
 
-  const primary = t?.img || heroImg;
-  return [primary, destLeptisTheater, destSabrathaTheater, destUbariGaberoun, destGhadamesOasis];
+  return [t?.img || heroImg];
 }
 
 export type TripOffer = {
@@ -253,142 +323,7 @@ export type TripOffer = {
   schedules?: any[];
 };
 
-const tripOffers: TripOffer[] = [
-  {
-    id: "HO-1",
-    title: "عرض رحلة لبدة الكبرى الرومانية",
-    sub: "يوم كامل يشمل الغداء البحري الفاخر وزيارة المسرح وقوس النصر",
-    oldPrice: "260",
-    price: "180",
-    discountPercent: "30%",
-    tag: "خصم 30%",
-    img: destLeptisTheater,
-    gallery: [
-      destLeptisTheater,
-      destLeptisArch,
-      destLeptisForum,
-      destLeptisCoast,
-    ],
-    kind: "daily",
-    departure: "مكتب طرابلس - النوفليين (08:30 ص)",
-    perk: "🥗 شامل تذاكر الدخول ووجبة الغداء البحري والمرشد السياحي",
-    schedules: [
-      { id: "ho1-s1", date: "يومياً عدا الأحد", time: "08:30 AM", seats: 20, taken: 12, guide: "أ. محمد الفيتوري", price: 180 },
-    ]
-  },
-  {
-    id: "HO-2",
-    title: "عرض مغامرة أوباري والرمال الذهبية",
-    sub: "برنامج ٥ أيام شامل الإقامة في مخيم صحراوي ونقل 4x4 وسفاري",
-    oldPrice: "2,400",
-    price: "1,650",
-    discountPercent: "30%",
-    tag: "خصم 30%",
-    img: destUbariGaberoun,
-    gallery: [
-      destUbariGaberoun,
-      destUbariUmmAlMaa,
-      destAcacusArch,
-      destSaharaDunes,
-    ],
-    kind: "weekly",
-    departure: "مكتب طرابلس / سبها",
-    perk: "🎁 جلسة تصوير وسهرة طوارق وتزلج رملي ومخيم صحراوي مجاناً",
-    schedules: [
-      { id: "ho2-s1", date: "الخميس القادم", time: "07:00 AM", seats: 14, taken: 6, guide: "طارق التواتي", price: 1650 },
-    ]
-  },
-  {
-    id: "HO-3",
-    title: "جولة آثار قورينا والجبل الأخضر",
-    sub: "٤ أيام بين طبيعة الجبل الخلابة وآثار شحات ومعبد أبولو",
-    oldPrice: "1,350",
-    price: "950",
-    discountPercent: "25%",
-    tag: "خصم 25%",
-    img: destCyreneApollo,
-    gallery: [
-      destCyreneApollo,
-      destCyreneSanctuary,
-      destJabalAkhdarPanorama,
-      destJabalAkhdarForest,
-      destJabalAkhdarBridge,
-      destJabalAkhdarValley,
-    ],
-    kind: "weekly",
-    departure: "مكتب بنغازي - شارع فينيسيا",
-    perk: "🏨 إقامة منتجع جبلي فاخر مع وجبة إفطار ومشاوي",
-    schedules: [
-      { id: "ho3-s1", date: "الجمعة القادمة", time: "08:00 AM", seats: 16, taken: 9, guide: "خالد العبيدي", price: 950 },
-    ]
-  },
-  {
-    id: "HO-4",
-    title: "جولة طرابلس القديمة والسرايا الحمراء",
-    sub: "جولة يومية ممتعة في أسواق المدينة القديمة ومتحف السرايا والمقاهي",
-    oldPrice: "120",
-    price: "85",
-    discountPercent: "30%",
-    tag: "خصم 30%",
-    img: destTripoliCastle,
-    gallery: [
-      destTripoliCastle,
-      destTripoliArch,
-      destTripoliMedina,
-      destTripoliHarbor,
-    ],
-    kind: "daily",
-    departure: "مكتب طرابلس - النوفليين (09:00 ص)",
-    perk: "☕ استراحة ضيافة وتذوق وحلويات تراثية في زنقة الفندق",
-    schedules: [
-      { id: "ho4-s1", date: "كل ثلاثاء وجمعة", time: "09:00 AM", seats: 15, taken: 7, guide: "منى مصطفى", price: 85 },
-    ]
-  },
-  {
-    id: "HO-5",
-    title: "جولة مسرح وآثار صبراتة الساحلية",
-    sub: "يوم كامل لزيارة تحفة المسرح الروماني الأيقوني والمتحف والغداء البحري",
-    oldPrice: "210",
-    price: "150",
-    discountPercent: "28%",
-    tag: "خصم 28%",
-    img: destSabrathaTheater,
-    gallery: [
-      destSabrathaTheater,
-      destSabrathaCoast,
-      destSabrathaTemple,
-      destSabrathaRuins,
-    ],
-    kind: "daily",
-    departure: "مكتب طرابلس (09:00 ص)",
-    perk: "🏛️ تذاكر الموقع والمتحف وغداء سمك طازج على الكورنيش",
-    schedules: [
-      { id: "ho5-s1", date: "كل خميس وسبت", time: "09:00 AM", seats: 20, taken: 8, guide: "أ. عادل الزواوي", price: 150 },
-    ]
-  },
-  {
-    id: "HO-6",
-    title: "جولة بيوت الحفر وقصور جبل نفوسة",
-    sub: "رحلة يومية لبيوت الحفر التراثية بغريان ومصانع الفخار وقصر الحاج",
-    oldPrice: "160",
-    price: "110",
-    discountPercent: "31%",
-    tag: "خصم 31%",
-    img: destGharyanCave,
-    gallery: [
-      destGharyanCave,
-      destGharyanCourtyard,
-      destKsarNalut,
-      destNafusaFortress,
-    ],
-    kind: "daily",
-    departure: "مكتب طرابلس (08:30 ص)",
-    perk: "🏺 زيارة بيوت الحفر وورش الفخار مع غداء جبلي أصيل",
-    schedules: [
-      { id: "ho6-s1", date: "كل سبت وأحد", time: "08:30 AM", seats: 18, taken: 6, guide: "أ. أحمد الغرياني", price: 110 },
-    ]
-  },
-];
+const tripOffers: TripOffer[] = [];
 
 export type NearbyPlace = {
   id: string;
@@ -636,7 +571,7 @@ const nearbyPlaces: NearbyPlace[] = [
     img: "/assets/ai_ruins.jpg",
     rating: 4.85,
     phone: "0915556622",
-    priceNote: "جلسات قهوة وغروب استثنائية",
+    priceNote: "جلسات قهوة وغروب ساحرة ومميزة",
     perk: "خصم 15% لعملاء رحلة قورينا",
   },
 
@@ -791,402 +726,9 @@ const nearbyPlaces: NearbyPlace[] = [
   },
 ];
 
-const dailyTrips: DailyTrip[] = [
-  {
-    id: "d1",
-    type: "daily",
-    title: "لبدة الكبرى وسبل الرومان",
-    img: heroImg,
-    description:
-      "رحلة يومية شاملة لاستكشاف جوهرة الآثار الرومانية في لبدة الكبرى مع شرح تاريخي متألق، جولة بالمسرح الضخم، والغداء الساحلي.",
-    activities: ["جولة أثرية بمرشد موثق", "شرح تاريخي مفصل", "غداء طازج على الشاطئ", "جلسة تصوير احترافية"],
-    attractions: [
-      {
-        name: "لبدة الكبرى",
-        location: "الخمس - ليبيا",
-        description:
-          "أعظم مدينة رومانية أثرية محفوظة في أفريقيا. تضم المسرح الروماني الأثري الضخم، قوس سيبتيموس سيفيروس، وحمامات هادريان ذات الموزاييك التاريخي النادر.",
-      },
-      {
-        name: "المسرح الروماني بقورينا والساحل",
-        location: "لبدة الكبرى",
-        description: "مدرج روماني عملاق يطل مباشرة على زرقة البحر المتوسط، يتميز بهندسة صوتية مذهلة تعود إلى القرن الأول الميلادي.",
-      },
-    ],
-    targetPersons: 20,
-    availableSeats: 12,
-    daysOfWeek: "كل سبت، اثنين، وأربعاء",
-    departure: "طرابلس",
-    entertainment: "ألعاب مائية على شاطئ الخمس، كافيهات عائلية مطلة على البحر، وجلسة تصوير واستراحة عند الغروب",
-    guide: {
-      name: "أ. محمد الفيتوري",
-      title: "خبير الآثار الرومانية والتاريخ الليبي (خبرة 12 سنة)",
-      phone: "+218 91 333 4455",
-      cv: {
-        name: "أ. محمد الفيتوري",
-        title: "خبير الآثار الرومانية والتراث الساحلي",
-        licenseNumber: "G-8821",
-        experienceYears: 12,
-        rating: 4.9,
-        pricePerDay: 180,
-        phone: "+218 91 333 4455",
-        bio: "مرشد سياحي معتمد ومؤرخ متخصص في الآثار الرومانية والفينيقية في لبدة الكبرى وصبراتة. خبرة أكثر من 12 عاماً في مرافقة الوفود الدبلوماسية والمجموعات السياحية.",
-        specialties: ["الآثار الرومانية", "التاريخ الفينيقي", "الجولات التاريخية"],
-      },
-    },
-    vehicle: {
-      model: "تويوتا كوستر 2024 سياحية مكيفة",
-      company: "شركة الصحراء للنقل والخدمات",
-      driver: "الكابتن سالم الورفلي",
-    },
-    accommodation: "إقامة يومية - عودة مساءً إلى طرابلس",
-    price: 180,
-    rating: 4.9,
-    reviews: 84,
-  },
-  {
-    id: "d2",
-    type: "daily",
-    title: "طرابلس القديمة ومعالم السراي",
-    img: destTripoli,
-    description:
-      "جولة سحرية في دروب طرابلس القديمة والقلعة الحمراء وقوس ماركوس أوريليوس مع تذوق المأكولات الشعبية الطرابلسية الشهيرة.",
-    activities: ["جولة حنطور ترفيهية", "استراحة ضيافة وتذوق في زنقة الفندوق", "زيارة القلعة الحمراء والمتحف"],
-    attractions: [
-      {
-        name: "السراي الحمراء والمدينة القديمة",
-        location: "طرابلس",
-        description: "قلعة تاريخية مجاورة لميناء طرابلس تروي تاريخ الحضارات الفينيقية، الرومانية، والإسلامية.",
-      },
-      {
-        name: "قوس ماركوس أوريليوس",
-        location: "طرابلس القديمة",
-        description: "قوس نصر روماني من الرخام الأبيض يعود للقرن الثاني الميلادي في قلب طرابلس القديمة.",
-      },
-    ],
-    targetPersons: 25,
-    availableSeats: 8,
-    daysOfWeek: "كل ثلاثاء، خميس، وجمعة",
-    departure: "طرابلس",
-    entertainment: "جولة حنطور، كافيهات المدينة القديمة الأثرية، وعرض فني تراثي طرابلسي عريق",
-    guide: {
-      name: "أ. سعاد الورفلي",
-      title: "دليلة التراث الطرابلسي والمدينة القديمة (خبرة 9 سنوات)",
-      phone: "+218 92 555 7788",
-      cv: {
-        name: "أ. سعاد الورفلي",
-        title: "دليلة التراث الطرابلسي والمدينة القديمة",
-        licenseNumber: "G-9410",
-        experienceYears: 9,
-        rating: 4.95,
-        pricePerDay: 150,
-        phone: "+218 92 555 7788",
-        bio: "متخصصة في السراي الحمراء والأسواق التاريخية والعمارة الإسلامية. أقدم جولات مشي ساحرة في أزقة المدينة القديمة مع ضيافة المأكولات الشعبية.",
-        specialties: ["تراث طرابلس القديمة", "السراي الحمراء", "المأكولات الشعبية"],
-      },
-    },
-    vehicle: {
-      model: "مرسيدس سبرينتر سياحي VIP",
-      company: "شركة عروس البحر للنقل",
-      driver: "الكابتن طارق الكيلاني",
-    },
-    price: 120,
-    rating: 4.8,
-    reviews: 62,
-  },
-  {
-    id: "d3",
-    type: "daily",
-    title: "شحات وقورينا الإغريقية",
-    img: destCyreneApollo,
-    description:
-      "استكشاف الآثار الإغريقية الساحرة فوق قمم الجبل الأخضر، زيارة معبد أبولو، وإطلالة على شواطئ سوسة وأبولونيا.",
-    activities: ["جولة أثرية بموقع قورينا", "استراحة غداء جبلية", "زيارة عين شحات الشافية"],
-    attractions: [
-      {
-        name: "آثار قورينا وشحات",
-        location: "شحات - الجبل الأخضر",
-        description: "مدينة إغريقية أثرية تقف على قمم الجبل الأخضر الساحر مع مشاهد بانورامية لمعبد أبولو ومدرجات الإغريق.",
-      },
-    ],
-    targetPersons: 18,
-    availableSeats: 5,
-    daysOfWeek: "كل جمعة، سبت، وأحد",
-    departure: "بنغازي",
-    entertainment: "جلسة تصوير جبلية، مشويات بين الغابات الطبيعية، وزيارة شلالات المنصورة",
-    guide: {
-      name: "أ. فاطمة الزهراء الشريف",
-      title: "مرشدة الطبيعة والآثار الإغريقية بالجبل الأخضر (خبرة 7 سنوات)",
-      phone: "+218 61 909 3322",
-      cv: {
-        name: "أ. فاطمة الزهراء الشريف",
-        title: "مرشدة الطبيعة والآثار الإغريقية بالجبل الأخضر",
-        licenseNumber: "G-6512",
-        experienceYears: 7,
-        rating: 4.85,
-        pricePerDay: 170,
-        phone: "+218 61 909 3322",
-        bio: "متخصصة في التاريخ الإغريقي بقورينا (شحات) ومعبد أبولو وشلالات الجبل الأخضر. أسلوب مميز في السرد التاريخي وإرشاد العائلات.",
-        specialties: ["آثار قورينا وشحات", "طبيعة الجبل الأخضر", "جولات عائلية"],
-      },
-    },
-    vehicle: {
-      model: "تويوتا هايس 2024 مكيفة",
-      company: "شركة الجبل الأخضر للخدمات السياحية",
-      driver: "الكابتن خالد البرعصي",
-    },
-    price: 210,
-    rating: 4.95,
-    reviews: 47,
-  },
-  {
-    id: "d4",
-    type: "daily",
-    title: "صبراتة الأثرية ومسرح البحر",
-    img: destSabratah,
-    description:
-      "رحلة ساحلية ليوم كامل لاستكشاف مسرح صبراتة الروماني المطل على مياه المتوسط والمتحف الأثري وتناول المأكولات البحرية.",
-    activities: ["جولة المسرح الروماني", "زيارة المتحف الفينيقي", "غداء مأكولات بحرية طازجة", "استراحة بحرية عند المغيب"],
-    attractions: [
-      {
-        name: "مسرح صبراتة الروماني",
-        location: "صبراتة - الساحل الغربي",
-        description: "تحفة معمارية رومانية شهيرة بواجهتها ذات الأعمدة الرخامية متعددة الطبقات والمطلة مباشرة على زرقة البحر.",
-      },
-    ],
-    targetPersons: 22,
-    availableSeats: 10,
-    daysOfWeek: "كل خميس وسبت",
-    departure: "طرابلس",
-    entertainment: "مشاهدة غروب الشمس على كورنيش صبراتة، مقاهي شاطئية وجلسة مأكولات بحرية طازجة",
-    guide: {
-      name: "أ. عادل الزواوي",
-      title: "مرشد أثري متخصص في حضارات الساحل الفينيقية (خبرة 8 سنوات)",
-      phone: "+218 92 666 4411",
-      cv: {
-        name: "أ. عادل الزواوي",
-        title: "مرشد أثري متخصص في حضارات الساحل الفينيقية",
-        licenseNumber: "G-7104",
-        experienceYears: 8,
-        rating: 4.88,
-        pricePerDay: 160,
-        phone: "+218 92 666 4411",
-        bio: "دليل سياحي مرخص متخصص في مدينة صبراتة التاريخية والتراث البحري.",
-        specialties: ["مسرح صبراتة", "الآثار الرومانية", "جولات شاطئية"],
-      },
-    },
-    vehicle: {
-      model: "تويوتا هايس سياحي 2024 VIP",
-      company: "شركة المتوسط للنقل السياحي",
-      driver: "الكابتن كمال الفرجاني",
-    },
-    accommodation: "رحلة يومية - عودة في المساء إلى طرابلس",
-    price: 150,
-    rating: 4.88,
-    reviews: 53,
-  },
-  {
-    id: "d5",
-    type: "daily",
-    title: "جبل نفوسة وبيوت الحفر بغريان",
-    img: destGharyanCave,
-    description:
-      "جولة جبلية مشوقة تنطلق من طرابلس لزيارة بيوت الحفر الأثرية في باطن جبل نفوسة، وورش الفخار اليدوي الشهيرة وقصور نالوت وقصر الحاج الحجرية.",
-    activities: ["استكشاف بيوت الحفر التراثية", "ورش ومصانع الفخار اليدوي", "زيارة قصر الحاج وقصور نالوت", "إطلالة بانورامية من رأس اللفعة"],
-    attractions: [
-      {
-        name: "بيوت الحفر التراثية بغريان",
-        location: "غريان - جبل نفوسة",
-        description: "مساكن بيئية فريدة محفورة في باطن الجبل تمتاز باعتدال حرارتها المستمر وفنائها المفتوح للسماء.",
-      },
-      {
-        name: "قصور وقلاع الجبل الغربي",
-        location: "نالوت وقصر الحاج",
-        description: "قلاع تاريخية لتخزين الحبوب شيدها الأمازيغ على حواف الجبال الشاهقة منذ مئات السنين.",
-      },
-    ],
-    targetPersons: 20,
-    availableSeats: 8,
-    daysOfWeek: "كل سبت وأربعاء",
-    departure: "طرابلس",
-    entertainment: "مشاهدة صناعة الفخار المباشرة، غداء جبلي أصيل بزيت الزيتون النفوسي، وجلسة شاي بالنعناع الجبلي",
-    guide: {
-      name: "أ. أحمد الغرياني",
-      title: "مرشد التراث والمسالك الجبلية بنفوسة (خبرة 10 سنوات)",
-      phone: "+218 91 777 8899",
-      cv: {
-        name: "أ. أحمد الغرياني",
-        title: "مرشد التراث والمسالك الجبلية بنفوسة",
-        licenseNumber: "G-8220",
-        experienceYears: 10,
-        rating: 4.92,
-        pricePerDay: 140,
-        phone: "+218 91 777 8899",
-        bio: "دليل محلي خبير في تاريخ جبل نفوسة وبيوت الحفر الأثرية والقصور الأمازيغية والمسارات الجبلية الطبيعية.",
-        specialties: ["بيوت الحفر بغريان", "قصور وقلاع نفوسة", "التراث الجبلي"],
-      },
-    },
-    vehicle: {
-      model: "تويوتا هايس 2024 سياحي مريح",
-      company: "شركة الجبل للنقل والسياحة",
-      driver: "الكابتن مراد الباروني",
-    },
-    accommodation: "رحلة يومية - عودة في المساء إلى طرابلس",
-    price: 110,
-    rating: 4.92,
-    reviews: 41,
-  },
-  {
-    id: "d6",
-    type: "daily",
-    title: "طبيعة وغابات الجبل الأخضر ووادي الكوف",
-    img: destJabalAkhdarBridge,
-    description:
-      "مغامرة طبيعية استثنائية في قلب غابات الصنوبر والعرعر بالجبل الأخضر، وزيارة جسر وادي الكوف المعلق الشاهق ومطلات عقبة الجبل.",
-    activities: ["مسار المشي بين أشجار الصنوبر", "التوقف عند جسر وادي الكوف الأيقوني", "إطلالات بانورامية على السهول والبحر", "غداء مشويات جبلية"],
-    attractions: [
-      {
-        name: "جسر وادي الكوف المعلق",
-        location: "وادي الكوف - الجبل الأخضر",
-        description: "أحد أشهر الجسور المعلقة في أفريقيا يرتفع فوق وادٍ سحيق محاط بالغابات الكثيفة والمنحدرات الجبلية.",
-      },
-      {
-        name: "غابات الجبل الأخضر ومطلات السهول",
-        location: "البيضاء والمنصورة",
-        description: "غطاء نباتي طبيعي فريد يجمع بين الصنوبر الحلبي والبطم والعرعر مع هواء جبلي نقي ومنعش.",
-      },
-    ],
-    targetPersons: 16,
-    availableSeats: 6,
-    daysOfWeek: "كل خميس، جمعة، وسبت",
-    departure: "بنغازي",
-    entertainment: "جلسة شاي جبلية بالأعشاب الطبيعية، مشويات على الفحم في الغابة، وتصوير بانورامي",
-    guide: {
-      name: "أ. خالد بن يونس",
-      title: "دليل المغامرات البيئية بالجبل الأخضر (خبرة 6 سنوات)",
-      phone: "+218 92 111 2233",
-      cv: {
-        name: "أ. خالد بن يونس",
-        title: "دليل المغامرات البيئية بالجبل الأخضر",
-        licenseNumber: "G-9902",
-        experienceYears: 6,
-        rating: 4.9,
-        pricePerDay: 160,
-        phone: "+218 92 111 2233",
-        bio: "متخصص في المسارات الطبيعية وغابات الجبل الأخضر وجسر وادي الكوف والتخييم الجبلي.",
-        specialties: ["مسارات غابات الصنوبر", "جسر وادي الكوف", "سياحة بيئية"],
-      },
-    },
-    vehicle: {
-      model: "تويوتا هايس 2024 دفع رباعي مكيفة",
-      company: "شركة نسائم الجبل للسياحة",
-      driver: "الكابتن طارق الورفلي",
-    },
-    accommodation: "رحلة يومية - عودة في المساء",
-    price: 160,
-    rating: 4.96,
-    reviews: 58,
-  },
-];
-
-const weeklyTrips: WeeklyTrip[] = [
-  {
-    id: "w1",
-    type: "weekly",
-    title: "سحر الصحراء: أوباري وتدرارت أكاكوس",
-    img: destUbariGaberoun,
-    description:
-      "رحلة أسبوعية استكشافية متكاملة لرمال الجنوب الساحرة، التخييم الفاخر تحت النجوم، وبحيرة قبر عون العجيبة.",
-    startDate: "2026-10-10",
-    endDate: "2026-10-17",
-    targetPersons: 15,
-    availableSeats: 6,
-    seatPrice: 1850,
-    cities: ["طرابلس", "سبها", "أوباري", "غات"],
-    attractions: [
-      {
-        name: "بحيرات أوباري وقبر عون",
-        location: "أوباري - الجنوب الليبي",
-        description: "واحات مائية مالحة في قلب الرمال الذهبية تحيط بها النخيل والكثبان العملاقة.",
-      },
-      {
-        name: "جبال تدرارت أكاكوس",
-        location: "غات - فزان",
-        description: "سلسلة جبلية صخرية تضم نقوشاً جدارية نادرة تعود لآلاف السنين قبل الميلاد.",
-      },
-    ],
-    hotels: ["مخيم أوباري الصحراوي الفاخر", "فندق غات السياحي"],
-    departure: "طرابلس",
-    guide: {
-      name: "أ. طارق التواتي",
-      title: "خبير الصحراء الكبرى والجغرافيا الطوارقية (خبرة 15 سنة)",
-      phone: "+218 91 888 2211",
-      cv: {
-        name: "أ. طارق التواتي",
-        title: "خبير الصحراء الكبرى والجغرافيا الطوارقية",
-        licenseNumber: "G-7734",
-        experienceYears: 15,
-        rating: 5.0,
-        pricePerDay: 250,
-        phone: "+218 91 888 2211",
-        bio: "دليل صحراوي محترف من أهالي الجنوب. خبير في مسارات الكثبان الرملية بأوباري، التخييم في جبال أكاكوس، وسهرات الفلكلور الطوارقي وشواء الصحراء.",
-        specialties: ["سفاري الصحراء 4x4", "تخييم أكاكوس", "نقوش ما قبل التاريخ"],
-      },
-    },
-    vehicle: {
-      model: "مجموعة من سيارات الدفع الرباعي وسائقيها",
-      company: "شركة الفزان لسفاري الصحراء",
-      driver: "الكابتن عمر الطوارقي ونخبة السائقين",
-    },
-    rating: 5.0,
-    reviews: 112,
-  },
-  {
-    id: "w2",
-    type: "weekly",
-    title: "لؤلؤة الصحراء: غدامس والواحات القديمة",
-    img: destGhadames,
-    description: "أسبوع ثقافي وتراثي في مدينة غدامس المسجلة باليونسكو مع المأكولات التراثية والعمارة الطينية.",
-    startDate: "2026-11-01",
-    endDate: "2026-11-07",
-    targetPersons: 20,
-    availableSeats: 9,
-    seatPrice: 1450,
-    cities: ["طرابلس", "نالوت", "غدامس"],
-    attractions: [
-      {
-        name: "مدينة غدامس القديمة",
-        location: "غدامس",
-        description: "لؤلؤة الصحراء المسجلة بتراث اليونسكو، تمتاز بعمارتها الطينية الأسطورية وشوارعها المسقوفة.",
-      },
-    ],
-    hotels: ["فندق عين الفرس غدامس"],
-    departure: "طرابلس",
-    guide: {
-      name: "أ. المبروك الغدامسي",
-      title: "دليل العمارة الطينية وتراث غدامس (خبرة 14 سنة)",
-      phone: "+218 484 622 111",
-      cv: {
-        name: "أ. المبروك الغدامسي",
-        title: "دليل العمارة الطينية وتراث مدينة غدامس",
-        licenseNumber: "G-5519",
-        experienceYears: 14,
-        rating: 4.92,
-        pricePerDay: 200,
-        phone: "+218 484 622 111",
-        bio: "دليل محلي معتمد لمدينة غدامس القديمة. خبير بالعمارة الطينية الفريدة وعين الفرس وعادات الزفاف التراثية الغدامسية.",
-        specialties: ["عمارة غدامس الطينية", "متحف التراث", "عين الفرس"],
-      },
-    },
-    vehicle: {
-      model: "حافلة هيونداي يونيفرس الحديثة",
-      company: "شركة الواحات للنقل الدولي",
-      driver: "الكابتن جمال النفوسي",
-    },
-    rating: 4.9,
-    reviews: 79,
-  },
-];
+// Live trips loaded dynamically from DelniDB SQL Server (static mock trips removed)
+const dailyTrips: DailyTrip[] = [];
+const weeklyTrips: WeeklyTrip[] = [];
 
 const privateTemplates: PrivateTemplate[] = [
   {
@@ -1223,36 +765,7 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
   const bookedSeats = Math.max(0, totalSeats - availableSeats);
   const percentBooked = Math.min(100, Math.round((bookedSeats / totalSeats) * 100));
 
-  let realisticOverview = "";
-  if ("realisticOverview" in t && (t as any).realisticOverview) {
-    realisticOverview = (t as any).realisticOverview;
-  } else if (t.id === "d2") {
-    realisticOverview = isAr
-      ? "رحلة العاصمة الليبية طرابلس تشمل جولة ميدانية متكاملة لزيارة المعالم التراثية بالمدينة القديمة وقوس ماركوس أوريليوس وزنقة الفرنسيس ومدرسة عثمان باشا، وزيارة قلعة السرايا الحمراء والمتحف الوطني، بالإضافة إلى زيارة حديقة الحيوان والاستمتاع بالمساحات الخضراء، وتناول وجبة الغداء في إحدى المطاعم التراثية العريقة بالمدينة (أكلات شعبية ليبية أصيلة تشمل الكسكسي بالبصلة، البازين، أو الأسماك الطازجة مع الشاي باللوز)، مع وقت حر للتسوق في أسواق المدينة القديمة."
-      : "Tripoli capital tour covers walking exploration of the historic Old Medina, Marcus Aurelius Arch, the Red Castle & National Museum, followed by a visit to the Tripoli Zoo & botanical gardens, and an authentic Libyan traditional lunch at an iconic heritage restaurant with almond mint tea.";
-  } else if (t.id === "d1") {
-    realisticOverview = isAr
-      ? "رحلة يومية شاملة إلى مدينة لبدة الكبرى الأثرية بالخمس، تشمل استكشاف المسرح الروماني الأضخم في شمال أفريقيا، وقوس سيبتيموس سيفيروس، وحمامات هادريان ذات الموزاييك الرخامي، والسوق الروماني القديم، يعقبها تناول وجبة غداء بحرية طازجة في مطعم شاطئي مطل على البحر المتوسط، مع استراحة شاي عند الغروب."
-      : "Full-day archaeological tour to Leptis Magna, exploring the Roman amphitheater, Arch of Septimius Severus, and Hadrianic baths, complemented by a fresh seafood lunch at a seaside restaurant.";
-  } else if (t.id === "d3") {
-    realisticOverview = isAr
-      ? "رحلة جبلية وأثرية ليوم كامل إلى قمم الجبل الأخضر وآثار قورينا (شحات)، تشمل زيارة معبد أبولو، والمدرج الإغريقي، وعين شحات التاريخية، مع إطلالة بانورامية على شواطئ سوسة وأبولونيا، وتناول وجبة غداء لحم وطني مشوي على الطريقة الجبلية وسط غابات الجبل الأخضر الطبيعية."
-      : "Full-day scenic & historical expedition to Cyrene (Shahhat) on the Green Mountain, visiting the Temple of Apollo, Greek theater, and ancient springs, paired with a traditional mountain pit-roasted barbecue lunch.";
-  } else if (t.id === "d4") {
-    realisticOverview = isAr
-      ? "رحلة ساحلية ليوم كامل لمدينة صبراتة الأثرية، تشمل زيارة مسرح صبراتة الروماني الشهير بواجهته الرخامية المطلة على البحر المتوسط، والمتحف الأثري الفينيقي، وتناول وجبة غداء أسماك طازجة بمطعم على الشاطئ، وجولة حرة على الكورنيش."
-      : "Coastal day tour to ancient Sabratha, featuring the iconic seaside Roman theater, Phoenician museum, and a fresh Mediterranean catch lunch.";
-  } else if (t.id === "w1") {
-    realisticOverview = isAr
-      ? "رحلة أسبوعية استكشافية متكاملة لرمال الجنوب الليبي وسفاري الصحراء، تشمل سيارات الدفع الرباعي 4x4 مع سائقين محترفين من أهالي الصحراء، زيارة بحيرات أوباري الساحرة (قبرعون والمندرة)، التخييم الفاخر في جبال تدرارت أكاكوس، مشاهدة النقوش الصخرية القديمة، وتناول وجبات الشواء الصحراوية وسهرات الشاي الطوارقي الفلكلورية."
-      : "Complete 7-day desert safari into Ubari sand dunes and Tadrart Acacus mountains with 4x4 SUVs, native Tuareg desert guides, luxury camp stay, and barbecue feasts.";
-  } else if (t.id === "w2") {
-    realisticOverview = isAr
-      ? "رحلة أسبوعية ثقافية متكاملة إلى لؤلؤة الصحراء غدامس المسجلة باليونسكو، تشمل التجول في شوارع المدينة القديمة المسقوفة، زيارة عين الفرس، والمتحف التراثي، وتناول الوجبات التراثية الغدامسية (بازين، فتات، وتمور الواحات) مع الإقامة في فندق تراثي."
-      : "7-day cultural journey to the UNESCO-listed mud-brick oasis of Ghadames, with heritage walks, Ain al-Faras spring, and authentic oasis feasts.";
-  } else {
-    realisticOverview = t.description;
-  }
+  const realisticOverview = ("realisticOverview" in t && (t as any).realisticOverview) || t.description || "";
 
   // Daily Tours STRICTLY 09:00 AM to 09:00 PM (12 hours) as explicitly demanded by user
   let customSteps: any[] | null = null;
@@ -1468,12 +981,81 @@ function TripDetailsView({
 
   const cityImages = useMemo(() => getTripImages(trip), [trip]);
 
-  // Slideshow state for city images
+  // Dynamic platform hotels and restaurants filtered by visited landmarks
+  const [platformHotels, setPlatformHotels] = useState<any[]>([]);
+  const [platformRestaurants, setPlatformRestaurants] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiGetHotels().then((list) => {
+      if (Array.isArray(list)) setPlatformHotels(list);
+    });
+    apiGetRestaurants().then((list) => {
+      if (Array.isArray(list)) setPlatformRestaurants(list);
+    });
+  }, []);
+
+  const destinationKeywords = useMemo(() => {
+    const list: string[] = [];
+    if (trip.title) list.push(trip.title);
+    if ((trip as any).destination) list.push((trip as any).destination);
+    if ((trip as any).destination_city) list.push((trip as any).destination_city);
+    if (Array.isArray((trip as any).cities)) list.push(...(trip as any).cities);
+    if (Array.isArray((trip as any).destinations)) list.push(...(trip as any).destinations);
+    if (Array.isArray((trip as any).attractions)) {
+      (trip as any).attractions.forEach((a: any) => {
+        if (a.name) list.push(a.name);
+        if (a.location) list.push(a.location);
+      });
+    }
+    return list.map((s) => String(s).toLowerCase().trim()).filter(Boolean);
+  }, [trip]);
+
+  const filteredHotels = useMemo(() => {
+    if (platformHotels.length === 0) return [];
+    const assigned = platformHotels.filter(
+      (h) => (trip as any).hotel_ids?.includes(h.hotel_id) || (trip as any).hotel_id === h.hotel_id
+    );
+    if (assigned.length > 0) return assigned;
+
+    const matched = platformHotels.filter((h) => {
+      const hCity = String(h.city || h.address || h.hotel_name || "").toLowerCase();
+      return destinationKeywords.some((kw) => kw.includes(hCity) || hCity.includes(kw));
+    });
+    return matched.slice(0, 4);
+  }, [platformHotels, destinationKeywords, trip]);
+
+  const { includedRestaurants, promoRestaurants } = useMemo(() => {
+    if (platformRestaurants.length === 0) return { includedRestaurants: [], promoRestaurants: [] };
+
+    const tripRestIds = (trip as any).restaurant_ids || [];
+    const tripSingleRestId = (trip as any).restaurant_id;
+
+    const assigned = platformRestaurants.filter(
+      (r) =>
+        tripRestIds.includes(r.id || r.facility_id) ||
+        tripSingleRestId === (r.id || r.facility_id) ||
+        tripRestIds.includes(String(r.id || r.facility_id))
+    );
+
+    const promo = platformRestaurants.filter((r) => {
+      const isAssigned = assigned.some((a) => (a.id || a.facility_id) === (r.id || r.facility_id));
+      if (isAssigned) return false;
+      const rCity = String(r.city || r.address || r.name || "").toLowerCase();
+      return destinationKeywords.some((kw) => kw.includes(rCity) || rCity.includes(kw));
+    }).slice(0, 4);
+
+    return { includedRestaurants: assigned, promoRestaurants: promo };
+  }, [platformRestaurants, destinationKeywords, trip]);
+
+  const [dismissedPromoIds, setDismissedPromoIds] = useState<string[]>([]);
+
+  // Slideshow state for city images with elegant smooth motion
   const [activeSlide, setActiveSlide] = useState(0);
   useEffect(() => {
+    if (cityImages.length <= 1) return;
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % cityImages.length);
-    }, 4000);
+    }, 5500);
     return () => clearInterval(timer);
   }, [cityImages.length]);
 
@@ -1484,105 +1066,129 @@ function TripDetailsView({
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#0F172A] pb-20 relative" dir={dir}>
-      {/* 1. Sleek Compact Image Slideshow Banner */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
-        <div className="relative w-full h-[260px] sm:h-[320px] lg:h-[360px] bg-black rounded-3xl overflow-hidden shadow-lg border border-[#E8E2D6] group">
-          {/* Stacked animated city images with crossfade */}
-          {cityImages.map((imgSrc, idx) => (
-            <div
-              key={idx}
-              className="absolute inset-0 transition-opacity duration-[1000ms] ease-in-out"
-              style={{ opacity: idx === activeSlide ? 1 : 0, zIndex: idx === activeSlide ? 1 : 0 }}
-            >
-              <img
-                src={imgSrc}
-                alt={`${trip.title} - ${idx + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
-
-          {/* Clean subtle bottom gradient for text contrast only */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent z-10 pointer-events-none" />
-
-          {/* Prev / Next Manual Navigation Arrows on Banner */}
-          <button
-            type="button"
-            onClick={() => setActiveSlide((prev) => (prev - 1 + cityImages.length) % cityImages.length)}
-            aria-label="Previous Slide"
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-25 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 flex items-center justify-center text-lg transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
+      {/* 1. Sleek Full-Width Panoramic Image Slideshow Banner with Elegant Ken Burns Motion */}
+      <div className="w-full relative h-[360px] sm:h-[460px] lg:h-[540px] bg-slate-950 overflow-hidden shadow-lg group">
+        {/* Stacked animated city images with crossfade & elegant Ken Burns motion */}
+        {cityImages.map((imgSrc, idx) => (
+          <div
+            key={idx}
+            className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: idx === activeSlide ? 1 : 0, zIndex: idx === activeSlide ? 2 : 1 }}
           >
-            ‹
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSlide((prev) => (prev + 1) % cityImages.length)}
-            aria-label="Next Slide"
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-25 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 flex items-center justify-center text-lg transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
-          >
-            ›
-          </button>
-
-          {/* Slide indicator dots */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20">
-            {cityImages.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setActiveSlide(idx)}
-                className={`rounded-full transition-all duration-300 cursor-pointer ${
-                  idx === activeSlide
-                    ? "w-5 h-1.5 bg-amber-400 shadow-md"
-                    : "w-1.5 h-1.5 bg-white/45 hover:bg-white/75"
-                }`}
-                aria-label={`الصورة ${idx + 1}`}
-              />
-            ))}
-            <span className="text-[10px] text-white/90 font-bold ml-1">
-              {activeSlide + 1}/{cityImages.length}
-            </span>
+            <img
+              src={imgSrc}
+              alt={`${trip.title} - ${idx + 1}`}
+              className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
+                idx === activeSlide ? KB_CLASSES[idx % KB_CLASSES.length] : "scale-100"
+              }`}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (target.src !== heroImg) {
+                  target.src = heroImg;
+                }
+              }}
+            />
           </div>
+        ))}
 
-          {/* Floating Transparent Top Navigation Bar Directly Over Image */}
-          <div className="absolute top-0 inset-x-0 z-30 p-3 sm:p-4 flex items-center justify-between pointer-events-none">
-            {/* Back Button: Round Transparent Glass Arrow */}
+        {/* Clean subtle bottom gradient for text contrast only */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent z-10 pointer-events-none" />
+
+        {/* Prev / Next Manual Navigation Arrows on Banner ONLY if multiple images */}
+        {cityImages.length > 1 && (
+          <>
             <button
               type="button"
-              onClick={onBack}
-              className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 hover:bg-black/65 text-white backdrop-blur-md border border-white/25 flex items-center justify-center text-xl transition shadow-md cursor-pointer hover:scale-105 active:scale-95"
-              title={isAr ? "العودة للرحلات" : "Back to Tours"}
+              onClick={() => setActiveSlide((prev) => (prev - 1 + cityImages.length) % cityImages.length)}
+              aria-label="Previous Slide"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-25 w-10 h-10 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md border border-white/25 flex items-center justify-center text-xl transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
             >
-              <span>{dir === "rtl" ? "➔" : "←"}</span>
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSlide((prev) => (prev + 1) % cityImages.length)}
+              aria-label="Next Slide"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-25 w-10 h-10 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md border border-white/25 flex items-center justify-center text-xl transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
+            >
+              ›
             </button>
 
-            {/* Dallani Logo with Transparent Glass */}
-            <div className="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/25 text-white font-black text-xs drop-shadow-md">
-              <span className="text-amber-400 text-sm">🧭</span>
-              <span>{isAr ? "منصة دلّني" : "Dallani"}</span>
-            </div>
-
-            {/* Tour Type Badge with Transparent Glass */}
-            <div className="pointer-events-auto flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/25 text-white text-[11px] font-black drop-shadow-md">
-                {trip.type === "daily"
-                  ? (isAr ? "☀️ رحلة يومية (9 ص - 9 م)" : "Daily Tour (9 AM - 9 PM)")
-                  : trip.type === "weekly"
-                  ? (isAr ? "🗓️ رحلة أسبوعية" : "Weekly Tour")
-                  : (isAr ? "👑 رحلة خاصة" : "Private Tour")}
+            {/* Slide indicator dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20">
+              {cityImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveSlide(idx)}
+                  className={`rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === activeSlide
+                      ? "w-5 h-1.5 bg-amber-400 shadow-md"
+                      : "w-1.5 h-1.5 bg-white/45 hover:bg-white/75"
+                  }`}
+                  aria-label={`الصورة ${idx + 1}`}
+                />
+              ))}
+              <span className="text-[10px] text-white/90 font-bold ml-1 font-mono">
+                {activeSlide + 1}/{cityImages.length}
               </span>
-              {"rating" in trip && (
-                <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/25 text-white text-[11px] font-black">
-                  <span className="text-amber-300">★ {trip.rating}</span>
-                  <span className="text-white/80">({trip.reviews})</span>
-                </div>
-              )}
             </div>
+          </>
+        )}
+
+        {/* Floating Top Luxury Glass Navigation Bar with High Contrast & Clear Exit Button */}
+        <div className="absolute top-0 inset-x-0 z-30 p-3 sm:p-5 flex items-center justify-between gap-3 pointer-events-none">
+          {/* Back/Exit Button: Highly Visible, High-Contrast Luxury Glass Button */}
+          <button
+            type="button"
+            onClick={onBack}
+            className="pointer-events-auto group px-4 sm:px-5 py-2.5 rounded-2xl bg-white/95 hover:bg-white text-slate-900 font-black text-xs sm:text-sm shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md border-2 border-[#D96B27]/40 hover:border-[#D96B27] flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ring-4 ring-black/20"
+            title={isAr ? "العودة إلى قائمة الرحلات" : "Back to Tours"}
+          >
+            <span className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#D96B27] to-[#EA580C] text-white flex items-center justify-center text-sm font-black shadow-md transition-transform group-hover:-translate-x-1">
+              {dir === "rtl" ? "➔" : "←"}
+            </span>
+            <div className="flex flex-col text-right leading-tight">
+              <span className="text-[#003580] font-black">{isAr ? "العودة لقائمة الرحلات" : "Back to Tours"}</span>
+              <span className="text-[10px] text-[#D96B27] font-bold">{isAr ? "خروج وتصفح المزيد" : "Exit & Browse"}</span>
+            </div>
+          </button>
+
+          {/* Dallani Tourism Center Brand Badge */}
+          <div className="pointer-events-auto hidden md:inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/65 backdrop-blur-md border border-amber-500/30 text-white font-black text-xs shadow-xl">
+            <span className="text-amber-400 text-base">🧭</span>
+            <span className="tracking-wide">{isAr ? "منصة دلّني للسياحة والتجارب الليبية" : "Dallani Tourism Experiences"}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+          </div>
+
+          {/* Tour Type & Live Availability Status Badge */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            <span className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-[#003580]/90 to-[#1B5A78]/90 text-white text-xs font-black shadow-xl backdrop-blur-md border border-white/20 flex items-center gap-1.5">
+              <span>{trip.type === "daily" ? "☀️" : trip.type === "weekly" ? "🗓️" : "👑"}</span>
+              <span>
+                {trip.type === "daily"
+                  ? (isAr ? "رحلة يومية" : "Daily Tour")
+                  : trip.type === "weekly"
+                  ? (isAr ? "رحلة أسبوعية" : "Weekly Tour")
+                  : (isAr ? "رحلة خاصة VIP" : "Private Tour")}
+              </span>
+            </span>
+
+            {info.availableSeats <= 0 ? (
+              <span className="px-3.5 py-2 rounded-2xl bg-red-600/95 text-white text-xs font-black shadow-xl backdrop-blur-md border border-red-400/40 animate-pulse">
+                {isAr ? "مكتملة الحجز" : "Fully Booked"}
+              </span>
+            ) : (
+              <span className="hidden sm:inline-flex px-3.5 py-2 rounded-2xl bg-emerald-950/80 backdrop-blur-md border border-emerald-400/40 text-emerald-300 text-xs font-black shadow-xl">
+                {isAr ? `متبقي ${info.availableSeats} مقاعد` : `${info.availableSeats} seats left`}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 2. Trip Header & Key Highlights Section (Cleanly below video - ZERO text covering video) */}
-      <div className="bg-white border-b border-[#E8E2D6] py-6 sm:py-8 shadow-xs relative z-10">
+      {/* 2. Trip Header & Key Highlights Section with Elegant Orange Top Border */}
+      <div className="bg-white border-b border-[#E8E2D6] border-t-4 border-t-[#D96B27] py-6 sm:py-8 shadow-xs relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div className="space-y-2">
@@ -1605,9 +1211,17 @@ function TripDetailsView({
                     )}
                   </>
                 )}
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-black border border-amber-200">
+                <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black border ${
+                  info.availableSeats <= 0
+                    ? "bg-red-50 text-red-800 border-red-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
+                }`}>
                   <span>🪑</span>
-                  <span>{isAr ? `متبقي ${info.availableSeats} مقاعد` : `${info.availableSeats} seats left`}</span>
+                  <span>
+                    {info.availableSeats <= 0
+                      ? (isAr ? "الرحلة مكتملة المقاعد" : "Fully Booked")
+                      : (isAr ? `متبقي ${info.availableSeats} مقاعد` : `${info.availableSeats} seats left`)}
+                  </span>
                 </span>
               </div>
 
@@ -1623,11 +1237,22 @@ function TripDetailsView({
               </div>
               <button
                 type="button"
+                disabled={info.availableSeats <= 0}
                 onClick={onBook}
-                className="px-6 py-3.5 rounded-xl bg-[#D96B27] hover:bg-[#c25a1b] text-white font-black text-sm shadow-md transition cursor-pointer flex items-center gap-2"
+                className={`px-6 py-3.5 rounded-xl font-black text-sm shadow-md transition flex items-center gap-2 ${
+                  info.availableSeats <= 0
+                    ? "bg-stone-300 text-stone-500 cursor-not-allowed border border-stone-400"
+                    : "bg-[#D96B27] hover:bg-[#c25a1b] text-white cursor-pointer hover:shadow-lg active:scale-95"
+                }`}
               >
-                <span>{trip.type === "private" ? (isAr ? "طلب تصميم الرحلة" : "Request Custom Tour") : (isAr ? "حجز مقعدك الآن" : "Book Your Seat")}</span>
-                <span>➔</span>
+                <span>
+                  {info.availableSeats <= 0
+                    ? (isAr ? "مكتملة بالكامل" : "Fully Booked")
+                    : trip.type === "private"
+                    ? (isAr ? "طلب تصميم الرحلة" : "Request Custom Tour")
+                    : (isAr ? "حجز مقعدك الآن" : "Book Your Seat")}
+                </span>
+                {info.availableSeats > 0 && <span>➔</span>}
               </button>
             </div>
           </div>
@@ -1650,8 +1275,14 @@ function TripDetailsView({
                   <span>🪑</span>
                   <span>{isAr ? "حالة حجز المقاعد المتاحة في الرحلة:" : "Trip Seats Availability:"}</span>
                 </span>
-                <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                  {isAr ? `متبقي ${info.availableSeats} مقاعد فقط للحجز!` : `Only ${info.availableSeats} seats left!`}
+                <span className={`text-xs font-black px-3 py-1 rounded-full border ${
+                  info.availableSeats <= 0
+                    ? "text-red-700 bg-red-50 border-red-200 animate-pulse"
+                    : "text-emerald-700 bg-emerald-50 border-emerald-200"
+                }`}>
+                  {info.availableSeats <= 0
+                    ? (isAr ? "الرحلة مكتملة بالكامل (0 مقاعد متبقية)" : "Fully booked - 0 seats left")
+                    : (isAr ? `متبقي ${info.availableSeats} مقاعد فقط للحجز!` : `Only ${info.availableSeats} seats left!`)}
                 </span>
               </div>
 
@@ -1684,23 +1315,13 @@ function TripDetailsView({
                 {info.realisticOverview}
               </p>
 
-              {/* Features Chips */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
-                  <span className="text-xl">🍽️</span>
-                  <div>
-                    <div className="font-black text-xs text-[#0F172A]">{isAr ? "وجبة الغداء مشمولة بالكامل" : "Lunch Included"}</div>
-                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      {isAr ? "وجبة غداء ليبية متكاملة (كسكسي، بازين، أو أسماك طازجة) في مطعم تراثي." : "Traditional multi-course lunch at a vetted heritage restaurant."}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+              {/* Departure Feature Chip */}
+              <div className="pt-2">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
                   <span className="text-xl">📍</span>
                   <div>
                     <div className="font-black text-xs text-[#0F172A]">{isAr ? "نقطة وموعد الانطلاق بدقة" : "Exact Departure Point"}</div>
-                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    <div className="text-xs text-slate-600 font-medium mt-0.5">
                       {info.departurePoint}
                     </div>
                   </div>
@@ -1745,8 +1366,10 @@ function TripDetailsView({
               </div>
             </div>
 
-            {/* 4. Included Attractions & City Landmarks */}
-            {"attractions" in trip && trip.attractions && trip.attractions.length > 0 && (
+
+
+            {/* 4. Included Attractions & City Landmarks (Weekly Trips only — Daily trips visit 1 landmark/city) */}
+            {trip.type !== "daily" && "attractions" in trip && trip.attractions && trip.attractions.length > 0 && (
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
                 <h3 className="text-lg font-black text-[#003580] flex items-center gap-2">
                   <span>🏛️</span>
@@ -1764,108 +1387,111 @@ function TripDetailsView({
               </div>
             )}
 
-            {/* 5. Recommended Nearby Partner Hotels */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
-                    <span>🏨</span>
-                    <span>{isAr ? "الفنادق وأماكن الإقامة المجاورة المقترحة للرحلة:" : "Recommended Nearby Partner Hotels:"}</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 font-bold mt-0.5">
-                    {isAr ? "فنادق ونُزل معتمدة قريبة من مسار الرحلة مع خصم خاص 20% لعملاء منصة دلّني" : "Vetted hotels near trip route with 20% partner discount"}
-                  </p>
-                </div>
-                <Link
-                  to="/hotels"
-                  className="text-xs font-black text-[#003580] hover:underline flex items-center gap-1"
-                >
-                  <span>{isAr ? "استعراض جميع الفنادق" : "View All"}</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] flex flex-col justify-between space-y-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="/assets/ai_city.jpg"
-                      alt="فندق شريك"
-                      className="w-16 h-16 rounded-xl object-cover"
-                    />
-                    <div>
-                      <div className="font-black text-sm text-[#0F172A]">
-                        {isAr ? "فندق ومنتجع الشاطئ الفاخر" : "Luxury Seafront Resort"}
-                      </div>
-                      <div className="text-xs text-amber-500 font-bold">★★★★★ · {isAr ? "خدمة 5 نجوم" : "5 Stars"}</div>
-                      <div className="text-[11px] text-[#003580] font-black mt-0.5">
-                        {isAr ? "ابتداءً من 450 د.ل (خصم 20%)" : "From 450 LYD (20% OFF)"}
-                      </div>
-                    </div>
+            {/* 5. Recommended Accommodations & Stays (Weekly Tours with overnight stay only — Daily trips have no stay) */}
+            {trip.type !== "daily" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
+                      <span>🏨</span>
+                      <span>
+                        {isAr ? "فنادق وأماكن الإقامة المشمولة في برنامج الرحلة الأسبوعية:" : "Included Accommodations & Hotels for Weekly Tour:"}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 font-bold mt-0.5">
+                      {isAr
+                        ? "أماكن إقامة مختارة ومجهزة للمبيت طوال أيام الرحلة الأسبوعية في المعالم المزارة"
+                        : "Handpicked hotels and stays at the tour destination"}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-[#E8E2D6]">
-                    <a
-                      href="tel:0912223344"
-                      className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs text-center transition flex items-center justify-center gap-1"
-                    >
-                      <span>📞</span>
-                      <span>0912223344</span>
-                    </a>
-                    <Link
-                      to="/hotels"
-                      className="py-1.5 px-3 rounded-xl bg-[#003580] text-white font-black text-xs text-center transition"
-                    >
-                      {isAr ? "تفاصيل الفندق" : "Details"}
+                  <Link
+                    to="/hotels"
+                    className="text-xs font-black text-[#003580] hover:underline flex items-center gap-1"
+                  >
+                    <span>{isAr ? "استعراض جميع الفنادق" : "View All"}</span>
+                    <span>➔</span>
+                  </Link>
+                </div>
+
+                {filteredHotels.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {filteredHotels.map((h, hIdx) => {
+                      const hName = h.hotel_name || h.name || "فندق معتمد";
+                      const hImg = h.hotel_photo_1 || h.photo || "/assets/ai_hotel.jpg";
+                      const hStars = Number(h.star_rating || h.stars || 4);
+                      const hCity = h.city || "ليبيا";
+                      const hPhone = h.phone_number || h.phone;
+                      return (
+                        <div key={h.hotel_id || h.id || hIdx} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] flex flex-col justify-between space-y-3">
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={hImg}
+                              alt={hName}
+                              className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1 mb-0.5">
+                                <h4 className="font-black text-sm text-[#0F172A] truncate">{hName}</h4>
+                                <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                                  {isAr ? "مشمول بالرحلة ✓" : "Included ✓"}
+                                </span>
+                              </div>
+                              <div className="text-xs text-amber-500 font-bold">
+                                {"★".repeat(Math.min(5, Math.max(1, hStars)))} · {isAr ? `فندق ${hStars} نجوم` : `${hStars} Stars`}
+                              </div>
+                              <div className="text-[11px] text-[#003580] font-black mt-1">
+                                📍 {hCity} {h.address_details || h.address ? `— ${h.address_details || h.address}` : ""}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pt-2 border-t border-[#E8E2D6]">
+                            {hPhone ? (
+                              <a
+                                href={`tel:${hPhone}`}
+                                className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs text-center transition flex items-center justify-center gap-1"
+                              >
+                                <span>📞</span>
+                                <span>{hPhone}</span>
+                              </a>
+                            ) : (
+                              <span className="flex-1 py-1.5 px-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs text-center">
+                                {isAr ? "حجز مسبق معتمد" : "Confirmed Stay"}
+                              </span>
+                            )}
+                            <Link
+                              to="/hotels"
+                              className="py-1.5 px-3 rounded-xl bg-[#003580] text-white font-black text-xs text-center transition"
+                            >
+                              {isAr ? "تفاصيل الفندق" : "Details"}
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-center text-xs font-bold text-slate-600 space-y-1">
+                    <div>🏨 {isAr ? "أماكن الإقامة والفنادق المعتمدة يتم ترتيبها وتجهيزها في المعالم والمدن المزارة لهذه الرحلة." : "Accommodations are arranged directly within the destination landmarks."}</div>
+                    <Link to="/hotels" className="text-[#003580] underline font-black inline-block mt-1">
+                      {isAr ? "استعراض شبكة فنادق منصة دلّني في ليبيا ➔" : "Browse all partner hotels ➔"}
                     </Link>
                   </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] flex flex-col justify-between space-y-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="/assets/ai_city.jpg"
-                      alt="نزل تراثي"
-                      className="w-16 h-16 rounded-xl object-cover"
-                    />
-                    <div>
-                      <div className="font-black text-sm text-[#0F172A]">
-                        {isAr ? "نزل وأجنحة التراث العريق" : "Heritage Boutique Suites"}
-                      </div>
-                      <div className="text-xs text-amber-500 font-bold">★★★★☆ · {isAr ? "أصالة وأجواء تراثية" : "Heritage Stay"}</div>
-                      <div className="text-[11px] text-[#003580] font-black mt-0.5">
-                        {isAr ? "ابتداءً من 320 د.ل (خصم خاص)" : "From 320 LYD"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-[#E8E2D6]">
-                    <a
-                      href="tel:0925556677"
-                      className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs text-center transition flex items-center justify-center gap-1"
-                    >
-                      <span>📞</span>
-                      <span>0925556677</span>
-                    </a>
-                    <Link
-                      to="/hotels"
-                      className="py-1.5 px-3 rounded-xl bg-[#003580] text-white font-black text-xs text-center transition"
-                    >
-                      {isAr ? "تفاصيل الفندق" : "Details"}
-                    </Link>
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
+            )}
 
-            {/* 6. Partner Dining & Restaurants Included Section */}
+            {/* 6. Partner Dining & Restaurants (Filtered by visited destinations) */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
                     <span>🍽️</span>
-                    <span>{isAr ? "المطاعم والمقاهي الشريكة المشمولة في برنامج الرحلة:" : "Included Partner Restaurants & Cafes:"}</span>
+                    <span>{isAr ? "المطاعم والمقاهي المتواجدة في المعالم المزارة والمشمولة بالرحلة:" : "Restaurants & Cafes in Visited Destinations:"}</span>
                   </h3>
                   <p className="text-xs text-slate-500 font-bold mt-0.5">
-                    {isAr ? "وجبات غداء شعبية ليبية ومأكولات بحرية طازجة وشاي باللوز في أرقى المطاعم" : "Authentic Libyan feasts & fresh seafood"}
+                    {isAr
+                      ? "وجبات وأطباق شعبية وضيافة قهوة وشاي في أرقى المطاعم المسجلة بالمنصة في المعالم المزارة"
+                      : "Authentic local dining and hospitality in the visited landmarks"}
                   </p>
                 </div>
                 <Link
@@ -1877,9 +1503,55 @@ function TripDetailsView({
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {info.restaurant ? (
-                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2.5">
+              {includedRestaurants.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {includedRestaurants.map((r, rIdx) => {
+                    const rName = r.facility_name || r.name || "مطعم ومقهى تراثي";
+                    const rImg = r.facility_image_1 || r.image || "/assets/restaurant-libya.jpg";
+                    const rType = r.facility_type || r.type || "مطعم ليبي تراثي";
+                    const rCity = r.city || "ليبيا";
+                    const rPhone = r.phone_number || r.phone;
+                    return (
+                      <div key={r.facility_id || r.id || rIdx} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2.5 shadow-xs">
+                        <div className="flex items-start gap-3">
+                          <img
+                            src={rImg}
+                            alt={rName}
+                            className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1 mb-0.5">
+                              <span className="font-black text-sm text-[#0F172A] truncate">{rName}</span>
+                              <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                                {isAr ? "مشمول بالرحلة ✓" : "Included ✓"}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-amber-700 font-bold">
+                              🍲 {rType}
+                            </div>
+                            <div className="text-[11px] text-slate-600 font-medium leading-relaxed mt-1 line-clamp-2">
+                              {r.description || `مطعم معتمد لتقديم أشهى الوجبات والضيافة في ${rCity}.`}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
+                          <span>📍 {rCity} {r.address_details || r.address ? `— ${r.address_details || r.address}` : ""}</span>
+                          {rPhone ? (
+                            <a href={`tel:${rPhone}`} className="text-emerald-700 font-black hover:underline flex items-center gap-1">
+                              <span>📞</span>
+                              <span>{rPhone}</span>
+                            </a>
+                          ) : (
+                            <span className="text-emerald-700 font-bold">شامل بالرحلة ✓</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : info.restaurant ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2.5 shadow-xs">
                     <div className="flex items-start gap-3">
                       {info.restaurant.image ? (
                         <img
@@ -1897,8 +1569,8 @@ function TripDetailsView({
                           <span className="font-black text-sm text-[#0F172A] truncate">
                             {info.restaurant.name}
                           </span>
-                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
-                            {isAr ? "وجبة الغداء المعتمدة" : "Lunch Included"}
+                          <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                            {isAr ? "مشمول بالرحلة ✓" : "Included ✓"}
                           </span>
                         </div>
                         <div className="text-[11px] text-amber-700 font-bold">
@@ -1921,44 +1593,80 @@ function TripDetailsView({
                       )}
                     </div>
                   </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-sm text-[#0F172A]">
-                        {isAr ? "مطعم الحوش للتراث والمأكولات الشعبية" : "Al-Housh Heritage Restaurant"}
-                      </span>
-                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        {isAr ? "شامل الغداء بالرحلة" : "Lunch Included"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                      {isAr ? "أشهى أطباق الكسكسي بالبصلة، البازين، والمشروبات الليبية والشوربة مع جلسات عربية مريحة." : "Authentic couscous, bazeen, and traditional hospitality."}
-                    </p>
-                    <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
-                      <span>📍 {info.departurePoint.includes("طرابلس") ? "طرابلس - المدينة القديمة" : "بنغازي - شارع فينيسيا"}</span>
-                      <a href="tel:0914445566" className="text-emerald-700 font-black hover:underline">📞 0914445566</a>
-                    </div>
-                  </div>
-                )}
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-center text-xs font-bold text-slate-600 space-y-1">
+                  <div>🍽️ {isAr ? "الوجبات والضيافة مشمولة ضمن البرنامج في المطاعم المتواجدة في المعالم المزارة." : "Dining and local hospitality are included in the visited landmarks."}</div>
+                  <Link to="/restaurants" className="text-[#003580] underline font-black inline-block mt-1">
+                    {isAr ? "استعراض دليل المطاعم والمقاهي في المنصة ➔" : "Browse all platform restaurants ➔"}
+                  </Link>
+                </div>
+              )}
 
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2">
+              {/* Promotional Partner Restaurants (Dismissible Box with ✕ exit button) */}
+              {promoRestaurants.filter(r => !dismissedPromoIds.includes(r.id || r.facility_id)).length > 0 && (
+                <div className="pt-4 border-t border-[#E8E2D6] space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-sm text-[#0F172A]">
-                      {isAr ? "مقهى زنقة الفندق التراثي والضيافة" : "Traditional Heritage Cafe"}
-                    </span>
-                    <span className="text-[10px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
-                      {isAr ? "شامل الضيافة والتذوق" : "Hospitality Included"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-500 text-sm">✨</span>
+                      <h4 className="text-xs font-black text-slate-800">
+                        {isAr ? "مقاهي ومطاعم مقترحة بالوجهة (ترويج — اضغط ✕ للإزالة):" : "Suggested Dining in Destination (Promo — Click ✕ to remove):"}
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-amber-800 bg-amber-100 font-bold px-2 py-0.5 rounded-full">إعلانات ترويجية</span>
                   </div>
-                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                    {isAr ? "جلسة استراحة وضيافة حلويات مقروض وغريبة ليبية في أجواء ساحرة." : "Traditional hospitality break with authentic Libyan sweets."}
-                  </p>
-                  <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
-                    <span>☕ {isAr ? "ضيافة تراثية خاصة لرواد الرحلة" : "Special Hospitality"}</span>
-                    <Link to="/restaurants" className="font-black underline">{isAr ? "قائمة المقاهي" : "Cafes"}</Link>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {promoRestaurants
+                      .filter(r => !dismissedPromoIds.includes(r.id || r.facility_id))
+                      .map((r, rIdx) => {
+                        const rId = r.facility_id || r.id || String(rIdx);
+                        const rName = r.facility_name || r.name || "مطعم ومقهى مميز";
+                        const rImg = r.facility_image_1 || r.image || "/assets/restaurant-libya.jpg";
+                        const rType = r.facility_type || r.type || "مطعم ومقهى";
+                        const rCity = r.city || "ليبيا";
+                        return (
+                          <div
+                            key={rId}
+                            className="relative p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 hover:border-amber-300 transition shadow-xs group"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setDismissedPromoIds(prev => [...prev, rId])}
+                              aria-label="إزالة الإعلان"
+                              className="absolute top-2.5 left-2.5 w-6 h-6 rounded-full bg-slate-200 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs font-black text-slate-700 transition shadow-xs cursor-pointer z-10"
+                              title={isAr ? "إزالة هذا الاقتراح الترويجي" : "Dismiss suggestion"}
+                            >
+                              ✕
+                            </button>
+
+                            <div className="flex items-start gap-3">
+                              <img
+                                src={rImg}
+                                alt={rName}
+                                className="w-14 h-14 rounded-xl object-cover border border-amber-200 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0 pr-1">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className="font-black text-xs text-[#0F172A] truncate">{rName}</span>
+                                  <span className="text-[9px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded-full shrink-0">
+                                    {isAr ? "ترويج" : "Promo"}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-amber-800 font-bold">
+                                  🍲 {rType}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
+                                  📍 {rCity} {r.address_details || r.address ? `— ${r.address_details || r.address}` : ""}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
           </div>
@@ -1993,79 +1701,26 @@ function TripDetailsView({
 
               <button
                 type="button"
+                disabled={info.availableSeats <= 0}
                 onClick={onBook}
-                className="w-full py-3.5 rounded-2xl bg-[#D96B27] hover:bg-[#c25a1b] text-white font-black text-sm shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                className={`w-full py-3.5 rounded-2xl font-black text-sm shadow-lg transition-all flex items-center justify-center gap-2 ${
+                  info.availableSeats <= 0
+                    ? "bg-stone-500/50 text-white/70 cursor-not-allowed border border-white/20"
+                    : "bg-[#D96B27] hover:bg-[#c25a1b] text-white hover:shadow-xl cursor-pointer active:scale-98"
+                }`}
               >
-                <span>{trip.type === "private" ? (isAr ? "طلب تصميم الرحلة الخاصة" : "Request Custom Tour") : (isAr ? "حجز مقاعدك الآن" : "Book Your Seat Now")}</span>
-                <span>➔</span>
+                <span>
+                  {info.availableSeats <= 0
+                    ? (isAr ? "عذراً، هذه الرحلة مكتملة" : "Fully Booked")
+                    : trip.type === "private"
+                    ? (isAr ? "طلب تصميم الرحلة الخاصة" : "Request Custom Tour")
+                    : (isAr ? "حجز مقاعدك الآن" : "Book Your Seat Now")}
+                </span>
+                {info.availableSeats > 0 && <span>➔</span>}
               </button>
             </div>
 
-            {/* Transport Card - STRICTLY: Vehicle, Company, Driver */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E8E2D6] shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
-                  <span>🚌</span>
-                  <span>{isAr ? "المركبة الناقلة المعتمدة للرحلة:" : "Approved Transport Vehicle:"}</span>
-                </span>
-                <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  {isAr ? "مفحوصة ومعتمدة" : "Inspected"}
-                </span>
-              </div>
 
-              <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] space-y-2 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "نوع وموديل المركبة:" : "Vehicle Type:"}</span>
-                  <span className="font-black text-[#0F172A]">{info.vehicle.model}</span>
-                </div>
-                {info.vehicle.plateNumber && (
-                  <div>
-                    <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "رقم اللوحة المعدنية:" : "License Plate:"}</span>
-                    <span className="font-black text-slate-800 bg-white px-2 py-0.5 rounded-lg border border-slate-200 inline-block font-mono">
-                      {info.vehicle.plateNumber}
-                    </span>
-                  </div>
-                )}
-                {info.vehicle.capacity && (
-                  <div>
-                    <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "سعة المركبة المعتمدة:" : "Capacity:"}</span>
-                    <span className="font-bold text-sky-700">{info.vehicle.capacity} راكب</span>
-                  </div>
-                )}
-                <div>
-                  <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "الشركة المشغلة:" : "Operating Company:"}</span>
-                  <span className="font-bold text-[#003580]">{info.vehicle.company}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block font-bold">{isAr ? "السائق المكلف:" : "Assigned Driver:"}</span>
-                  <div className="flex items-center justify-between pt-0.5">
-                    <span className="font-black text-emerald-800">👨‍✈️ {info.vehicle.driver}</span>
-                    {info.vehicle.driverPhone && (
-                      <a href={`tel:${info.vehicle.driverPhone}`} className="text-emerald-700 font-bold hover:underline flex items-center gap-1 text-[11px]">
-                        <span>📞</span>
-                        <span>{info.vehicle.driverPhone}</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onOpenVehicleDetails?.({
-                  model: info.vehicle.model,
-                  company: info.vehicle.company,
-                  driver: info.vehicle.driver,
-                  licensePlate: info.vehicle.plateNumber,
-                  phone: info.vehicle.driverPhone,
-                  seats: info.vehicle.capacity,
-                })}
-                className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <span>🔍</span>
-                <span>{isAr ? "فحص مواصفات الأمان والسلامة" : "Inspect Safety Specs"}</span>
-              </button>
-            </div>
 
             {/* Tour Guide Card */}
             <div className="bg-white rounded-3xl p-5 border border-[#E8E2D6] shadow-sm space-y-3">
@@ -2102,130 +1757,79 @@ function TripDetailsView({
               </button>
             </div>
 
+            {/* Vehicle & Driver Card (Directly below Tour Guide for all trips) */}
+            <div className="bg-white rounded-3xl p-5 border border-[#E8E2D6] shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
+                  <span>🚌</span>
+                  <span>{isAr ? "مركبة وسائق الرحلة:" : "Trip Vehicle & Driver:"}</span>
+                </span>
+                <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {isAr ? "معتمدة ✓" : "Certified ✓"}
+                </span>
+              </div>
+
+              <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-black text-[#0F172A] text-sm flex items-center gap-1.5">
+                    <span>{info.vehicle.model.includes("50") ? "🚍" : info.vehicle.model.includes("15") ? "🚐" : "🚌"}</span>
+                    <span>{info.vehicle.model}</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded-lg border border-[#E8E2D6]">
+                    {isAr ? `${info.vehicle.capacity} راكب` : `${info.vehicle.capacity} seats`}
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1">
+                  <span>🏢</span>
+                  <span className="text-[#003580]">{info.vehicle.company}</span>
+                  <span className="text-slate-400">·</span>
+                  <span className="font-mono text-slate-700">{(info.vehicle.plateNumber || "").replace(/\?+/g, "").trim() || (isAr ? "لوحة معتمدة" : "Verified")}</span>
+                </div>
+
+                <div className="pt-1.5 border-t border-[#E8E2D6]/60 flex items-center justify-between text-xs">
+                  <div className="font-bold text-slate-700 flex items-center gap-1">
+                    <span>👨‍✈️</span>
+                    <span>{info.vehicle.driver}</span>
+                  </div>
+                  {info.vehicle.driverPhone && (
+                    <div className="text-[#003580] font-mono font-bold text-[11px]">
+                      📞 {info.vehicle.driverPhone}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onOpenVehicleDetails?.({
+                  model: info.vehicle.model,
+                  company: info.vehicle.company,
+                  driver: info.vehicle.driver,
+                  licensePlate: (info.vehicle.plateNumber || "").replace(/\?+/g, "").trim() || "ليبيا - 5-99214",
+                  seats: info.vehicle.capacity,
+                  phone: info.vehicle.driverPhone || "091-2345678",
+                  features: [
+                    "تكييف هوائي مركزي متطور",
+                    "مقاعد مريحة مخصصة للجولات السياحية",
+                    "حقيبة إسعافات أولية وطفاية حريق",
+                    "شاشات عرض ونظام صوتي متكامل",
+                    "سائق ذو خبرة ورخصة قيادة عمومية معتمدة"
+                  ],
+                })}
+                className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>🔍</span>
+                <span>{isAr ? "معاينة تفاصيل المركبة والسائق" : "Inspect Vehicle & Driver"}</span>
+              </button>
+            </div>
+
           </div>
 
         </div>
       </div>
 
-      <FloatingRecommendations trip={trip} />
     </div>
-  );
-}
-
-/* ============================================================ */
-/* FLOATING RECOMMENDATIONS WIDGET (RESTAURANTS & HOTELS)       */
-/* ============================================================ */
-function FloatingRecommendations({ trip }: { trip: Trip }) {
-  const { language, dir } = useLanguage();
-  const isAr = language === "ar";
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Extract cities/locations related to the trip
-  const tripLocations: string[] = [];
-  if ("departure" in trip && trip.departure) tripLocations.push(trip.departure);
-  if ("cities" in trip && trip.cities) tripLocations.push(...trip.cities);
-  
-  // Also check keywords in title/desc
-  const searchStr = `${trip.title} ${trip.description}`.toLowerCase();
-  ["طرابلس", "بنغازي", "الخمس", "لبدة", "شحات", "غدامس", "أوباري", "صبراتة"].forEach(city => {
-    if (searchStr.includes(city) && !tripLocations.includes(city)) tripLocations.push(city);
-  });
-  
-  // Map some names and get relevant places
-  const relevantPlaces = nearbyPlaces.filter(place => 
-    tripLocations.some(loc => 
-      place.city.includes(loc) || loc.includes(place.city) || (loc.includes("لبدة") && place.city.includes("الخمس"))
-    )
-  );
-
-  // Fallback to top 4 places if none matched
-  const displayPlaces = relevantPlaces.length > 0 ? relevantPlaces.slice(0, 5) : nearbyPlaces.slice(0, 5);
-
-  return (
-    <>
-      {/* Floating Action Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 left-6 sm:bottom-10 sm:left-10 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-tr from-[#D96B27] to-[#EA580C] text-white shadow-[0_10px_25px_rgba(217,107,39,0.5)] hover:scale-110 active:scale-95 transition-all cursor-pointer animate-bounce border-2 border-white/50"
-        title={isAr ? "مطاعم وفنادق قريبة" : "Nearby Dining & Stays"}
-      >
-        <span className="text-3xl drop-shadow-md">✨</span>
-        {/* Notification badge */}
-        <span className="absolute -top-1 -right-1 flex h-5 w-5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-400 border-2 border-white items-center justify-center text-[10px] font-black text-[#003580]">{displayPlaces.length}</span>
-        </span>
-      </button>
-
-      {/* Pop-up Modal / Side Panel */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-end sm:justify-start p-4 sm:p-10 pointer-events-none" dir={dir}>
-          {/* Backdrop for mobile */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm sm:hidden pointer-events-auto" onClick={() => setIsOpen(false)} />
-          
-          <div className="relative bg-white w-full sm:w-[420px] rounded-[32px] shadow-2xl border border-[#E8E2D6] overflow-hidden pointer-events-auto flex flex-col max-h-[75vh] animate-in slide-in-from-bottom-10 fade-in duration-300">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#003580] to-[#1B5A78] p-5 text-white flex items-center justify-between shadow-md relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-              <div className="relative z-10">
-                <h3 className="font-black text-xl flex items-center gap-2">
-                  <span>🗺️</span>
-                  <span>{isAr ? "اكتشف الجوار" : "Discover Nearby"}</span>
-                </h3>
-                <p className="text-xs text-blue-100 font-bold mt-1.5 opacity-90">
-                  {isAr ? "فنادق ومطاعم مقترحة بالقرب من مسار رحلتك" : "Recommended hotels & restaurants near your trip"}
-                </p>
-              </div>
-              <button 
-                onClick={() => setIsOpen(false)} 
-                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors cursor-pointer text-lg shrink-0 relative z-10 border border-white/20"
-                title={isAr ? "إغلاق" : "Close"}
-              >
-                ✕
-              </button>
-            </div>
-            
-            {/* List */}
-            <div className="overflow-y-auto p-5 space-y-4 bg-[#FAF7F2]">
-              {displayPlaces.map(place => (
-                <div key={place.id} className="group flex gap-4 p-4 rounded-3xl bg-white border border-[#E8E2D6] hover:border-[#D96B27] hover:shadow-lg transition-all cursor-pointer items-center">
-                  <div className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden shadow-sm">
-                    <img src={place.img} alt={place.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                    <div className="absolute top-1 right-1 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg text-[10px] font-black text-amber-500 shadow-sm flex items-center gap-0.5">
-                      ★ {place.rating}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5 text-[11px] font-black text-[#003580] mb-1">
-                      <span className="bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
-                        {place.category === 'hotel' || place.category === 'resort' || place.category === 'heritage' || place.category === 'apartment' ? '🏨' : '🍽️'}
-                        {place.city}
-                      </span>
-                    </div>
-                    <h4 className="font-black text-sm text-[#0F172A] leading-tight mb-1 group-hover:text-[#D96B27] transition-colors">{place.name}</h4>
-                    <p className="text-[11px] text-slate-500 font-bold line-clamp-1 mb-1">📍 {place.area}</p>
-                    <div className="text-[11px] font-black text-[#D96B27] bg-orange-50 inline-block px-2 py-0.5 rounded-full border border-orange-100">
-                      🎁 {place.perk}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              <div className="pt-2 text-center">
-                <Link
-                  to="/hotels"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[#003580] hover:bg-[#1B5A78] text-white text-xs font-black shadow-md transition-all cursor-pointer w-full"
-                >
-                  <span>{isAr ? "تصفح جميع الفنادق والمطاعم" : "Browse all places"}</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -2330,13 +1934,19 @@ function SpecialOffersSpotlight({
                     {currentOffer.price} <span className="text-lg md:text-xl font-bold text-slate-300">{isAr ? "د.ل" : "LYD"}</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onBook(currentOffer); }}
-                  className="mt-2 py-3 px-8 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-sm md:text-base shadow-md transition cursor-pointer w-full md:w-auto"
-                >
-                  {isAr ? "احجز هذا العرض الآن" : "Book This Offer"}
-                </button>
+                <div className="flex items-center gap-2 mt-2 w-full md:w-auto">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDetails(currentOffer);
+                    }}
+                    className="py-3 px-8 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-sm md:text-base shadow-lg transition cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-2"
+                  >
+                    <span>{isAr ? "عرض تفاصيل العرض" : "View Offer Details"}</span>
+                    <span>➔</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2452,7 +2062,7 @@ function CompactLocationHotelsFinder() {
           </div>
         </div>
 
-        {/* Right Side (RTL Left): Direct Redirection Arrow Button To Hotels Page with Location Filter */}
+        {/* Right Side (RTL Left): Prominent Large Icon Button To Hotels & Dining Page */}
         <div className="flex items-center gap-3 shrink-0">
           <Link
             to="/hotels"
@@ -2460,11 +2070,14 @@ function CompactLocationHotelsFinder() {
             onClick={() => {
               sessionStorage.setItem("dallani_selected_city", selectedCity);
             }}
-            className="px-7 py-4 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white font-black text-xs sm:text-sm shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer hover:scale-105 active:scale-95 text-center"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#D96B27] via-[#EA580C] to-[#C25A1B] hover:brightness-110 text-white shadow-xl shadow-orange-500/30 transition-all flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
             title={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
+            aria-label={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
           >
-            <span>{isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}</span>
-            <span className="text-lg font-black transition-transform group-hover:translate-x-1">➔</span>
+            <UtensilsCrossed className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-md group-hover:rotate-12 group-hover:scale-110 transition-all duration-300" />
+            <span className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white text-[#D96B27] shadow-md flex items-center justify-center text-xs font-black group-hover:-translate-x-0.5 transition-transform">
+              ➔
+            </span>
           </Link>
         </div>
 
@@ -2485,6 +2098,7 @@ function TripsPage() {
 
   // Dedicated Full Trip Details View State
   const [activeTripDetails, setActiveTripDetails] = useState<Trip | null>(null);
+  const [selectedBookingTrip, setSelectedBookingTrip] = useState<Trip | null>(null);
 
   const modals = useModalPair();
   const [scheduleKind, setScheduleKind] = useState<"daily" | "weekly" | null>(null);
@@ -2507,21 +2121,45 @@ function TripsPage() {
     scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };
 
-  // Live Database Trips from DelniDB API
-  const [liveDbTrips, setLiveDbTrips] = useState<Trip[]>([]);
+  // Live Database Trips with Instant Cache
+  const [liveDbTrips, setLiveDbTrips] = useState<Trip[]>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("dallani_cached_trips");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  });
+  const [dbOffers, setDbOffers] = useState<TripOffer[]>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("dallani_cached_offers");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => liveDbTrips.length === 0);
 
   useEffect(() => {
     const fetchDbTrips = async () => {
       try {
-        const [resDaily, resWeekly] = await Promise.all([
+        const [resDaily, resWeekly, resDailyOffers, resWeeklyOffers] = await Promise.all([
           apiGetDailyTrips(),
           apiGetWeeklyTrips(),
+          apiGetDailyOffers(),
+          apiGetWeeklyOffers(),
         ]);
 
         const mappedDaily: DailyTrip[] = (Array.isArray(resDaily) ? resDaily : []).map((t: any) => {
-          const galleryList = t.gallery
-            ? (typeof t.gallery === "string" ? t.gallery.split(",").map((s: string) => s.trim()).filter(Boolean) : t.gallery)
-            : [];
+          const galleryList = safeParseGallery(t.gallery);
           const primaryImg = t.photo || (galleryList[0] || heroImg);
           const fiveImgs = [primaryImg, ...galleryList.filter((x: string) => x !== primaryImg)];
           while (fiveImgs.length < 5) fiveImgs.push(fiveImgs[fiveImgs.length - 1] || primaryImg);
@@ -2589,9 +2227,7 @@ function TripsPage() {
         });
 
         const mappedWeekly: WeeklyTrip[] = (Array.isArray(resWeekly) ? resWeekly : []).map((t: any) => {
-          const galleryList = t.gallery
-            ? (typeof t.gallery === "string" ? t.gallery.split(",").map((s: string) => s.trim()).filter(Boolean) : t.gallery)
-            : [];
+          const galleryList = safeParseGallery(t.gallery);
           const primaryImg = t.photo || (galleryList[0] || destUbari);
           const fiveImgs = [primaryImg, ...galleryList.filter((x: string) => x !== primaryImg)];
           while (fiveImgs.length < 5) fiveImgs.push(fiveImgs[fiveImgs.length - 1] || primaryImg);
@@ -2609,15 +2245,25 @@ function TripsPage() {
             targetPersons: t.max_capacity || 20,
             availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 20),
             seatPrice: Number(t.seat_per_price) || 1500,
-            cities: [t.departure_city || "طرابلس", t.destination_region || "الصحراء"],
-            attractions: [
-              {
-                name: t.destination_region || "الواحات والآثار",
-                location: "ليبيا",
-                description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
-              }
-            ],
-            hotels: ["فندق مبيت معتمد"],
+            cities: (t.destinations && Array.isArray(t.destinations) && t.destinations.length > 0)
+              ? t.destinations
+              : (t.destination ? t.destination.split(" + ") : [t.departure_city || "طرابلس", t.destination_region || "الصحراء"]),
+            attractions: (t.places && Array.isArray(t.places) && t.places.length > 0)
+              ? t.places.map((p: any) => ({
+                  name: p.place_name || p.name,
+                  location: p.city || "ليبيا",
+                  description: p.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
+                }))
+              : [
+                  {
+                    name: t.destination_region || "الواحات والآثار",
+                    location: "ليبيا",
+                    description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
+                  }
+                ],
+            hotels: (t.hotels && Array.isArray(t.hotels) && t.hotels.length > 0)
+              ? t.hotels.map((h: any) => h.hotel_name || h.name)
+              : ["فندق مبيت معتمد"],
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
             guide: {
@@ -2648,9 +2294,102 @@ function TripsPage() {
           };
         });
 
-        setLiveDbTrips([...mappedDaily, ...mappedWeekly]);
+        // Map live Daily Trip Offers from DelniDB
+        const mappedDailyOffers: TripOffer[] = (Array.isArray(resDailyOffers) ? resDailyOffers : []).map((o: any) => {
+          const trip = mappedDaily.find((t) => t.id === o.daily_trip_id);
+          const basePrice = Number(o.price_per_seat || trip?.price || 120);
+          const discount = Number(o.percent_discount) || 15;
+          const finalPrice = Math.round(basePrice * (1 - discount / 100));
+          const primaryImg = o.offer_image_url || trip?.img || destLeptisTheater;
+
+          return {
+            id: o.offer_daily_id || `DO-${o.id}`,
+            daily_trip_id: o.daily_trip_id,
+            title: o.offer_title || (trip ? `عرض: ${trip.title}` : "عرض رحلة يومية"),
+            sub: o.description || (trip ? `خصم مميز ${discount}% على رحلة ${trip.title}.` : "عرض سياحي مميز لفترة محدودة."),
+            oldPrice: String(basePrice),
+            price: String(finalPrice),
+            discountPercent: `${discount}%`,
+            tag: o.badge || `خصم ${discount}%`,
+            img: primaryImg,
+            gallery: [primaryImg, ...(trip?.images || [])],
+            kind: "daily" as const,
+            departure: trip?.departure ? `مكتب ${trip.departure}` : (o.departure_city ? `مكتب ${o.departure_city}` : "مكتب طرابلس"),
+            perk: `🎯 يشمل برنامج الجولة المتكامل مع مرشد سياحي ونقل مريح`,
+            schedules: [
+              {
+                id: `sch-${o.offer_daily_id}`,
+                date: trip?.daysOfWeek || "أيام الرحلة المحددة",
+                time: "09:00 ص",
+                seats: trip?.availableSeats || 20,
+                taken: 0,
+                guide: trip?.guide?.name || "مرشد سياحي معتمد",
+                price: finalPrice,
+              }
+            ],
+          } as any;
+        });
+
+        // Map live Weekly Trip Offers from DelniDB
+        const mappedWeeklyOffers: TripOffer[] = (Array.isArray(resWeeklyOffers) ? resWeeklyOffers : []).map((w: any) => {
+          const trip = mappedWeekly.find((t) => t.id === w.weekly_trip_id);
+          const basePrice = Number(w.seat_per_price || trip?.seatPrice || 1500);
+          const discount = Number(w.discount_percentage) || 15;
+          const finalPrice = Math.round(basePrice * (1 - discount / 100));
+          const primaryImg = w.offer_image_url || trip?.img || destUbariGaberoun;
+
+          return {
+            id: w.offer_weekly_id || `WO-${w.id}`,
+            weekly_trip_id: w.weekly_trip_id,
+            title: w.offer_title || (trip ? `عرض أسبوعي: ${trip.title}` : "عرض رحلة أسبوعية"),
+            sub: w.description || (trip ? `خصم استثنائي ${discount}% على رحلة ${trip.title} شاملة الإقامة والتنقل.` : "برنامج أسبوعي استكشافي متكامل."),
+            oldPrice: String(basePrice),
+            price: String(finalPrice),
+            discountPercent: `${discount}%`,
+            tag: w.badge || `خصم ${discount}%`,
+            img: primaryImg,
+            gallery: [primaryImg, ...(trip?.images || [])],
+            kind: "weekly" as const,
+            departure: trip?.departure ? `مكتب ${trip.departure}` : (w.departure_city ? `مكتب ${w.departure_city}` : "مكتب طرابلس"),
+            perk: `🏨 شامل الإقامة الفندقية والمخيمات ووجبات البرنامج والمركبات السياحية`,
+            schedules: [
+              {
+                id: `sch-${w.offer_weekly_id}`,
+                date: trip?.startDate ? `انطلاق: ${trip.startDate}` : "الجمعة القادمة",
+                time: "08:00 ص",
+                seats: trip?.availableSeats || 15,
+                taken: 0,
+                guide: trip?.guide?.name || "مرشد سياحي معتمد",
+                price: finalPrice,
+              }
+            ],
+          } as any;
+        });
+
+        const allCombinedTrips = [...mappedDaily, ...mappedWeekly];
+        const allCombinedOffers = [...mappedDailyOffers, ...mappedWeeklyOffers];
+
+        if (allCombinedTrips.length > 0) {
+          setLiveDbTrips(allCombinedTrips);
+          try {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("dallani_cached_trips", JSON.stringify(allCombinedTrips));
+            }
+          } catch {}
+        }
+
+        if (allCombinedOffers.length > 0) {
+          setDbOffers(allCombinedOffers);
+          try {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("dallani_cached_offers", JSON.stringify(allCombinedOffers));
+            }
+          } catch {}
+        }
       } catch (err) {
         console.error("Failed to load live database trips:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -2658,9 +2397,24 @@ function TripsPage() {
   }, []);
 
   const allTrips = useMemo(
-    () => (liveDbTrips.length > 0 ? liveDbTrips : [...dailyTrips, ...weeklyTrips]),
+    () => liveDbTrips,
     [liveDbTrips]
   );
+
+  // Auto-detect and open trip if specified in URL query params
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tripParam = urlParams.get("tripId") || urlParams.get("trip") || urlParams.get("id");
+      if (tripParam && allTrips.length > 0 && !activeTripDetails) {
+        const found = allTrips.find((t) => t.id === tripParam || (t as any).daily_trip_id === tripParam || (t as any).weekly_trip_id === tripParam);
+        if (found) {
+          setActiveTripDetails(found);
+          window.scrollTo({ top: 0, behavior: "instant" });
+        }
+      }
+    } catch {}
+  }, [allTrips, activeTripDetails]);
 
   const gallerySectionRef = useRef<HTMLElement>(null);
 
@@ -2746,6 +2500,7 @@ function TripsPage() {
               setPrivateOpen(true);
               return;
             }
+            setSelectedBookingTrip(activeTripDetails);
             setScheduleKind(activeTripDetails.type);
             setScheduleTripTitle(activeTripDetails.title);
             setScheduleTripImage(activeTripDetails.img);
@@ -2779,10 +2534,21 @@ function TripsPage() {
             setScheduleTripTitle(undefined);
             setScheduleTripImage(undefined);
             setCustomSchedules(undefined);
+            setSelectedBookingTrip(null);
           }}
           kind={scheduleKind}
-          customTitle={scheduleTripTitle}
-          customImage={scheduleTripImage}
+          trip={selectedBookingTrip || activeTripDetails}
+          tripId={(selectedBookingTrip || activeTripDetails)?.id}
+          tripTitle={scheduleTripTitle || (selectedBookingTrip || activeTripDetails)?.title}
+          customTitle={scheduleTripTitle || (selectedBookingTrip || activeTripDetails)?.title}
+          customImage={scheduleTripImage || (selectedBookingTrip || activeTripDetails)?.img}
+          customPrice={
+            (selectedBookingTrip || activeTripDetails)?.type === "daily"
+              ? ((selectedBookingTrip || activeTripDetails) as DailyTrip)?.price
+              : (selectedBookingTrip || activeTripDetails)?.type === "weekly"
+              ? ((selectedBookingTrip || activeTripDetails) as WeeklyTrip)?.seatPrice
+              : undefined
+          }
           customSchedules={customSchedules}
         />
 
@@ -2904,8 +2670,8 @@ function TripsPage() {
               </span>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { id: "daily", label: isAr ? "رحلات يومية" : "Daily Tours", icon: "☀️", count: dailyTrips.length },
-                  { id: "weekly", label: isAr ? "رحلات أسبوعية" : "Weekly Tours", icon: "🗺️", count: weeklyTrips.length },
+                  { id: "daily", label: isAr ? "رحلات يومية" : "Daily Tours", icon: "☀️", count: allTrips.filter(t => t.type === "daily").length },
+                  { id: "weekly", label: isAr ? "رحلات أسبوعية" : "Weekly Tours", icon: "🗺️", count: allTrips.filter(t => t.type === "weekly").length },
                   { id: "private", label: isAr ? "رحلات خاصة" : "Private Tours", icon: "⭐", count: privateTemplates.length },
                 ].map((item) => {
                   const isChecked = selectedTypes.includes(item.id);
@@ -3012,35 +2778,48 @@ function TripsPage() {
 
 
       {/* ============================================================ */}
-      {/* 3. SPECIAL OFFERS SPOTLIGHT (INTERACTIVE 3D STACKED DECK)    */}
+      {/* 3. SPECIAL OFFERS SPOTLIGHT (LIVE DELNIDB OFFERS)            */}
       {/* ============================================================ */}
-      <SpecialOffersSpotlight
-        offers={tripOffers}
-        onDetails={(offer) => {
-          const cleanTitle = offer.title.replace("عرض ", "").replace("رحلة ", "").trim();
-          const matchingTrip = allTrips.find((t) =>
-            t.title.includes(cleanTitle) || cleanTitle.includes(t.title) ||
-            ("cities" in t && t.cities.some((c) => offer.title.includes(c)))
-          ) || allTrips[0];
-          setActiveTripDetails(matchingTrip);
-          window.scrollTo({ top: 0, behavior: "instant" });
-        }}
-        onBook={(offer) => {
-          if (offer.schedules && offer.schedules.length > 0) {
-            setScheduleKind(offer.kind);
-            setScheduleTripTitle(offer.title);
-            setScheduleTripImage(offer.img);
-            setCustomSchedules(offer.schedules);
-          } else {
-            modals.openBooking({
-              title: offer.title,
-              subtitle: offer.sub,
-              image: offer.img,
-              price: Number(offer.price.replace(/,/g, "")),
-            });
-          }
-        }}
-      />
+      {dbOffers.length > 0 && (
+        <SpecialOffersSpotlight
+          offers={dbOffers}
+          onDetails={(offer) => {
+            // Navigate to the linked trip by ID (daily_trip_id / weekly_trip_id stored in offer)
+            const linkedTripId = (offer as any).daily_trip_id || (offer as any).weekly_trip_id;
+            let matchingTrip: Trip | undefined;
+            if (linkedTripId) {
+              matchingTrip = allTrips.find((t) => t.id === linkedTripId);
+            }
+            // Fallback: fuzzy title match
+            if (!matchingTrip) {
+              const cleanTitle = offer.title.replace("عرض ", "").replace("رحلة ", "").trim();
+              matchingTrip = allTrips.find((t) =>
+                t.title.includes(cleanTitle) || cleanTitle.includes(t.title) ||
+                ("cities" in t && t.cities.some((c) => offer.title.includes(c)))
+              ) || allTrips[0];
+            }
+            if (matchingTrip) {
+              setActiveTripDetails(matchingTrip);
+              window.scrollTo({ top: 0, behavior: "instant" });
+            }
+          }}
+          onBook={(offer) => {
+            if (offer.schedules && offer.schedules.length > 0) {
+              setScheduleKind(offer.kind);
+              setScheduleTripTitle(offer.title);
+              setScheduleTripImage(offer.img);
+              setCustomSchedules(offer.schedules);
+            } else {
+              modals.openBooking({
+                title: offer.title,
+                subtitle: offer.sub,
+                image: offer.img,
+                price: Number(offer.price.replace(/,/g, "")),
+              });
+            }
+          }}
+        />
+      )}
 
       {/* ============================================================ */}
       {/* 4. OUR GALLERY: STAGGERED TRIP CARDS SHOWCASE (IMAGE 1)      */}
@@ -3097,32 +2876,66 @@ function TripsPage() {
             ref={scrollContainerRef}
             className="flex gap-6 overflow-x-auto no-scrollbar scroll-smooth pt-6 pb-20 px-4 items-center relative z-10"
           >
-            {filtered.map((t, idx) => (
-              <div key={t.id} className="shrink-0">
-                <TripCard
-                  t={t}
-                  index={idx}
-                  onDetails={() => {
-                    setActiveTripDetails(t);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  onBook={() => {
-                    if (t.type === "private") {
-                      setPrivateOpen(true);
-                      return;
-                    }
-                    setScheduleKind(t.type);
-                    setScheduleTripTitle(t.title);
-                    setScheduleTripImage(t.img);
-                    setCustomSchedules((t as any).schedules);
-                  }}
-                />
-              </div>
-            ))}
+            {filtered.map((t, idx) => {
+              // Find if this trip has an active offer
+              const tripOffer = dbOffers.find((o) =>
+                (o.kind === "daily" && (o as any).daily_trip_id === t.id) ||
+                (o.kind === "weekly" && (o as any).weekly_trip_id === t.id)
+              );
+              return (
+                <div key={t.id} className="shrink-0">
+                  <TripCard
+                    t={t}
+                    index={idx}
+                    offer={tripOffer}
+                    onDetails={() => {
+                      setActiveTripDetails(t);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    onBook={() => {
+                      if (t.type === "private") {
+                        setPrivateOpen(true);
+                        return;
+                      }
+                      setSelectedBookingTrip(t);
+                      setScheduleKind(t.type);
+                      setScheduleTripTitle(t.title);
+                      setScheduleTripImage(t.img);
+                      setCustomSchedules((t as any).schedules);
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {filtered.length === 0 && (
+        {/* Loading Skeletons when fetching initial data */}
+        {isLoading && filtered.length === 0 && (
+          <div className="flex gap-6 overflow-x-auto no-scrollbar py-6 px-4">
+            {[1, 2, 3, 4].map((n) => (
+              <div
+                key={n}
+                className="w-[320px] sm:w-[350px] shrink-0 rounded-3xl bg-white border border-[#E8E2D6] p-4 space-y-4 shadow-sm animate-pulse"
+              >
+                <div className="w-full h-52 bg-slate-200 rounded-2xl" />
+                <div className="flex justify-between items-center">
+                  <div className="w-20 h-5 bg-slate-200 rounded-full" />
+                  <div className="w-16 h-5 bg-slate-200 rounded-full" />
+                </div>
+                <div className="w-3/4 h-6 bg-slate-200 rounded-lg" />
+                <div className="w-full h-4 bg-slate-100 rounded" />
+                <div className="w-2/3 h-4 bg-slate-100 rounded" />
+                <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
+                  <div className="w-24 h-7 bg-slate-200 rounded-xl" />
+                  <div className="w-20 h-7 bg-slate-200 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && filtered.length === 0 && (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#E8E2D6] shadow-sm my-8">
             <div className="text-4xl mb-3">🔍</div>
             <h3 className="text-lg font-black text-[#003580] mb-1">
@@ -3240,10 +3053,21 @@ function TripsPage() {
           setScheduleTripTitle(undefined);
           setScheduleTripImage(undefined);
           setCustomSchedules(undefined);
+          setSelectedBookingTrip(null);
         }}
         kind={scheduleKind}
-        customTitle={scheduleTripTitle}
-        customImage={scheduleTripImage}
+        trip={selectedBookingTrip}
+        tripId={selectedBookingTrip?.id}
+        tripTitle={scheduleTripTitle || selectedBookingTrip?.title}
+        customTitle={scheduleTripTitle || selectedBookingTrip?.title}
+        customImage={scheduleTripImage || selectedBookingTrip?.img}
+        customPrice={
+          selectedBookingTrip?.type === "daily"
+            ? (selectedBookingTrip as DailyTrip)?.price
+            : selectedBookingTrip?.type === "weekly"
+            ? (selectedBookingTrip as WeeklyTrip)?.seatPrice
+            : undefined
+        }
         customSchedules={customSchedules}
       />
 
@@ -3343,11 +3167,13 @@ function buildDetails(t: Trip, lang: "ar" | "en" = "ar"): DetailsItem {
 function TripCard({
   t,
   index = 0,
+  offer,
   onDetails,
   onBook,
 }: {
   t: Trip;
   index?: number;
+  offer?: TripOffer;
   onDetails: () => void;
   onBook: () => void;
 }) {
@@ -3384,41 +3210,68 @@ function TripCard({
       onClick={onDetails}
       className={`group relative w-[290px] sm:w-[315px] min-w-[290px] sm:min-w-[315px] h-[450px] sm:h-[480px] rounded-[34px] overflow-hidden shadow-[0_20px_55px_rgba(217,107,39,0.32)] hover:shadow-[0_28px_70px_rgba(217,107,39,0.55)] transition-all duration-300 cursor-pointer select-none flex flex-col justify-between ${stagger}`}
     >
-      {/* 5 Full Bleed Photo Backgrounds with Smooth Crossfade */}
-      {tripImages.map((imgSrc, i) => (
+      {/* Photo Background: Single Clean Photo for Daily Trips, 5 Navigable Transition Photos for Weekly Trips */}
+      {t.type === "weekly" ? (
+        <>
+          {tripImages.map((imgSrc, i) => (
+            <img
+              key={i}
+              src={imgSrc}
+              alt={`${t.title} - ${i + 1}`}
+              loading={i === 0 ? "eager" : "lazy"}
+              className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 brightness-100 contrast-100 ${
+                i === activeImgIndex ? "opacity-100 z-0 scale-100" : "opacity-0 -z-10 pointer-events-none"
+              }`}
+            />
+          ))}
+
+          {/* Prev / Next 5-Image Navigation Arrows on Card Sides for Weekly Trips */}
+          <button
+            type="button"
+            onClick={handlePrevImage}
+            aria-label="Previous Image"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={handleNextImage}
+            aria-label="Next Image"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
+          >
+            ›
+          </button>
+        </>
+      ) : (
+        /* Daily Trips: One single clean primary photo on card face */
         <img
-          key={i}
-          src={imgSrc}
-          alt={`${t.title} - ${i + 1}`}
-          loading={i === 0 ? "eager" : "lazy"}
-          className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 brightness-100 contrast-100 ${
-            i === activeImgIndex ? "opacity-100 z-0 scale-100" : "opacity-0 -z-10 pointer-events-none"
-          }`}
+          src={t.img || tripImages[0]}
+          alt={t.title}
+          loading="eager"
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 brightness-100 contrast-100 z-0"
         />
-      ))}
+      )}
 
       {/* Clean Subtle Gradient for High Contrast Typography */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/30 pointer-events-none z-5" />
 
-      {/* Prev / Next 5-Image Navigation Arrows on Card Sides */}
-      <button
-        type="button"
-        onClick={handlePrevImage}
-        aria-label="Previous Image"
-        className="absolute left-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        onClick={handleNextImage}
-        aria-label="Next Image"
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
-      >
-        ›
-      </button>
+      {/* Offer Badge — shown when this trip has an active offer */}
+      {offer && (
+        <div className="absolute top-14 left-3 z-20 pointer-events-none">
+          <div className="flex flex-col items-start gap-1">
+            <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-red-600 to-[#EA580C] text-white font-black text-[11px] shadow-lg border border-white/20 animate-pulse">
+              🔥 {offer.discountPercent} خصم
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-amber-300 font-bold text-[10px] border border-amber-400/30">
+              {offer.price} <span className="text-white/70">{isAr ? "د.ل" : "LYD"}</span>
+              <span className="line-through text-white/50 mr-1">{offer.oldPrice}</span>
+            </span>
+          </div>
+        </div>
+      )}
 
-      {/* Top Floating Badges & 5-Image Interactive Indicator */}
+      {/* Top Floating Badges & Image Indicators */}
       <div className="relative z-10 p-5 pb-2 flex items-center justify-between gap-1.5">
         <span className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white font-black text-xs shadow-md border border-white/25">
           {t.type === "daily"
@@ -3428,28 +3281,30 @@ function TripCard({
             : (isAr ? "👑 خاصة VIP" : "👑 Private VIP")}
         </span>
 
-        {/* 5-Image Dots / Indicator with Counter */}
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/25 shadow-md">
-          {tripImages.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveImgIndex(i);
-              }}
-              aria-label={`الصورة ${i + 1}`}
-              className={`transition-all rounded-full cursor-pointer ${
-                i === activeImgIndex
-                  ? "w-3.5 h-1.5 bg-amber-400"
-                  : "w-1.5 h-1.5 bg-white/50 hover:bg-white"
-              }`}
-            />
-          ))}
-          <span className="text-[10px] text-amber-300 font-black ml-1 select-none">
-            {activeImgIndex + 1}/5
-          </span>
-        </div>
+        {t.type === "weekly" ? (
+          /* 5-Image Dots / Indicator for Weekly Trips (5 images navigate) */
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/25 shadow-md">
+            {tripImages.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImgIndex(i);
+                }}
+                aria-label={`الصورة ${i + 1}`}
+                className={`transition-all rounded-full cursor-pointer ${
+                  i === activeImgIndex
+                    ? "w-3.5 h-1.5 bg-amber-400"
+                    : "w-1.5 h-1.5 bg-white/50 hover:bg-white"
+                }`}
+              />
+            ))}
+            <span className="text-[10px] text-amber-300 font-black ml-1 select-none">
+              {activeImgIndex + 1}/5
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Bottom Floating Information: Title, Departure, Seats, Price, Action */}
@@ -3466,8 +3321,14 @@ function TripCard({
           </span>
 
           {seatsAvailable !== undefined && targetPersons !== undefined && (
-            <span className="shrink-0 text-[10px] bg-white/25 px-2.5 py-0.5 rounded-full text-white font-bold backdrop-blur-md border border-white/20">
-              {isAr ? `متبقي ${seatsAvailable} مقاعد` : `${seatsAvailable} left`}
+            <span className={`shrink-0 text-[10px] px-2.5 py-0.5 rounded-full font-black backdrop-blur-md border ${
+              seatsAvailable <= 0
+                ? "bg-red-600/90 text-white border-red-400/40 animate-pulse"
+                : "bg-white/25 text-white border-white/20"
+            }`}>
+              {seatsAvailable <= 0
+                ? (isAr ? "مكتملة بالكامل" : "Fully Booked")
+                : (isAr ? `متبقي ${seatsAvailable} مقاعد` : `${seatsAvailable} left`)}
             </span>
           )}
         </div>
@@ -3515,18 +3376,34 @@ function TripCard({
             )}
           </div>
 
-          {/* Action Button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDetails();
-            }}
-            className="py-2 px-4 rounded-2xl bg-white hover:bg-slate-100 text-[#003580] font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
-          >
-            <span>{isAr ? "عرض التفاصيل" : "Details"}</span>
-            <span className="text-sm">➔</span>
-          </button>
+          {/* Action Buttons: Details + Direct Booking if seats available */}
+          <div className="flex items-center gap-1.5">
+            {seatsAvailable !== undefined && seatsAvailable > 0 && t.type !== "private" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBook();
+                }}
+                className="py-1.5 px-3 rounded-xl bg-[#D96B27] hover:bg-[#c25a1b] text-white font-black text-xs transition flex items-center gap-1 cursor-pointer hover:scale-105 active:scale-95 shadow-md"
+                title={isAr ? "حجز مقعد الآن" : "Book Seat"}
+              >
+                <span>🪑</span>
+                <span>{isAr ? "حجز" : "Book"}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDetails();
+              }}
+              className="py-1.5 px-3 rounded-xl bg-white/20 hover:bg-white/35 border border-white/60 text-white font-black text-xs transition flex items-center gap-1 cursor-pointer hover:scale-105 active:scale-95 backdrop-blur-sm"
+            >
+              <span>{isAr ? "التفاصيل" : "Details"}</span>
+              <span className="text-xs">➔</span>
+            </button>
+          </div>
         </div>
       </div>
     </article>

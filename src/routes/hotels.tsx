@@ -1290,9 +1290,8 @@ function HotelsPage() {
   }, []);
 
   const hotels = useMemo(() => {
-    if (dbHotels.length > 0) return dbHotels;
-    return getHotels(language);
-  }, [language, dbHotels]);
+    return dbHotels;
+  }, [dbHotels]);
 
   const cities = useMemo(
     () => [

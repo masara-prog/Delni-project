@@ -17,15 +17,16 @@ class PlaceTourist extends Model
         'place_name',
         'description',
         'city',
+        'region',
         'longitude',
         'latitude',
         'category',
         'place_image',
         'is_unesco',
         'unesco_year',
-        'gallery',
-        'entry_fee',
         'google_maps_url',
+        'history_snippet',
+        'highlights',
     ];
 
     protected $casts = [
@@ -38,5 +39,10 @@ class PlaceTourist extends Model
     public function weeklyTrips()
     {
         return $this->belongsToMany(WeeklyTrip::class, 'places_trip_weekly', 'place_id', 'weekly_trip_id');
+    }
+
+    public function dailyTrips()
+    {
+        return $this->belongsToMany(DailyTrip::class, 'places_trip_daily', 'place_id', 'daily_trip_id');
     }
 }

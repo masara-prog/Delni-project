@@ -132,12 +132,26 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  const minBookingDate = useMemo(() => {
+    // 24 hours in the future
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const isWithin24h = useMemo(() => {
+    if (!date) return false;
+    const picked = new Date(date).getTime();
+    return picked - Date.now() < 24 * 60 * 60 * 1000;
+  }, [date]);
 
   useEffect(() => {
     if (open) {
       setStep("form");
       setSeats("2");
       setDate("");
+      setBookingError(null);
       let initialPhone = "0912345678";
       let initialName = isAr ? "محمد أحمد" : "John Smith";
       try {
@@ -218,7 +232,12 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             onSubmit={async (e) => {
               e.preventDefault();
               if (hasSeatError) return;
+              if (isWithin24h) {
+                setBookingError(isAr ? "عذراً، يُقفل الحجز تلقائياً قبل انطلاق الرحلة بـ 24 ساعة لترتيب الحافلات والمرشدين." : "Bookings close 24 hours prior to departure.");
+                return;
+              }
               if (!phone.match(/^09\d{8}$/)) return;
+              setBookingError(null);
 
               // Connect to real DelniDB
               try {
@@ -227,8 +246,9 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 const nSeats = parseInt(seats, 10) || 1;
                 const isWeekly = item.id?.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
 
+                let res: any;
                 if (isWeekly) {
-                  await apiBookWeeklyTrip({
+                  res = await apiBookWeeklyTrip({
                     tourist_id: touristId,
                     weekly_trip_id: item.id || "WT-201",
                     number_of_seats: nSeats,
@@ -236,7 +256,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                     booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
                   });
                 } else {
-                  await apiBookDailyTrip({
+                  res = await apiBookDailyTrip({
                     tourist_id: touristId,
                     daily_trip_id: item.id || "DT-101",
                     number_of_seats: nSeats,
@@ -244,8 +264,15 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                     booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
                   });
                 }
-              } catch (err) {
+
+                if (res && res.status === "error") {
+                  setBookingError(res.message || (isAr ? "تعذر إتمام الحجز" : "Booking failed"));
+                  return;
+                }
+              } catch (err: any) {
                 console.error("Booking API error:", err);
+                setBookingError(err?.message || (isAr ? "حدث خطأ أثناء الاتصال بقاعدة البيانات" : "Database error"));
+                return;
               }
 
               setStep("success");
@@ -343,7 +370,43 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               )}
             </div>
 
-            <Field label={isAr ? "تاريخ الرحلة *" : "Trip Date *"} value={date} onChange={setDate} type="date" required />
+            <Field 
+              label={isAr ? "تاريخ الرحلة *" : "Trip Date *"} 
+              value={date} 
+              onChange={setDate} 
+              type="date" 
+              min={minBookingDate}
+              required 
+            />
+
+            {/* 24-Hour Advance Cutoff Notice */}
+            {isWithin24h && date && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold flex items-start gap-2 animate-in fade-in">
+                <span className="text-base leading-none">⏳</span>
+                <div>
+                  <span className="font-black block">
+                    {isAr ? "إغلاق الحجوزات قبل 24 ساعة:" : "24-Hour Cutoff:"}
+                  </span>
+                  <span>
+                    {isAr
+                      ? `عذراً، يُغلق الحجز تلقائياً قبل انطلاق الرحلة بـ 24 ساعة لترتيب المركبات والمرشدين وقوائم الركاب. يرجى اختيار تاريخ يبدأ من (${minBookingDate}) فصاعداً.`
+                      : `Bookings close 24 hours prior to departure. Please choose a date on or after ${minBookingDate}.`}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Server Error Alert */}
+            {bookingError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-300 text-red-700 text-xs font-bold flex items-start gap-2 animate-in fade-in">
+                <span className="text-base leading-none">⚠️</span>
+                <div>
+                  <span className="font-black block">{isAr ? "تعذر إتمام الحجز" : "Booking Error"}</span>
+                  <span>{bookingError}</span>
+                </div>
+              </div>
+            )}
+
             <Field 
               label={isAr ? "رقم الهاتف (الواتساب) *" : "Phone Number (WhatsApp) *"} 
               value={phone} 
@@ -377,11 +440,13 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             )}
 
             <button
-              disabled={hasSeatError}
+              disabled={hasSeatError || isWithin24h}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
             >
               {hasSeatError
                 ? (isAr ? "حدد عدد مقاعد متاح للاستمرار" : "Select valid seats to continue")
+                : isWithin24h
+                ? (isAr ? "اختر موعداً يبعد 24 ساعة على الأقل" : "Select a date at least 24h away")
                 : (isAr ? "تأكيد الحجز (الدفع فيزيائي بموقع الشركة)" : "Confirm Booking (Pay at Company Office)")}
             </button>
           </form>
@@ -1031,7 +1096,7 @@ function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: stri
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, required }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean }) {
+function Field({ label, value, onChange, type = "text", placeholder, required, min, max }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean; min?: string | number; max?: string | number }) {
   return (
     <div>
       <label className="text-sm font-bold text-foreground mb-1 block">{label}{required && <span className="text-red-500"> *</span>}</label>
@@ -1039,6 +1104,8 @@ function Field({ label, value, onChange, type = "text", placeholder, required }:
         type={type}
         value={value}
         required={required}
+        min={min}
+        max={max}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="w-full h-11 px-4 rounded-xl border border-border bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-sm font-semibold"
@@ -1112,12 +1179,69 @@ export function TripScheduleModal({
   const [seats, setSeats] = useState("1");
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"pick" | "form" | "done">("pick");
+  const [showAuthWarning, setShowAuthWarning] = useState(false);
+  const [priorBookedSeats, setPriorBookedSeats] = useState<number>(0);
+  const [bookingConfirmedCode, setBookingConfirmedCode] = useState<string>("");
+  const [totalSeatsAfterBooking, setTotalSeatsAfterBooking] = useState<number>(0);
+  const [isAccountRestricted, setIsAccountRestricted] = useState(false);
 
   useEffect(() => {
-    if (open) { setSelected(null); setSeats("1"); setPhone(""); setStep("pick"); }
-  }, [open]);
+    if (open) {
+      setSeats("1");
+      setPhone("");
+      setStep("pick");
+      setShowAuthWarning(false);
+      setIsAccountRestricted(false);
+      setBookingConfirmedCode(`DL-${Math.floor(Math.random() * 90000 + 10000)}`);
 
-  if (!kind && !customSchedules && !trip) return null;
+      // Check account restriction status & prior bookings for this tourist
+      try {
+        const session = getStoredSession();
+        const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id;
+        const targetTripId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId;
+        const targetTitle = customTitle || tripTitle || trip?.title;
+
+        if (session.role === "tourist" && touristId) {
+          if (session.user?.account_status === "مقيّد") {
+            setIsAccountRestricted(true);
+          }
+          fetch(`http://127.0.0.1:5001/api/db/tourists?tourist_id=${encodeURIComponent(touristId)}`)
+            .then(r => r.json())
+            .then(res => {
+              if (res && res.success && res.data) {
+                const restricted = res.data.account_status === "مقيّد";
+                setIsAccountRestricted(restricted);
+                if (session.user) {
+                  session.user.account_status = res.data.account_status;
+                  localStorage.setItem("delni_session", JSON.stringify(session));
+                }
+              }
+            })
+            .catch(() => {});
+
+          const localDaily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
+          const localWeekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
+          const allUserBookings = [...localDaily, ...localWeekly].filter(
+            (b: any) =>
+              (b.tourist_id === touristId || b.passengers_names === session.user?.full_name) &&
+              (b.daily_trip_id === targetTripId ||
+                b.weekly_trip_id === targetTripId ||
+                b.trip_title === targetTitle)
+          );
+
+          const totalPrev = allUserBookings.reduce(
+            (sum: number, b: any) => sum + (Number(b.number_of_seats) || 0),
+            0
+          );
+          setPriorBookedSeats(totalPrev);
+        } else {
+          setPriorBookedSeats(0);
+        }
+      } catch {
+        setPriorBookedSeats(0);
+      }
+    }
+  }, [open, trip, tripId, customTitle, tripTitle]);
 
   const defaultDaily: ScheduledTrip[] = [
     { id: "d1", date: isAr ? "الأربعاء 23 يوليو 2026" : "Wed 23 Jul 2026", time: isAr ? "08:00 ص" : "08:00 AM", seats: 20, taken: 14, guide: isAr ? "خالد الورفلي" : "Khaled Al-Warfali", price: 180 },
@@ -1132,7 +1256,7 @@ export function TripScheduleModal({
   let schedules: ScheduledTrip[];
   if (customSchedules && customSchedules.length > 0) {
     schedules = customSchedules;
-  } else if (trip || tripId || customPrice !== undefined || customTitle) {
+  } else if (trip || tripId || customPrice !== undefined || customTitle || tripTitle) {
     const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId || (kind === "weekly" ? "WT-220" : "DT-366");
     const realPrice = customPrice !== undefined
       ? customPrice
@@ -1140,7 +1264,7 @@ export function TripScheduleModal({
     const realTitle = customTitle || tripTitle || trip?.title || (kind === "daily" ? "رحلة يومية" : "رحلة أسبوعية");
     const realGuide = trip?.guide?.name || "مرشد سياحي معتمد";
     const realSeats = trip?.targetPersons || trip?.max_capacity || 25;
-    const realAvail = trip?.availableSeats !== undefined ? trip.availableSeats : realSeats;
+    const realAvail = trip?.availableSeats !== undefined ? trip.availableSeats : (trip?.available_seats !== undefined ? trip.available_seats : realSeats);
     const realDate = trip?.daysOfWeek || (trip?.startDate ? `${trip.startDate} إلى ${trip.endDate}` : (isAr ? "الموعد القادم المتاح" : "Upcoming Scheduled Date"));
     const realTime = kind === "weekly" ? (isAr ? "انطلاق صباحي 07:00 ص" : "Morning 07:00 AM") : (isAr ? "08:00 ص" : "08:00 AM");
 
@@ -1162,12 +1286,26 @@ export function TripScheduleModal({
     schedules = kind === "daily" ? defaultDaily : defaultWeekly;
   }
 
-  const selectedTrip = schedules.find((s) => s.id === selected);
+  // Auto-select schedule so the date is instantly active and button enabled if seats available
+  const firstAvailSchedule = schedules.find(s => (s.seats - s.taken) > 0);
+  const effectiveSelectedId = (selected && schedules.some(s => s.id === selected && (s.seats - s.taken) > 0))
+    ? selected
+    : (firstAvailSchedule?.id || (schedules.length === 1 ? schedules[0].id : null));
+
+  useEffect(() => {
+    if (open && effectiveSelectedId && selected !== effectiveSelectedId) {
+      setSelected(effectiveSelectedId);
+    }
+  }, [open, effectiveSelectedId, selected]);
+
+  const selectedTrip = schedules.find((s) => s.id === effectiveSelectedId) || schedules[0];
   const total = selectedTrip ? selectedTrip.price * (parseInt(seats) || 1) : 0;
 
   const kindLabel = customTitle || tripTitle || (kind === "daily" ? (isAr ? "الرحلات اليومية" : "Daily Trips") : (isAr ? "الرحلات الأسبوعية" : "Weekly Trips"));
   const kindIcon = kind === "daily" ? "☀️" : "🗓️";
   const slideshowImages = resolveTripGallery(kindLabel, kind, customImage);
+
+  if (!open) return null;
 
   return (
     <Modal open={open} onClose={onClose} size="lg">
@@ -1188,19 +1326,19 @@ export function TripScheduleModal({
           <div className="p-6 space-y-3">
             <p className="text-sm text-[#526078] mb-4">
               {kind === "daily"
-                ? (isAr ? "الرحلات اليومية تنطلق صباحاً وتعود مساءً — اختر الموعد الذي يناسبك:" : "Daily trips depart in the morning & return evening — select your date:")
+                ? (isAr ? "الرحلات اليومية تنطلق صباحاً وتعود مساءً — تم تحديد الموعد المتاح أدناه:" : "Daily trips depart in the morning & return evening — date selected:")
                 : (isAr ? "الرحلات الأسبوعية برنامج ٥-٧ أيام شامل — اختر أسبوع انطلاقك:" : "Weekly tours are 5-7 days all-inclusive — select your departure week:")}
             </p>
             {schedules.map((s) => {
               const avail = s.seats - s.taken;
               const full = avail === 0;
-              const isSelected = selected === s.id;
+              const isSelected = effectiveSelectedId === s.id;
               return (
                 <button
                   key={s.id}
                   disabled={full}
-                  onClick={() => setSelected(isSelected ? null : s.id)}
-                  className={`w-full text-right p-4 rounded-2xl border-2 transition ${
+                  onClick={() => setSelected(s.id)}
+                  className={`w-full text-right p-4 rounded-2xl border-2 transition cursor-pointer ${
                     full
                       ? "border-[#E6E1D6] bg-stone-100 opacity-50 cursor-not-allowed"
                       : isSelected
@@ -1234,12 +1372,55 @@ export function TripScheduleModal({
               );
             })}
 
+            {/* Tourist Only Verification Notice */}
+            {showAuthWarning && (
+              <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 text-xs space-y-2 animate-in fade-in">
+                <div className="flex items-center gap-2 font-black text-sm text-amber-900">
+                  <span>🔒</span>
+                  <span>{isAr ? "الحجز متاح لحسابات السياح فقط" : "Booking restricted to tourist accounts"}</span>
+                </div>
+                <p className="text-[11px] font-medium leading-relaxed text-amber-900">
+                  {isAr
+                    ? "عذراً، يجب أن تمتلك حساب سائح لإتمام حجز المقاعد في الرحلات. يرجى تسجيل الدخول أو إنشاء حساب سائح جديد للمتابعة."
+                    : "You must be logged in as a tourist to complete this booking."}
+                </p>
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <a
+                    href="/auth/login"
+                    className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-block"
+                  >
+                    {isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}
+                  </a>
+                  <a
+                    href="/auth/signup"
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-black text-xs transition shadow-sm inline-block"
+                  >
+                    {isAr ? "إنشاء حساب سائح جديد" : "Sign Up"}
+                  </a>
+                </div>
+              </div>
+            )}
+
             <button
-              disabled={!selected}
-              onClick={() => selected && setStep("form")}
+              disabled={!effectiveSelectedId || Boolean(selectedTrip && (selectedTrip.seats - selectedTrip.taken) <= 0)}
+              onClick={() => {
+                const targetId = selected || effectiveSelectedId;
+                if (!targetId) return;
+                const session = getStoredSession();
+                if (!session.token || session.role !== "tourist") {
+                  setShowAuthWarning(true);
+                  return;
+                }
+                setSelected(targetId);
+                setStep("form");
+              }}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition disabled:opacity-40 disabled:cursor-not-allowed mt-2 cursor-pointer"
             >
-              {selected ? (isAr ? "متابعة الحجز ←" : "Proceed to Booking →") : (isAr ? "اختر موعداً أولاً" : "Select a date first")}
+              {selectedTrip && (selectedTrip.seats - selectedTrip.taken) <= 0
+                ? (isAr ? "عذراً، هذه الرحلة مكتملة المقاعد بالكامل" : "Sorry, this tour is fully booked")
+                : effectiveSelectedId
+                ? (isAr ? "متابعة الحجز ←" : "Proceed to Booking →")
+                : (isAr ? "اختر موعداً متاحاً أولاً" : "Select an available date first")}
             </button>
           </div>
         </div>
@@ -1266,10 +1447,63 @@ export function TripScheduleModal({
               </div>
             </div>
           </div>
+          {/* Tourist Account Restricted Warning */}
+          {isAccountRestricted && (
+            <div className="mx-6 mt-4 p-4 rounded-2xl bg-red-50 border-2 border-red-500 text-red-950 text-xs space-y-2 animate-in fade-in">
+              <div className="flex items-center gap-2 font-black text-sm text-red-900">
+                <span className="text-xl">⛔</span>
+                <span>{isAr ? "تنبيه أمني: حساب السائح مقيّد حالياً من قِبل الإدارة" : "Tourist Account Restricted"}</span>
+              </div>
+              <p className="text-xs font-semibold leading-relaxed text-red-900">
+                {isAr
+                  ? "عذراً، لقد تم تقييد حسابك من قِبل إدارة المنصة ولا يمكنك إتمام أي حجوزات جديدة في الوقت الحالي. للمساعدة أو إعادة التنشيط، يرجى مراجعة إدارة الدعم الفني."
+                  : "Your tourist account is currently restricted from booking trips by platform administration. Please contact support."}
+              </p>
+            </div>
+          )}
+
+          {/* Tourist Only Verification Notice */}
+          {(!getStoredSession().token || getStoredSession().role !== "tourist") && (
+            <div className="mx-6 mt-4 p-4 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-950 text-xs space-y-2.5 animate-in fade-in">
+              <div className="flex items-center gap-2 font-black text-sm text-amber-900">
+                <span>🔒</span>
+                <span>{isAr ? "تنبيه: يجب التسجيل في المنصة كسائح" : "Tourist Account Required"}</span>
+              </div>
+              <p className="text-xs font-semibold leading-relaxed text-amber-900">
+                {isAr
+                  ? "عذراً، أنت مسجل حالياً بحساب إداري أو غير مسجل كسائح. حجز الرحلات السياحية متاح حصرياً لحسابات السياح. يرجى تسجيل الدخول أو إنشاء حساب كسائح للمتابعة."
+                  : "You are currently not logged in as a tourist. Please register or log in with a tourist account."}
+              </p>
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <a
+                  href="/auth/signup?role=tourist"
+                  className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-block"
+                >
+                  {isAr ? "سجل في المنصة كسائح ➔" : "Sign Up as Tourist ➔"}
+                </a>
+                <a
+                  href="/auth/login?role=tourist"
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-black text-xs transition shadow-sm inline-block"
+                >
+                  {isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}
+                </a>
+              </div>
+            </div>
+          )}
+
           <form
             className="p-6 space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
+              if (isAccountRestricted) {
+                alert("⛔ عذراً، حسابك مقيّد حالياً من قِبل إدارة المنصة ولا يمكنك إتمام أي حجوزات جديدة.");
+                return;
+              }
+              const session = getStoredSession();
+              if (!session.token || session.role !== "tourist") {
+                setShowAuthWarning(true);
+                return;
+              }
               const avail = selectedTrip ? (selectedTrip.seats - selectedTrip.taken) : 0;
               const n = parseInt(seats, 10);
               if (isNaN(n) || n < 1 || n > avail) return;
@@ -1281,6 +1515,11 @@ export function TripScheduleModal({
                 const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
                 const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id || (isWeekly ? "WT-220" : "DT-366");
                 const targetTitle = selectedTrip?.tripTitle || customTitle || tripTitle || (isWeekly ? "رحلة أسبوعية" : "رحلة يومية");
+
+                const code = bookingConfirmedCode || `DL-${Math.floor(Math.random() * 90000 + 10000)}`;
+                setBookingConfirmedCode(code);
+                const newTotal = priorBookedSeats + n;
+                setTotalSeatsAfterBooking(newTotal);
 
                 if (isWeekly) {
                   await apiBookWeeklyTrip({
@@ -1310,6 +1549,23 @@ export function TripScheduleModal({
               setStep("done");
             }}
           >
+            {/* Prior Booking Alert Notification */}
+            {priorBookedSeats > 0 && (
+              <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">🔔</span>
+                  <span className="font-black text-amber-900">
+                    {isAr
+                      ? `تنبيه: لديك حجز مسبق في هذه الرحلة بمجموع (${priorBookedSeats}) مقاعد.`
+                      : `You have a prior booking on this trip with (${priorBookedSeats}) seats.`}
+                  </span>
+                </div>
+                <span className="text-[11px] font-black text-amber-900 bg-amber-200/70 px-2.5 py-0.5 rounded-full border border-amber-300">
+                  {isAr ? `حجز مسبق: ${priorBookedSeats} مقاعد` : `${priorBookedSeats} booked`}
+                </span>
+              </div>
+            )}
+
             {/* Bus Capacity and Schedule Info */}
             {(() => {
               const avail = selectedTrip ? (selectedTrip.seats - selectedTrip.taken) : 0;
@@ -1415,14 +1671,25 @@ export function TripScheduleModal({
                     </div>
                   )}
 
-                  <button
-                    disabled={hasErr}
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
-                  >
-                    {hasErr
-                      ? (isAr ? "يرجى تحديد مقاعد متاحة" : "Select valid seats")
-                      : (isAr ? "تأكيد الحجز (الدفع فيزيائي بموقع الشركة)" : "Confirm Booking (Physical Payment at Office)")}
-                  </button>
+                  {(() => {
+                    const session = getStoredSession();
+                    const isTourist = !!session.token && session.role === "tourist";
+                    const isBtnDisabled = hasErr || !isTourist || isAccountRestricted;
+                    return (
+                      <button
+                        disabled={isBtnDisabled}
+                        className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
+                      >
+                        {isAccountRestricted
+                          ? (isAr ? "⛔ حسابك مقيّد من قِبل الإدارة ولا يمكنك الحجز" : "Account Restricted from Booking")
+                          : !isTourist
+                          ? (isAr ? "🔒 يجب التسجيل في المنصة كسائح لتأكيد الحجز" : "Tourist account required to book")
+                          : hasErr
+                          ? (isAr ? "يرجى تحديد مقاعد متاحة" : "Select valid seats")
+                          : (isAr ? "تأكيد الحجز (الدفع بموقع الشركة)" : "Confirm Booking (Pay at Company Office)")}
+                      </button>
+                    );
+                  })()}
                 </div>
               );
             })()}
@@ -1431,13 +1698,52 @@ export function TripScheduleModal({
       )}
 
       {step === "done" && selectedTrip && (
-        <div className="p-10 text-center" dir={dir}>
-          <div className="w-20 h-20 mx-auto rounded-full bg-emerald-100 text-emerald-600 grid place-items-center text-4xl">✅</div>
-          <h3 className="mt-5 text-2xl font-black text-[#0B132B]">{isAr ? "تم تسجيل حجزك المبدئي بنجاح!" : "Booking Registered!"}</h3>
-          <p className="mt-2 text-[#526078] text-sm">
-            {isAr ? `رقم الحجز #DL-${Math.floor(Math.random() * 90000 + 10000)}. تم حجز (${seats}) مقاعد بنجاح مع المرشد (${selectedTrip.guide}). يرجى زيارة مقر وموقع الشركة لإتمام الدفع الفيزيائي وتثبيت الحجز النهائي قبل موعد الانطلاق.` : `Booking #DL-${Math.floor(Math.random() * 90000 + 10000)}. Your booking has been confirmed.`}
+        <div className="p-8 sm:p-10 text-center" dir={dir}>
+          <div className="w-20 h-20 mx-auto rounded-full bg-emerald-100 text-emerald-600 grid place-items-center text-4xl shadow-inner">
+            ✅
+          </div>
+          <h3 className="mt-5 text-2xl font-black text-[#0B132B]">
+            {isAr ? "تمت عملية الحجز بنجاح" : "Booking Completed Successfully"}
+          </h3>
+          <p className="mt-3 text-sm sm:text-base leading-relaxed max-w-md mx-auto font-bold text-slate-700">
+            {isAr
+              ? "الرجاء استكمال الدفع بموقع الشركة قبل 24 ساعة من الانطلاق على الأقل لضمان موقعك."
+              : "Please complete payment at the company office at least 24 hours prior to departure to guarantee your seat."}
           </p>
-          <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft cursor-pointer">{isAr ? "تم" : "Done"}</button>
+
+          <div className="mt-5 p-4 rounded-2xl bg-stone-50 border border-stone-200 max-w-md mx-auto text-right space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-bold">{isAr ? "رقم الحجز والتذكرة:" : "Booking Code:"}</span>
+              <span className="font-mono text-[#003580] font-black text-sm">{bookingConfirmedCode}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
+              <span className="text-slate-500 font-bold">{isAr ? "المقاعد المحجوزة:" : "Booked Seats:"}</span>
+              <span className="font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                {isAr ? `حجز عدد ${seats} مقاعد` : `${seats} Seats`}
+              </span>
+            </div>
+            {priorBookedSeats > 0 && (
+              <div className="mt-2 p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-black flex items-center justify-between">
+                <span>⚠️ {isAr ? "تنبيه (حجز مسبق):" : "Notice (Prior Booking):"}</span>
+                <span>{isAr ? `إجمالي حجزك الآن: حجز عدد ${priorBookedSeats + (parseInt(seats, 10) || 1)} مقاعد` : `Total booked: ${priorBookedSeats + (parseInt(seats, 10) || 1)} seats`}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={onClose}
+              className="w-full sm:w-auto px-8 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft cursor-pointer transition text-sm"
+            >
+              {isAr ? "تم" : "Done"}
+            </button>
+            <a
+              href="/dashboard/tourist"
+              className="w-full sm:w-auto px-6 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm inline-flex items-center justify-center transition"
+            >
+              {isAr ? "عرض تذكرتي الإلكترونية 🎫" : "View My E-Ticket"}
+            </a>
+          </div>
         </div>
       )}
     </Modal>

@@ -115,9 +115,11 @@ function LoginPage() {
           navigate({ to: "/dashboard/transport" });
         } else if (role === "driver") {
           navigate({ to: "/dashboard/driver" });
+        } else if (role === "tourist") {
+          // Open Home page directly for tourists
+          navigate({ to: "/" });
         } else {
-          // Open services page with trips, landmarks, and full header
-          navigate({ to: "/trips" });
+          navigate({ to: "/" });
         }
         return;
       } else {

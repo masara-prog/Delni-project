@@ -64,4 +64,9 @@ class DailyTrip extends Model
     {
         return $this->hasMany(ReviewDailyTrip::class, 'daily_trip_id', 'daily_trip_id');
     }
+
+    public function places()
+    {
+        return $this->belongsToMany(PlaceTourist::class, 'places_trip_daily', 'daily_trip_id', 'place_id');
+    }
 }

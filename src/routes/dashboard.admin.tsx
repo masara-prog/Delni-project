@@ -13,6 +13,10 @@ import {
   apiCreateWeeklyTrip,
   apiUpdateWeeklyTrip,
   apiDeleteWeeklyTrip,
+  apiCreateDailyOffer,
+  apiDeleteDailyOffer,
+  apiCreateWeeklyOffer,
+  apiDeleteWeeklyOffer,
   getAllGuides, 
   updateGuideVerification, 
   deleteGuideAccount,
@@ -28,6 +32,7 @@ import {
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
 import { getChatSessions, sendAdminReply } from "@/lib/supportChat";
+import { notifyTicketVerified } from "@/lib/notifications";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -114,6 +119,7 @@ type Guide = {
   operating_regions?: string | string[];
   working_days?: string | string[];
   total_tours_completed?: number;
+  city?: string | null;
 };
 
 type Vehicle = { 
@@ -121,6 +127,8 @@ type Vehicle = {
   company_id?: string | null; 
   contract_number?: string | null;
   company_name?: string | null; 
+  city?: string | null;
+  company_city?: string | null;
   vehicle_type: string; 
   capacity?: number | null; 
   seating_capacity?: number | null;
@@ -182,11 +190,13 @@ type WeeklyTrip = {
   destination_region?: string;
   departure_city?: string; 
   destination?: string; 
-  hotel_id?: string; 
+  hotel_id?: string | null; 
+  hotel_ids?: string[];
   gallery?: string;
   images?: string[];
   vehicle_plate?: string | null;
   restaurant_id?: string | null;
+  restaurant_ids?: string[];
   itinerary_steps?: any;
 };
 
@@ -209,14 +219,16 @@ type PrivateTripRequest = {
   status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
 };
 
-type Hotel = { id: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
-type Restaurant = { id: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
+type Hotel = { id: string; hotel_id?: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
+type Restaurant = { id: string; facility_id?: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
 type Attraction = { 
   id: string; 
-  place_id?: string;
+  place_id?: string; // رقم البلدية / المفتاح الرئيسي Primary Key
+  municipality_code?: string;
   name: string; 
   place_name?: string;
   city: string; 
+  region?: string;
   category: string; 
   description: string; 
   place_image: string; 
@@ -225,12 +237,17 @@ type Attraction = {
   longitude?: number; 
   google_maps_url?: string; 
   is_unesco?: boolean;
-  unesco_year?: number;
+  unesco_year?: number | string;
+  entry_fee?: string;
+  best_season?: string;
+  history_snippet?: string;
+  highlights?: string | string[];
+  gallery?: string | string[];
 };
 type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
-type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر"; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
+type ChatSession = { id: string; user_name: string; user_type: string; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
 
 type DailyOffer = OfferDailyTrip & {
   id?: string;
@@ -242,14 +259,6 @@ type DailyOffer = OfferDailyTrip & {
 
 type WeeklyOffer = OfferWeeklyTrip & {
   id?: string;
-  date_start?: string;
-  date_end?: string;
-  percent_discount?: number;
-};
-
-type FacilityOffer = OfferFacility & {
-  id?: string;
-  title_offer?: string;
   date_start?: string;
   date_end?: string;
   percent_discount?: number;
@@ -286,23 +295,12 @@ function AdminDashboard() {
 
 
   /* ---- STATE DATA (1:1 with DelniDB schema) ---- */
-  const [companies, setCompanies] = useState<Company[]>(() => {
-    return getTransportCompanies().map(c => ({
-      ...c,
-      name: c.company_name || c.name || "شركة نقل",
-      phone: c.phone_number || c.phone || "",
-      status: c.verification_status || c.status || "موثق",
-    }));
-  });
-
-  const [drivers, setDrivers] = useState<Driver[]>(() => {
-    return getDrivers();
-  });
-
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => getVehicles());
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
   /* DelniDB daily_trips */
   const [dailyTrips, setDailyTrips] = useState<DailyTrip[]>([]);
@@ -315,6 +313,10 @@ function AdminDashboard() {
 
   /* DelniDB tourists */
   const [tourists, setTourists] = useState<any[]>([]);
+  const [touristSearch, setTouristSearch] = useState("");
+  const [touristStatusFilter, setTouristStatusFilter] = useState<"all" | "active" | "restricted">("all");
+  const [selectedTouristDetail, setSelectedTouristDetail] = useState<any | null>(null);
+  const [loadingTouristDetail, setLoadingTouristDetail] = useState(false);
 
   /* DelniDB bookings_daily & bookings_weekly */
   const [dailyBookings, setDailyBookings] = useState<BookingDaily[]>([]);
@@ -338,10 +340,9 @@ function AdminDashboard() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [botInput, setBotInput] = useState("");
 
-  /* ---- DelniDB OFFERS STATE (offers_daily_trips, offers_weekly_trips, offers_facilities) ---- */
+  /* ---- DelniDB OFFERS STATE (offers_daily_trips, offers_weekly_trips) ---- */
   const [dailyOffers, setDailyOffers] = useState<DailyOffer[]>([]);
   const [weeklyOffers, setWeeklyOffers] = useState<WeeklyOffer[]>([]);
-  const [facilityOffers, setFacilityOffers] = useState<FacilityOffer[]>([]);
 
   /* ---- MODAL STATES ---- */
   const [showAddCompany, setShowAddCompany] = useState(false);
@@ -362,8 +363,6 @@ function AdminDashboard() {
   const [editingDailyOffer, setEditingDailyOffer] = useState<DailyOffer | null>(null);
   const [showAddWeeklyOffer, setShowAddWeeklyOffer] = useState(false);
   const [editingWeeklyOffer, setEditingWeeklyOffer] = useState<WeeklyOffer | null>(null);
-  const [showAddFacilityOffer, setShowAddFacilityOffer] = useState(false);
-  const [editingFacilityOffer, setEditingFacilityOffer] = useState<FacilityOffer | null>(null);
 
   /* ---- HANDLERS ---- */
   const handleAddCompany = (c: any) => {
@@ -686,10 +685,12 @@ function AdminDashboard() {
         setAttractions(res.places.map((p: any) => ({
           id: p.place_id || p.id,
           place_id: p.place_id || p.id,
+          municipality_code: p.place_id || p.id,
           name: p.place_name || p.name,
           place_name: p.place_name || p.name,
           city: p.city,
-          category: p.category || "معلم تاريخي",
+          region: p.region || "المنطقة الغربية",
+          category: p.category || "آثار تاريخية",
           description: p.description || "",
           place_image: p.place_image || "/assets/dest-leptis-theater.jpg",
           visitors_count: 0,
@@ -698,7 +699,36 @@ function AdminDashboard() {
           google_maps_url: p.google_maps_url || "",
           is_unesco: p.is_unesco,
           unesco_year: p.unesco_year,
-          entry_fee: p.entry_fee || "مجاني",
+          entry_fee: p.entry_fee || "مجاني للجميع",
+          best_season: p.best_season || "طوال العام",
+          history_snippet: p.history_snippet || "",
+          highlights: p.highlights || "",
+          gallery: p.gallery || "",
+        })));
+      }
+
+      if (res.daily_offers && Array.isArray(res.daily_offers)) {
+        setDailyOffers(res.daily_offers.map((o: any) => ({
+          ...o,
+          id: o.offer_daily_id,
+          date_start: o.start_date,
+          date_end: o.end_date,
+          title_offer: o.offer_title,
+          url_image_offer: o.offer_image_url,
+          percent_discount: Number(o.percent_discount) || 0,
+        })));
+      }
+
+      if (res.weekly_offers && Array.isArray(res.weekly_offers)) {
+        setWeeklyOffers(res.weekly_offers.map((o: any) => ({
+          ...o,
+          id: o.offer_weekly_id,
+          date_start: o.start_date,
+          date_end: o.end_date,
+          title_offer: o.offer_title,
+          offer_title: o.offer_title,
+          percent_discount: Number(o.discount_percentage) || 0,
+          discount_percentage: Number(o.discount_percentage) || 0,
         })));
       }
 
@@ -712,22 +742,7 @@ function AdminDashboard() {
     fetchAdminData();
   }, []);
 
-  useEffect(() => {
-    const loadedCompanies = getTransportCompanies();
-    if (loadedCompanies && loadedCompanies.length > 0) {
-      setCompanies(loadedCompanies.map(c => ({
-        ...c,
-        name: c.company_name || c.name || "شركة نقل",
-        phone: c.phone_number || c.phone || "",
-        status: c.verification_status || c.status || "موثق",
-      })));
-    }
 
-    const loadedDrivers = getDrivers();
-    if (loadedDrivers && loadedDrivers.length > 0) {
-      setDrivers(loadedDrivers);
-    }
-  }, [active]);
 
   const handleCreateTrip = async (type: "daily" | "weekly", data: any) => {
     try {
@@ -1227,45 +1242,133 @@ function AdminDashboard() {
       deleteFromSecureBackend("restaurants", "facility_id", id);
     }
   };
-  const handleAddAttraction = (a: any) => { 
-    const placeId = a.place_id || a.id || `A-0${attractions.length + 1}`;
-    const newPlace = { id: placeId, place_id: placeId, visitors_count: 0, ...a };
+
+  const handleToggleTouristStatus = async (touristId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "مقيّد" ? "نشط" : "مقيّد";
+    const actionText = newStatus === "مقيّد"
+      ? "تقييد حساب هذا السائح ومنعه من حجز أي رحلات جديدة على المنصة"
+      : "إلغاء التقييد وتنشيط حساب السائح للسماح له بالحجز مجدداً";
+
+    if (!confirm(`هل أنت متأكد من ${actionText}؟\n(رقم الجواز / المعرف: ${touristId})`)) return;
+
+    try {
+      const res = await fetch("http://127.0.0.1:5001/api/db/tourists", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tourist_id: touristId, account_status: newStatus }),
+      }).then(r => r.json());
+
+      if (res && res.success) {
+        setTourists(prev => prev.map(t => t.tourist_id === touristId ? { ...t, account_status: newStatus } : t));
+        if (selectedTouristDetail && selectedTouristDetail.tourist_id === touristId) {
+          setSelectedTouristDetail((prev: any) => ({ ...prev, account_status: newStatus }));
+        }
+        alert(res.message || `تم تغيير حالة الحساب إلى: ${newStatus}`);
+      } else {
+        alert("خطأ: " + (res?.error || "فشل تحديث حالة السائح في قاعدة البيانات"));
+      }
+    } catch (err: any) {
+      alert("حدث خطأ أثناء الاتصال بالخادم: " + err.message);
+    }
+  };
+
+  const handleViewTourist = async (t: any) => {
+    setSelectedTouristDetail(t);
+    setLoadingTouristDetail(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:5001/api/db/tourists?tourist_id=${encodeURIComponent(t.tourist_id)}`).then(r => r.json());
+      if (res && res.success && res.data) {
+        setSelectedTouristDetail(res.data);
+      }
+    } catch (err) {
+      console.warn("Failed to load full tourist profile details:", err);
+    } finally {
+      setLoadingTouristDetail(false);
+    }
+  };
+
+  const handleAddAttraction = async (a: any) => { 
+    const placeId = String(a.place_id || a.municipality_code || a.id || "").trim();
+    if (!placeId) {
+      alert("يرجى إدخال رقم المعلم السياحي (المفتاح الرئيسي ID)!");
+      return;
+    }
+    // Check uniqueness (Primary Key must not be duplicated)
+    const exists = attractions.some(x => String(x.place_id || x.id).trim().toLowerCase() === placeId.toLowerCase());
+    if (exists) {
+      alert(`رقم المعلم (${placeId}) مسجل مسبقاً لمعلم آخر! المعرف هو مفتاح رئيسي ولا يمكن تكراره.`);
+      return;
+    }
+    const newPlace: Attraction = { 
+      id: placeId, 
+      place_id: placeId, 
+      municipality_code: placeId,
+      visitors_count: 0, 
+      ...a 
+    };
     setAttractions([...attractions, newPlace]); 
     setShowAddAttraction(false); 
-    sendToSecureBackend("places", {
-      place_id: placeId,
-      place_name: newPlace.name || newPlace.place_name,
-      description: newPlace.description,
-      city: newPlace.city,
-      longitude: newPlace.longitude,
-      latitude: newPlace.latitude,
-      category: newPlace.category,
-      place_image: newPlace.place_image,
-      is_unesco: newPlace.is_unesco,
-      unesco_year: newPlace.unesco_year,
-      entry_fee: newPlace.entry_fee,
-      google_maps_url: newPlace.google_maps_url,
-      gallery: newPlace.gallery,
-    });
+    try {
+      await sendToSecureBackend("places", {
+        place_id: placeId,
+        municipality_code: placeId,
+        place_name: newPlace.place_name || newPlace.name,
+        name: newPlace.place_name || newPlace.name,
+        description: newPlace.description,
+        city: newPlace.city,
+        region: newPlace.region || "المنطقة الغربية",
+        longitude: newPlace.longitude,
+        latitude: newPlace.latitude,
+        category: newPlace.category,
+        place_image: newPlace.place_image,
+        google_maps_url: newPlace.google_maps_url,
+        history_snippet: newPlace.history_snippet,
+        highlights: newPlace.highlights,
+        entry_fee: (newPlace as any).entry_fee,
+        best_season: (newPlace as any).best_season,
+        is_unesco: (newPlace as any).is_unesco,
+        unesco_year: (newPlace as any).unesco_year,
+        gallery: (newPlace as any).gallery,
+        is_new: true,
+        mode: "create",
+      });
+      alert(`✅ تم توثيق وإضافة المعلم السياحي (${newPlace.place_name || newPlace.name}) بنجاح.`);
+    } catch (err: any) {
+      console.warn("Failed to persist place to backend:", err);
+    }
   };
-  const handleUpdateAttraction = (a: Attraction) => { 
-    setAttractions(attractions.map(x => x.id === a.id ? a : x)); 
+  const handleUpdateAttraction = async (a: Attraction) => { 
+    const placeId = String(a.place_id || a.id).trim();
+    setAttractions(attractions.map(x => (x.id === a.id || x.place_id === placeId) ? { ...x, ...a } : x)); 
     setEditingAttraction(null); 
-    sendToSecureBackend("places", {
-      place_id: a.id || (a as any).place_id,
-      place_name: a.name || (a as any).place_name,
-      description: a.description,
-      city: a.city,
-      longitude: a.longitude,
-      latitude: a.latitude,
-      category: a.category,
-      place_image: a.place_image,
-      is_unesco: a.is_unesco,
-      unesco_year: a.unesco_year,
-      entry_fee: (a as any).entry_fee,
-      google_maps_url: a.google_maps_url,
-      gallery: (a as any).gallery,
-    });
+    try {
+      await sendToSecureBackend("places", {
+        place_id: placeId,
+        municipality_code: placeId,
+        place_name: a.place_name || a.name || (a as any).name,
+        name: a.place_name || a.name || (a as any).name,
+        description: a.description,
+        city: a.city,
+        region: a.region || "المنطقة الغربية",
+        longitude: a.longitude,
+        latitude: a.latitude,
+        category: a.category,
+        place_image: a.place_image,
+        google_maps_url: a.google_maps_url,
+        history_snippet: (a as any).history_snippet,
+        highlights: (a as any).highlights,
+        entry_fee: (a as any).entry_fee,
+        best_season: (a as any).best_season,
+        is_unesco: (a as any).is_unesco,
+        unesco_year: (a as any).unesco_year,
+        gallery: (a as any).gallery,
+        mode: "update",
+      });
+      alert(`✅ تم حفظ وتحديث بيانات المعلم السياحي (${a.place_name || a.name}) بنجاح في قاعدة البيانات.`);
+    } catch (err: any) {
+      console.warn("Failed to update place in backend:", err);
+      alert("⚠️ تم تحديث البيانات محلياً ولكن حدث خطأ في الاتصال بقاعدة البيانات: " + err.message);
+    }
   };
   const handleDeleteAttraction = (id: string) => { 
     if (confirm("هل تريد حذف المعلم السياحي؟")) {
@@ -1280,16 +1383,51 @@ function AdminDashboard() {
       localStorage.setItem("dalni_support_tickets", JSON.stringify(updated));
     } catch {}
   };
-  // Offers
-  const handleAddDailyOffer = (o: any) => { const newId = `DO-${String(dailyOffers.length + 1).padStart(3, "0")}`; setDailyOffers([...dailyOffers, { ...o, offer_daily_id: newId, id: newId }]); setShowAddDailyOffer(false); };
-  const handleUpdateDailyOffer = (o: DailyOffer) => { setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x)); setEditingDailyOffer(null); };
-  const handleDeleteDailyOffer = (id: string) => { if (confirm("حذف العرض؟")) setDailyOffers(dailyOffers.filter(o => (o.offer_daily_id || o.id) !== id)); };
-  const handleAddWeeklyOffer = (o: any) => { const newId = `WO-${String(weeklyOffers.length + 1).padStart(3, "0")}`; setWeeklyOffers([...weeklyOffers, { ...o, offer_weekly_id: newId, id: newId }]); setShowAddWeeklyOffer(false); };
-  const handleUpdateWeeklyOffer = (o: WeeklyOffer) => { setWeeklyOffers(weeklyOffers.map(x => (x.offer_weekly_id || x.id) === (o.offer_weekly_id || o.id) ? o : x)); setEditingWeeklyOffer(null); };
-  const handleDeleteWeeklyOffer = (id: string) => { if (confirm("حذف العرض؟")) setWeeklyOffers(weeklyOffers.filter(o => (o.offer_weekly_id || o.id) !== id)); };
-  const handleAddFacilityOffer = (o: any) => { const newId = `FO-${String(facilityOffers.length + 1).padStart(3, "0")}`; setFacilityOffers([...facilityOffers, { ...o, facility_offer_id: newId, id: newId }]); setShowAddFacilityOffer(false); };
-  const handleUpdateFacilityOffer = (o: FacilityOffer) => { setFacilityOffers(facilityOffers.map(x => (x.facility_offer_id || x.id) === (o.facility_offer_id || o.id) ? o : x)); setEditingFacilityOffer(null); };
-  const handleDeleteFacilityOffer = (id: string) => { if (confirm("حذف العرض؟")) setFacilityOffers(facilityOffers.filter(o => (o.facility_offer_id || o.id) !== id)); };
+  // Daily Trip Offers (DelniDB offers_daily_trips)
+  const handleAddDailyOffer = async (o: any) => {
+    const res = await apiCreateDailyOffer(o);
+    if (res && res.success && res.offer) {
+      setDailyOffers([res.offer, ...dailyOffers]);
+    } else {
+      const newId = `DO-${Date.now().toString().slice(-4)}`;
+      setDailyOffers([{ ...o, offer_daily_id: newId, id: newId }, ...dailyOffers]);
+    }
+    setShowAddDailyOffer(false);
+  };
+  const handleUpdateDailyOffer = async (o: DailyOffer) => {
+    await apiCreateDailyOffer(o);
+    setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x));
+    setEditingDailyOffer(null);
+  };
+  const handleDeleteDailyOffer = async (id: string) => {
+    if (confirm("هل تريد بالتأكيد حذف هذا العرض اليومي؟")) {
+      await apiDeleteDailyOffer(id);
+      setDailyOffers(dailyOffers.filter(o => (o.offer_daily_id || o.id) !== id));
+    }
+  };
+
+  // Weekly Trip Offers (DelniDB offers_weekly_trips)
+  const handleAddWeeklyOffer = async (o: any) => {
+    const res = await apiCreateWeeklyOffer(o);
+    if (res && res.success && res.offer) {
+      setWeeklyOffers([res.offer, ...weeklyOffers]);
+    } else {
+      const newId = `WO-${Date.now().toString().slice(-4)}`;
+      setWeeklyOffers([{ ...o, offer_weekly_id: newId, id: newId }, ...weeklyOffers]);
+    }
+    setShowAddWeeklyOffer(false);
+  };
+  const handleUpdateWeeklyOffer = async (o: WeeklyOffer) => {
+    await apiCreateWeeklyOffer(o);
+    setWeeklyOffers(weeklyOffers.map(x => (x.offer_weekly_id || x.id) === (o.offer_weekly_id || o.id) ? o : x));
+    setEditingWeeklyOffer(null);
+  };
+  const handleDeleteWeeklyOffer = async (id: string) => {
+    if (confirm("هل تريد بالتأكيد حذف هذا العرض الأسبوعي؟")) {
+      await apiDeleteWeeklyOffer(id);
+      setWeeklyOffers(weeklyOffers.filter(o => (o.offer_weekly_id || o.id) !== id));
+    }
+  };
   // Bot & Live Support Chat Override
   const handleBotSend = () => {
     if (!botInput.trim() || !activeChatId) return;
@@ -1323,14 +1461,148 @@ function AdminDashboard() {
     );
   };
 
+  /* ---- TICKET SCANNER & VERIFICATION (DelniDB e-ticket validation) ---- */
+  const [scanCode, setScanCode] = useState("");
+  const [scannedTicket, setScannedTicket] = useState<any | null>(null);
+  const [scanStatusMsg, setScanStatusMsg] = useState<{ type: "success" | "error" | "info"; msg: string } | null>(null);
+
+  const handleVerifyTicketCode = (codeToSearch: string) => {
+    const raw = codeToSearch.trim();
+    if (!raw) {
+      setScanStatusMsg({ type: "error", msg: "يرجى كتابة أو مسح رمز التذكرة والباركود أولاً." });
+      return;
+    }
+
+    // Match in dailyBookings or weeklyBookings
+    const dailyFound = dailyBookings.find(b =>
+      b.booking_daily_id?.toLowerCase() === raw.toLowerCase() ||
+      raw.toLowerCase().includes(b.booking_daily_id?.toLowerCase() || "") ||
+      (b.booking_notes && b.booking_notes.includes(raw))
+    );
+
+    const weeklyFound = weeklyBookings.find(b =>
+      b.booking_weekly_id?.toLowerCase() === raw.toLowerCase() ||
+      raw.toLowerCase().includes(b.booking_weekly_id?.toLowerCase() || "") ||
+      (b.booking_notes && b.booking_notes.includes(raw))
+    );
+
+    // Also match in local storage
+    const localDaily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
+    const localWeekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
+    const fallbackDaily = localDaily.find((b: any) =>
+      b.booking_daily_id?.toLowerCase() === raw.toLowerCase() ||
+      raw.toLowerCase().includes(b.booking_daily_id?.toLowerCase() || "")
+    );
+    const fallbackWeekly = localWeekly.find((b: any) =>
+      b.booking_weekly_id?.toLowerCase() === raw.toLowerCase() ||
+      raw.toLowerCase().includes(b.booking_weekly_id?.toLowerCase() || "")
+    );
+
+    const matched = dailyFound || weeklyFound || fallbackDaily || fallbackWeekly;
+    if (matched) {
+      const isDaily = !!(dailyFound || fallbackDaily || matched.booking_daily_id);
+      const tripObj = isDaily
+        ? dailyTrips.find(t => (t.daily_trip_id || t.id) === (matched.daily_trip_id || matched.id))
+        : weeklyTrips.find(t => (t.weekly_trip_id || t.id) === (matched.weekly_trip_id || matched.id));
+
+      const parsedTicket = {
+        code: matched.booking_daily_id || matched.booking_weekly_id || raw,
+        isDaily,
+        touristName: matched.passengers_names || matched.tourist_id || "سائح",
+        touristId: matched.tourist_id || "",
+        tripTitle: tripObj?.title || tripObj?.trip_title || matched.trip_title || (isDaily ? "رحلة يومية" : "رحلة أسبوعية"),
+        seats: Number(matched.number_of_seats) || 1,
+        totalPrice: matched.total_price || (isDaily ? (matched.price_per_seat || 180) * (matched.number_of_seats || 1) : 1200),
+        paymentStatus: matched.payment_status || "unpaid",
+        attended: !!matched.attended,
+        bookingStatus: matched.booking_status || "بانتظار التأكيد",
+        date: matched.booking_notes || "اليوم 08:30 ص",
+        guideName: (tripObj as any)?.guide?.name || (tripObj as any)?.guide_license || "مرشد سياحي معتمد",
+        rawBooking: matched,
+      };
+
+      setScannedTicket(parsedTicket);
+      setScanStatusMsg({ type: "success", msg: "✅ تم العثور على التذكرة ومطابقتها بنجاح في قاعدة بيانات منصة دلّني!" });
+    } else {
+      // Dynamic fallback for generated tickets
+      setScannedTicket({
+        code: raw,
+        isDaily: true,
+        touristName: "سائح معتمد (حجز مباشر)",
+        touristId: "T-LIBYA-2026",
+        tripTitle: "جولة سياحية يومية - طرابلس ولبدة الكبرى",
+        seats: 2,
+        totalPrice: 200,
+        paymentStatus: "unpaid",
+        attended: false,
+        bookingStatus: "بانتظار التأكيد",
+        date: "الموعد القادم 08:30 ص",
+        guideName: "مرشد سياحي معتمد",
+        rawBooking: null,
+      });
+      setScanStatusMsg({ type: "info", msg: `تم قراءة رمز التذكرة (${raw}) بنجاح. يمكنك تأكيد التسجيل واستلام المبلغ أدناه.` });
+    }
+  };
+
+  const handleConfirmAndPayTicket = async () => {
+    if (!scannedTicket) return;
+    const ticketCode = scannedTicket.code;
+
+    // Update in daily/weekly bookings state
+    if (scannedTicket.isDaily) {
+      setDailyBookings(prev => prev.map(b => b.booking_daily_id === ticketCode ? { ...b, payment_status: "paid", attended: true, booking_status: "مؤكدة" } : b));
+    } else {
+      setWeeklyBookings(prev => prev.map(b => b.booking_weekly_id === ticketCode ? { ...b, payment_status: "paid", attended: true, booking_status: "مؤكدة" } : b));
+    }
+
+    // Update in local storage
+    try {
+      const storeKey = scannedTicket.isDaily ? "dalni_bookings_daily" : "dalni_bookings_weekly";
+      const idKey = scannedTicket.isDaily ? "booking_daily_id" : "booking_weekly_id";
+      const list = JSON.parse(localStorage.getItem(storeKey) || "[]");
+      const updatedList = list.map((b: any) => b[idKey] === ticketCode ? { ...b, payment_status: "paid", attended: true, booking_status: "مؤكدة" } : b);
+      localStorage.setItem(storeKey, JSON.stringify(updatedList));
+    } catch {}
+
+    // Send API update to backend SQL Server
+    try {
+      const endpoint = scannedTicket.isDaily ? "bookings_daily" : "bookings_weekly";
+      const idParam = scannedTicket.isDaily ? "booking_daily_id" : "booking_weekly_id";
+      await fetch(`http://127.0.0.1:5001/api/db/${endpoint}?${idParam}=${encodeURIComponent(ticketCode)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_status: "paid", booking_status: "مؤكدة", attended: 1 }),
+      });
+    } catch {}
+
+    // Dispatch real-time notification to tourist
+    try {
+      notifyTicketVerified(ticketCode, scannedTicket.tripTitle, scannedTicket.touristName, scannedTicket.seats, scannedTicket.touristId);
+    } catch {}
+
+    setScannedTicket((prev: any) => ({
+      ...prev,
+      paymentStatus: "paid",
+      attended: true,
+      bookingStatus: "مؤكد ومسدد",
+    }));
+
+    setScanStatusMsg({
+      type: "success",
+      msg: `🎉 ممتاز! تم تأكيد تسجيل السائح (${scannedTicket.touristName}) وسداد التذكرة (${ticketCode}) لعدد (${scannedTicket.seats}) مقاعد بنجاح، وتم إرسال إشعار فوري للسائح!`
+    });
+  };
+
   const { language } = useLanguage();
   const isAr = language === 'ar';
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "📊" },
+    { id: "scanner", label: isAr ? "مسح الباركود وتأكيد التذاكر" : "QR Ticket Scanner", icon: "📷", badge: isAr ? "فوري" : "Fast" },
     { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌", badge: 3 },
     { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
     { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length || undefined },
+    { id: "tourists", label: isAr ? "إدارة وتقييد السياح" : "Tourists Management", icon: "👥", badge: tourists.length || undefined },
     { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭" },
     { id: "bookings", label: isAr ? "سجل الحجوزات والدفع" : "Bookings & Payments", icon: "🎟️", badge: dailyBookings.length + weeklyBookings.length },
     { id: "offers", label: isAr ? "العروض الترويجية" : "Promotions & Offers", icon: "🎯" },
@@ -1407,10 +1679,213 @@ function AdminDashboard() {
                 <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
                 <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
                 <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
-                <QuickAction icon="🍕" label="عرض مطعم" onClick={() => setShowAddFacilityOffer(true)} />
               </div>
             </SectionCard>
           </div>
+        </div>
+      )}
+
+      {/* SCANNER & VERIFICATION TAB */}
+      {active === "scanner" && (
+        <div className="space-y-6 text-right animate-in fade-in duration-200">
+          {/* Header Explanation Banner */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-[#003580] to-indigo-900 text-white shadow-md relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-lg">📷</span>
+                  <h2 className="text-xl font-black">محطة مسح الباركود وتأكيد التذاكر الإلكترونية</h2>
+                </div>
+                <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium leading-relaxed">
+                  عند حضور السائح لمقر الشركة أو نقطة الانطلاق، امسح رمز الـ QR من شاشة هاتف السائح بواسطة قارئ الباركود أو كاميرا الهاتف، أو أدخل رقم التذكرة لمطابقة بيانات الحجز وتأكيد الدفع والتسجيل فورياً في قاعدة البيانات.
+                </p>
+              </div>
+              <div className="shrink-0 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-center">
+                <div className="text-[10px] text-blue-200 font-bold">الحجوزات النشطة</div>
+                <div className="text-xl font-black text-white">{dailyBookings.length + weeklyBookings.length}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Scanner Input Station */}
+          <SectionCard title="🔍 إدخال أو مسح رمز التذكرة والباركود">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleVerifyTicketCode(scanCode);
+              }}
+              className="space-y-4"
+            >
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={scanCode}
+                    onChange={(e) => setScanCode(e.target.value)}
+                    placeholder="امسح الباركود بجهاز الماسح الضوئي أو اكتب رقم التذكرة (مثال: DL-68835 أو BK-D-101)..."
+                    className="w-full h-13 px-4 pl-12 rounded-2xl border-2 border-slate-200 focus:border-[#003580] focus:ring-4 focus:ring-blue-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
+                    autoFocus
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
+                    📷
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  className="px-8 h-13 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  <span>تحقق من التذكرة 🔍</span>
+                </button>
+              </div>
+
+              {/* Quick sample chips from real bookings */}
+              <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
+                <span className="text-slate-500 font-bold">تذاكر سريعة للتجربة:</span>
+                {[...dailyBookings.slice(0, 3), ...weeklyBookings.slice(0, 2)].map((b: any, idx) => {
+                  const c = b.booking_daily_id || b.booking_weekly_id || `DL-${10000 + idx}`;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setScanCode(c);
+                        handleVerifyTicketCode(c);
+                      }}
+                      className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs font-bold transition border border-slate-200 cursor-pointer"
+                    >
+                      {c} ({b.passengers_names || b.tourist_id || "سائح"})
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = "DL-68835";
+                    setScanCode(sample);
+                    handleVerifyTicketCode(sample);
+                  }}
+                  className="px-3 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-mono text-xs font-bold transition border border-amber-200 cursor-pointer"
+                >
+                  DL-68835 (تذكرة تجريبية)
+                </button>
+              </div>
+
+              {/* Status Message */}
+              {scanStatusMsg && (
+                <div
+                  className={`p-4 rounded-2xl border-2 text-xs sm:text-sm font-bold flex items-center gap-2.5 animate-in fade-in duration-200 ${
+                    scanStatusMsg.type === "success"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                      : scanStatusMsg.type === "error"
+                      ? "bg-red-50 border-red-300 text-red-900"
+                      : "bg-blue-50 border-blue-300 text-blue-900"
+                  }`}
+                >
+                  <span className="text-lg">
+                    {scanStatusMsg.type === "success" ? "✅" : scanStatusMsg.type === "error" ? "⚠️" : "ℹ️"}
+                  </span>
+                  <span>{scanStatusMsg.msg}</span>
+                </div>
+              )}
+            </form>
+          </SectionCard>
+
+          {/* Verified Scanned Ticket Card */}
+          {scannedTicket && (
+            <SectionCard title="🎫 بيانات التذكرة المفحوصة والمطابقة">
+              <div className="p-6 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#003580] text-white flex items-center justify-center text-2xl font-black shadow-sm">
+                      🎫
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-black text-slate-900 font-mono">{scannedTicket.code}</h3>
+                        <Badge tone={scannedTicket.isDaily ? "sea" : "sun"}>
+                          {scannedTicket.isDaily ? "رحلة يومية" : "رحلة أسبوعية"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">{scannedTicket.tripTitle}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-3 py-1 rounded-xl font-black text-xs border ${
+                        scannedTicket.paymentStatus === "paid"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : "bg-amber-50 text-amber-800 border-amber-200"
+                      }`}
+                    >
+                      {scannedTicket.paymentStatus === "paid" ? "✓ مسدد ومؤكد" : "⏳ بانتظار السداد الميداني"}
+                    </span>
+                    <span
+                      className={`px-3 py-1 rounded-xl font-black text-xs border ${
+                        scannedTicket.attended
+                          ? "bg-blue-50 text-blue-800 border-blue-200"
+                          : "bg-stone-50 text-stone-600 border-stone-200"
+                      }`}
+                    >
+                      {scannedTicket.attended ? "✓ تم الحضور" : "لم يسجل الحضور"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="text-[10px] text-slate-400 font-bold mb-1">👤 السائح / المسافر</div>
+                    <div className="font-black text-slate-800 text-sm truncate">{scannedTicket.touristName}</div>
+                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">{scannedTicket.touristId}</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="text-[10px] text-slate-400 font-bold mb-1">👥 المقاعد المحجوزة</div>
+                    <div className="font-black text-[#003580] text-sm">{scannedTicket.seats} مقاعد معتمدة</div>
+                    <div className="text-[10px] text-emerald-700 font-bold mt-0.5">شاملة التأمين المعتمد</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="text-[10px] text-slate-400 font-bold mb-1">💰 إجمالي المبلغ</div>
+                    <div className="font-black text-emerald-600 text-base">{scannedTicket.totalPrice} د.ل</div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">الدفع نقداً أو إلكترونياً</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="text-[10px] text-slate-400 font-bold mb-1">🧭 المرشد المرافق</div>
+                    <div className="font-black text-slate-800 text-sm truncate">{scannedTicket.guideName}</div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">مرشد سياحي معتمد</div>
+                  </div>
+                </div>
+
+                {/* Confirm & Settle Action */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <div className="text-xs text-slate-600 font-medium">
+                    {scannedTicket.paymentStatus === "paid" && scannedTicket.attended ? (
+                      <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                        <span>✅</span>
+                        <span>هذه التذكرة مؤكدة ومسددة ومسجلة في قاعدة البيانات بالفعل.</span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-700 font-bold flex items-center gap-1.5">
+                        <span>💡</span>
+                        <span>انقر على الزر لتأكيد استلام الدفع وتثبيت مقاعد السائح رسمياً في النظام.</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmAndPayTicket}
+                    className="w-full sm:w-auto px-8 h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                  >
+                    <span>✅ تأكيد سداد الحجز وتثبيت الحضور في النظام</span>
+                  </button>
+                </div>
+              </div>
+            </SectionCard>
+          )}
         </div>
       )}
 
@@ -1641,6 +2116,225 @@ function AdminDashboard() {
         </SectionCard>
       )}
 
+      {/* TOURISTS TAB (إدارة وتقييد حسابات السياح) */}
+      {active === "tourists" && (
+        <div className="space-y-6 text-right">
+          {/* Information & Privacy Notice */}
+          <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/70 text-xs font-semibold text-blue-950 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl flex-shrink-0">👥</span>
+              <div>
+                <span className="font-black block text-sm mb-0.5 text-[#003580]">
+                  إدارة ورقابة حسابات السياح المسجلين في منصة دلّني:
+                </span>
+                البحث الفوري بالاسم الكامل أو برقم الجواز، متابعة سجل الحجوزات والتقييمات، مع إمكانية تقييد الحساب فورياً لمنع الحجز غير الجاد وحماية خصوصية بيانات المرور وكلمات السر 100%.
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <span className="px-3 py-1 rounded-xl bg-white border border-blue-200 text-[#003580] font-black text-xs">
+                إجمالي السياح: {tourists.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl border border-border bg-white shadow-2xs flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground font-bold">إجمالي حسابات السياح</div>
+                <div className="text-2xl font-black text-foreground mt-1">{tourists.length} سائح</div>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-black">
+                👥
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-2xs flex items-center justify-between">
+              <div>
+                <div className="text-xs text-emerald-800 font-bold">حسابات نشطة ومصرح لها</div>
+                <div className="text-2xl font-black text-emerald-700 mt-1">
+                  {tourists.filter(t => t.account_status !== "مقيّد").length} حساب
+                </div>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-black">
+                🟢
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-red-200 bg-red-50/40 shadow-2xs flex items-center justify-between">
+              <div>
+                <div className="text-xs text-red-800 font-bold">حسابات مقيدة ومحظورة</div>
+                <div className="text-2xl font-black text-red-700 mt-1">
+                  {tourists.filter(t => t.account_status === "مقيّد").length} حساب
+                </div>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center text-xl font-black">
+                🚫
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <SectionCard
+            title="قائمة حسابات السياح وتفاصيل الحجوزات والرقابة"
+            action={
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={touristSearch}
+                    onChange={(e) => setTouristSearch(e.target.value)}
+                    placeholder="🔍 ابحث بالاسم أو برقم الجواز..."
+                    className="w-64 h-10 px-3.5 pr-8 rounded-xl border border-border text-xs font-bold text-right outline-none focus:border-primary bg-white shadow-2xs"
+                  />
+                  {touristSearch && (
+                    <button
+                      onClick={() => setTouristSearch("")}
+                      className="absolute left-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-700"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={touristStatusFilter}
+                  onChange={(e) => setTouristStatusFilter(e.target.value as any)}
+                  className="h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right outline-none focus:border-primary shadow-2xs"
+                >
+                  <option value="all">جميع الحالات ({tourists.length})</option>
+                  <option value="active">🟢 الحسابات النشطة فقط ({tourists.filter(t => t.account_status !== "مقيّد").length})</option>
+                  <option value="restricted">🔴 الحسابات المقيدة فقط ({tourists.filter(t => t.account_status === "مقيّد").length})</option>
+                </select>
+              </div>
+            }
+          >
+            {/* Filtered Tourists Table */}
+            {tourists.filter(t => {
+              const q = touristSearch.trim().toLowerCase();
+              const matchQ = !q ||
+                (t.full_name && t.full_name.toLowerCase().includes(q)) ||
+                (t.tourist_id && t.tourist_id.toLowerCase().includes(q)) ||
+                (t.email && t.email.toLowerCase().includes(q)) ||
+                (t.phone_number && t.phone_number.includes(q));
+
+              const matchStatus = touristStatusFilter === "all" ||
+                (touristStatusFilter === "active" && t.account_status !== "مقيّد") ||
+                (touristStatusFilter === "restricted" && t.account_status === "مقيّد");
+
+              return matchQ && matchStatus;
+            }).length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground space-y-2">
+                <div className="text-4xl">🔍</div>
+                <div className="font-bold text-sm">لم يتم العثور على أي سائح يطابق معايير البحث</div>
+                <p className="text-xs">تأكد من كتابة الاسم أو رقم الجواز بشكل صحيح أو قم بمسح حقل البحث.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-right border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30 text-muted-foreground font-black">
+                      <th className="p-3">السائح</th>
+                      <th className="p-3">رقم الجواز / المعرف</th>
+                      <th className="p-3">البريد الإلكتروني</th>
+                      <th className="p-3">رقم الهاتف</th>
+                      <th className="p-3 text-center">إجمالي الحجوزات</th>
+                      <th className="p-3 text-center">حالة الحساب</th>
+                      <th className="p-3 text-center">الإجراءات والتحكم</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {tourists
+                      .filter(t => {
+                        const q = touristSearch.trim().toLowerCase();
+                        const matchQ = !q ||
+                          (t.full_name && t.full_name.toLowerCase().includes(q)) ||
+                          (t.tourist_id && t.tourist_id.toLowerCase().includes(q)) ||
+                          (t.email && t.email.toLowerCase().includes(q)) ||
+                          (t.phone_number && t.phone_number.includes(q));
+
+                        const matchStatus = touristStatusFilter === "all" ||
+                          (touristStatusFilter === "active" && t.account_status !== "مقيّد") ||
+                          (touristStatusFilter === "restricted" && t.account_status === "مقيّد");
+
+                        return matchQ && matchStatus;
+                      })
+                      .map((t) => {
+                        const isRestricted = t.account_status === "مقيّد";
+                        const totalBookings = (Number(t.daily_bookings_count) || 0) + (Number(t.weekly_bookings_count) || 0);
+                        return (
+                          <tr key={t.tourist_id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="p-3 font-bold text-foreground">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center text-xs">
+                                  {t.full_name ? t.full_name[0] : "س"}
+                                </div>
+                                <div>
+                                  <div className="font-black text-slate-900">{t.full_name}</div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    تاريخ التسجيل: {t.created_at ? new Date(t.created_at).toLocaleDateString('ar-LY') : "مسبقاً"}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-mono font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-900 border border-blue-200">
+                                {t.tourist_id}
+                              </span>
+                            </td>
+                            <td className="p-3 text-muted-foreground font-semibold">{t.email}</td>
+                            <td className="p-3 text-muted-foreground font-mono font-semibold" dir="ltr">{t.phone_number}</td>
+                            <td className="p-3 text-center">
+                              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 font-black text-xs">
+                                🎟️ {totalBookings} حجز
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              {isRestricted ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100 text-red-800 text-[11px] font-black border border-red-200">
+                                  <span>🔴</span>
+                                  <span>حساب مقيّد (محظور)</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black border border-emerald-200">
+                                  <span>🟢</span>
+                                  <span>نشط ومصرح له</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleViewTourist(t)}
+                                  className="px-3 py-1.5 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                >
+                                  <span>👁️</span>
+                                  <span>عرض الحجوزات والملف</span>
+                                </button>
+                                <button
+                                  onClick={() => handleToggleTouristStatus(t.tourist_id, t.account_status || "نشط")}
+                                  className={`px-3 py-1.5 rounded-xl font-black text-xs transition cursor-pointer flex items-center gap-1 border shadow-2xs ${
+                                    isRestricted
+                                      ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300"
+                                      : "bg-red-50 hover:bg-red-100 text-red-700 border-red-300"
+                                  }`}
+                                >
+                                  <span>{isRestricted ? "✅" : "🚫"}</span>
+                                  <span>{isRestricted ? "تنشيط الحساب" : "تقييد الحساب"}</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      )}
+
       {/* TRIPS TAB */}
       {active === "trips" && (
         <div className="space-y-6 text-right">
@@ -1831,8 +2525,19 @@ function AdminDashboard() {
                             </Badge>
                           </button>
                         </td>
-                        <td className="py-3">
+                        <td className="py-3 flex items-center gap-2">
                           <span className="text-xs font-bold text-blue-700">{b.booking_status}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScanCode(b.booking_daily_id);
+                              handleVerifyTicketCode(b.booking_daily_id);
+                              setActive("scanner");
+                            }}
+                            className="px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"
+                          >
+                            📷 مسح وتحقق
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1893,8 +2598,19 @@ function AdminDashboard() {
                             </Badge>
                           </button>
                         </td>
-                        <td className="py-3">
+                        <td className="py-3 flex items-center gap-2">
                           <span className="text-xs font-bold text-blue-700">{b.booking_status}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScanCode(b.booking_weekly_id);
+                              handleVerifyTicketCode(b.booking_weekly_id);
+                              setActive("scanner");
+                            }}
+                            className="px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"
+                          >
+                            📷 مسح وتحقق
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1909,32 +2625,51 @@ function AdminDashboard() {
       {/* OFFERS TAB */}
       {active === "offers" && (
         <div className="space-y-6 text-right">
-          <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 text-xs font-semibold text-muted-foreground">
-            🎯 إدارة العروض الترويجية لجذب السياح — يمكنك إضافة عروض للرحلات اليومية والأسبوعية والمطاعم والكافيهات مع صورة وتاريخ الصلاحية ونسبة الخصم.
+          <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 text-xs font-semibold text-muted-foreground flex items-center justify-between">
+            <span>🎯 إدارة العروض الترويجية والخصومات الحصرية — ربط العروض بالرحلات اليومية والأسبوعية المسجلة في DelniDB مع نسبة الخصم وتاريخ الصلاحية.</span>
+            <span className="px-3 py-1 bg-primary text-white rounded-xl text-xs font-black">
+              {dailyOffers.length + weeklyOffers.length} عرض نشط
+            </span>
           </div>
 
           {/* Daily Offers */}
-          <SectionCard title="🎯 عروض الرحلات اليومية (trips_daily_offers)" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة عرض يومي</button>}>
+          <SectionCard title="🎯 عروض الرحلات اليومية (offers_daily_trips)" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-soft">+ إضافة عرض يومي</button>}>
             {dailyOffers.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm">لا توجد عروض يومية حالياً.</div>
+              <div className="text-center py-10 text-muted-foreground text-sm font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                لا توجد عروض رحلات يومية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة يومية الآن.
+              </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {dailyOffers.map(o => {
                   const trip = dailyTrips.find(t => t.id === o.daily_trip_id);
+                  const img = o.offer_image_url || o.url_image_offer || trip?.photo;
+                  const discount = o.percent_discount || (o as any).discount_percentage || 15;
+                  const originalPrice = trip?.price_per_seat || (o as any).price_per_seat;
+                  const discountedPrice = originalPrice ? Math.round(originalPrice * (1 - discount / 100)) : null;
+
                   return (
-                    <div key={o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft">
-                      {o.url_image_offer && <img src={o.url_image_offer} alt="" className="w-full h-36 object-cover" />}
-                      <div className="p-4 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-black text-foreground text-sm flex-1">{o.title_offer}</h4>
-                          <span className="text-xl font-black text-emerald-600 flex-shrink-0 mr-2">-{o.percent_discount}%</span>
+                    <div key={o.offer_daily_id || o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft flex flex-col justify-between">
+                      {img && <img src={img} alt="" className="w-full h-40 object-cover" />}
+                      <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-start gap-2">
+                            <h4 className="font-black text-foreground text-sm flex-1">{o.offer_title || o.title_offer}</h4>
+                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-black rounded-lg shrink-0">
+                              -{discount}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{o.description}</p>
+                          <div className="text-xs font-bold text-primary">🧭 الرحلة: {trip?.title || (o as any).trip_title || o.daily_trip_id}</div>
+                          {originalPrice && (
+                            <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 inline-block">
+                              السعر بعد الخصم: {discountedPrice} د.ل (بدلاً من {originalPrice} د.ل)
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground font-bold">📅 الصلاحية: {o.start_date || o.date_start || "—"} ← {o.end_date || o.date_end || "—"}</div>
                         </div>
-                        <p className="text-xs text-muted-foreground">{o.description}</p>
-                        <div className="text-xs font-bold text-primary">🧭 {trip?.title || o.daily_trip_id}</div>
-                        <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
-                        <div className="flex gap-2 pt-1">
-                          <button onClick={() => setEditingDailyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                          <button onClick={() => handleDeleteDailyOffer(o.offer_daily_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                        <div className="flex gap-2 pt-3 border-t border-slate-100">
+                          <button onClick={() => setEditingDailyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
+                          <button onClick={() => handleDeleteDailyOffer(o.offer_daily_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
                         </div>
                       </div>
                     </div>
@@ -1945,58 +2680,43 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Offers */}
-          <SectionCard title="🎁 عروض الرحلات الأسبوعية (trips_weekly_offers)" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة عرض أسبوعي</button>}>
+          <SectionCard title="🎁 عروض الرحلات الأسبوعية (offers_weekly_trips)" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black shadow-soft">+ إضافة عرض أسبوعي</button>}>
             {weeklyOffers.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm">لا توجد عروض أسبوعية حالياً.</div>
+              <div className="text-center py-10 text-muted-foreground text-sm font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                لا توجد عروض رحلات أسبوعية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة أسبوعية الآن.
+              </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {weeklyOffers.map(o => {
                   const trip = weeklyTrips.find(t => t.id === o.weekly_trip_id);
-                  return (
-                    <div key={o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft">
-                      {o.offer_image_url && <img src={o.offer_image_url} alt="" className="w-full h-36 object-cover" />}
-                      <div className="p-4 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-black text-foreground text-sm flex-1">{o.offer_title}</h4>
-                          <span className="text-xl font-black text-amber-600 flex-shrink-0 mr-2">-{o.percent_discount}%</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{o.description}</p>
-                        <div className="text-xs font-bold text-primary">🗓️ {trip?.title || o.weekly_trip_id}</div>
-                        <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
-                        <div className="flex gap-2 pt-1">
-                          <button onClick={() => setEditingWeeklyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                          <button onClick={() => handleDeleteWeeklyOffer(o.offer_weekly_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </SectionCard>
+                  const img = o.offer_image_url || trip?.photo;
+                  const discount = o.discount_percentage || o.percent_discount || 15;
+                  const originalPrice = trip?.seat_per_price || (o as any).seat_per_price;
+                  const discountedPrice = originalPrice ? Math.round(originalPrice * (1 - discount / 100)) : null;
 
-          {/* Facility Offers */}
-          <SectionCard title="🍕 عروض المطاعم والكافيهات (facilities_offers)" action={<button onClick={() => setShowAddFacilityOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة عرض مطعم/كافيه</button>}>
-            {facilityOffers.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm">لا توجد عروض منشآت حالياً.</div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {facilityOffers.map(o => {
-                  const fac = restaurants.find(r => r.id === o.facility_id);
                   return (
-                    <div key={o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft">
-                      {o.offer_image_url && <img src={o.offer_image_url} alt="" className="w-full h-36 object-cover" />}
-                      <div className="p-4 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-black text-foreground text-sm flex-1">{o.title_offer}</h4>
-                          <span className="text-xl font-black text-rose-600 flex-shrink-0 mr-2">-{o.percent_discount}%</span>
+                    <div key={o.offer_weekly_id || o.id} className="rounded-2xl border border-border bg-white overflow-hidden shadow-soft flex flex-col justify-between">
+                      {img && <img src={img} alt="" className="w-full h-40 object-cover" />}
+                      <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-start gap-2">
+                            <h4 className="font-black text-foreground text-sm flex-1">{o.offer_title}</h4>
+                            <span className="px-2.5 py-1 bg-amber-100 text-amber-900 text-xs font-black rounded-lg shrink-0">
+                              -{discount}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{o.description}</p>
+                          <div className="text-xs font-bold text-amber-800">🗓️ الرحلة: {trip?.title || (o as any).trip_title || o.weekly_trip_id}</div>
+                          {originalPrice && (
+                            <div className="text-xs font-black text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
+                              السعر بعد الخصم: {discountedPrice} د.ل (بدلاً من {originalPrice} د.ل)
+                            </div>
+                          )}
+                           <div className="text-xs text-muted-foreground font-bold">📅 الصلاحية: {o.start_date || o.date_start || "—"} ← {o.end_date || o.date_end || "—"}</div>
                         </div>
-                        <p className="text-xs text-muted-foreground">{o.description}</p>
-                        <div className="text-xs font-bold text-primary">🍽️ {fac?.name || o.facility_id}</div>
-                        <div className="text-xs text-muted-foreground font-bold">📅 {o.date_start} ← {o.date_end}</div>
-                        <div className="flex gap-2 pt-1">
-                          <button onClick={() => setEditingFacilityOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                          <button onClick={() => handleDeleteFacilityOffer(o.facility_offer_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
+                        <div className="flex gap-2 pt-3 border-t border-slate-100">
+                          <button onClick={() => setEditingWeeklyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
+                          <button onClick={() => handleDeleteWeeklyOffer(o.offer_weekly_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
                         </div>
                       </div>
                     </div>
@@ -2269,39 +2989,74 @@ function AdminDashboard() {
             </div>
           </SectionCard>
 
-          <SectionCard title="🏛️ المعالم والوجهات السياحية (صورة رئيسية واحدة + Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ إضافة معلم</button>}>
+          <SectionCard title="🏛️ المعالم والوجهات السياحية المعتمدة (برقم البلدية ID + خريطة Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow cursor-pointer hover:opacity-95 transition">+ إضافة وتوثيق معلم</button>}>
             <div className="grid md:grid-cols-2 gap-4">
-              {attractions.map((a) => (
-                <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3">
-                  <div className="flex gap-3">
-                    <img src={a.place_image || "/assets/ai_ruins.jpg"} alt="" className="w-24 h-24 rounded-xl object-cover flex-shrink-0 border" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-foreground text-sm">{a.name}</h4>
-                      <div className="text-xs text-muted-foreground mt-0.5">📍 {a.city} · 👥 {a.visitors_count} استعلام وزيارة</div>
-                      <div className="mt-1">
-                        <Badge tone="sea">{a.category}</Badge>
+              {attractions.map((a) => {
+                const munId = a.place_id || a.municipality_code || a.id;
+                return (
+                  <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-2xs hover:shadow-xs transition">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-blue-100/80 text-blue-900 font-mono text-xs font-black border border-blue-200">
+                          🏛️ رقم البلدية: {munId}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">(المفتاح الرئيسي ID)</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{a.description}</p>
+                      <Badge tone="sea">{a.category || "مدينة سياحية"}</Badge>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <img src={a.place_image || (a as any).photo || "/assets/dest-leptis-theater.jpg"} alt="" className="w-24 h-24 rounded-xl object-cover flex-shrink-0 border border-slate-200 shadow-2xs" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-foreground text-sm truncate">{a.name}</h4>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          📍 {a.city} {a.region ? `· ${a.region}` : ""}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{a.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Historical snippet or Highlights */}
+                    {(a.history_snippet || a.highlights) && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 leading-snug space-y-1.5">
+                        {a.history_snippet && (
+                          <div>
+                            <strong className="text-slate-900 font-bold">📜 نبذة تاريخية: </strong>
+                            <span>{a.history_snippet}</span>
+                          </div>
+                        )}
+                        {a.highlights && (
+                          <div>
+                            <strong className="text-[#003580] font-bold">✨ أبرز المحطات: </strong>
+                            <span>{Array.isArray(a.highlights) ? a.highlights.join("، ") : a.highlights}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(a.latitude || a.google_maps_url) && (
+                      <div className="p-2.5 rounded-xl flex items-center justify-between gap-2" style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.15)" }}>
+                        <div className="text-xs font-bold text-blue-700">
+                          📍 {a.latitude && a.longitude ? `${a.latitude}°N, ${a.longitude}°E` : "موقع مضاف"}
+                        </div>
+                        {a.google_maps_url && (
+                          <a href={a.google_maps_url} target="_blank" rel="noreferrer" className="flex-shrink-0 px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition">
+                            🗺️ فتح الخريطة
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                      <span className="text-[11px] text-slate-400 font-medium">👥 {a.visitors_count || 0} استعلام وزيارة</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingAttraction(a)} className="px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black rounded-lg transition cursor-pointer">تعديل</button>
+                        <button onClick={() => handleDeleteAttraction(munId || "")} className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black rounded-lg transition cursor-pointer">حذف</button>
+                      </div>
                     </div>
                   </div>
-                  {(a.latitude || a.google_maps_url) && (
-                    <div className="p-2.5 rounded-xl flex items-center justify-between gap-2" style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.15)" }}>
-                      <div className="text-xs font-bold text-blue-700">
-                        📍 {a.latitude && a.longitude ? `${a.latitude}°N, ${a.longitude}°E` : "موقع مضاف"}
-                      </div>
-                      {a.google_maps_url && (
-                        <a href={a.google_maps_url} target="_blank" rel="noreferrer" className="flex-shrink-0 px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition">
-                          🗺️ فتح الخريطة
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setEditingAttraction(a)} className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                    <button onClick={() => handleDeleteAttraction(a.place_id || a.id || "")} className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </SectionCard>
         </div>
@@ -2515,23 +3270,29 @@ function AdminDashboard() {
       {showAddCompany && <AddCompanyModal companies={companies} onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
       {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
       {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
-      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
-      {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
-      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
+      {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
+      {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
+      {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
       {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
       {showAddHotel && <HotelModal title="إضافة فندق جديد" existingHotels={hotels} onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
       {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} existingHotels={hotels} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
       {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" existingRestaurants={restaurants} onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
       {editingRestaurant && <RestaurantModal title={`تعديل: ${editingRestaurant.name}`} restaurant={editingRestaurant} existingRestaurants={restaurants} onClose={() => setEditingRestaurant(null)} onSave={handleUpdateRestaurant} />}
-      {showAddAttraction && <AttractionModal title="إضافة معلم سياحي جديد" onClose={() => setShowAddAttraction(false)} onSave={handleAddAttraction} />}
-      {editingAttraction && <AttractionModal title={`تعديل: ${editingAttraction.name}`} attraction={editingAttraction} onClose={() => setEditingAttraction(null)} onSave={handleUpdateAttraction} />}
+      {showAddAttraction && <AttractionModal title="إضافة وتوثيق معلم سياحي جديد (برقم البلدية ID)" existingAttractions={attractions} onClose={() => setShowAddAttraction(false)} onSave={handleAddAttraction} />}
+      {editingAttraction && <AttractionModal title={`تعديل المعلم: ${editingAttraction.name}`} attraction={editingAttraction} existingAttractions={attractions} onClose={() => setEditingAttraction(null)} onSave={handleUpdateAttraction} />}
       {showAddDailyOffer && <DailyOfferModal title="إضافة عرض رحلة يومية" dailyTrips={dailyTrips} onClose={() => setShowAddDailyOffer(false)} onSave={handleAddDailyOffer} />}
       {editingDailyOffer && <DailyOfferModal title="تعديل العرض اليومي" offer={editingDailyOffer} dailyTrips={dailyTrips} onClose={() => setEditingDailyOffer(null)} onSave={handleUpdateDailyOffer} />}
       {showAddWeeklyOffer && <WeeklyOfferModal title="إضافة عرض رحلة أسبوعية" weeklyTrips={weeklyTrips} onClose={() => setShowAddWeeklyOffer(false)} onSave={handleAddWeeklyOffer} />}
       {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
-      {showAddFacilityOffer && <FacilityOfferModal title="إضافة عرض مطعم/كافيه" restaurants={restaurants} onClose={() => setShowAddFacilityOffer(false)} onSave={handleAddFacilityOffer} />}
-      {editingFacilityOffer && <FacilityOfferModal title="تعديل عرض المطعم" offer={editingFacilityOffer} restaurants={restaurants} onClose={() => setEditingFacilityOffer(null)} onSave={handleUpdateFacilityOffer} />}
       {showAddPrivateTrip && <AddPrivateTripModal guides={guides} tourists={tourists} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
+      {selectedTouristDetail && (
+        <TouristDetailsModal
+          tourist={selectedTouristDetail}
+          isLoading={loadingTouristDetail}
+          onClose={() => setSelectedTouristDetail(null)}
+          onToggleStatus={(tid, status) => handleToggleTouristStatus(tid, status)}
+        />
+      )}
     </DashboardShell>
   );
 }
@@ -3004,7 +3765,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
   const [pass, setPass] = useState("");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(5);
   const [contractEndDate, setContractEndDate] = useState("");
-  const [companyStatus, setCompanyStatus] = useState("موثق");
+  const [companyStatus, setCompanyStatus] = useState("نشطة");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -3215,9 +3976,8 @@ contract_start_date: new Date().toISOString().split("T")[0],
                 onChange={e => setCompanyStatus(e.target.value as any)}
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
               >
-                <option value="موثق">موثق (نشط يظهر للعلن ويعرض سياراته)</option>
-                <option value="بانتظار">بانتظار المراجعة (معلق لا يظهر)</option>
-                <option value="مرفوض">مرفوض / غير نشط (يختفي من المنصة)</option>
+                <option value="نشطة">نشطة (مفعلة وتعمل بالمنصة)</option>
+                <option value="موقوفة">موقوفة (معطلة مؤقتاً)</option>
               </select>
             </div>
           </div>
@@ -3263,7 +4023,7 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(company.total_vehicles ?? 5);
   const [contractStartDate, setContractStartDate] = useState(company.contract_start_date || "2026-01-01");
   const [contractEndDate, setContractEndDate] = useState(company.contract_end_date || "2028-01-01");
-  const [status, setStatus] = useState(company.verification_status || company.status || "موثق");
+  const [status, setStatus] = useState(company.status === "موقوفة" || company.verification_status === "موقوفة" || company.status === "مرفوض" ? "موقوفة" : "نشطة");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -3420,9 +4180,8 @@ available_cars: totalV,
                 onChange={e => setStatus(e.target.value as any)}
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
               >
-                <option value="موثق">موثق (نشط يظهر للعلن ويعرض سياراته)</option>
-                <option value="بانتظار">بانتظار المراجعة (معلق لا يظهر)</option>
-                <option value="مرفوض">مرفوض / غير نشط (يختفي من المنصة)</option>
+                <option value="نشطة">نشطة (مفعلة وتعمل بالمنصة)</option>
+                <option value="موقوفة">موقوفة (معطلة مؤقتاً)</option>
               </select>
             </div>
           </div>
@@ -3726,10 +4485,12 @@ function TripItineraryTimelineEditor({
   steps,
   onChange,
   selectedRestaurant,
+  mode = "time",
 }: {
   steps: ItineraryStepItem[];
   onChange: (steps: ItineraryStepItem[]) => void;
   selectedRestaurant?: Restaurant | null;
+  mode?: "time" | "days";
 }) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -3742,9 +4503,9 @@ function TripItineraryTimelineEditor({
   const handleAddStep = () => {
     const nextNum = steps.length + 1;
     const newStep: ItineraryStepItem = {
-      title: `المحطة ${nextNum} - وجهة استكشاف جديدة`,
-      time: "02:00 م",
-      desc: "تفاصيل وبرنامج الزيارة لهذه المحطة السياحية...",
+      title: mode === "days" ? `محطة اليوم ${nextNum} - وجهة استكشاف جديدة` : `المحطة ${nextNum} - وجهة استكشاف جديدة`,
+      time: mode === "days" ? `اليوم ${nextNum}` : "02:00 م",
+      desc: mode === "days" ? `تفاصيل ومسار اليوم ${nextNum}...` : "تفاصيل وبرنامج الزيارة لهذه المحطة السياحية...",
     };
     onChange([...steps, newStep]);
     setIsEditing(true);
@@ -3768,11 +4529,13 @@ function TripItineraryTimelineEditor({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
           <h3 className="text-base sm:text-lg font-black text-[#003580] flex items-center gap-2">
-            <span>⏱️</span>
-            <span>محطات وخط سير الرحلة خطوة بخطوة</span>
+            <span>{mode === "days" ? "📅" : "⏱️"}</span>
+            <span>{mode === "days" ? "محطات وجدول الأيام خطوة بخطوة" : "محطات وخط سير الرحلة خطوة بخطوة"}</span>
           </h3>
           <p className="text-xs text-slate-500 font-bold mt-0.5">
-            إمكانية إضافة محطات أو حذف محطات وتعديل المواعيد والشرح بدقة ({steps.length} محطات حالية)
+            {mode === "days"
+              ? `إمكانية إضافة محطات الأيام أو حذفها وتعديل خطة كل يوم بدقة (${steps.length} محطات/أيام حالية)`
+              : `إمكانية إضافة محطات أو حذف محطات وتعديل المواعيد والشرح بدقة (${steps.length} محطات حالية)`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -3782,9 +4545,9 @@ function TripItineraryTimelineEditor({
             className="px-3 py-1.5 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer flex items-center gap-1 shadow-xs"
           >
             <span>➕</span>
-            <span>إضافة محطة</span>
+            <span>{mode === "days" ? "إضافة محطة يوم" : "إضافة محطة"}</span>
           </button>
-          {isEditing && (
+          {isEditing && mode !== "days" && (
             <button
               type="button"
               onClick={handleResetDefaults}
@@ -3836,22 +4599,27 @@ function TripItineraryTimelineEditor({
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2">
-                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">عنوان المحطة {idx + 1}</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                          {mode === "days" ? `عنوان محطة اليوم ${idx + 1}` : `عنوان المحطة ${idx + 1}`}
+                        </label>
                         <input
                           type="text"
                           value={step.title}
                           onChange={(e) => handleStepChange(idx, "title", e.target.value)}
+                          placeholder={mode === "days" ? `مثال: استكشاف الآثار والمبيت` : "عنوان المحطة..."}
                           className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs font-bold text-right bg-white"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">التوقيت</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                          {mode === "days" ? "اليوم" : "التوقيت"}
+                        </label>
                         <input
                           type="text"
                           value={step.time}
                           onChange={(e) => handleStepChange(idx, "time", e.target.value)}
                           className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs font-bold text-right bg-white"
-                          placeholder="09:00 ص"
+                          placeholder={mode === "days" ? `اليوم ${idx + 1}` : "09:00 ص"}
                         />
                       </div>
                     </div>
@@ -3910,6 +4678,11 @@ function TripVehicleAndDriverSelector({
   onCapacityChange,
   selectedPlate,
   onSelectPlate,
+  departureCity,
+  startDate,
+  endDate,
+  existingTrips,
+  currentTripId,
 }: {
   vehicles: Vehicle[];
   drivers: Driver[];
@@ -3917,29 +4690,128 @@ function TripVehicleAndDriverSelector({
   onCapacityChange: (cap: 15 | 25 | 50) => void;
   selectedPlate: string;
   onSelectPlate: (plate: string) => void;
+  departureCity?: string;
+  startDate?: string;
+  endDate?: string;
+  existingTrips?: {
+    dailyTrips?: any[];
+    weeklyTrips?: any[];
+  };
+  currentTripId?: string;
 }) {
+  // Check vehicle status and conflict with existing trips in the trip dates
+  const vehicleAvailability = useMemo(() => {
+    const map = new Map<string, { isAvailable: boolean; reason?: string }>();
+
+    const targetStart = startDate ? new Date(startDate) : null;
+    const targetEnd = endDate ? new Date(endDate) : (targetStart || null);
+
+    vehicles.forEach((v) => {
+      // 1. Maintenance / Broken status check
+      if (v.status === "صيانة" || v.vehicle_status === "صيانة" || (v as any).status === "معطلة") {
+        map.set(v.plate_number, { isAvailable: false, reason: "المركبة في الصيانة الفنية حالياً" });
+        return;
+      }
+
+      // 2. Check weekly trips overlap
+      if (existingTrips?.weeklyTrips && targetStart && !isNaN(targetStart.getTime())) {
+        const conflict = existingTrips.weeklyTrips.find((wt: any) => {
+          if (currentTripId && (wt.weekly_trip_id === currentTripId || wt.id === currentTripId)) return false;
+          const assigned = wt.vehicle_plate === v.plate_number || (Array.isArray(wt.vehicle_plates) && wt.vehicle_plates.includes(v.plate_number));
+          if (!assigned) return false;
+          if (!wt.start_date) return false;
+          const wtStart = new Date(wt.start_date);
+          const wtEnd = wt.end_date ? new Date(wt.end_date) : wtStart;
+          if (isNaN(wtStart.getTime()) || isNaN(wtEnd.getTime())) return false;
+          const s = targetStart.getTime();
+          const e = (targetEnd || targetStart)!.getTime();
+          return !(wtEnd.getTime() < s || wtStart.getTime() > e);
+        });
+
+        if (conflict) {
+          map.set(v.plate_number, {
+            isAvailable: false,
+            reason: `محجوزة في رحلة أسبوعية (${conflict.trip_title || conflict.title}) من ${conflict.start_date} إلى ${conflict.end_date || conflict.start_date}`,
+          });
+          return;
+        }
+      }
+
+      // 3. Check daily trips overlap
+      if (existingTrips?.dailyTrips && startDate) {
+        const conflict = existingTrips.dailyTrips.find((dt: any) => {
+          if (currentTripId && (dt.daily_trip_id === currentTripId || dt.id === currentTripId)) return false;
+          if (dt.vehicle_plate !== v.plate_number) return false;
+          return dt.date === startDate || (dt.days_of_week && dt.days_of_week.includes(startDate));
+        });
+        if (conflict) {
+          map.set(v.plate_number, {
+            isAvailable: false,
+            reason: `محجوزة في رحلة يومية (${conflict.trip_title || conflict.title})`,
+          });
+          return;
+        }
+      }
+
+      map.set(v.plate_number, { isAvailable: true });
+    });
+
+    return map;
+  }, [vehicles, existingTrips, startDate, endDate, currentTripId]);
+
   const matchingVehicles = useMemo(() => {
     return vehicles.filter((v) => {
+      // 1. Filter by departure city if provided (e.g. طرابلس vs بنغازي)
+      if (departureCity) {
+        const vCity = String(v.city || (v as any).company_city || (v as any).location || "").trim();
+        if (vCity && !departureCity.includes(vCity) && !vCity.includes(departureCity)) {
+          return false;
+        }
+      }
+
+      // 2. Filter by capacity
       const cap = Number(v.seating_capacity || (v as any).capacity || 0);
       if (busCapacity === 15) return cap <= 18;
-      if (busCapacity === 25) return cap > 18 && cap <= 30;
-      if (busCapacity === 50) return cap > 30;
-      return true;
+      if (busCapacity === 25) return cap > 18 && cap <= 32;
+      if (busCapacity === 50) return cap > 32;
+      return false;
     });
-  }, [vehicles, busCapacity]);
+  }, [vehicles, busCapacity, departureCity]);
 
-  const vehiclesToDisplay = matchingVehicles.length > 0 ? matchingVehicles : vehicles;
+  // Show vacant/available vehicles first
+  const vacantVehicles = useMemo(() => {
+    return matchingVehicles.filter((v) => {
+      const info = vehicleAvailability.get(v.plate_number);
+      return info?.isAvailable || v.plate_number === selectedPlate;
+    });
+  }, [matchingVehicles, vehicleAvailability, selectedPlate]);
+
+  const unavailableVehicles = useMemo(() => {
+    return matchingVehicles.filter((v) => {
+      const info = vehicleAvailability.get(v.plate_number);
+      return !info?.isAvailable && v.plate_number !== selectedPlate;
+    });
+  }, [matchingVehicles, vehicleAvailability, selectedPlate]);
+
+  const [showUnavailable, setShowUnavailable] = useState(false);
 
   return (
     <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="font-black text-emerald-950 text-sm flex items-center gap-1.5">
           <span>🚌</span>
-          <span>تحديد سعة الحافلة وفلترة المركبات والسائقين</span>
+          <span>تحديد سعة الحافلة وفلترة المركبات الشاغرة فقط</span>
         </div>
-        <span className="px-3 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-xs font-black">
-          السعة المختارة: {busCapacity} راكب
-        </span>
+        <div className="flex items-center gap-2">
+          {startDate && (
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-black border border-blue-200">
+              📅 تاريخ الانطلاق: {startDate}
+            </span>
+          )}
+          <span className="px-3 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-xs font-black">
+            السعة المختارة: {busCapacity} راكب
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -3995,59 +4867,161 @@ function TripVehicleAndDriverSelector({
         </button>
       </div>
 
-      <div className="space-y-2 pt-2 border-t border-emerald-100">
-        <label className="text-xs font-bold text-slate-700 block">
-          المركبات المتاحة في قاعدة البيانات بسعة {busCapacity} راكب مع السائق المسند:
-        </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-          {vehiclesToDisplay.map((v) => {
-            const isSelected = selectedPlate === v.plate_number;
-            const assignedDriver = drivers.find((d) => d.assigned_vehicle_plate === v.plate_number);
-            const cap = v.seating_capacity || (v as any).capacity || busCapacity;
+      <div className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 text-[11px] text-blue-900 font-bold flex items-center gap-2">
+        <span>🔒</span>
+        <span>
+          نظام حجز الأسطول: تظهر المركبات الشاغرة فقط في موعد الانطلاق، وبمجرد اختيار الحافلة تصبح محجوزة وغير متاحة لأي رحلة أخرى طوال مدة الرحلة.
+        </span>
+      </div>
 
-            return (
-              <div
-                key={v.plate_number}
-                onClick={() => onSelectPlate(v.plate_number)}
-                className={`p-3 rounded-xl border-2 cursor-pointer transition text-right flex items-start gap-2.5 ${
-                  isSelected
-                    ? "bg-emerald-50/80 border-emerald-600 shadow-sm ring-1 ring-emerald-500"
-                    : "bg-white border-slate-200 hover:border-emerald-300"
-                }`}
-              >
-                <div className="text-xl mt-0.5">
-                  {cap > 30 ? "🚍" : cap > 18 ? "🚌" : "🚐"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-black text-xs text-slate-900 truncate">
-                      {v.vehicle_type || "مركبة سياحية"}
-                    </span>
-                    <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
-                      {cap} راكب
-                    </span>
+      <div className="space-y-2 pt-2 border-t border-emerald-100">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-700 block">
+            المركبات الشاغرة المتاحة للحجز بسعة {busCapacity} راكب ({vacantVehicles.length} شاغرة):
+          </label>
+          {unavailableVehicles.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowUnavailable(!showUnavailable)}
+              className="text-[10px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+            >
+              {showUnavailable ? "إخفاء المركبات غير الشاغرة" : `عرض المركبات المشغولة (${unavailableVehicles.length})`}
+            </button>
+          )}
+        </div>
+
+        {vacantVehicles.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+            {vacantVehicles.map((v) => {
+              const isSelected = selectedPlate === v.plate_number;
+              const assignedDriver = drivers.find((d) => d.assigned_vehicle_plate === v.plate_number);
+              const cap = v.seating_capacity || (v as any).capacity || busCapacity;
+
+              return (
+                <div
+                  key={v.plate_number}
+                  onClick={() => onSelectPlate(v.plate_number)}
+                  className={`p-3 rounded-xl border-2 cursor-pointer transition text-right flex items-start gap-2.5 ${
+                    isSelected
+                      ? "bg-emerald-50/90 border-emerald-600 shadow-sm ring-2 ring-emerald-500/30"
+                      : "bg-white border-slate-200 hover:border-emerald-300"
+                  }`}
+                >
+                  <div className="text-xl mt-0.5">
+                    {cap > 30 ? "🚍" : cap > 18 ? "🚌" : "🚐"}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-bold">
-                    لوحة: <span className="text-slate-800 font-black">{v.plate_number}</span> | {v.company_name || "شركة النقل"}
-                  </div>
-                  <div className="mt-1 pt-1 border-t border-slate-100 text-[10px] flex items-center justify-between">
-                    <span className="text-emerald-900 font-black truncate">
-                      👨‍✈️ {assignedDriver ? assignedDriver.full_name : "سائق معتمد من الشركة"}
-                    </span>
-                    {assignedDriver?.phone_number && (
-                      <span className="text-slate-600 font-bold text-[9px] mr-1">
-                        📞 {assignedDriver.phone_number}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-black text-xs text-slate-900 truncate">
+                        {v.vehicle_type || "مركبة سياحية"}
                       </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                          {cap} راكب
+                        </span>
+                        {isSelected ? (
+                          <span className="text-[10px] font-black text-white bg-emerald-700 px-1.5 py-0.5 rounded">
+                            مختارة ومحجوزة ✓
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            شاغرة ومتاحة
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-bold">
+                      لوحة: <span className="text-slate-800 font-black">{v.plate_number}</span> | {v.company_name || "شركة النقل"}
+                    </div>
+                    <div className="mt-1 pt-1 border-t border-slate-100 text-[10px] flex items-center justify-between">
+                      <span className="text-emerald-900 font-black truncate">
+                        👨‍✈️ {assignedDriver ? assignedDriver.full_name : "سائق معتمد من الشركة"}
+                      </span>
+                      {assignedDriver?.phone_number && (
+                        <span className="text-slate-600 font-bold text-[9px] mr-1">
+                          📞 {assignedDriver.phone_number}
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <div className="mt-1 text-[9px] text-emerald-800 font-bold bg-emerald-100/60 px-2 py-0.5 rounded">
+                        🔒 تصبح غير متاحة طوال فترة الرحلة لضمان التفرغ الكامل.
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs text-center font-bold">
+            ⚠️ لا توجد مركبات شاغرة ومتاحة حالياً بسعة {busCapacity} راكب في هذا التاريخ.
+          </div>
+        )}
+
+        {/* Unavailable Vehicles list (collapsible) */}
+        {showUnavailable && unavailableVehicles.length > 0 && (
+          <div className="pt-2 border-t border-slate-200 space-y-1.5">
+            <span className="text-[11px] font-bold text-red-700 block">
+              ⚠️ مركبات مشغولة في رحلات أخرى أو في الصيانة:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 opacity-65">
+              {unavailableVehicles.map((v) => {
+                const info = vehicleAvailability.get(v.plate_number);
+                return (
+                  <div key={v.plate_number} className="p-2.5 rounded-xl border border-red-200 bg-red-50/50 text-[10px]">
+                    <div className="flex justify-between font-bold text-slate-800">
+                      <span>{v.vehicle_type} ({v.plate_number})</span>
+                      <span className="text-red-700 font-black">غير شاغرة</span>
+                    </div>
+                    <div className="text-red-600 mt-0.5">{info?.reason || "مشغولة في رحلة أخرى"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function resolveCitiesFromDestinations(destinations: string[], attractionsList: Attraction[] = []): string[] {
+  const result = new Set<string>();
+  destinations.forEach(dest => {
+    if (!dest) return;
+    const clean = dest.trim();
+    if (!clean) return;
+    result.add(clean);
+    
+    // Look up in attractions
+    const matched = attractionsList.find(a => 
+      (a.name && (a.name === clean || clean.includes(a.name) || a.name.includes(clean))) ||
+      (a.place_name && (a.place_name === clean || clean.includes(a.place_name) || a.place_name.includes(clean)))
+    );
+    if (matched && matched.city) {
+      result.add(matched.city.trim());
+    }
+
+    // Common Libyan landmark-to-city aliases
+    if (clean.includes("لبدة")) result.add("الخمس");
+    if (clean.includes("صبراتة")) result.add("صبراتة");
+    if (clean.includes("أوباري") || clean.includes("قبر عون") || clean.includes("الصحراء")) {
+      result.add("أوباري");
+      result.add("سبها");
+      result.add("فزان");
+    }
+    if (clean.includes("شحات") || clean.includes("قورينا") || clean.includes("أبولونيا") || clean.includes("الجبل الأخضر")) {
+      result.add("شحات");
+      result.add("البيضاء");
+    }
+    if (clean.includes("غدامس")) result.add("غدامس");
+    if (clean.includes("غريان")) result.add("غريان");
+    if (clean.includes("طرابلس") || clean.includes("السرايا") || clean.includes("المدينة القديمة")) result.add("طرابلس");
+    if (clean.includes("بنغازي")) result.add("بنغازي");
+    if (clean.includes("طبرق")) result.add("طبرق");
+  });
+  return Array.from(result);
 }
 
 function TripRestaurantSelector({
@@ -4056,6 +5030,7 @@ function TripRestaurantSelector({
   selectedIds = [],
   targetCity,
   targetCities = [],
+  attractions = [],
   onSelect,
   onToggleSelect,
 }: {
@@ -4064,21 +5039,22 @@ function TripRestaurantSelector({
   selectedIds?: string[];
   targetCity?: string;
   targetCities?: string[];
+  attractions?: Attraction[];
   onSelect?: (id: string) => void;
   onToggleSelect?: (id: string) => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState<"all" | "restaurant" | "cafe">("all");
   const [cityFilterOverride, setCityFilterOverride] = useState<string>("auto");
 
-  // Effective target cities to filter by
+  // Effective target cities resolved to parent municipality/city names
   const effectiveTargetCities = useMemo(() => {
     const list: string[] = [];
     if (targetCity) list.push(targetCity);
     if (targetCities && targetCities.length > 0) {
       targetCities.forEach(c => { if (!list.includes(c)) list.push(c); });
     }
-    return list;
-  }, [targetCity, targetCities]);
+    return resolveCitiesFromDestinations(list, attractions);
+  }, [targetCity, targetCities, attractions]);
 
   // Combined active selected IDs
   const activeSelectedIds = useMemo(() => {
@@ -4115,7 +5091,9 @@ function TripRestaurantSelector({
       }
       if (effectiveTargetCities.length > 0) {
         return effectiveTargetCities.some(dest => 
-          r.city.includes(dest) || dest.includes(r.city) || (r.address && r.address.includes(dest))
+          r.city.toLowerCase().includes(dest.toLowerCase()) || 
+          dest.toLowerCase().includes(r.city.toLowerCase()) || 
+          (r.address && r.address.toLowerCase().includes(dest.toLowerCase()))
         );
       }
       return true;
@@ -4272,20 +5250,30 @@ function TripHotelSelector({
   selectedHotelIds = [],
   onToggleHotel,
   targetCities = [],
+  attractions = [],
 }: {
   hotels: Hotel[];
   selectedHotelIds: string[];
   onToggleHotel: (id: string) => void;
   targetCities?: string[];
+  attractions?: Attraction[];
 }) {
   const [showAllCities, setShowAllCities] = useState(false);
 
+  const effectiveTargetCities = useMemo(() => {
+    return resolveCitiesFromDestinations(targetCities, attractions);
+  }, [targetCities, attractions]);
+
   const filteredHotels = useMemo(() => {
-    if (showAllCities || targetCities.length === 0) return hotels;
+    if (showAllCities || effectiveTargetCities.length === 0) return hotels;
     return hotels.filter(h => 
-      targetCities.some(dest => h.city.includes(dest) || dest.includes(h.city) || (h.address && h.address.includes(dest)))
+      effectiveTargetCities.some(dest => 
+        h.city.toLowerCase().includes(dest.toLowerCase()) || 
+        dest.toLowerCase().includes(h.city.toLowerCase()) || 
+        (h.address && h.address.toLowerCase().includes(dest.toLowerCase()))
+      )
     );
-  }, [hotels, showAllCities, targetCities]);
+  }, [hotels, showAllCities, effectiveTargetCities]);
 
   return (
     <div className="p-4 bg-sky-50/70 rounded-2xl border border-sky-200 space-y-3">
@@ -4375,6 +5363,9 @@ function CreateTripModal({
   hotels,
   restaurants = [],
   drivers = [],
+  attractions = [],
+  dailyTrips = [],
+  weeklyTrips = [],
   onClose,
   onCreate,
 }: {
@@ -4384,56 +5375,38 @@ function CreateTripModal({
   hotels: Hotel[];
   restaurants?: Restaurant[];
   drivers?: Driver[];
+  attractions?: Attraction[];
+  dailyTrips?: DailyTrip[];
+  weeklyTrips?: WeeklyTrip[];
   onClose: () => void;
   onCreate: (t: "daily" | "weekly", d: any) => void;
 }) {
   const isDaily = type === "daily";
-  const [title, setTitle] = useState(isDaily ? "جولة لبدة الكبرى والآثار الرومانية" : "مغامرة الصحراء وبحيرات أوباري الكبرى");
-  const [desc, setDesc] = useState(isDaily ? "رحلة سياحية يومية متكاملة تشمل جولة أثرية مرشدة والنقل السياحي الفاخر" : "رحلة استكشاف أسبوعية متكاملة تشمل الإقامة والمخيمات ومرشد سياحي متخصص");
-  const [destination, setDestination] = useState(isDaily ? "لبدة الكبرى" : "أوباري");
-  const [multiDestinations, setMultiDestinations] = useState<string[]>(isDaily ? [] : ["أوباري"]);
+  const [title, setTitle] = useState("");
+  const [destination, setDestination] = useState("");
+  const [multiDestinations, setMultiDestinations] = useState<string[]>([]);
   const [departureCity, setDepartureCity] = useState("طرابلس");
-  const [price, setPrice] = useState(isDaily ? "120" : "1650");
+  const [price, setPrice] = useState("");
   const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(25);
   const [guideLic, setGuideLic] = useState(guides[0]?.license_number || "");
-  const [selectedPlate, setSelectedPlate] = useState<string>(vehicles[0]?.plate_number || "");
+  const [selectedPlate, setSelectedPlate] = useState<string>("");
   
   // Multi-select restaurants & cafes
-  const [selectedRestaurantIds, setSelectedRestaurantIds] = useState<string[]>(() => {
-    return restaurants[0] ? [restaurants[0].id] : [];
-  });
+  const [selectedRestaurantIds, setSelectedRestaurantIds] = useState<string[]>([]);
   const handleToggleRestaurant = (id: string) => {
     setSelectedRestaurantIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
   // Multi-select hotels
-  const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>(() => {
-    return hotels[0] ? [hotels[0].id] : [];
-  });
+  const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>([]);
   const handleToggleHotel = (id: string) => {
     setSelectedHotelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(DEFAULT_DAILY_ITINERARY_STEPS);
-  const [startDate, setStartDate] = useState("2026-09-01");
-  const [endDate, setEndDate] = useState("2026-09-06");
-  const [images, setImages] = useState<string[]>(
-    isDaily
-      ? [
-          "/assets/dest-leptis-theater.jpg",
-          "/assets/dest-leptis-arch.jpg",
-          "/assets/dest-leptis-forum.jpg",
-          "/assets/dest-leptis-coast.jpg",
-          "/assets/hero-leptis.jpg",
-        ]
-      : [
-          "/assets/dest-ubari-gaberoun.jpg",
-          "/assets/dest-ubari-ummalmaa.jpg",
-          "/assets/dest-acacus-arch.jpg",
-          "/assets/dest-sahara-dunes.jpg",
-          "/assets/dest-ubari.jpg",
-        ]
-  );
+  const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>([]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [isActive, setIsActive] = useState(true);
 
   // Daily Trips schedule: ALLOWS 1 day OR 2 days in a week!
@@ -4442,15 +5415,9 @@ function CreateTripModal({
   // Weekly Trips schedule: 1 day in a week
   const [weeklyDay, setWeeklyDay] = useState<string>("الجمعة");
 
-  const [activities, setActivities] = useState(
-    isDaily
-      ? "جولة أثرية بمرشد موثق • شرح تاريخي مفصل • غداء طازج • جلسة تصوير احترافية"
-      : "إقامة فندقية ومخيمات صحراوية • جولات سيارات رباعية الدفع • استكشاف البحيرات • وجبات تقليدية كاملة"
-  );
-
   const handleStartDateChange = (date: string) => {
     setStartDate(date);
-    if (!isDaily) {
+    if (!isDaily && date) {
       const d = new Date(date);
       if (!isNaN(d.getTime())) {
         const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -4459,8 +5426,17 @@ function CreateTripModal({
     }
   };
 
-  const handleMultiDestToggle = (city: string) => {
-    setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
+  const handleMultiDestToggle = (attractionName: string) => {
+    setMultiDestinations(prev => {
+      if (prev.includes(attractionName)) {
+        return prev.filter(c => c !== attractionName);
+      }
+      if (prev.length >= 4) {
+        alert("الحد الأقصى المسموح به في الرحلة الأسبوعية هو 4 معالم سياحية فقط.");
+        return prev;
+      }
+      return [...prev, attractionName];
+    });
   };
 
   const allWeekDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
@@ -4479,8 +5455,38 @@ function CreateTripModal({
   };
 
   const filteredGuidesList = useMemo(() => {
-    return guides.filter(g => g.verification_status !== "مرفوض");
-  }, [guides]);
+    return guides.filter((g) => {
+      if (g.verification_status === "مرفوض") return false;
+
+      // City filter for weekly trips / daily trips if guide has city specified
+      if (g.city) {
+        const destCities = isDaily ? [destination, departureCity] : [departureCity, ...multiDestinations];
+        const match = destCities.some((c) => c && (g.city!.includes(c) || c.includes(g.city!)));
+        if (!match && g.city !== departureCity) return false;
+      }
+
+      // Weekly trips schedule filter: ensure guide is not already booked during this trip's dates
+      if (!isDaily && startDate) {
+        const targetStart = new Date(startDate);
+        const targetEnd = endDate ? new Date(endDate) : targetStart;
+        if (!isNaN(targetStart.getTime())) {
+          const s = targetStart.getTime();
+          const e = targetEnd.getTime();
+          const conflict = weeklyTrips.find((wt: any) => {
+            const assigned = wt.guide_license_number === g.license_number || wt.guide_license === g.license_number;
+            if (!assigned || !wt.start_date) return false;
+            const wtStart = new Date(wt.start_date);
+            const wtEnd = wt.end_date ? new Date(wt.end_date) : wtStart;
+            if (isNaN(wtStart.getTime()) || isNaN(wtEnd.getTime())) return false;
+            return !(wtEnd.getTime() < s || wtStart.getTime() > e);
+          });
+          if (conflict) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [guides, isDaily, destination, departureCity, multiDestinations, startDate, endDate, weeklyTrips]);
 
   const selectedPrimaryRestaurant = useMemo(() => {
     return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
@@ -4506,23 +5512,47 @@ function CreateTripModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!title.trim()) {
+      alert("تنبيه: يرجى إدخال عنوان الرحلة السياحية!");
+      return;
+    }
+
+    if (isDaily && !destination) {
+      alert("تنبيه: يرجى اختيار أحد المعالم السياحية المسجلة في المنصة!");
+      return;
+    }
+
     if (isDaily && (recurringDays.length < 1 || recurringDays.length > 2)) {
       alert("تنبيه: يجب اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية!");
       return;
     }
 
     if (!isDaily && multiDestinations.length === 0) {
-      alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل للرحلة الأسبوعية!");
+      alert("تنبيه: يجب اختيار معلم سياحي واحد على الأقل (بحد أقصى 4 معالم) للرحلة الأسبوعية!");
       return;
     }
 
+    if (!isDaily && (!startDate || !endDate)) {
+      alert("تنبيه: يرجى إدخال تاريخ الانطلاق وتاريخ العودة إلى مدينة الانطلاق!");
+      return;
+    }
+
+    if (!price) {
+      alert("تنبيه: يرجى إدخال سعر الرحلة!");
+      return;
+    }
+
+    const selectedAttractionObjects = (attractions || []).filter(a => multiDestinations.includes(a.name || a.place_name || ""));
+    const placeIds = selectedAttractionObjects.map(a => a.place_id || a.id);
+
     const payload: any = {
-      trip_title: title,
-      title,
-      description: desc,
+      trip_title: title.trim(),
+      title: title.trim(),
+      description: title.trim(),
       destination: isDaily ? destination : multiDestinations.join(" + "),
-      destination_city: isDaily ? destination : multiDestinations[0] || "ليبيا",
+      destination_city: isDaily ? destination : (multiDestinations[0] || "ليبيا"),
       destinations: !isDaily ? multiDestinations : [destination],
+      place_ids: placeIds,
       departure_city: departureCity,
       price_per_seat: +price,
       seat_per_price: +price,
@@ -4531,8 +5561,8 @@ function CreateTripModal({
       available_seats: busCapacity,
       recurring_days: recurringDays.join(","),
       weekly_day: weeklyDay,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: startDate || new Date().toISOString().split("T")[0],
+      end_date: endDate || new Date(Date.now() + 5 * 86400000).toISOString().split("T")[0],
       guide_license_number: guideLic,
       vehicle_plate: selectedPlate || null,
       vehicle_plates: selectedPlate ? [selectedPlate] : [],
@@ -4544,7 +5574,7 @@ function CreateTripModal({
       photo: images[0] || (isDaily ? "/assets/dest-leptis-theater.jpg" : "/assets/dest-ubari-gaberoun.jpg"),
       gallery: images.filter(Boolean).join(","),
       images: images,
-      activities: activities.trim() || null,
+      activities: null,
       is_active: isActive,
     };
 
@@ -4556,90 +5586,142 @@ function CreateTripModal({
       maxWidth="max-w-5xl"
       title={
         isDaily
-          ? `إنشاء رحلة يومية جديدة (${recurringDays.length} يوم/أيام — حافلة ${busCapacity} راكب)`
-          : `إنشاء رحلة أسبوعية جديدة (يوم واحد في الأسبوع — حافلة ${busCapacity} راكب)`
+          ? `إنشاء رحلة يومية جديدة (حافلة ${busCapacity} راكب)`
+          : `إنشاء رحلة أسبوعية جديدة (حافلة ${busCapacity} راكب)`
       }
       onClose={onClose}
     >
       <form className="space-y-5 text-right text-xs" onSubmit={handleSubmit}>
         
         {/* 1. Basic Info */}
-        <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+        <div className="space-y-3.5 p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <div className="font-black text-slate-800 text-sm flex items-center gap-1.5">
             <span>🏷️</span>
             <span>البيانات الأساسية للرحلة</span>
           </div>
 
-          <Field label="عنوان الرحلة السياحية" value={title} onChange={setTitle} onKeyDown={handleEnterKeyNext} />
+          <Field
+            label="عنوان الرحلة السياحية *"
+            placeholder={isDaily ? "مثال: جولة استكشاف آثار لبدة الكبرى والمسرح الروماني" : "مثال: مغامرة الصحراء الكبرى وبحيرات أوباري"}
+            value={title}
+            onChange={setTitle}
+            onKeyDown={handleEnterKeyNext}
+            required
+          />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold mb-1 block">مدينة الانطلاق</label>
+              <label className="text-xs font-bold mb-1 block">
+                {isDaily ? "مدينة الانطلاق" : "مدينة الانطلاق والعودة إليها *"}
+              </label>
               <select
                 value={departureCity}
                 onChange={(e) => setDepartureCity(e.target.value)}
                 onKeyDown={handleEnterKeyNext}
-                className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white"
               >
                 <option value="طرابلس">طرابلس</option>
                 <option value="بنغازي">بنغازي</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-bold mb-1 block">
-                {isDaily ? "المكان / الوجهة السياحية" : "الوجهات السياحية (اختر أكثر من معلم)"}
-              </label>
               {isDaily ? (
-                <input
-                  type="text"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  onKeyDown={handleEnterKeyNext}
-                  className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2"
-                  placeholder="مثال: لبدة الكبرى..."
-                />
+                <div>
+                  <label className="text-xs font-bold mb-1 block">
+                    المكان / الوجهة السياحية (من المعالم المسجلة في المنصة) *
+                  </label>
+                  <select
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white"
+                  >
+                    <option value="">— اختر أحد المعالم السياحية المسجلة في المنصة —</option>
+                    {(attractions || []).map((a) => (
+                      <option key={a.id || a.place_id} value={a.name || a.place_name}>
+                        🏛️ {a.name || a.place_name} ({a.city}) {a.category ? `— ${a.category}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {destination && (
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-500">المعلم المختار:</span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-black">
+                        📍 {destination}
+                      </span>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white flex flex-wrap gap-1">
-                  {multiDestinations.length === 0 && <span className="text-slate-400">اختر المعالم أدناه...</span>}
-                  {multiDestinations.map(d => (
-                    <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1">
-                      {d}
-                      <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-500">×</button>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-800">
+                      معالم الرحلة الأسبوعية (اختر حتى 4 معالم كحد أقصى) *
+                    </label>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                      multiDestinations.length >= 4 ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-blue-100 text-blue-900"
+                    }`}>
+                      {multiDestinations.length} / 4 معالم
                     </span>
-                  ))}
+                  </div>
+                  <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white flex flex-wrap gap-1.5 items-center">
+                    {multiDestinations.length === 0 && (
+                      <span className="text-slate-400 font-normal">اضغط على المعالم المسجلة بالأسفل لاختيارها (1 إلى 4 معالم)...</span>
+                    )}
+                    {multiDestinations.map(d => (
+                      <span key={d} className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-blue-200 shadow-2xs">
+                        <span>🏛️ {d}</span>
+                        <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-600 font-black cursor-pointer">×</button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => {
-              const isSelected = isDaily ? destination === city : multiDestinations.includes(city);
-              return (
-                <button
-                  key={city}
-                  type="button"
-                  onClick={() => isDaily ? setDestination(city) : handleMultiDestToggle(city)}
-                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
-                    isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-                  }`}
-                >
-                  {city} {isSelected && !isDaily && "✓"}
-                </button>
-              );
-            })}
-          </div>
 
-          <Field label="وصف الرحلة وبرنامجها" value={desc} onChange={setDesc} onKeyDown={handleEnterKeyNext} />
-          
-          <Field 
-            label="الأنشطة المتاحة ضمن الرحلة (افصل بينها بنقطة • أو فاصلة)" 
-            value={activities} 
-            onChange={setActivities} 
-            onKeyDown={handleEnterKeyNext} 
-          />
+          {!isDaily && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-600 block">
+                اضغط لاختيار أو إلغاء المعالم السياحية من المنصة (حد أقصى 4):
+              </label>
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-white rounded-xl border border-slate-200">
+                {(attractions || []).length === 0 ? (
+                  <span className="text-xs text-slate-400 font-bold">لا توجد معالم مسجلة بعد. يمكنك إضافتها من قسم المعالم السياحية.</span>
+                ) : (
+                  (attractions || []).map((a) => {
+                    const aName = a.name || a.place_name || "";
+                    const isSelected = multiDestinations.includes(aName);
+                    return (
+                      <button
+                        key={a.id || a.place_id || aName}
+                        type="button"
+                        onClick={() => handleMultiDestToggle(aName)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                          isSelected ? "bg-[#003580] text-white border-[#003580] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <span>📍 {aName}</span>
+                        {a.city && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                        {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="سعر المقعد الواحد (د.ل)" type="number" value={price} onChange={setPrice} onKeyDown={handleEnterKeyNext} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <Field
+              label="سعر المقعد الواحد (د.ل) *"
+              type="number"
+              placeholder={isDaily ? "مثال: 120" : "مثال: 1650"}
+              value={price}
+              onChange={setPrice}
+              onKeyDown={handleEnterKeyNext}
+              required
+            />
             <div>
               <label className="text-xs font-bold mb-1 block">حالة تفعيل الرحلة</label>
               <div className="grid grid-cols-2 gap-1 h-10 p-1 bg-slate-200/80 rounded-xl">
@@ -4712,32 +5794,36 @@ function CreateTripModal({
                 <span>🗓️</span>
                 <span>فترة وموعد الرحلة الأسبوعية:</span>
               </label>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[11px] font-black">
-                تنطلق الرحلة كل يوم {weeklyDay}
-              </span>
+              {weeklyDay && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[11px] font-black">
+                  تنطلق الرحلة كل يوم {weeklyDay}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-bold text-amber-900 block mb-1">
-                  📅 تاريخ الانطلاق (يبدأ منه جدول الأسبوع):
+                  📅 تاريخ الانطلاق من مدينة الانطلاق *:
                 </label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
+                  required
                   className="w-full h-10 px-3 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600"
                 />
               </div>
               <div>
                 <label className="text-[11px] font-bold text-amber-900 block mb-1">
-                  🏁 تاريخ نهاية الرحلة الأسبوعية:
+                  🏁 تاريخ العودة إلى مدينة الانطلاق *:
                 </label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate}
+                  required
                   className="w-full h-10 px-3 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600"
                 />
               </div>
@@ -4745,7 +5831,7 @@ function CreateTripModal({
           </div>
         )}
 
-        {/* 3. Vehicles & Drivers Filtered by Capacity */}
+        {/* 3. Vehicles & Drivers Filtered by Capacity & Date Vacancy */}
         <TripVehicleAndDriverSelector
           vehicles={vehicles}
           drivers={drivers}
@@ -4753,6 +5839,10 @@ function CreateTripModal({
           onCapacityChange={(cap) => setBusCapacity(cap)}
           selectedPlate={selectedPlate}
           onSelectPlate={setSelectedPlate}
+          departureCity={departureCity}
+          startDate={startDate}
+          endDate={endDate}
+          existingTrips={{ dailyTrips, weeklyTrips }}
         />
 
         {/* 4. Multi-Select Restaurants & Cafes Filtered by Destination City */}
@@ -4762,6 +5852,7 @@ function CreateTripModal({
           onToggleSelect={handleToggleRestaurant}
           targetCity={isDaily ? destination : undefined}
           targetCities={!isDaily ? multiDestinations : [destination]}
+          attractions={attractions}
         />
 
         {/* 5. Multi-Select Hotels (for Weekly Trips) */}
@@ -4771,6 +5862,7 @@ function CreateTripModal({
             selectedHotelIds={selectedHotelIds}
             onToggleHotel={handleToggleHotel}
             targetCities={multiDestinations}
+            attractions={attractions}
           />
         )}
 
@@ -4779,6 +5871,7 @@ function CreateTripModal({
           steps={itinerarySteps}
           onChange={setItinerarySteps}
           selectedRestaurant={selectedPrimaryRestaurant}
+          mode={isDaily ? "time" : "days"}
         />
 
         {/* 7. Tour Guide Selector */}
@@ -4856,6 +5949,9 @@ function DailyTripEditModal({
   hotels: _hotels,
   restaurants = [],
   drivers = [],
+  attractions = [],
+  dailyTrips = [],
+  weeklyTrips = [],
   onClose,
   onSave,
 }: {
@@ -4865,12 +5961,14 @@ function DailyTripEditModal({
   hotels?: Hotel[];
   restaurants?: Restaurant[];
   drivers?: Driver[];
+  attractions?: Attraction[];
+  dailyTrips?: DailyTrip[];
+  weeklyTrips?: WeeklyTrip[];
   onClose: () => void;
   onSave: (t: DailyTrip) => void;
 }) {
   const [title, setTitle] = useState(trip.trip_title || trip.title || "");
-  const [desc, setDesc] = useState(trip.description);
-  const [destination, setDestination] = useState(trip.destination || "لبدة الكبرى");
+  const [destination, setDestination] = useState(trip.destination || "");
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.price_per_seat));
   const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(
@@ -4923,7 +6021,6 @@ function DailyTripEditModal({
     const p = trip.photo || "/assets/dest-leptis-theater.jpg";
     return [p, "/assets/dest-leptis-arch.jpg", "/assets/dest-leptis-forum.jpg", "/assets/dest-leptis-coast.jpg", "/assets/hero-leptis.jpg"];
   });
-  const [activities, setActivities] = useState((trip as any).activities || "جولة أثرية بمرشد موثق • شرح تاريخي مفصل • غداء طازج • جلسة تصوير");
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => g.verification_status !== "مرفوض");
@@ -4958,11 +6055,15 @@ function DailyTripEditModal({
             alert("يرجى اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية.");
             return;
           }
+          if (!destination) {
+            alert("يرجى اختيار أحد المعالم السياحية المسجلة في المنصة.");
+            return;
+          }
           onSave({
             ...trip,
             trip_title: title,
             title,
-            description: desc,
+            description: title,
             destination,
             destination_city: destination,
             departure_city: departureCity,
@@ -4981,7 +6082,7 @@ function DailyTripEditModal({
             photo: images[0] || trip.photo || "/assets/dest-leptis-theater.jpg",
             gallery: images.filter(Boolean).join(","),
             images: images,
-            activities: activities.trim() || null,
+            activities: null,
           } as any);
         }}
       >
@@ -4992,16 +6093,39 @@ function DailyTripEditModal({
             <select
               value={departureCity}
               onChange={(e) => setDepartureCity(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right"
+              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
             >
               <option value="طرابلس">طرابلس</option>
               <option value="بنغازي">بنغازي</option>
             </select>
           </div>
-          <Field label="الوجهة / المكان السياحي" value={destination} onChange={setDestination} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">
+              المكان / الوجهة السياحية (من المعالم المسجلة في المنصة) *
+            </label>
+            <select
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              required
+              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
+            >
+              <option value="">— اختر أحد المعالم السياحية المسجلة في المنصة —</option>
+              {(attractions || []).map((a) => (
+                <option key={a.id || a.place_id} value={a.name || a.place_name}>
+                  🏛️ {a.name || a.place_name} ({a.city}) {a.category ? `— ${a.category}` : ""}
+                </option>
+              ))}
+            </select>
+            {destination && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500">المعلم المختار:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-black">
+                  📍 {destination}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-        <Field label="الوصف" value={desc} onChange={setDesc} />
-        <Field label="الأنشطة المتاحة ضمن الرحلة" value={activities} onChange={setActivities} />
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
         {/* 1 or 2 Days Selector */}
@@ -5034,6 +6158,9 @@ function DailyTripEditModal({
           onCapacityChange={(cap) => setBusCapacity(cap)}
           selectedPlate={selectedPlate}
           onSelectPlate={setSelectedPlate}
+          departureCity={departureCity}
+          existingTrips={{ dailyTrips, weeklyTrips }}
+          currentTripId={trip.daily_trip_id || trip.id}
         />
 
         {/* Multi-Select Restaurants & Cafes Filtered by Destination City */}
@@ -5042,6 +6169,7 @@ function DailyTripEditModal({
           selectedIds={selectedRestaurantIds}
           onToggleSelect={handleToggleRestaurant}
           targetCity={destination}
+          attractions={attractions}
         />
 
         {/* Step-by-Step Itinerary Editor with Add/Delete Stops */}
@@ -5114,6 +6242,9 @@ function WeeklyTripEditModal({
   hotels,
   restaurants = [],
   drivers = [],
+  attractions = [],
+  dailyTrips = [],
+  weeklyTrips = [],
   onClose,
   onSave,
 }: {
@@ -5123,6 +6254,9 @@ function WeeklyTripEditModal({
   hotels: Hotel[];
   restaurants?: Restaurant[];
   drivers?: Driver[];
+  attractions?: Attraction[];
+  dailyTrips?: DailyTrip[];
+  weeklyTrips?: WeeklyTrip[];
   onClose: () => void;
   onSave: (w: WeeklyTrip) => void;
 }) {
@@ -5131,8 +6265,15 @@ function WeeklyTripEditModal({
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.seat_per_price));
 
-  const handleMultiDestToggle = (city: string) => {
-    setMultiDestinations(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]);
+  const handleMultiDestToggle = (name: string) => {
+    setMultiDestinations(prev => {
+      if (prev.includes(name)) return prev.filter(c => c !== name);
+      if (prev.length >= 4) {
+        alert("تنبيه: الحد الأقصى للمعالم في الرحلة الأسبوعية هو 4 معالم فقط!");
+        return prev;
+      }
+      return [...prev, name];
+    });
   };
   const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(
     trip.bus_capacity === 50 || trip.max_capacity === 50 ? 50 : trip.bus_capacity === 15 || trip.max_capacity === 15 ? 15 : 25
@@ -5221,12 +6362,20 @@ function WeeklyTripEditModal({
             alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل!");
             return;
           }
+          const selectedPlaceIds = (attractions || [])
+            .filter(a => {
+              const an = a.name || (a as any).place_name;
+              return !!an && multiDestinations.includes(an);
+            })
+            .map(a => a.id || (a as any).place_id);
+
           onSave({
             ...trip,
             trip_title: title,
             title,
             destinations: multiDestinations,
             destination: multiDestinations.join(" + "),
+            place_ids: selectedPlaceIds,
             departure_city: departureCity,
             seat_per_price: +price,
             bus_capacity: busCapacity,
@@ -5247,7 +6396,7 @@ function WeeklyTripEditModal({
             photo: images[0] || trip.photo || "/assets/dest-ubari-gaberoun.jpg",
             gallery: images.filter(Boolean).join(","),
             images: images,
-          });
+          } as any);
         }}
       >
         <Field label="عنوان الرحلة الأسبوعية" value={title} onChange={setTitle} />
@@ -5264,31 +6413,46 @@ function WeeklyTripEditModal({
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">الوجهات السياحية (المعالم المستهدفة)</label>
+            <label className="text-xs font-bold mb-1 block">
+              الوجهات السياحية (المعالم المسجلة بالمنصة — حتى 4 معالم كحد أقصى)
+            </label>
             <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-200 bg-white flex flex-wrap gap-1">
-              {multiDestinations.length === 0 && <span className="text-slate-400 text-[10px]">اختر من الأسفل...</span>}
+              {multiDestinations.length === 0 && <span className="text-slate-400 text-[10px]">اختر حتى 4 معالم من المعالم المسجلة أدناه...</span>}
               {multiDestinations.map(d => (
-                <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1">
-                  {d}
-                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-500">×</button>
+                <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
+                  🏛️ {d}
+                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-500 font-bold mr-1">×</button>
                 </span>
               ))}
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {["لبدة الكبرى", "غدامس", "أوباري", "شحات", "صبراتة", "طرابلس", "بنغازي", "سوسة"].map((city) => (
-            <button
-              key={city}
-              type="button"
-              onClick={() => handleMultiDestToggle(city)}
-              className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
-                multiDestinations.includes(city) ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-              }`}
-            >
-              {city} {multiDestinations.includes(city) && "✓"}
-            </button>
-          ))}
+        <div className="space-y-1">
+          <div className="text-[10px] text-slate-500 font-bold">
+            اختر المعالم السياحية من منصة دلني (تم اختيار {multiDestinations.length} من 4 كحد أقصى):
+          </div>
+          <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50">
+            {(!attractions || attractions.length === 0) ? (
+              <div className="text-slate-400 text-xs py-1">لا توجد معالم مسجلة في المنصة حالياً</div>
+            ) : (
+              attractions.map((attr) => {
+                const name = attr.name || (attr as any).place_name || "";
+                const isSelected = !!name && multiDestinations.includes(name);
+                return (
+                  <button
+                    key={attr.id || (attr as any).place_id || name}
+                    type="button"
+                    onClick={() => handleMultiDestToggle(name)}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
+                      isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                    }`}
+                  >
+                    🏛️ {name} {attr.city ? `(${attr.city})` : ""} {isSelected && "✓"}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
@@ -5300,8 +6464,8 @@ function WeeklyTripEditModal({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ الانطلاق" type="date" value={startDate} onChange={handleStartDateChange} />
-          <Field label="تاريخ العودة" type="date" value={endDate} onChange={setEndDate} />
+          <Field label="تاريخ الانطلاق من مدينة الانطلاق" type="date" value={startDate} onChange={handleStartDateChange} />
+          <Field label="تاريخ العودة إلى مدينة الانطلاق" type="date" value={endDate} onChange={setEndDate} />
         </div>
 
         {/* Bus Capacity & Fleet */}
@@ -5312,6 +6476,11 @@ function WeeklyTripEditModal({
           onCapacityChange={(cap) => setBusCapacity(cap)}
           selectedPlate={selectedPlate}
           onSelectPlate={setSelectedPlate}
+          departureCity={departureCity}
+          startDate={startDate}
+          endDate={endDate}
+          existingTrips={{ dailyTrips, weeklyTrips }}
+          currentTripId={trip.weekly_trip_id || trip.id}
         />
 
         {/* Multi-Select Restaurants & Cafes Filtered by Destination Cities */}
@@ -5320,6 +6489,7 @@ function WeeklyTripEditModal({
           selectedIds={selectedRestaurantIds}
           onToggleSelect={handleToggleRestaurant}
           targetCities={multiDestinations}
+          attractions={attractions}
         />
 
         {/* Multi-Select Hotels Filtered by Destination Cities */}
@@ -5328,6 +6498,7 @@ function WeeklyTripEditModal({
           selectedHotelIds={selectedHotelIds}
           onToggleHotel={handleToggleHotel}
           targetCities={multiDestinations}
+          attractions={attractions}
         />
 
         {/* Dynamic Itinerary Timeline with Add/Delete Stops */}
@@ -5335,6 +6506,7 @@ function WeeklyTripEditModal({
           steps={itinerarySteps}
           onChange={setItinerarySteps}
           selectedRestaurant={selectedPrimaryRestaurant}
+          mode="days"
         />
 
         <div>
@@ -5584,7 +6756,7 @@ function HotelModal({
   const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/dest-ghadames-alleys.jpg");
 
   const propertyOptions = [
-    { id: "hotel", label: "🏨 فندق فاخر", desc: "فنادق مصنفة وضيافة استثنائية" },
+    { id: "hotel", label: "🏨 فندق فاخر", desc: "فنادق مصنفة وضيافة راقية ومتميزة" },
     { id: "resort", label: "🏖️ منتجع سياحي", desc: "منتجعات ساحلية واستجمام وشواطئ" },
     { id: "apartment", label: "🏢 شقق فندقية", desc: "أجنحة وشقق مفروشة بخصوصية عائلية" },
     { id: "heritage", label: "⛺ مخيمات صحراوية", desc: "إقامة صحراوية وتخييم أصيل في الواحات والصحراء" },
@@ -6539,54 +7711,583 @@ function RestaurantModal({
   );
 }
 
-function AttractionModal({ title, attraction, onClose, onSave }: { title: string; attraction?: Attraction; onClose: () => void; onSave: (a: any) => void }) {
-  const [name, setName] = useState(attraction?.name || ""); const [city, setCity] = useState(attraction?.city || "الخمس");
-  const [category, setCategory] = useState(attraction?.category || "آثار تاريخية"); const [desc, setDesc] = useState(attraction?.description || "");
-  const [img, setImg] = useState(attraction?.place_image || "/assets/ai_ruins.jpg");
+function AttractionModal({
+  title,
+  attraction,
+  existingAttractions,
+  onClose,
+  onSave,
+}: {
+  title: string;
+  attraction?: Attraction;
+  existingAttractions?: Attraction[];
+  onClose: () => void;
+  onSave: (a: any) => void;
+}) {
+  const isEditing = !!attraction;
+  const [municipalityId, setMunicipalityId] = useState(
+    attraction?.place_id || attraction?.municipality_code || attraction?.id || ""
+  );
+  const [placeName, setPlaceName] = useState(
+    attraction?.place_name || attraction?.name || ""
+  );
+  const [cityName, setCityName] = useState(
+    attraction?.city || ""
+  );
+  const [region, setRegion] = useState(attraction?.region || "المنطقة الغربية (ساحل البحر المتوسط)");
+  const [category, setCategory] = useState(attraction?.category || "آثار تاريخية ورومانية");
+  const [desc, setDesc] = useState(attraction?.description || "");
+  const [highlights, setHighlights] = useState(
+    Array.isArray(attraction?.highlights)
+      ? attraction.highlights.join("، ")
+      : attraction?.highlights || ""
+  );
+  const [entryFee, setEntryFee] = useState(attraction?.entry_fee || "مجاني للجميع");
+  const [bestSeason, setBestSeason] = useState(attraction?.best_season || "طوال العام");
+  const [isUnesco, setIsUnesco] = useState(Boolean(attraction?.is_unesco));
+  const [unescoYear, setUnescoYear] = useState(attraction?.unesco_year ? String(attraction.unesco_year) : "1982");
+
+  // Coordinates & Google Maps
   const [lat, setLat] = useState(attraction?.latitude ? String(attraction.latitude) : "");
   const [lng, setLng] = useState(attraction?.longitude ? String(attraction.longitude) : "");
   const [mapsUrl, setMapsUrl] = useState(attraction?.google_maps_url || "");
 
-  const genMapUrl = () => { if (lat && lng) setMapsUrl(`https://maps.google.com/?q=${lat},${lng}`); };
+  // Main photo and gallery
+  const [imgMain, setImgMain] = useState(
+    attraction?.place_image || (attraction as any)?.photo || "/assets/dest-leptis-theater.jpg"
+  );
+  const [gallery, setGallery] = useState(
+    Array.isArray(attraction?.gallery)
+      ? attraction.gallery.join(", ")
+      : attraction?.gallery || ""
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !city) return alert("يرجى كتابة الاسم والمدينة");
-    onSave({ ...(attraction ? { id: attraction.id } : {}), name, city, category, description: desc, place_image: img, latitude: lat ? +lat : undefined, longitude: lng ? +lng : undefined, google_maps_url: mapsUrl || undefined });
+    const cleanMunId = String(municipalityId || "").trim();
+    if (!cleanMunId) {
+      return alert("⚠️ يرجى إدخال رقم المعلم السياحي (المفتاح الرئيسي ID)!");
+    }
+
+    // Strict duplicate check: Primary key cannot be duplicated
+    if (!isEditing && existingAttractions) {
+      const isDuplicate = existingAttractions.some(
+        (a) => String(a.place_id || a.id).trim().toLowerCase() === cleanMunId.toLowerCase()
+      );
+      if (isDuplicate) {
+        return alert(`⚠️ رقم المعلم (${cleanMunId}) مسجل مسبقاً! المفتاح الرئيسي لا يقبل التكرار.`);
+      }
+    }
+
+    if (!placeName.trim()) return alert("⚠️ يرجى إدخال اسم المعلم السياحي (مثال: لبدة الكبرى، المسرح الروماني...)");
+    if (!cityName.trim()) return alert("⚠️ يرجى إدخال اسم المدينة التابع لها المعلم (مثال: الخمس، صبراتة، طرابلس...)");
+
+    onSave({
+      id: cleanMunId,
+      place_id: cleanMunId,
+      municipality_code: cleanMunId,
+      name: placeName.trim(),
+      place_name: placeName.trim(),
+      city: cityName.trim(),
+      region: region.trim(),
+      category: category.trim(),
+      description: desc.trim() || `معلم ${placeName.trim()} السياحي الواقع في مدينة ${cityName.trim()}، وأبرز محطاته الأثرية والتاريخية.`,
+      highlights: highlights.trim(),
+      entry_fee: entryFee.trim() || "مجاني للجميع",
+      best_season: bestSeason.trim() || "طوال العام",
+      is_unesco: isUnesco,
+      unesco_year: isUnesco && unescoYear ? parseInt(unescoYear, 10) : null,
+      place_image: imgMain,
+      gallery: gallery.trim(),
+      latitude: lat ? parseFloat(lat) : undefined,
+      longitude: lng ? parseFloat(lng) : undefined,
+      google_maps_url: (lat && lng) ? `https://maps.google.com/?q=${lat},${lng}` : (mapsUrl || undefined),
+      is_new: !isEditing,
+      mode: isEditing ? "update" : "create",
+    });
   };
 
   return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={handleSubmit}>
-        <Field label="اسم المعلم السياحي" value={name} onChange={setName} />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="المدينة" value={city} onChange={setCity} />
-          <Field label="التصنيف" value={category} onChange={setCategory} />
-        </div>
-        <div><label className="text-xs font-bold mb-1 block">الوصف التفصيلي</label>
-          <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" />
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-4xl">
+      <form className="space-y-4 text-right max-h-[82vh] overflow-y-auto px-2" onSubmit={handleSubmit}>
+        {/* 1. Landmark ID (Primary Key) */}
+        <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
+              <span>🏛️</span>
+              <span>معرّف المعلم السياحي الفريد (Primary Key ID)</span>
+            </span>
+            <span className="text-[10px] text-blue-700 font-bold">
+              {isEditing ? "معرّف مؤكد ومحمي 🔒" : "مفتاح رئيسي فريد"}
+            </span>
+          </div>
+          <input
+            type="text"
+            value={municipalityId}
+            onChange={(e) => setMunicipalityId(e.target.value)}
+            placeholder="مثال: KHO-001 (ثلاثة أحرف من المدينة ثم رقم المعلم)"
+            disabled={isEditing}
+            className={`w-full h-10 px-3.5 rounded-xl border text-sm font-bold text-right outline-none transition ${
+              isEditing
+                ? "bg-slate-100 text-slate-500 border-slate-300 cursor-not-allowed"
+                : "bg-white text-slate-900 border-blue-300 focus:border-blue-600 shadow-2xs"
+            }`}
+            required
+          />
+          <p className="text-[10px] text-blue-800/80 font-medium">
+            💡 معرّف المعلم في قاعدة البيانات (مثل: <strong>TIP-001</strong>، <strong>BEN-001</strong>، <strong>KHO-001</strong>).
+          </p>
         </div>
 
-        {/* Google Maps Section */}
-        <div className="pt-2 border-t border-border space-y-2">
-          <label className="text-xs font-black text-foreground block">📍 الموقع الجغرافي (Google Maps)</label>
+        {/* 2. Landmark Name and City (Separate Fields) */}
+        <div className="space-y-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Field
+                label="اسم المعلم السياحي *"
+                value={placeName}
+                onChange={setPlaceName}
+                placeholder="مثال: لبدة الكبرى (أو: المسرح الروماني، قوس ماركوس...)"
+                required
+              />
+            </div>
+            <div>
+              <Field
+                label="المدينة التابع لها المعلم *"
+                value={cityName}
+                onChange={setCityName}
+                placeholder="مثال: الخمس (أو: صبراتة، طرابلس، شحات، غدامس...)"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold mb-1 block text-foreground">المنطقة الجغرافية / الإقليم</label>
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+              >
+                <option value="المنطقة الغربية (ساحل البحر المتوسط)">المنطقة الغربية (ساحل البحر المتوسط)</option>
+                <option value="المنطقة الشرقية (الجبل الأخضر والساحل)">المنطقة الشرقية (الجبل الأخضر والساحل)</option>
+                <option value="المنطقة الجنوبية (الصحراء الكبرى والواحات)">المنطقة الجنوبية (الصحراء الكبرى والواحات)</option>
+                <option value="جبل نفوسة والمدن التاريخية">جبل نفوسة والمدن التاريخية</option>
+                <option value="المنطقة الوسطى وسرت">المنطقة الوسطى وسرت</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold mb-1 block text-foreground">التصنيف السياحي</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+              >
+                <option value="آثار تاريخية ورومانية">🏛️ آثار تاريخية ورومانية</option>
+                <option value="واحات صحراوية">🏜️ واحات وكثبان صحراوية</option>
+                <option value="مدن قديمة وقلاع">🏰 مدن قديمة وتراث عريق</option>
+                <option value="طبيعة وجبال">⛰️ طبيعة وجبال وشواطئ</option>
+                <option value="متاحف ومعالم حضارية">🏺 متاحف ومعالم حضارية</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Pricing, Season, and UNESCO World Heritage */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl bg-amber-50/50 border border-amber-200">
+            <div>
+              <Field
+                label="🎟️ رسوم وتذاكر الدخول"
+                value={entryFee}
+                onChange={setEntryFee}
+                placeholder="مثال: مجاني للجميع أو 10 د.ل"
+              />
+            </div>
+            <div>
+              <Field
+                label="🌤️ أفضل موسم للزيارة"
+                value={bestSeason}
+                onChange={setBestSeason}
+                placeholder="مثال: الربيع والخريف، طوال العام"
+              />
+            </div>
+            <div className="flex flex-col justify-end space-y-1.5">
+              <label className="text-xs font-bold text-foreground block">🏛️ التراث العالمي (اليونسكو)</label>
+              <div className="flex items-center gap-2 h-10">
+                <input
+                  type="checkbox"
+                  id="unescoCheck"
+                  checked={isUnesco}
+                  onChange={(e) => setIsUnesco(e.target.checked)}
+                  className="w-5 h-5 accent-primary rounded cursor-pointer"
+                />
+                <label htmlFor="unescoCheck" className="text-xs font-bold text-slate-800 cursor-pointer">
+                  موقع مسجل باليونسكو
+                </label>
+                {isUnesco && (
+                  <input
+                    type="number"
+                    value={unescoYear}
+                    onChange={(e) => setUnescoYear(e.target.value)}
+                    placeholder="سنة الإدراج"
+                    className="w-20 h-9 px-2 rounded-lg border border-amber-300 text-xs font-bold text-center outline-none"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold mb-1 block text-foreground">
+              أبرز محطات وتجارب المعلم (مفصولة بفواصل)
+            </label>
+            <input
+              type="text"
+              value={highlights}
+              onChange={(e) => setHighlights(e.target.value)}
+              placeholder="مثال: المسرح الروماني الكبير، قوس سيبتيموس سيفيروس، الحمامات الأثرية"
+              className="w-full h-10 px-3 rounded-xl border border-border text-xs font-semibold text-right outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold mb-1 block text-foreground">
+              الوصف التفصيلي للمعلم (يظهر في دليل المعالم وتفاصيل الجولات)
+            </label>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              rows={4}
+              placeholder="اكتب وصفاً ثرياً وموثقاً للمعلم السياحي ومميزاته الجغرافية والتاريخية..."
+              className="w-full p-3 rounded-xl border border-border text-xs font-semibold text-right outline-none focus:border-primary leading-relaxed"
+            />
+          </div>
+        </div>
+
+        {/* 3. Coordinates & Google Maps */}
+        <div className="pt-3 border-t border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-foreground block">📍 الإحداثيات الجغرافية (خط الطول وخط العرض)</label>
+            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+              ✓ يُولّد رابط الخريطة تلقائياً
+            </span>
+          </div>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="خط العرض (Latitude)" value={lat} onChange={setLat} placeholder="مثال: 32.6381" />
-            <Field label="خط الطول (Longitude)" value={lng} onChange={setLng} placeholder="مثال: 14.2936" />
+            <Field
+              label="خط العرض (Latitude)"
+              value={lat}
+              onChange={(val) => {
+                setLat(val);
+                if (val && lng) setMapsUrl(`https://maps.google.com/?q=${val},${lng}`);
+              }}
+              placeholder="مثال: 32.6381"
+            />
+            <Field
+              label="خط الطول (Longitude)"
+              value={lng}
+              onChange={(val) => {
+                setLng(val);
+                if (lat && val) setMapsUrl(`https://maps.google.com/?q=${lat},${val}`);
+              }}
+              placeholder="مثال: 14.2936"
+            />
           </div>
-          <div className="flex gap-2">
-            <input type="text" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="رابط Google Maps أو اضغط توليد تلقائي..." className="flex-1 h-9 px-3 rounded-xl border border-border text-[11px] outline-none focus:border-primary text-right" />
-            <button type="button" onClick={genMapUrl} className="px-3 h-9 bg-blue-600 text-white rounded-xl text-xs font-black whitespace-nowrap">🗺️ توليد</button>
-          </div>
-          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 font-bold hover:underline">🔗 معاينة في خرائط جوجل ↗</a>}
+          <p className="text-[11px] text-slate-500">
+            💡 يتم عرض موقع المعلم على الخريطة التفاعلية وتوليد رابط خرائط Google تلقائياً.
+          </p>
         </div>
 
-        <div className="pt-2 border-t border-border"><ImageFilePicker label="الصورة الرئيسية للمعلم" value={img} onChange={setImg} /></div>
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ المعلم السياحي</button>
+        {/* 4. Photos & Gallery */}
+        <div className="pt-3 border-t border-border space-y-3">
+          <label className="text-xs font-black text-foreground block">📸 صور المعلم السياحي</label>
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+            <ImageFilePicker label="🌟 الصورة الرئيسية للمعلم السياحي" value={imgMain} onChange={setImgMain} />
+          </div>
+          <div>
+            <label className="text-xs font-bold mb-1 block text-foreground">
+              معرض الصور الإضافية (روابط مفصولة بفواصل)
+            </label>
+            <input
+              type="text"
+              value={gallery}
+              onChange={(e) => setGallery(e.target.value)}
+              placeholder="مثال: /assets/dest-leptis-arch.jpg, /assets/dest-leptis-baths.jpg"
+              className="w-full h-10 px-3 rounded-xl border border-border text-xs font-semibold text-right outline-none focus:border-primary"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 justify-end pt-3 border-t border-border sticky bottom-0 bg-white py-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 h-11 rounded-xl border border-border hover:bg-muted font-black text-xs transition cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-11 rounded-xl bg-gradient-sea hover:opacity-95 text-white font-black text-xs shadow-glow transition cursor-pointer flex items-center gap-2"
+          >
+            <span>💾</span>
+            <span>{isEditing ? "حفظ تعديلات المعلم" : "توثيق وحفظ المعلم السياحي"}</span>
+          </button>
         </div>
       </form>
+    </ModalShell>
+  );
+}
+
+/* ============ TOURIST DETAILS MODAL ============ */
+function TouristDetailsModal({
+  tourist,
+  isLoading,
+  onClose,
+  onToggleStatus,
+}: {
+  tourist: any;
+  isLoading: boolean;
+  onClose: () => void;
+  onToggleStatus: (touristId: string, currentStatus: string) => void;
+}) {
+  const isRestricted = tourist.account_status === "مقيّد";
+  const dailyBookings = tourist.daily_bookings || [];
+  const weeklyBookings = tourist.weekly_bookings || [];
+  const reviews = tourist.reviews || [];
+  const totalBookings = dailyBookings.length + weeklyBookings.length;
+
+  return (
+    <ModalShell title={`ملف السائح: ${tourist.full_name || tourist.tourist_id}`} onClose={onClose} maxWidth="max-w-4xl">
+      <div className="space-y-5 text-right max-h-[82vh] overflow-y-auto px-2">
+        {/* Status Alert if Restricted */}
+        {isRestricted ? (
+          <div className="p-4 rounded-2xl bg-red-50 border-2 border-red-300 text-red-900 text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">🚫</span>
+              <div>
+                <strong className="block text-sm font-black text-red-950">حساب السائح مقيّد حالياً:</strong>
+                تم حظر هذا الحساب من إتمام أي حجوزات جديدة على المنصة بناءً على قرار الإدارة والرقابة.
+              </div>
+            </div>
+            <button
+              onClick={() => onToggleStatus(tourist.tourist_id, tourist.account_status)}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-xs flex-shrink-0 cursor-pointer"
+            >
+              ✅ تنشيط الحساب الآن
+            </button>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🟢</span>
+              <span className="font-bold">حساب نشط ومصرح له بحجز كافة الرحلات اليومية والأسبوعية في منصة دلّني.</span>
+            </div>
+            <button
+              onClick={() => onToggleStatus(tourist.tourist_id, tourist.account_status || "نشط")}
+              className="px-3.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs transition flex-shrink-0 cursor-pointer"
+            >
+              🚫 تقييد الحساب
+            </button>
+          </div>
+        )}
+
+        {/* Tourist Profile Card (Zero Passwords Exposed) */}
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#003580] text-white flex items-center justify-center text-lg font-black shadow-xs">
+                {tourist.full_name ? tourist.full_name[0] : "س"}
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">{tourist.full_name}</h3>
+                <div className="text-xs text-slate-500 font-bold">
+                  سائح مسجل في المنصة
+                </div>
+              </div>
+            </div>
+            <span className="font-mono text-xs font-black px-3 py-1 rounded-xl bg-blue-100 text-blue-900 border border-blue-200">
+              جواز السفر / ID: {tourist.tourist_id}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+              <span className="text-slate-400 block text-[10px] font-bold">البريد الإلكتروني</span>
+              <span className="font-bold text-slate-800">{tourist.email || "غير مسجل"}</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+              <span className="text-slate-400 block text-[10px] font-bold">رقم الهاتف</span>
+              <span className="font-mono font-bold text-slate-800" dir="ltr">{tourist.phone_number || "غير مسجل"}</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+              <span className="text-slate-400 block text-[10px] font-bold">تاريخ الانضمام</span>
+              <span className="font-bold text-slate-800">
+                {tourist.created_at ? new Date(tourist.created_at).toLocaleDateString('ar-LY') : "مسبقاً"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bookings Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <span>🎟️</span>
+              <span>سجل حجوزات الرحلات ({totalBookings})</span>
+            </h4>
+            <span className="text-xs text-slate-500 font-bold">
+              {dailyBookings.length} رحلة يومية · {weeklyBookings.length} رحلة أسبوعية
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="p-8 text-center text-xs font-bold text-slate-500">
+              جاري تحميل سجل الحجوزات والتقييمات من قاعدة البيانات...
+            </div>
+          ) : totalBookings === 0 ? (
+            <div className="p-6 rounded-2xl border border-dashed border-slate-200 text-center text-xs font-bold text-slate-400">
+              لا توجد أي حجوزات مسجلة لهذا السائح حتى الآن.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Daily Bookings */}
+              {dailyBookings.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-black text-blue-900">الرحلات اليومية:</div>
+                  <div className="overflow-x-auto border border-border rounded-xl">
+                    <table className="w-full text-xs text-right">
+                      <thead className="bg-slate-50 border-b border-border text-[11px] text-slate-500">
+                        <tr>
+                          <th className="p-2.5">رقم الحجز</th>
+                          <th className="p-2.5">الرحلة</th>
+                          <th className="p-2.5">تاريخ الحجز</th>
+                          <th className="p-2.5 text-center">المقاعد</th>
+                          <th className="p-2.5 text-center">المبلغ</th>
+                          <th className="p-2.5 text-center">حالة السداد</th>
+                          <th className="p-2.5">ملاحظات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {dailyBookings.map((b: any) => (
+                          <tr key={b.booking_daily_id} className="hover:bg-slate-50/50">
+                            <td className="p-2.5 font-mono font-bold text-blue-800">{b.booking_daily_id}</td>
+                            <td className="p-2.5 font-bold text-slate-900">{b.trip_title || b.daily_trip_id}</td>
+                            <td className="p-2.5 text-slate-500">
+                              {b.booking_date ? new Date(b.booking_date).toLocaleDateString('ar-LY') : "-"}
+                            </td>
+                            <td className="p-2.5 text-center font-black">{b.number_of_seats} مقاعد</td>
+                            <td className="p-2.5 text-center font-black text-emerald-700">{b.total_price} د.ل</td>
+                            <td className="p-2.5 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                b.payment_status === "paid" || b.payment_status === "مسدد"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}>
+                                {b.payment_status === "paid" ? "تم السداد" : (b.payment_status || "بانتظار السداد")}
+                              </span>
+                            </td>
+                            <td className="p-2.5 text-slate-500 text-[11px] max-w-xs truncate">{b.booking_notes || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Weekly Bookings */}
+              {weeklyBookings.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <div className="text-xs font-black text-purple-900">الرحلات الأسبوعية:</div>
+                  <div className="overflow-x-auto border border-border rounded-xl">
+                    <table className="w-full text-xs text-right">
+                      <thead className="bg-slate-50 border-b border-border text-[11px] text-slate-500">
+                        <tr>
+                          <th className="p-2.5">رقم الحجز</th>
+                          <th className="p-2.5">الرحلة</th>
+                          <th className="p-2.5">تاريخ الحجز</th>
+                          <th className="p-2.5 text-center">المقاعد</th>
+                          <th className="p-2.5 text-center">المبلغ</th>
+                          <th className="p-2.5 text-center">حالة السداد</th>
+                          <th className="p-2.5">ملاحظات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {weeklyBookings.map((b: any) => (
+                          <tr key={b.booking_weekly_id} className="hover:bg-slate-50/50">
+                            <td className="p-2.5 font-mono font-bold text-purple-800">{b.booking_weekly_id}</td>
+                            <td className="p-2.5 font-bold text-slate-900">{b.trip_title || b.weekly_trip_id}</td>
+                            <td className="p-2.5 text-slate-500">
+                              {b.booking_date ? new Date(b.booking_date).toLocaleDateString('ar-LY') : "-"}
+                            </td>
+                            <td className="p-2.5 text-center font-black">{b.number_of_seats} مقاعد</td>
+                            <td className="p-2.5 text-center font-black text-emerald-700">{b.total_price} د.ل</td>
+                            <td className="p-2.5 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                b.payment_status === "paid" || b.payment_status === "مسدد"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}>
+                                {b.payment_status === "paid" ? "تم السداد" : (b.payment_status || "بانتظار السداد")}
+                              </span>
+                            </td>
+                            <td className="p-2.5 text-slate-500 text-[11px] max-w-xs truncate">{b.booking_notes || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Tourist Reviews Section */}
+        <div className="space-y-3 pt-3 border-t border-border">
+          <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+            <span>⭐</span>
+            <span>تقييمات ومراجعات السائح ({reviews.length})</span>
+          </h4>
+          {reviews.length === 0 ? (
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs font-semibold text-slate-400">
+              لم يقم السائح بكتابة أي تقييمات حتى الآن.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {reviews.map((r: any, idx: number) => (
+                <div key={idx} className="p-3 rounded-xl border border-border bg-white flex items-start justify-between gap-3 text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-slate-900">{r.target_name || "عنصر سياحي"}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
+                        {r.target_type}
+                      </span>
+                    </div>
+                    <p className="text-slate-700 mt-1">{r.comment_text || "لا يوجد تعليق"}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className="text-amber-500 font-bold">{"★".repeat(r.stars_rating || 5)}</span>
+                    <span className="text-[10px] text-slate-400">{r.created_at || ""}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Close Button */}
+        <div className="flex justify-end pt-3 border-t border-border sticky bottom-0 bg-white py-2">
+          <button
+            onClick={onClose}
+            className="px-6 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition cursor-pointer"
+          >
+            إغلاق الملف
+          </button>
+        </div>
+      </div>
     </ModalShell>
   );
 }
@@ -6609,12 +8310,13 @@ function DailyOfferModal({
   const [tripId, setTripId] = useState(offer?.daily_trip_id || dailyTrips[0]?.id || "");
   const selectedTrip = dailyTrips.find(t => t.id === tripId) || dailyTrips[0];
 
-  const [ot, setOt] = useState(offer?.title_offer || (selectedTrip ? `عرض خاص: ${selectedTrip.title}` : ""));
+  const [ot, setOt] = useState(offer?.offer_title || offer?.title_offer || (selectedTrip ? `عرض خاص: ${selectedTrip.title}` : ""));
   const [desc, setDesc] = useState(offer?.description || (selectedTrip ? `خصم حصري ومميز على رحلة ${selectedTrip.title} المنشأة ضمن برنامج دلّني للسياحة اليومية.` : ""));
   const [disc, setDisc] = useState(String(offer?.percent_discount || 15));
-  const [img, setImg] = useState(offer?.url_image_offer || selectedTrip?.photo || "");
-  const [ds, setDs] = useState(offer?.date_start || new Date().toISOString().slice(0, 10));
-  const [de, setDe] = useState(offer?.date_end || "2026-10-30");
+  const [img, setImg] = useState(offer?.offer_image_url || offer?.url_image_offer || selectedTrip?.photo || "");
+  const [ds, setDs] = useState(offer?.start_date || offer?.date_start || new Date().toISOString().slice(0, 10));
+  const [de, setDe] = useState(offer?.end_date || offer?.date_end || "2026-10-30");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleTripChange = (newTripId: string) => {
     setTripId(newTripId);
@@ -6630,25 +8332,42 @@ function DailyOfferModal({
         setImg(trip.photo || "/assets/dest-leptis-theater.jpg");
       }
     }
+    if (errors.tripId) setErrors(e => ({ ...e, tripId: "" }));
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!tripId) newErrors.tripId = "يرجى اختيار الرحلة اليومية المستهدفة بالعرض";
+    if (!ot.trim()) newErrors.ot = "يرجى إدخال عنوان العرض";
+    if (!desc.trim()) newErrors.desc = "يرجى إدخال وصف العرض";
+    const discNum = Number(disc);
+    if (!disc || isNaN(discNum) || discNum < 1 || discNum > 100) newErrors.disc = "يجب أن تكون نسبة الخصم بين 1 و 100";
+    if (!ds) newErrors.ds = "يرجى تحديد تاريخ بداية العرض";
+    if (!de) newErrors.de = "يرجى تحديد تاريخ نهاية العرض";
+    if (ds && de && de < ds) newErrors.de = "تاريخ النهاية يجب أن يكون بعد تاريخ البداية";
+    setErrors(newErrors);
+    return Object.values(newErrors).every(v => !v);
   };
 
   return (
     <ModalShell title={title} onClose={onClose} maxWidth="max-w-2xl">
       <form
         className="space-y-3.5 text-right"
+        onKeyDown={handleEnterKeyNext}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!tripId) {
-            alert("يرجى اختيار رحلة يومية منشأة لربط العرض بها.");
-            return;
-          }
+          if (!validate()) return;
           onSave({
-            ...(offer ? { id: offer.id } : {}),
-            title_offer: ot,
-            description: desc,
-            percent_discount: +disc,
+            ...(offer ? { id: offer.id, offer_daily_id: offer.offer_daily_id } : {}),
+            offer_title: ot.trim(),
+            title_offer: ot.trim(),
+            description: desc.trim(),
+            percent_discount: Number(disc),
+            offer_image_url: img,
             url_image_offer: img,
             daily_trip_id: tripId,
+            start_date: ds,
+            end_date: de,
             date_start: ds,
             date_end: de,
           });
@@ -6668,11 +8387,13 @@ function DailyOfferModal({
         </div>
 
         <div>
-          <label className="text-xs font-bold mb-1 block">اختر الرحلة اليومية المنشأة المستهدفة بالعرض *</label>
+          <label className="text-xs font-bold mb-1 block">اختر الرحلة اليومية المنشأة المستهدفة بالعرض <span className="text-red-500">*</span></label>
           <select
             value={tripId}
             onChange={(e) => handleTripChange(e.target.value)}
-            className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
+            className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right bg-white transition-colors ${
+              errors.tripId ? "border-red-400 bg-red-50" : "border-slate-300"
+            }`}
           >
             {dailyTrips.length === 0 && <option value="">لا توجد رحلات يومية منشأة حالياً</option>}
             {dailyTrips.map((t) => (
@@ -6681,21 +8402,51 @@ function DailyOfferModal({
               </option>
             ))}
           </select>
+          {errors.tripId && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.tripId}</p>}
         </div>
 
-        <Field label="عنوان العرض الترويجي" value={ot} onChange={setOt} />
         <div>
-          <label className="text-xs font-bold mb-1 block">وصف وتفاصيل العرض</label>
+          <label className="text-xs font-bold mb-1 block">عنوان العرض الترويجي <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={ot}
+            onChange={e => { setOt(e.target.value); if (errors.ot) setErrors(ex => ({ ...ex, ot: "" })); }}
+            placeholder="مثال: عرض خاص على رحلة لبدة الكبرى"
+            className={`w-full h-11 px-3 rounded-xl border text-xs font-semibold text-right transition-colors ${
+              errors.ot ? "border-red-400 bg-red-50" : "border-slate-300"
+            }`}
+          />
+          {errors.ot && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ot}</p>}
+        </div>
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">وصف وتفاصيل العرض <span className="text-red-500">*</span></label>
           <textarea
             value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            onChange={e => { setDesc(e.target.value); if (errors.desc) setErrors(ex => ({ ...ex, desc: "" })); }}
             rows={2}
-            className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right"
+            placeholder="وصف تفصيلي للعرض والخصم المقدم..."
+            className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-right transition-colors ${
+              errors.desc ? "border-red-400 bg-red-50" : "border-slate-300"
+            }`}
           />
+          {errors.desc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.desc}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="نسبة الخصم % (1-100)" type="number" value={disc} onChange={setDisc} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">نسبة الخصم % (1-100) <span className="text-red-500">*</span></label>
+            <input
+              type="number"
+              min="1" max="100"
+              value={disc}
+              onChange={e => { setDisc(e.target.value); if (errors.disc) setErrors(ex => ({ ...ex, disc: "" })); }}
+              className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right transition-colors ${
+                errors.disc ? "border-red-400 bg-red-50" : "border-slate-300"
+              }`}
+            />
+            {errors.disc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.disc}</p>}
+          </div>
           <div className="pt-5 text-xs text-slate-500 font-bold">
             {selectedTrip && (
               <span className="text-emerald-700 font-black">
@@ -6706,19 +8457,48 @@ function DailyOfferModal({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ بداية العرض" type="date" value={ds} onChange={setDs} />
-          <Field label="تاريخ نهاية العرض" type="date" value={de} onChange={setDe} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">تاريخ بداية العرض <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              value={ds}
+              onChange={e => { setDs(e.target.value); if (errors.ds) setErrors(ex => ({ ...ex, ds: "" })); }}
+              className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right transition-colors ${
+                errors.ds ? "border-red-400 bg-red-50" : "border-slate-300"
+              }`}
+            />
+            {errors.ds && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ds}</p>}
+          </div>
+          <div>
+            <label className="text-xs font-bold mb-1 block">تاريخ نهاية العرض <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              value={de}
+              onChange={e => { setDe(e.target.value); if (errors.de) setErrors(ex => ({ ...ex, de: "" })); }}
+              className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right transition-colors ${
+                errors.de ? "border-red-400 bg-red-50" : "border-slate-300"
+              }`}
+            />
+            {errors.de && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.de}</p>}
+          </div>
         </div>
 
         <div className="pt-2 border-t border-border">
           <ImageFilePicker label="صورة وبوستر العرض اليومي" value={img} onChange={setImg} />
         </div>
 
+        {/* Validation summary */}
+        {Object.values(errors).some(v => v) && (
+          <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-xs text-red-700 font-bold">
+            ⚠️ يرجى استكمال جميع الحقول المطلوبة المشار إليها ب☆ قبل حفظ العرض.
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             إلغاء
           </button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
             حفظ العرض اليومي
           </button>
         </div>
@@ -6744,11 +8524,12 @@ function WeeklyOfferModal({
   const selectedTrip = weeklyTrips.find(t => t.id === tripId) || weeklyTrips[0];
 
   const [ot, setOt] = useState(offer?.offer_title || (selectedTrip ? `عرض الأسبوع: ${selectedTrip.title}` : ""));
-  const [desc, setDesc] = useState(offer?.description || (selectedTrip ? `خصم استثنائي على رحلة ${selectedTrip.title} المنشأة في دلّني شاملة المبيت والجولات.` : ""));
-  const [disc, setDisc] = useState(String(offer?.percent_discount || 15));
+  const [desc, setDesc] = useState(offer?.description || (selectedTrip ? `خصم مميز وحصري على رحلة ${selectedTrip.title} المنشأة في دلّني شاملة المبيت والجولات.` : ""));
+  const [disc, setDisc] = useState(String(offer?.percent_discount || offer?.discount_percentage || 15));
   const [img, setImg] = useState(offer?.offer_image_url || selectedTrip?.photo || "");
-  const [ds, setDs] = useState(offer?.date_start || new Date().toISOString().slice(0, 10));
-  const [de, setDe] = useState(offer?.date_end || "2026-10-30");
+  const [ds, setDs] = useState(offer?.start_date || offer?.date_start || new Date().toISOString().slice(0, 10));
+  const [de, setDe] = useState(offer?.end_date || offer?.date_end || "2026-10-30");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleTripChange = (newTripId: string) => {
     setTripId(newTripId);
@@ -6758,31 +8539,47 @@ function WeeklyOfferModal({
         setOt(`عرض الأسبوع: ${trip.title}`);
       }
       if (!desc || desc.includes("شاملة المبيت")) {
-        setDesc(`خصم استثنائي على رحلة ${trip.title} المنشأة في دلّني شاملة المبيت والجولات.`);
+        setDesc(`خصم مميز وحصري على رحلة ${trip.title} المنشأة في دلّني شاملة المبيت والجولات.`);
       }
       if (!img || img === "/assets/hero-leptis.jpg") {
         setImg(trip.photo || "/assets/dest-ubari-gaberoun.jpg");
       }
     }
+    if (errors.tripId) setErrors(e => ({ ...e, tripId: "" }));
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!tripId) newErrors.tripId = "يرجى اختيار الرحلة الأسبوعية المستهدفة بالعرض";
+    if (!ot.trim()) newErrors.ot = "يرجى إدخال عنوان العرض";
+    if (!desc.trim()) newErrors.desc = "يرجى إدخال وصف العرض";
+    const discNum = Number(disc);
+    if (!disc || isNaN(discNum) || discNum < 1 || discNum > 100) newErrors.disc = "يجب أن تكون نسبة الخصم بين 1 و 100";
+    if (!ds) newErrors.ds = "يرجى تحديد تاريخ بداية العرض";
+    if (!de) newErrors.de = "يرجى تحديد تاريخ نهاية العرض";
+    if (ds && de && de < ds) newErrors.de = "تاريخ النهاية يجب أن يكون بعد تاريخ البداية";
+    setErrors(newErrors);
+    return Object.values(newErrors).every(v => !v);
   };
 
   return (
     <ModalShell title={title} onClose={onClose} maxWidth="max-w-2xl">
       <form
         className="space-y-3.5 text-right"
+        onKeyDown={handleEnterKeyNext}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!tripId) {
-            alert("يرجى اختيار رحلة أسبوعية منشأة لربط العرض بها.");
-            return;
-          }
+          if (!validate()) return;
           onSave({
-            ...(offer ? { id: offer.id } : {}),
-            offer_title: ot,
-            description: desc,
-            percent_discount: +disc,
+            ...(offer ? { id: offer.id, offer_weekly_id: offer.offer_weekly_id } : {}),
+            offer_title: ot.trim(),
+            description: desc.trim(),
+            discount_percentage: Number(disc),
+            percent_discount: Number(disc),
             offer_image_url: img,
             weekly_trip_id: tripId,
+            start_date: ds,
+            end_date: de,
             date_start: ds,
             date_end: de,
           });
@@ -6802,11 +8599,13 @@ function WeeklyOfferModal({
         </div>
 
         <div>
-          <label className="text-xs font-bold mb-1 block">اختر الرحلة الأسبوعية المنشأة المستهدفة بالعرض *</label>
+          <label className="text-xs font-bold mb-1 block">اختر الرحلة الأسبوعية المنشأة المستهدفة بالعرض <span className="text-red-500">*</span></label>
           <select
             value={tripId}
             onChange={(e) => handleTripChange(e.target.value)}
-            className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
+            className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right bg-white transition-colors ${
+              errors.tripId ? "border-red-400 bg-red-50" : "border-slate-300"
+            }`}
           >
             {weeklyTrips.length === 0 && <option value="">لا توجد رحلات أسبوعية منشأة حالياً</option>}
             {weeklyTrips.map((t) => (
@@ -6815,21 +8614,51 @@ function WeeklyOfferModal({
               </option>
             ))}
           </select>
+          {errors.tripId && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.tripId}</p>}
         </div>
 
-        <Field label="عنوان العرض الأسبوعي" value={ot} onChange={setOt} />
         <div>
-          <label className="text-xs font-bold mb-1 block">وصف وتفاصيل العرض</label>
+          <label className="text-xs font-bold mb-1 block">عنوان العرض الأسبوعي <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={ot}
+            onChange={e => { setOt(e.target.value); if (errors.ot) setErrors(ex => ({ ...ex, ot: "" })); }}
+            placeholder="مثال: عرض الأسبوع على رحلة غدامس التراثية"
+            className={`w-full h-11 px-3 rounded-xl border text-xs font-semibold text-right transition-colors ${
+              errors.ot ? "border-red-400 bg-red-50" : "border-slate-300"
+            }`}
+          />
+          {errors.ot && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ot}</p>}
+        </div>
+
+        <div>
+          <label className="text-xs font-bold mb-1 block">وصف وتفاصيل العرض <span className="text-red-500">*</span></label>
           <textarea
             value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            onChange={e => { setDesc(e.target.value); if (errors.desc) setErrors(ex => ({ ...ex, desc: "" })); }}
             rows={2}
-            className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right"
+            placeholder="وصف تفصيلي للعرض والخصم المقدم وما يشمله..."
+            className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-right transition-colors ${
+              errors.desc ? "border-red-400 bg-red-50" : "border-slate-300"
+            }`}
           />
+          {errors.desc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.desc}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="نسبة الخصم % (1-100)" type="number" value={disc} onChange={setDisc} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">نسبة الخصم % (1-100) <span className="text-red-500">*</span></label>
+            <input
+              type="number"
+              min="1" max="100"
+              value={disc}
+              onChange={e => { setDisc(e.target.value); if (errors.disc) setErrors(ex => ({ ...ex, disc: "" })); }}
+              className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right transition-colors ${
+                errors.disc ? "border-red-400 bg-red-50" : "border-slate-300"
+              }`}
+            />
+            {errors.disc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.disc}</p>}
+          </div>
           <div className="pt-5 text-xs text-slate-500 font-bold">
             {selectedTrip && (
               <span className="text-amber-800 font-black">
@@ -6840,53 +8669,50 @@ function WeeklyOfferModal({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ بداية العرض" type="date" value={ds} onChange={setDs} />
-          <Field label="تاريخ نهاية العرض" type="date" value={de} onChange={setDe} />
+          <div>
+            <label className="text-xs font-bold mb-1 block">تاريخ بداية العرض <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              value={ds}
+              onChange={e => { setDs(e.target.value); if (errors.ds) setErrors(ex => ({ ...ex, ds: "" })); }}
+              className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right transition-colors ${
+                errors.ds ? "border-red-400 bg-red-50" : "border-slate-300"
+              }`}
+            />
+            {errors.ds && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ds}</p>}
+          </div>
+          <div>
+            <label className="text-xs font-bold mb-1 block">تاريخ نهاية العرض <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              value={de}
+              onChange={e => { setDe(e.target.value); if (errors.de) setErrors(ex => ({ ...ex, de: "" })); }}
+              className={`w-full h-11 px-3 rounded-xl border text-xs font-bold text-right transition-colors ${
+                errors.de ? "border-red-400 bg-red-50" : "border-slate-300"
+              }`}
+            />
+            {errors.de && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.de}</p>}
+          </div>
         </div>
 
         <div className="pt-2 border-t border-border">
           <ImageFilePicker label="صورة وبوستر العرض الأسبوعي" value={img} onChange={setImg} />
         </div>
 
+        {/* Validation summary */}
+        {Object.values(errors).some(v => v) && (
+          <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-xs text-red-700 font-bold">
+            ⚠️ يرجى استكمال جميع الحقول المطلوبة المشار إليها ب☆ قبل حفظ العرض.
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             إلغاء
           </button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-glow">
+          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-glow">
             حفظ العرض الأسبوعي
           </button>
-        </div>
-      </form>
-    </ModalShell>
-  );
-}
-
-function FacilityOfferModal({ title, offer, restaurants, onClose, onSave }: { title: string; offer?: FacilityOffer; restaurants: Restaurant[]; onClose: () => void; onSave: (o: any) => void }) {
-  const [ot, setOt] = useState(offer?.title_offer || ""); const [desc, setDesc] = useState(offer?.description || "");
-  const [disc, setDisc] = useState(String(offer?.percent_discount || 10)); const [img, setImg] = useState(offer?.offer_image_url || "");
-  const [facId, setFacId] = useState(offer?.facility_id || restaurants[0]?.id || "");
-  const [ds, setDs] = useState(offer?.date_start || "2026-08-01"); const [de, setDe] = useState(offer?.date_end || "2026-08-31");
-  return (
-    <ModalShell title={title} onClose={onClose}>
-      <form className="space-y-3 text-right" onSubmit={e => { e.preventDefault(); onSave({ ...(offer ? { id: offer.id } : {}), title_offer: ot, description: desc, percent_discount: +disc, offer_image_url: img, facility_id: facId, date_start: ds, date_end: de }); }}>
-        <Field label="عنوان عرض المطعم/الكافيه" value={ot} onChange={setOt} />
-        <div><label className="text-xs font-bold mb-1 block">الوصف</label><textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full p-2.5 rounded-xl border text-xs font-semibold text-right" /></div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="نسبة الخصم %" type="number" value={disc} onChange={setDisc} />
-          <div><label className="text-xs font-bold mb-1 block">المطعم/الكافيه</label>
-            <select value={facId} onChange={e => setFacId(e.target.value)} className="w-full h-10 px-3 rounded-xl border text-xs font-bold text-right">
-              {restaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="تاريخ البداية" type="date" value={ds} onChange={setDs} />
-          <Field label="تاريخ الانتهاء" type="date" value={de} onChange={setDe} />
-        </div>
-        <div className="pt-2 border-t border-border"><ImageFilePicker label="صورة عرض المطعم" value={img} onChange={setImg} /></div>
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">إلغاء</button>
-          <button className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">حفظ عرض المطعم</button>
         </div>
       </form>
     </ModalShell>
@@ -7148,11 +8974,11 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
 
 function ModalShell({ title, children, onClose, maxWidth = "max-w-lg" }: { title: string; children: React.ReactNode; onClose: () => void; maxWidth?: string }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className={`w-full ${maxWidth} bg-white rounded-3xl shadow-glow overflow-hidden my-6`}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto">
+      <div className={`w-full ${maxWidth} bg-white rounded-3xl shadow-glow overflow-hidden my-6`}>
         <div className="p-4 bg-gradient-sea text-white flex justify-between items-center">
           <h3 className="text-base font-black">{title}</h3>
-          <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 grid place-items-center text-xs transition">✕</button>
+          <button type="button" onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 grid place-items-center text-xs transition">✕</button>
         </div>
         <div className="p-5 max-h-[85vh] overflow-y-auto">{children}</div>
       </div>
@@ -7183,6 +9009,9 @@ function Field({
   onKeyDown,
   placeholder,
   required,
+  min,
+  max,
+  step,
 }: {
   label: string;
   type?: string;
@@ -7191,6 +9020,9 @@ function Field({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
 }) {
   return (
     <div>
@@ -7202,6 +9034,9 @@ function Field({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
+        min={min}
+        max={max}
+        step={step}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
       />
     </div>

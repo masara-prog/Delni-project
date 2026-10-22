@@ -156,21 +156,37 @@ function RoleDashboardsSidebar() {
 }
 
 function NotFoundComponent() {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
+  const isAr = language === "ar";
+
+  useEffect(() => {
+    document.title = isAr ? "منصة دَلّني | الصفحة غير موجودة (404)" : "Dalni Platform | Page Not Found (404)";
+  }, [isAr]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12" dir={isAr ? "rtl" : "ltr"}>
+      <div className="max-w-md w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+        <div className="flex justify-center">
+          <img src="/logo.png" alt="دلني" className="h-16 w-auto object-contain" />
+        </div>
+        <div className="inline-block px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-black">
+          {isAr ? "خطأ 404 — الصفحة غير متوفرة" : "Error 404 — Not Found"}
+        </div>
+        <h1 className="text-xl font-black text-slate-900">
+          {isAr ? "الصفحة التي تبحث عنها غير موجودة" : "The page you are looking for does not exist"}
+        </h1>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          {isAr
+            ? "ربما تم تغيير مسار الصفحة أو لم تعد متوفرة. يمكنك العودة إلى الصفحة الرئيسية لمتابعة التصفح."
+            : "The page may have been moved or is no longer available. You can head back to the home page."}
         </p>
-        <div className="mt-6">
+        <div className="pt-2">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] px-6 py-3 text-xs font-black text-white shadow-soft transition-all cursor-pointer"
           >
-            {t('home')}
+            <span>🏠</span>
+            <span>{isAr ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}</span>
           </Link>
         </div>
       </div>
@@ -179,33 +195,59 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
   const router = useRouter();
 
+  useEffect(() => {
+    document.title = "منصة دَلّني للخدمات السياحية | تنبيه";
+    console.error("[Dalni Error Caught]:", error);
+  }, [error]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12" dir="rtl">
+      <div className="max-w-lg w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-2xl space-y-4">
+        <div className="flex justify-center">
+          <img src="/logo.png" alt="منصة دلني" className="h-16 w-auto object-contain" />
+        </div>
+
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-black border border-red-200">
+          <span>⚠️</span>
+          <span>منصة دَلِّني للخدمات السياحية</span>
+        </div>
+
+        <h1 className="text-xl font-black text-slate-900">
+          تعذر تحميل هذه الصفحة مؤقتاً
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+
+        <p className="text-xs text-slate-600 leading-relaxed font-medium">
+          حدث خطأ غير متوقع أثناء معالجة بيانات هذه الصفحة. البيانات آمنة في قاعدة بيانات المنصة، ويمكنك إعادة المحاولة لتحديث الجلسة أو العودة للرئيسية.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+
+        {error?.message && (
+          <div className="text-[11px] text-slate-500 font-mono bg-slate-100 p-2.5 rounded-xl text-left ltr break-all border border-slate-200">
+            {error.message}
+          </div>
+        )}
+
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
           <button
+            type="button"
             onClick={() => {
-              router.invalidate();
+              try {
+                router.invalidate();
+              } catch { }
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#003580] hover:bg-[#00224f] px-6 py-2.5 text-xs font-black text-white shadow-md transition cursor-pointer"
           >
-            Try again
+            <span>🔄</span>
+            <span>إعادة المحاولة الآن</span>
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white px-6 py-2.5 text-xs font-black text-slate-800 transition cursor-pointer"
           >
-            Go home
+            <span>🏠</span>
+            <span>العودة للرئيسية</span>
           </a>
         </div>
       </div>
@@ -218,16 +260,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ليبيا رحلات Pro | حجز الرحلات، الفنادق والمغامرات" },
+      { title: "منصة دَلِّني للخدمات السياحية | حجز الرحلات والفنادق في ليبيا" },
       {
         name: "description",
         content:
-          "منصة ليبيا رحلات Pro للسياحة والخدمات — احجز رحلاتك، فنادقك، ووسائل النقل بتجربة عصرية وموثوقة.",
+          "منصة دَلِّني للخدمات السياحية — احجز رحلاتك، فنادقك، ووسائل النقل السياحية بتجربة عصرية وموثوقة.",
       },
-      { property: "og:title", content: "ليبيا رحلات Pro — اكتشف ليبيا" },
+      { property: "og:title", content: "منصة دَلِّني السياحية — اكتشف ليبيا" },
       {
         property: "og:description",
-        content: "احجز رحلات ليبيا الداخلية بسهولة: فنادق، سيارات، ومعالم لا تُنسى.",
+        content: "دليلك المتكامل لحجز الرحلات السياحية، الفنادق، والمركبات في كافة المدن الليبية.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -235,6 +277,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/logo.png", type: "image/png" },
+      { rel: "shortcut icon", href: "/logo.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/logo.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

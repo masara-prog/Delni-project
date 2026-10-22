@@ -246,24 +246,40 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[places_tourist](
-	[place_id] [varchar](50) NOT NULL,
+	[place_id] [varchar](50) NOT NULL, -- رقم البلدية / المفتاح الرئيسي Primary Key المدخل بواسطة الأدمن
 	[place_name] [varchar](100) NOT NULL,
 	[description] [text] NOT NULL,
 	[city] [varchar](50) NOT NULL,
+	[region] [varchar](100) NULL,
 	[longitude] [decimal](9, 6) NOT NULL,
 	[latitude] [decimal](9, 6) NOT NULL,
 	[category] [varchar](50) NOT NULL,
 	[place_image] [varchar](255) NULL,
 	[is_unesco] [bit] NOT NULL,
 	[unesco_year] [int] NULL,
-	[gallery] [nvarchar](max) NULL,
-	[entry_fee] [varchar](50) NULL,
 	[google_maps_url] [varchar](500) NULL,
+	[history_snippet] [nvarchar](max) NULL,
+	[highlights] [nvarchar](max) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[place_id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[places_trip_daily]    Script Date: 10/19/2026 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[places_trip_daily](
+	[place_id] [varchar](50) NOT NULL,
+	[daily_trip_id] [varchar](50) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[place_id] ASC,
+	[daily_trip_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
 GO
 /****** Object:  Table [dbo].[places_trip_weekly]    Script Date: 10/7/2026 12:36:01 PM ******/
 SET ANSI_NULLS ON
@@ -725,6 +741,14 @@ ALTER TABLE [dbo].[offers_weekly_trips]  WITH CHECK ADD FOREIGN KEY([weekly_trip
 REFERENCES [dbo].[weekly_trips] ([weekly_trip_id])
 ON DELETE CASCADE
 GO
+ALTER TABLE [dbo].[places_trip_daily]  WITH CHECK ADD FOREIGN KEY([place_id])
+REFERENCES [dbo].[places_tourist] ([place_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[places_trip_daily]  WITH CHECK ADD FOREIGN KEY([daily_trip_id])
+REFERENCES [dbo].[daily_trips] ([daily_trip_id])
+ON DELETE CASCADE
+GO
 ALTER TABLE [dbo].[places_trip_weekly]  WITH CHECK ADD FOREIGN KEY([place_id])
 REFERENCES [dbo].[places_tourist] ([place_id])
 ON DELETE CASCADE
@@ -914,6 +938,119 @@ ALTER TABLE [dbo].[weekly_trips]  WITH CHECK ADD  CONSTRAINT [chk_weekly_seats] 
 GO
 ALTER TABLE [dbo].[weekly_trips] CHECK CONSTRAINT [chk_weekly_seats]
 GO
+
+/****** Object:  Table [dbo].[daily_trip_stations] (1NF/2NF/3NF Normalized Stations) ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'daily_trip_stations')
+BEGIN
+CREATE TABLE [dbo].[daily_trip_stations](
+	[station_id] [varchar](50) NOT NULL,
+	[daily_trip_id] [varchar](50) NOT NULL,
+	[station_order] [int] NOT NULL DEFAULT 1,
+	[station_name] [nvarchar](150) NOT NULL,
+	[station_city] [nvarchar](100) NULL,
+	[station_type] [nvarchar](50) DEFAULT 'معلم سياحي',
+	[arrival_time] [varchar](20) NULL,
+	[departure_time] [varchar](20) NULL,
+	[duration_minutes] [int] DEFAULT 60,
+	[place_id] [varchar](50) NULL,
+	[description] [nvarchar](max) NULL,
+	[created_at] [datetime] DEFAULT GETDATE(),
+PRIMARY KEY CLUSTERED 
+(
+	[station_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+
+ALTER TABLE [dbo].[daily_trip_stations]  WITH CHECK ADD  CONSTRAINT [fk_daily_stations_trip] FOREIGN KEY([daily_trip_id])
+REFERENCES [dbo].[daily_trips] ([daily_trip_id])
+ON DELETE CASCADE;
+
+ALTER TABLE [dbo].[daily_trip_stations] CHECK CONSTRAINT [fk_daily_stations_trip];
+END
+GO
+
+/****** Object:  Table [dbo].[weekly_trip_stations] (1NF/2NF/3NF Normalized Multi-Day Stations) ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'weekly_trip_stations')
+BEGIN
+CREATE TABLE [dbo].[weekly_trip_stations](
+	[station_id] [varchar](50) NOT NULL,
+	[weekly_trip_id] [varchar](50) NOT NULL,
+	[station_order] [int] NOT NULL DEFAULT 1,
+	[day_number] [int] NOT NULL DEFAULT 1,
+	[station_name] [nvarchar](150) NOT NULL,
+	[station_city] [nvarchar](100) NULL,
+	[station_type] [nvarchar](50) DEFAULT 'معلم سياحي',
+	[arrival_time] [varchar](20) NULL,
+	[departure_time] [varchar](20) NULL,
+	[duration_minutes] [int] DEFAULT 60,
+	[place_id] [varchar](50) NULL,
+	[description] [nvarchar](max) NULL,
+	[created_at] [datetime] DEFAULT GETDATE(),
+PRIMARY KEY CLUSTERED 
+(
+	[station_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+
+ALTER TABLE [dbo].[weekly_trip_stations]  WITH CHECK ADD  CONSTRAINT [fk_weekly_stations_trip] FOREIGN KEY([weekly_trip_id])
+REFERENCES [dbo].[weekly_trips] ([weekly_trip_id])
+ON DELETE CASCADE;
+
+ALTER TABLE [dbo].[weekly_trip_stations] CHECK CONSTRAINT [fk_weekly_stations_trip];
+END
+GO
+
+/****** Object:  Table [dbo].[places_trip_daily] (M:N Landmark to Daily Trip Junction) ******/
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'places_trip_daily')
+BEGIN
+CREATE TABLE [dbo].[places_trip_daily](
+	[place_id] [varchar](50) NOT NULL,
+	[daily_trip_id] [varchar](50) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[place_id] ASC,
+	[daily_trip_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY];
+END
+GO
+
+/****** Object:  Table [dbo].[places_trip_weekly] (M:N Landmark to Weekly Trip Junction) ******/
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'places_trip_weekly')
+BEGIN
+CREATE TABLE [dbo].[places_trip_weekly](
+	[place_id] [varchar](50) NOT NULL,
+	[weekly_trip_id] [varchar](50) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[place_id] ASC,
+	[weekly_trip_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY];
+END
+GO
+
+/****** Tourist Account Status & Landmark Attributes Alterations ******/
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tourists') AND name = 'account_status')
+  ALTER TABLE [dbo].[tourists] ADD [account_status] [nvarchar](50) DEFAULT 'نشط';
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('places_tourist') AND name = 'entry_fee')
+  ALTER TABLE [dbo].[places_tourist] ADD [entry_fee] [nvarchar](100) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('places_tourist') AND name = 'gallery')
+  ALTER TABLE [dbo].[places_tourist] ADD [gallery] [nvarchar](max) NULL;
+GO
+
 USE [master]
 GO
 ALTER DATABASE [DelniDB] SET  READ_WRITE 

@@ -36,12 +36,21 @@ echo [✓] مسار الباك إند: "%BACKEND_DIR%"
 echo [✓] مسار الواجهة:   "%FRONTEND_DIR%"
 echo.
 
-:: 4. تشغيل خادم الباك إند وربط قاعدة البيانات
-echo [1/2] جاري تشغيل خادم الباك إند والربط مع قاعدة بيانات SQL Server (DelniDB)...
-start "خادم دلني - الباك إند وقاعدة البيانات (Port 8000)" cmd /k "chcp 65001 >nul && cd /d "%BACKEND_DIR%" && echo جاري تشغيل الباك إند على المنفذ 8000... && php artisan serve --port=8000"
+:: 4. تشغيل خادم الربط المباشر مع Microsoft SQL Server (DelniDB Port 5001)
+echo [1/3] جاري تشغيل جسر قاعدة بيانات Microsoft SQL Server (Port 5001)...
+start "جسر قاعدة بيانات دلني - DelniDB (Port 5001)" cmd /k "chcp 65001 >nul && cd /d "%FRONTEND_DIR%" && echo جاري الاتصال بقاعدة بيانات Microsoft SQL Server على المنفذ 5001... && npm run db:server"
 
-:: 5. تشغيل واجهة المستخدم
-echo [2/2] جاري تشغيل خادم الواجهة الأمامية (Frontend)...
+:: 5. تشغيل خادم لارفيل إذا توفر PHP
+where php >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [2/3] جاري تشغيل خادم لارفيل (Port 8000)...
+    start "خادم دلني - Laravel API (Port 8000)" cmd /k "chcp 65001 >nul && cd /d "%BACKEND_DIR%" && echo جاري تشغيل لارفيل على المنفذ 8000... && php artisan serve --port=8000"
+) else (
+    echo [-] تخطي تشغيل خادم PHP/Laravel لعدم تثبيت PHP (يتم الاعتماد على جسر SQL Server المباشر).
+)
+
+:: 6. تشغيل واجهة المستخدم
+echo [3/3] جاري تشغيل خادم الواجهة الأمامية (Frontend)...
 start "واجهة دلني - Frontend" cmd /k "chcp 65001 >nul && cd /d "%FRONTEND_DIR%" && npm run dev"
 
 echo.
@@ -56,7 +65,10 @@ echo ⚠️  ملاحظة هامة: لا تقم بإغلاق النوافذ ال
 echo.
 
 timeout /t 3 > nul
-start http://127.0.0.1:8000/db-viewer
+where php >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    start http://127.0.0.1:8000/db-viewer
+)
 start http://localhost:8080
 
 pause

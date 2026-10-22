@@ -1348,9 +1348,8 @@ function RestaurantsPage() {
   };
 
   const restaurants = useMemo(() => {
-    if (customRestaurants.length > 0) return customRestaurants;
-    return getRestaurants(language);
-  }, [language, customRestaurants]);
+    return customRestaurants;
+  }, [customRestaurants]);
 
   const cities = useMemo(
     () => [

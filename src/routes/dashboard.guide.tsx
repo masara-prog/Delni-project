@@ -795,7 +795,7 @@ function GuideDashboard() {
             {/* Section 2: Contact & Professional details */}
             <div className="space-y-3 pb-3 border-b border-stone-100">
               <div className="text-xs font-bold text-stone-800">معلومات التواصل والعمل الميداني:</div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field
                   label="رقم الهاتف المحمول"
                   value={guideInfo.phone_number}
@@ -803,10 +803,10 @@ function GuideDashboard() {
                   placeholder="0912345678"
                 />
                 <Field
-                  label="المسمى المهني واللقب"
-                  value={guideInfo.title || ""}
-                  onChange={(v) => setGuideInfo({ ...guideInfo, title: v })}
-                  placeholder="مثال: خبير الآثار الرومانية والتراث"
+                  label="البريد الإلكتروني المعتمد"
+                  value={guideInfo.email || ""}
+                  disabled
+                  placeholder="guide@dalni.ly"
                 />
               </div>
 

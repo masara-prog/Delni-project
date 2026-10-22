@@ -4,6 +4,7 @@ import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/co
 import { Modal } from "@/components/Modals";
 import { useLanguage } from "@/lib/i18n";
 import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Printer, X, Award } from "lucide-react";
+import QRCode from "qrcode";
 import type { PrivateTrip } from "@/lib/dbSchema";
 import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile } from "@/lib/api";
 
@@ -48,6 +49,24 @@ function TouristDashboard() {
   const isAr = language === "ar";
   const [active, setActive] = useState("overview");
   const [ticketModal, setTicketModal] = useState<Ticket | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (ticketModal?.code) {
+      QRCode.toDataURL(ticketModal.code, {
+        width: 320,
+        margin: 1,
+        color: {
+          dark: "#0F172A",
+          light: "#FFFFFF",
+        },
+      })
+        .then((url) => setQrCodeDataUrl(url))
+        .catch((err) => console.error("Error generating QR code:", err));
+    } else {
+      setQrCodeDataUrl("");
+    }
+  }, [ticketModal]);
 
   // Real Tourist Profile loaded dynamically from DelniDB session
   const [touristInfo, setTouristInfo] = useState(() => {
@@ -658,12 +677,22 @@ function TouristDashboard() {
 
             <div className="p-5 mt-2 relative">
               <div className="flex flex-col lg:flex-row gap-5">
-                <div className="w-full lg:w-44 shrink-0 flex flex-col items-center justify-center bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
-                  <div className="w-28 h-28 bg-white rounded-lg shadow-2xs border border-stone-200 p-2 flex items-center justify-center mb-2">
-                    <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
+                <div className="w-full lg:w-48 shrink-0 flex flex-col items-center justify-center bg-stone-50 border border-stone-200 rounded-2xl p-4 text-center">
+                  <div className="w-32 h-32 bg-white rounded-xl shadow-xs border border-stone-200 p-1 flex items-center justify-center mb-2 overflow-hidden">
+                    {qrCodeDataUrl ? (
+                      <img
+                        src={qrCodeDataUrl}
+                        alt={`QR Code: ${ticketModal.code}`}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
+                    )}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-medium mb-1.5">رمز التحقق وسداد الحجز بمقر الشركة</div>
-                  <div className="w-full py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-bold">
+                  <div className="text-[10px] text-slate-600 font-bold mb-1.5">
+                    امسح الرمز لتأكيد الحجز بمقر الشركة
+                  </div>
+                  <div className="w-full py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-black">
                     ✅ {ticketModal.status}
                   </div>
                 </div>

@@ -90,9 +90,16 @@ function TransportPage() {
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
 
   // Data Sources (Fallback local + Live Sync with SQL Server)
-  const [rawCompanies, setRawCompanies] = useState<any[]>(() => getTransportCompanies());
-  const [rawVehicles, setRawVehicles] = useState<any[]>(() => getApiVehicles());
-  const [rawDrivers, setRawDrivers] = useState<any[]>(() => getDrivers());
+  const [rawCompanies, setRawCompanies] = useState<any[]>([]);
+  const [rawVehicles, setRawVehicles] = useState<any[]>([]);
+  const [rawDrivers, setRawDrivers] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Populate local storage fallback on client mount
+    setRawCompanies(getTransportCompanies());
+    setRawVehicles(getApiVehicles());
+    setRawDrivers(getDrivers());
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

@@ -1094,13 +1094,56 @@ function Field({
   required?: boolean;
   suffix?: string;
 }) {
+  const isNumber = type === "number";
+
+  const handleStep = (delta: number) => {
+    const current = parseFloat(value) || 0;
+    const stepSize = label.includes("التكلفة") ? 10 : 1;
+    const nextVal = Math.max(0, current + delta * stepSize);
+    onChange(String(nextVal));
+  };
+
   return (
     <div>
       <label className="text-xs font-bold text-[#0F172A] mb-1 block text-right">
         {label}
         {required && <span className="text-red-500"> *</span>}
       </label>
-      <div className="relative flex items-center">
+      <div className="flex items-stretch rounded-xl border border-[#E2E8F0] bg-white focus-within:border-[#1B5A78] focus-within:ring-2 focus-within:ring-[#1B5A78]/15 transition overflow-hidden shadow-xs">
+        {/* Left Side (Addon): Unit Suffix Badge & Dedicated Stepper Buttons */}
+        {(suffix || isNumber) && (
+          <div className="flex items-center bg-[#F8FAFC] border-l border-[#E2E8F0] shrink-0 select-none">
+            {isNumber && (
+              <div className="flex flex-col border-r border-[#E2E8F0] h-full justify-center px-1 bg-white/60">
+                <button
+                  type="button"
+                  onClick={() => handleStep(1)}
+                  className="px-1 text-[9px] font-black text-slate-500 hover:text-[#1B5A78] hover:bg-slate-200/80 rounded transition cursor-pointer leading-tight select-none"
+                  title="زيادة القيمة"
+                  tabIndex={-1}
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStep(-1)}
+                  className="px-1 text-[9px] font-black text-slate-500 hover:text-[#1B5A78] hover:bg-slate-200/80 rounded transition cursor-pointer leading-tight select-none"
+                  title="إنقاص القيمة"
+                  tabIndex={-1}
+                >
+                  ▼
+                </button>
+              </div>
+            )}
+            {suffix && (
+              <span className="px-2.5 py-1 text-[10px] sm:text-[11px] font-black text-[#64748B] whitespace-nowrap">
+                {suffix}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Input text / number */}
         <input
           type={type}
           value={value}
@@ -1108,15 +1151,8 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className={`w-full h-10 sm:h-11 px-3.5 rounded-xl border border-[#E2E8F0] bg-white focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 outline-none transition text-xs sm:text-sm font-semibold text-[#0F172A] text-right ${
-            suffix ? "pl-16" : ""
-          }`}
+          className="flex-1 h-10 sm:h-11 px-3.5 bg-transparent outline-none text-xs sm:text-sm font-semibold text-[#0F172A] text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
-        {suffix && (
-          <span className="absolute left-2.5 text-[10px] font-bold text-[#718096] bg-[#FAF7F2] px-1.5 py-0.5 rounded border border-[#E2E8F0] pointer-events-none">
-            {suffix}
-          </span>
-        )}
       </div>
     </div>
   );

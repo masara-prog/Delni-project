@@ -85,6 +85,7 @@ import {
   type AttractionItem,
   type CityDestinationItem,
 } from "@/lib/attractionsData";
+import { apiGetPlaces } from "@/lib/api";
 
 export { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem, type CityDestinationItem };
 
@@ -96,6 +97,27 @@ function AttractionsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [tripSystemFilter, setTripSystemFilter] = useState<"all" | "daily" | "private" | "unesco">("all");
   const [sortBy, setSortBy] = useState<"rating" | "reviews" | "name">("rating");
+
+  // Dynamic touristic cities from DelniDB
+  const [dbPlaces, setDbPlaces] = useState<any[]>([]);
+  const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);
+
+  useEffect(() => {
+    let isSubscribed = true;
+    apiGetPlaces()
+      .then((res) => {
+        if (isSubscribed && Array.isArray(res) && res.length > 0) {
+          setDbPlaces(res);
+        }
+        if (isSubscribed) setIsLoadingPlaces(false);
+      })
+      .catch(() => {
+        if (isSubscribed) setIsLoadingPlaces(false);
+      });
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const modals = useModalPair();
   const [privateTripModalOpen, setPrivateTripModalOpen] = useState(false);
@@ -143,11 +165,84 @@ function AttractionsPage() {
     { id: "طبيعة وجبال", label: isAr ? "جبال وشواطئ طبيعية" : "Mountains & Coastlines", icon: "⛰️" },
   ], [isAr]);
 
-  // Cities list
+  // Dynamic touristic cities from DelniDB
+  const dynamicCities: CityDestinationItem[] = useMemo(() => {
+    if (!dbPlaces || dbPlaces.length === 0) {
+      return LIBYAN_CITIES;
+    }
+    return dbPlaces.map((p, idx) => {
+      let hl: string[] = [];
+      if (Array.isArray(p.highlights)) {
+        hl = p.highlights;
+      } else if (typeof p.highlights === "string") {
+        hl = p.highlights.split(/[،,\n]+/).map((s: string) => s.trim()).filter(Boolean);
+      }
+      if (hl.length === 0) {
+        hl = ["أبرز المعالم الأثرية والمحطات التاريخية", "المعالم الطبيعية والواحات", "الأسواق التراثية والمقاهي الأصيلة"];
+      }
+
+      const cityName = p.place_name || p.city || `مدينة سياحية ${idx + 1}`;
+      const region = p.region || "ليبيا";
+      const image = p.place_image || heroImg;
+
+      return {
+        id: String(p.place_id || p.id || idx),
+        name: cityName,
+        nameEn: p.nameEn || cityName,
+        shortName: cityName,
+        shortNameEn: p.nameEn || cityName,
+        subtitle: p.city && p.city !== cityName ? `${p.city} — ${region}` : `${region}`,
+        subtitleEn: p.region || "Libya",
+        region: region,
+        img: image,
+        description: p.description || `استكشف مدينة ${cityName} وأبرز معالمها ومحطاتها السياحية في ليبيا.`,
+        descriptionEn: p.description || `Explore the historical highlights and landmarks of ${cityName}.`,
+        rating: 4.9,
+        ratingLabel: "استثنائي",
+        ratingLabelEn: "Exceptional",
+        reviewsCount: 120 + idx * 8,
+        landmarksCount: hl.length,
+        categoryTag: p.category || "مدينة سياحية",
+        categoryTagEn: p.category || "Touristic City",
+        mapQuery: `${cityName} ليبيا`,
+        highlights: hl,
+        highlightsEn: hl,
+        photos: [image],
+        hasDailyTrip: true,
+        hasWeeklyTrip: true,
+        hasPrivateTrip: true,
+        startPriceLYD: 120,
+        dailyTripsInfo: "رحلات يومية منتظمة ورحلات خاصة مخصصة",
+        dailyTripsInfoEn: "Regular daily trips & custom private tours",
+        availableTripTypes: ["private", "daily"],
+      };
+    });
+  }, [dbPlaces]);
+
+  // Cities list for filter
   const cities = useMemo(() => {
-    const rawCities = Array.from(new Set(LIBYAN_ATTRACTIONS.map((a) => (isAr ? a.city : a.cityEn))));
+    const rawCities = Array.from(new Set(dynamicCities.map((c) => (isAr ? c.shortName : c.shortNameEn))));
     return ["all", ...rawCities];
-  }, [isAr]);
+  }, [dynamicCities, isAr]);
+
+  // Filtered & displayed cities
+  const displayedCities = useMemo(() => {
+    let list = dynamicCities;
+    if (selectedCity !== "all") {
+      list = list.filter((c) => {
+        const itemCity = isAr ? c.shortName : c.shortNameEn;
+        return itemCity === selectedCity || c.name === selectedCity || c.region === selectedCity;
+      });
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((c) => {
+        const searchable = `${c.name} ${c.shortName} ${c.region} ${c.description} ${c.highlights.join(" ")}`.toLowerCase();
+        return searchable.includes(q);
+      });
+    }
+    return list;
+  }, [dynamicCities, selectedCity, searchQuery, isAr]);
 
   // UNESCO World Heritage Sites & minimalist showcase state
   const unescoSites = useMemo(() => LIBYAN_ATTRACTIONS.filter((a) => a.isUnesco), []);
@@ -256,7 +351,7 @@ function AttractionsPage() {
         { label: isAr ? "المنطقة والإقليم" : "Region", value: city.region },
         { label: isAr ? "نظام الرحلات المتوفرة" : "Available Trip System", value: tripSystemSummary },
         { label: isAr ? "عدد المعالم السياحية" : "Documented Landmarks", value: isAr ? `${city.landmarksCount} معالم موثقة بالكامل` : `${city.landmarksCount} Documented Sites` },
-        { label: isAr ? "تقييم السياح والزوار" : "Guest Rating", value: `⭐ ${city.rating} / 5 (${city.ratingLabel} — ${city.reviewsCount} تقييم)` },
+        { label: isAr ? "تقييم السياح والزوار" : "Guest Rating", value: `⭐ ${city.rating} / 5 (${city.reviewsCount} تقييم)` },
       ],
       features: city.highlights,
     });
@@ -307,8 +402,8 @@ function AttractionsPage() {
               <span className="text-[11px] sm:text-xs">{isAr ? "إنشاء رحلات خاصة مخصصة بالكامل" : "Customized Private Trips"}</span>
             </div>
             <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10">
-              <span className="text-teal-300 font-black text-xs sm:text-sm">{LIBYAN_ATTRACTIONS.length}</span>
-              <span className="text-[11px] sm:text-xs">{isAr ? "معالم موثقة وموصوفة" : "Documented Iconic Sites"}</span>
+              <span className="text-teal-300 font-black text-xs sm:text-sm">{dynamicCities.length}</span>
+              <span className="text-[11px] sm:text-xs">{isAr ? "مدن ووجهات سياحية موثقة" : "Documented Destinations"}</span>
             </div>
           </div>
         </div>
@@ -382,8 +477,8 @@ function AttractionsPage() {
 
               <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-xl mx-auto font-medium">
                 {isAr
-                  ? "مواقع أثرية استثنائية مدرجة على قائمة التراث العالمي لليونسكو تتغير تلقائياً كل 5 ثوانٍ"
-                  : "Exceptional archaeological landmarks inscribed on UNESCO list - auto-rotating every 5 seconds"}
+                  ? "معالم ومواقع أثرية وتاريخية مدرجة على قائمة التراث العالمي لليونسكو تتغير تلقائياً كل 5 ثوانٍ"
+                  : "Archaeological and historical landmarks inscribed on UNESCO list - auto-rotating every 5 seconds"}
               </p>
 
               {/* City Navigation Pills: Royal Blue Inactive & Vibrant Orange Active */}
@@ -636,9 +731,29 @@ function AttractionsPage() {
           </div>
 
           {/* Pure Photo Cards Showcase (Simple, Calm, Clean Short City Name at Bottom) */}
-          {cityViewMode === "carousel" ? (
+          {displayedCities.length === 0 ? (
+            <div className="w-full text-center py-12 bg-white/90 backdrop-blur-md rounded-3xl border border-dashed border-slate-300 p-8 space-y-3">
+              <div className="text-4xl">🏛️</div>
+              <h3 className="text-base font-black text-slate-800">
+                {isAr ? "لا توجد مدن أو وجهات سياحية مطابقة للبحث" : "No touristic destinations match your search"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {isAr ? "جرّب البحث باسم مدينة أو إزالة عامل التصفية." : "Try clearing filters or search for another city."}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCity("all");
+                }}
+                className="px-5 py-2 rounded-xl bg-[#003580] text-white font-black text-xs cursor-pointer hover:bg-[#00224f] transition"
+              >
+                {isAr ? "إلغاء التصفية وعرض الكل" : "Reset Filters"}
+              </button>
+            </div>
+          ) : cityViewMode === "carousel" ? (
             <div ref={cityCarouselRef} className="flex gap-6 overflow-x-auto no-scrollbar scroll-smooth py-3 px-1">
-              {LIBYAN_CITIES.map((city) => (
+              {displayedCities.map((city) => (
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
@@ -692,7 +807,7 @@ function AttractionsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 py-3">
-              {LIBYAN_CITIES.map((city) => (
+              {displayedCities.map((city) => (
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
@@ -820,11 +935,11 @@ function LandmarkDetailsModal({
   const photo = city.img || heroImg;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-md animate-fade-in" dir={dir}>
-      <div className="bg-white rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative text-slate-900 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fade-in" dir={dir}>
+      <div className="bg-white rounded-3xl max-w-5xl w-full overflow-hidden shadow-2xl border border-slate-200 max-h-[94vh] flex flex-col relative text-slate-900 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* 1. Single Elegant Hero Photo Showcase */}
-        <div className="relative h-64 sm:h-80 md:h-[370px] w-full overflow-hidden bg-slate-900 shrink-0 group">
+        {/* 1. Grand Hero Photo Showcase for the City Landmark */}
+        <div className="relative h-72 sm:h-96 md:h-[420px] w-full overflow-hidden bg-slate-900 shrink-0 group">
           <img
             src={photo}
             alt={city.name}
@@ -876,13 +991,6 @@ function LandmarkDetailsModal({
               <span className="px-3 py-1 rounded-xl bg-amber-50 text-[#D96B27] font-black text-xs border border-amber-200 shadow-xs">
                 🏛️ {isAr ? city.categoryTag : city.categoryTagEn}
               </span>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-black">
-                <span className="bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md font-black text-[11px]">
-                  {city.rating}
-                </span>
-                <span>{city.ratingLabel}</span>
-                <span className="text-slate-500 font-medium text-[11px]">({city.reviewsCount} تقييم)</span>
-              </div>
             </div>
 
             {/* Google Maps link button */}

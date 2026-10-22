@@ -5,6 +5,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/lib/i18n";
 import { clearStoredSession } from "@/lib/api";
 import { DashboardSupportChatModal } from "@/components/DashboardSupportChatModal";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export type NavItem = { id: string; label: string; icon: string; badge?: string | number; group?: string };
 
@@ -69,12 +70,7 @@ export function DashboardShell({
             >
               💬 {isAr ? "الدعم" : "Support"}
             </button>
-            <button className="relative p-2 rounded-xl hover:bg-muted transition" aria-label="notifications">
-              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-2.5 px-3 border-x border-border">
               <div className="w-9 h-9 rounded-full bg-gradient-sea text-white grid place-items-center font-black text-sm shadow-soft">
                 {userName.charAt(0)}
