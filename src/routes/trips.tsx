@@ -109,6 +109,7 @@ export type DailyTrip = {
   targetPersons: number;
   availableSeats: number;
   daysOfWeek: string;
+  upcomingDepartures?: { date: string; weekday: string; departure_time: string; remaining: number }[];
   departure: "طرابلس" | "بنغازي";
   entertainment?: string;
   guide: {
@@ -2181,22 +2182,26 @@ function TripsPage() {
               }
             ],
             targetPersons: t.max_capacity || 25,
-            availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
-            daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "السبت,الثلاثاء",
+            // Seats are counted per departure day: show the best remaining count among upcoming departures.
+            availableSeats: Array.isArray(t.upcoming_departures) && t.upcoming_departures.length > 0
+              ? Math.max(...t.upcoming_departures.map((d: any) => Number(d.remaining) || 0))
+              : 0,
+            daysOfWeek: t.recurring_days || "",
+            upcomingDepartures: Array.isArray(t.upcoming_departures) ? t.upcoming_departures : [],
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
             guide: {
-              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
-              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
-              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+              name: t.guide_name || t.guide?.full_name || "لم يُعيَّن مرشد بعد",
+              title: t.guide_title || t.guide?.title || "سيتم تعيين مرشد معتمد من الإدارة",
+              phone: t.guide_phone || t.guide?.phone_number || "—",
               cv: {
-                name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
-                title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
-                licenseNumber: t.guide_license_number || t.guide?.license_number || "G-1001",
-                experienceYears: t.guide?.years_of_experience || 6,
+                name: t.guide_name || t.guide?.full_name || "لم يُعيَّن مرشد بعد",
+                title: t.guide_title || t.guide?.title || "سيتم تعيين مرشد معتمد من الإدارة",
+                licenseNumber: t.guide_license_number || t.guide?.license_number || "—",
+                experienceYears: Number(t.guide?.years_of_experience) || 0,
                 rating: 5.0,
-                pricePerDay: Number(t.guide?.price_per_day) || 180,
-                phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+                pricePerDay: Number(t.guide?.price_per_day) || 0,
+                phone: t.guide_phone || t.guide?.phone_number || "—",
                 bio: t.guide?.bio || "مرشد سياحي معتمد ومختص بآثار لبدة الكبرى وصبراتة والمدن التاريخية.",
                 specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
               }
@@ -2221,8 +2226,9 @@ function TripsPage() {
             itinerary_steps: t.itinerary_steps,
             accommodation: "رحلة يومية — عودة مساءً",
             price: Number(t.price_per_seat) || 120,
-            rating: 5.0,
-            reviews: 1,
+            // Visible reviews in DelniDB (0 when the trip has none yet)
+            rating: t.reviews_avg ? Math.round(Number(t.reviews_avg) * 10) / 10 : 0,
+            reviews: Number(t.reviews_count) || 0,
           };
         });
 
@@ -2267,9 +2273,9 @@ function TripsPage() {
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
             guide: {
-              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
-              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
-              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+              name: t.guide_name || t.guide?.full_name || "لم يُعيَّن مرشد بعد",
+              title: t.guide_title || t.guide?.title || "سيتم تعيين مرشد معتمد من الإدارة",
+              phone: t.guide_phone || t.guide?.phone_number || "—",
             },
             vehicle: {
               model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة سياحية مجهزة للمسافات الطويلة"),
@@ -2289,8 +2295,9 @@ function TripsPage() {
               image: t.restaurant_image || "/assets/dest-tripoli-old-city.jpg",
             } : undefined,
             itinerary_steps: t.itinerary_steps,
-            rating: 5.0,
-            reviews: 1,
+            // Visible reviews in DelniDB (0 when the trip has none yet)
+            rating: t.reviews_avg ? Math.round(Number(t.reviews_avg) * 10) / 10 : 0,
+            reviews: Number(t.reviews_count) || 0,
           };
         });
 

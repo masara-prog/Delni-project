@@ -6,7 +6,7 @@ import { useLanguage } from "@/lib/i18n";
 import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Printer, X, Award } from "lucide-react";
 import QRCode from "qrcode";
 import type { PrivateTrip } from "@/lib/dbSchema";
-import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile } from "@/lib/api";
+import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiTouristPrivateTripDecision } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/tourist")({
   head: () => ({
@@ -89,6 +89,9 @@ function TouristDashboard() {
   // Real Private Trips from DelniDB
   const [privateTrips, setPrivateTrips] = useState<PrivateTrip[]>([]);
 
+  // Shown when bookings could not be read from the server
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   // Sync profile & live bookings from DelniDB
   useEffect(() => {
     const session = getStoredSession();
@@ -119,26 +122,27 @@ function TouristDashboard() {
                 const guide = trip.guide || {};
                 loaded.push({
                   code: b.booking_daily_id || `BKD-${b.id}`,
-                  tripId: b.daily_trip_id || "DT-101",
+                  tripId: b.daily_trip_id,
                   tripName: trip.trip_title || trip.title || "جولة سياحية يومية",
                   type: "رحلة يومية",
-                  date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "تاريخ محدد",
-                  time: "08:30 ص",
+                  // Travel day (bookings_daily.trip_date); older bookings have none
+                  date: b.trip_date ? new Date(b.trip_date).toLocaleDateString("ar-LY") : "تاريخ الرحلة غير مسجل",
+                  time: "09:00 ص",
                   pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "مقر ومكتب شركة النقل المعتمد",
                   seats: b.number_of_seats || 1,
                   passengers: b.passengers_names || u.full_name || "سائح",
-                  guideName: guide.full_name || "مرشد سياحي معتمد",
-                  guideLicense: guide.license_number || "G-9901",
+                  guideName: guide.full_name || "لم يُعيَّن مرشد بعد",
+                  guideLicense: guide.license_number || "غير محدد",
                   companyName: "شركة النقل السياحي المعتمدة",
                   contractNo: trip.contract_number || b.contract_number || "",
                   driverName: "سائق سياحي مرخص",
-                  driverLicense: "DL-901",
+                  driverLicense: "غير محدد",
                   vehicleModel: "حافلة سياحية مكيفة",
-                  vehiclePlate: "ليبيا",
+                  vehiclePlate: "غير محدد",
                   insuranceInfo: "تأمين شامل لكافة الركاب",
                   status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
                   payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                  price: `${b.total_price || 120} د.ل`,
+                  price: `${Number(b.total_price) || 0} د.ل`,
                   tripImage: trip.photo || "/assets/dest-leptis.jpg",
                 });
               });
@@ -149,50 +153,35 @@ function TouristDashboard() {
                 const guide = trip.guide || {};
                 loaded.push({
                   code: b.booking_weekly_id || `BKW-${b.id}`,
-                  tripId: b.weekly_trip_id || "WT-201",
+                  tripId: b.weekly_trip_id,
                   tripName: trip.trip_title || "مغامرة سياحية أسبوعية",
                   type: "رحلة أسبوعية",
-                  date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "تاريخ الرحلة",
-                  time: "07:30 ص",
+                  date: trip.start_date
+                    ? `${new Date(trip.start_date).toLocaleDateString("ar-LY")}${trip.end_date ? " - " + new Date(trip.end_date).toLocaleDateString("ar-LY") : ""}`
+                    : "تاريخ الرحلة",
+                  time: "حسب برنامج الرحلة",
                   pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "مقر شركة النقل المعتمد",
                   seats: b.number_of_seats || 1,
                   passengers: b.passengers_names || u.full_name || "سائح",
-                  guideName: guide.full_name || "مرشد سياحي معتمد",
-                  guideLicense: guide.license_number || "G-9901",
+                  guideName: guide.full_name || "لم يُعيَّن مرشد بعد",
+                  guideLicense: guide.license_number || "غير محدد",
                   companyName: "شركة النقل السياحي المعتمدة",
                   contractNo: trip.contract_number || b.contract_number || "",
                   driverName: "سائق صحراوي محترف",
-                  driverLicense: "DL-901",
+                  driverLicense: "غير محدد",
                   vehicleModel: "مركبة دفع رباعي مجهزة",
-                  vehiclePlate: "ليبيا",
+                  vehiclePlate: "غير محدد",
                   insuranceInfo: "تأمين معتمد لمسارات الصحراء",
                   status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
                   payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                  price: `${b.total_price || 1850} د.ل`,
+                  price: `${Number(b.total_price) || 0} د.ل`,
                   tripImage: trip.photo,
                 });
               });
             }
             setBookings(loaded);
-            fetch("http://127.0.0.1:5001/api/db/private_trips")
-              .then((r) => r.json())
-              .then((dbData) => {
-                if (dbData?.data && Array.isArray(dbData.data)) {
-                  const filtered = dbData.data.filter((pt: any) => !tid || pt.tourist_id === tid || pt.customer_phone === u.phone_number);
-                  if (filtered.length > 0) {
-                    setPrivateTrips(filtered);
-                    return;
-                  }
-                }
-                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-                if (local.length > 0) setPrivateTrips(local);
-                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
-              })
-              .catch(() => {
-                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-                if (local.length > 0) setPrivateTrips(local);
-                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
-              });
+            setPrivateTrips(Array.isArray(res.privateTrips) ? res.privateTrips : []);
+            setLoadError(res.status === "error" ? res.message : null);
           }
         });
       }
@@ -200,39 +189,20 @@ function TouristDashboard() {
   }, [navigate]);
 
   const handleTouristDecision = async (tripId: string, decision: "مؤكدة" | "ملغاة من السائح") => {
-    try {
-      const trip = privateTrips.find((t) => t.private_trip_id === tripId);
-      if (!trip) return;
+    const res = await apiTouristPrivateTripDecision(tripId, decision);
+    if (res.status !== "success") {
+      alert(res.message || "تعذر حفظ القرار في قاعدة البيانات");
+      return;
+    }
 
-      const updated = {
-        ...trip,
-        status_order: decision,
-      };
+    setPrivateTrips((prev) =>
+      prev.map((t) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t))
+    );
 
-      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-
-      setPrivateTrips((prev) =>
-        prev.map((t) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t))
-      );
-
-      try {
-        const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-        const next = local.map((t: any) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t));
-        localStorage.setItem("delni_private_trips", JSON.stringify(next));
-      } catch {}
-
-      if (decision === "مؤكدة") {
-        alert("🎉 مبارك! تم إتمام وتأكيد رحلتك الخاصة بنجاح وسيتواصل معك المرشد والسائق.");
-      } else {
-        alert("تم إلغاء الرحلة الخاصة بنجاح.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("حدث خطأ أثناء حفظ القرار، يرجى المحاولة لاحقاً");
+    if (decision === "مؤكدة") {
+      alert("🎉 تم تأكيد رحلتك الخاصة وحفظ القرار في قاعدة البيانات.");
+    } else {
+      alert("تم إلغاء الرحلة الخاصة وحفظ القرار في قاعدة البيانات.");
     }
   };
 
@@ -250,25 +220,17 @@ function TouristDashboard() {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
       return;
     }
-    try {
-      const res = await apiUpdateTouristProfile({
-        tourist_id: touristInfo.tourist_id,
-        full_name: touristInfo.full_name,
-        email: touristInfo.email,
-        phone_number: touristInfo.phone_number,
-        password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
-      });
-      if (res && res.status === "success") {
-        alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
-        const session = getStoredSession();
-        if (session.user) {
-          localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...res.user }));
-        }
-      } else {
-        alert(res?.message || "تم حفظ التعديلات بنجاح ✓");
-      }
-    } catch {
-      alert("تم حفظ بيانات الملف الشخصي بنجاح ✓");
+    const res = await apiUpdateTouristProfile({
+      tourist_id: touristInfo.tourist_id,
+      full_name: touristInfo.full_name,
+      email: touristInfo.email,
+      phone_number: touristInfo.phone_number,
+      password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
+    });
+    if (res.status === "success") {
+      alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
+    } else {
+      alert(res.message || "تعذر حفظ التعديلات في قاعدة البيانات");
     }
   };
 
@@ -281,6 +243,11 @@ function TouristDashboard() {
       active={active}
       onNavigate={setActive}
     >
+      {loadError && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 text-right">
+          ⚠️ تعذر تحميل حجوزاتك من قاعدة البيانات: {loadError}
+        </div>
+      )}
       {/* Calm, Eye-Friendly Executive Welcome Banner - Matched exactly with Guide Dashboard */}
       <div className="rounded-2xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-xs mb-6 relative overflow-hidden text-right">
         <div className="absolute top-0 left-0 w-80 h-80 bg-[#1B5A78]/15 rounded-full blur-3xl pointer-events-none" />

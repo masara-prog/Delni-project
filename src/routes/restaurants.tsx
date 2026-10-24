@@ -6,6 +6,7 @@ import { useLanguage } from "@/lib/i18n";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { RestaurantDetailsModal } from "@/components/RestaurantDetailsModal";
 import { apiGetRestaurants } from "@/lib/api";
+import { ReviewsSection } from "@/components/Modals";
 
 export const Route = createFileRoute("/restaurants")({
   head: () => ({
@@ -758,15 +759,20 @@ function RestaurantDetailsView({
             {/* Rating Box & Gourmet Score */}
             <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto bg-white/5 border border-white/15 p-4 rounded-3xl backdrop-blur-xl shadow-xl">
               <div className="text-right">
-                <div className="text-sm font-black text-white">{restaurant.ratingWord || (isAr ? "تقييم استثنائي" : "Superb")}</div>
-                <div className="text-xs text-slate-400 font-bold">{restaurant.reviewsCount || 450} {isAr ? "تقييم زائر معتمد" : "verified reviews"}</div>
+                <div className="text-sm font-black text-white">{restaurant.ratingWord}</div>
+                <div className="text-xs text-slate-400 font-bold">{restaurant.reviewsCount ? `${restaurant.reviewsCount} ${isAr ? "تقييم زائر" : "reviews"}` : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet")}</div>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D96B27] via-amber-600 to-orange-600 text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
-                <span className="text-lg leading-tight font-black">{restaurant.rating}</span>
-                <span className="text-[9px] text-amber-200 font-bold">{isAr ? "من 10" : "/10"}</span>
+                <span className="text-lg leading-tight font-black">{restaurant.rating ? restaurant.rating : "—"}</span>
+                <span className="text-[9px] text-amber-200 font-bold">{isAr ? "من 5" : "/5"}</span>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Visitor reviews (reviews_facilities) */}
+        <div className="rounded-3xl bg-white p-4 text-slate-900">
+          <ReviewsSection type="facility" itemId={restaurant.id} />
         </div>
 
         {/* ── 3. BENTO PHOTO SHOWCASE & LIGHTBOX PREVIEW ── */}
@@ -1217,7 +1223,16 @@ function RestaurantDetailsView({
   );
 }
 
-function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
+function mapAdminRestaurantToPublic(raw: any, isAr: boolean): Restaurant {
+  // Accept restaurants_cafes columns from the API as well as the admin form's field names.
+  const r = {
+    ...raw,
+    id: raw.facility_id || raw.id,
+    name: raw.facility_name || raw.name,
+    type: raw.facility_type || raw.type,
+    address: raw.address_details || raw.address,
+    phone: raw.phone_number || raw.phone,
+  };
   let category: "seafood" | "traditional" | "fastfood" | "cafe" = "traditional";
   const typeStr = (r.type || "").toLowerCase();
   const nameStr = (r.name || "").toLowerCase();
@@ -1272,9 +1287,10 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     address: r.address || (isAr ? "ليبيا" : "Libya"),
     phone: r.phone || "0910000000",
     mapsQuery: r.google_maps_url || `${r.name || ""} ${r.city || ""}`,
-    rating: typeof r.rating_avg === "number" ? r.rating_avg : 5.0,
-    ratingWord: isAr ? "استثنائي" : "Superb",
-    reviewsCount: 120,
+    // Visible reviews in DelniDB (reviews_facilities); 0 means none yet
+    rating: r.reviews_avg ? Math.round(Number(r.reviews_avg) * 10) / 10 : 0,
+    ratingWord: r.reviews_count ? (isAr ? "تقييم السياح" : "Tourist rating") : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet"),
+    reviewsCount: Number(r.reviews_count) || 0,
     priceRange: isAr ? "حسب الطلب" : "On Demand",
     hours: r.working_hours || (isAr ? "10:00 ص – 11:00 م" : "10:00 AM – 11:00 PM"),
     specialty: r.description || (isAr ? "تشكيلة فاخرة من المأكولات والمشاريب الطازجة" : "Fresh Food & Drinks"),
@@ -1317,14 +1333,8 @@ function RestaurantsPage() {
           return;
         }
       } catch {}
-
-      try {
-        const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-        if (Array.isArray(storedRests) && storedRests.length > 0) {
-          const mapped = storedRests.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
-          setCustomRestaurants(mapped);
-        }
-      } catch {}
+      // The list comes only from DelniDB; an empty or failed response shows none.
+      setCustomRestaurants([]);
     };
 
     loadCustom();
@@ -1725,8 +1735,8 @@ function RestaurantsPage() {
                               مفتوح الآن · {r.hours}
                             </span>
                             <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                              <span>❤️</span>
-                              <span>{isFav ? (r.reviewsCount || 1200) + 1 : (r.reviewsCount || 1200)} {isAr ? "إعجاب" : "likes"}</span>
+                              <span>{isFav ? "❤️" : "⭐"}</span>
+                              <span>{r.reviewsCount ? `${r.rating} / 5 (${r.reviewsCount})` : (isAr ? "بدون تقييمات" : "No reviews")}</span>
                             </span>
                           </div>
 

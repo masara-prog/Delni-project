@@ -26,7 +26,7 @@ import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getNearbyServices } from "@/lib/homeData";
 import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays } from "@/lib/guidesData";
 import { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem } from "@/lib/attractionsData";
-import { apiBookDailyTrip, apiBookWeeklyTrip, getStoredSession } from "@/lib/api";
+import { apiBookDailyTrip, apiBookWeeklyTrip, apiGetDailyDepartures, apiGetTouristBookings, apiRequestPrivateTrip, getStoredSession, apiGetReviews, apiAddReview, type DailyDeparture, type PublicReview, type ReviewType } from "@/lib/api";
 
 function resolveTripImage(title?: string, kind?: string | null, customImage?: string): string {
   if (customImage) return customImage;
@@ -133,24 +133,31 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
   const [date, setDate] = useState("");
   const [accountName, setAccountName] = useState("");
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState("");
+  // Daily trips are booked for one of their departure days (from the server, 24h cutoff applied there).
+  const [departures, setDepartures] = useState<DailyDeparture[]>([]);
+  const [departuresLoading, setDeparturesLoading] = useState(false);
+  const isWeekly = !!item?.id && /^WT-/i.test(item.id);
+  const selectedDeparture = departures.find((d) => d.date === date);
 
-  const minBookingDate = useMemo(() => {
-    // 24 hours in the future
-    const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    return d.toISOString().split("T")[0];
-  }, []);
-
-  const isWithin24h = useMemo(() => {
-    if (!date) return false;
-    const picked = new Date(date).getTime();
-    return picked - Date.now() < 24 * 60 * 60 * 1000;
-  }, [date]);
+  useEffect(() => {
+    if (!open || !item?.id || isWeekly) return;
+    let cancelled = false;
+    setDeparturesLoading(true);
+    apiGetDailyDepartures(item.id).then((list) => {
+      if (cancelled) return;
+      setDepartures(list);
+      setDeparturesLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [open, item?.id, isWeekly]);
 
   useEffect(() => {
     if (open) {
       setStep("form");
       setSeats("2");
       setDate("");
+      setDepartures([]);
       setBookingError(null);
       let initialPhone = "0912345678";
       let initialName = isAr ? "محمد أحمد" : "John Smith";
@@ -174,10 +181,10 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
     ? (item.busCapacity >= 35 ? 50 : 25)
     : (item.totalSeats && item.totalSeats >= 35 ? 50 : (item.subtitle && (item.subtitle.includes("أسبوعية") || item.subtitle.includes("سفاري")) ? 50 : 25));
 
-  // Determine available seats
-  const maxAvailable = typeof item.availableSeats === "number" && item.availableSeats > 0
-    ? Math.min(item.availableSeats, busCapacity)
-    : (busCapacity === 50 ? 32 : 18);
+  // Available seats: per departure day for daily trips, trip-wide for weekly trips
+  const maxAvailable = !isWeekly
+    ? (selectedDeparture ? selectedDeparture.remaining : 0)
+    : typeof item.availableSeats === "number" ? item.availableSeats : 0;
 
   const numSeats = parseInt(seats, 10);
   const isSeatExceeded = !isNaN(numSeats) && numSeats > maxAvailable;
@@ -231,44 +238,36 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             className="p-6 space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
-              if (hasSeatError) return;
-              if (isWithin24h) {
-                setBookingError(isAr ? "عذراً، يُقفل الحجز تلقائياً قبل انطلاق الرحلة بـ 24 ساعة لترتيب الحافلات والمرشدين." : "Bookings close 24 hours prior to departure.");
+              if (!isWeekly && !selectedDeparture) {
+                setBookingError(isAr ? "يرجى اختيار يوم انطلاق من المواعيد المتاحة" : "Please choose one of the available departure days");
                 return;
               }
+              if (hasSeatError) return;
               if (!phone.match(/^09\d{8}$/)) return;
               setBookingError(null);
 
-              // Connect to real DelniDB
+              // Save the booking in DelniDB through Laravel
               try {
                 const session = getStoredSession();
-                const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-${phone}`;
-                const nSeats = parseInt(seats, 10) || 1;
-                const isWeekly = item.id?.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
-
-                let res: any;
-                if (isWeekly) {
-                  res = await apiBookWeeklyTrip({
-                    tourist_id: touristId,
-                    weekly_trip_id: item.id || "WT-201",
-                    number_of_seats: nSeats,
-                    passengers_names: accountName || "سائح",
-                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
-                  });
-                } else {
-                  res = await apiBookDailyTrip({
-                    tourist_id: touristId,
-                    daily_trip_id: item.id || "DT-101",
-                    number_of_seats: nSeats,
-                    passengers_names: accountName || "سائح",
-                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
-                  });
+                if (!session.token || session.role !== "tourist") {
+                  setBookingError(isAr ? "يجب تسجيل الدخول بحساب سائح لإتمام الحجز" : "Please sign in with a tourist account to book");
+                  return;
                 }
+                if (!item.id) {
+                  setBookingError(isAr ? "هذه الرحلة غير مسجلة في قاعدة البيانات ولا يمكن حجزها" : "This trip is not in the database");
+                  return;
+                }
+                const nSeats = parseInt(seats, 10) || 1;
 
-                if (res && res.status === "error") {
+                const res = isWeekly
+                  ? await apiBookWeeklyTrip({ weekly_trip_id: item.id, number_of_seats: nSeats })
+                  : await apiBookDailyTrip({ daily_trip_id: item.id, trip_date: date, number_of_seats: nSeats });
+
+                if (res.status !== "success") {
                   setBookingError(res.message || (isAr ? "تعذر إتمام الحجز" : "Booking failed"));
                   return;
                 }
+                setBookingId(res.booking?.booking_daily_id || res.booking?.booking_weekly_id || "");
               } catch (err: any) {
                 console.error("Booking API error:", err);
                 setBookingError(err?.message || (isAr ? "حدث خطأ أثناء الاتصال بقاعدة البيانات" : "Database error"));
@@ -370,28 +369,31 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               )}
             </div>
 
-            <Field 
-              label={isAr ? "تاريخ الرحلة *" : "Trip Date *"} 
-              value={date} 
-              onChange={setDate} 
-              type="date" 
-              min={minBookingDate}
-              required 
-            />
-
-            {/* 24-Hour Advance Cutoff Notice */}
-            {isWithin24h && date && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold flex items-start gap-2 animate-in fade-in">
-                <span className="text-base leading-none">⏳</span>
-                <div>
-                  <span className="font-black block">
-                    {isAr ? "إغلاق الحجوزات قبل 24 ساعة:" : "24-Hour Cutoff:"}
-                  </span>
-                  <span>
-                    {isAr
-                      ? `عذراً، يُغلق الحجز تلقائياً قبل انطلاق الرحلة بـ 24 ساعة لترتيب المركبات والمرشدين وقوائم الركاب. يرجى اختيار تاريخ يبدأ من (${minBookingDate}) فصاعداً.`
-                      : `Bookings close 24 hours prior to departure. Please choose a date on or after ${minBookingDate}.`}
-                  </span>
+            {!isWeekly && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-[#0F172A]">{isAr ? "يوم الانطلاق *" : "Departure Day *"}</label>
+                <select
+                  value={date}
+                  onChange={(e) => { setDate(e.target.value); setBookingError(null); }}
+                  required
+                  disabled={departuresLoading || departures.length === 0}
+                  className="w-full h-11 px-3 rounded-xl border-2 border-[#E8E2D6] bg-white text-sm font-bold outline-none focus:border-[#D96B27]"
+                >
+                  <option value="">
+                    {departuresLoading
+                      ? (isAr ? "جارٍ تحميل المواعيد..." : "Loading departures...")
+                      : departures.length === 0
+                        ? (isAr ? "لا توجد مواعيد متاحة حالياً" : "No departures available")
+                        : (isAr ? "اختر يوم الانطلاق" : "Choose a departure day")}
+                  </option>
+                  {departures.map((d) => (
+                    <option key={d.date} value={d.date} disabled={d.remaining < 1}>
+                      {`${d.weekday} ${d.date} · ${d.departure_time} · ${d.remaining < 1 ? (isAr ? "مكتمل" : "full") : (isAr ? `${d.remaining} مقعد متبقٍ` : `${d.remaining} seats left`)}`}
+                    </option>
+                  ))}
+                </select>
+                <div className="text-[11px] text-slate-500 font-semibold">
+                  {isAr ? "يُغلق الحجز قبل موعد الانطلاق بـ 24 ساعة." : "Booking closes 24 hours before departure."}
                 </div>
               </div>
             )}
@@ -440,13 +442,13 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             )}
 
             <button
-              disabled={hasSeatError || isWithin24h}
+              disabled={hasSeatError || (!isWeekly && !selectedDeparture)}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
             >
               {hasSeatError
                 ? (isAr ? "حدد عدد مقاعد متاح للاستمرار" : "Select valid seats to continue")
-                : isWithin24h
-                ? (isAr ? "اختر موعداً يبعد 24 ساعة على الأقل" : "Select a date at least 24h away")
+                : !isWeekly && !selectedDeparture
+                ? (isAr ? "اختر يوم الانطلاق للاستمرار" : "Choose a departure day to continue")
                 : (isAr ? "تأكيد الحجز (الدفع فيزيائي بموقع الشركة)" : "Confirm Booking (Pay at Company Office)")}
             </button>
           </form>
@@ -457,8 +459,8 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
           <h3 className="mt-4 text-2xl font-black text-[#0B132B]">{isAr ? "تم تسجيل حجزك المبدئي!" : "Booking Registered!"}</h3>
           <p className="mt-2 text-[#526078] text-sm">
             {isAr
-              ? `رقم الحجز #BK-${Math.floor(Math.random() * 90000 + 10000)}. تم حجز (${numSeats}) مقاعد على الحافلة سعة (${busCapacity} راكب). يرجى التوجه إلى مقر وموقع الشركة لإتمام الدفع الفيزيائي نقداً وتأكيد تذكرتك النهائية قبل موعد الانطلاق.`
-              : `Booking ID #BK-${Math.floor(Math.random() * 90000 + 10000)}. (${numSeats}) seats booked on ${busCapacity}-passenger coach. Linked to your account.`}
+              ? `رقم الحجز ${bookingId}${selectedDeparture ? ` ليوم ${selectedDeparture.weekday} ${selectedDeparture.date}` : ""}. تم حجز (${numSeats}) مقاعد على الحافلة سعة (${busCapacity} راكب). يرجى التوجه إلى مقر وموقع الشركة لإتمام الدفع الفيزيائي نقداً وتأكيد تذكرتك النهائية قبل موعد الانطلاق.`
+              : `Booking ID ${bookingId}${selectedDeparture ? ` for ${selectedDeparture.date}` : ""}. (${numSeats}) seats booked on ${busCapacity}-passenger coach. Linked to your account.`}
           </p>
           <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft">
             {isAr ? "إغلاق" : "Close"}
@@ -919,7 +921,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
           )}
 
           {/* Tourist Rating & Review Section */}
-          <ReviewsSection itemId={item.refId || item.title} itemTitle={item.title} />
+          {reviewTypeOf(item.refId) && <ReviewsSection type={reviewTypeOf(item.refId)!} itemId={item.refId!} />}
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
             {item.price !== undefined ? (
@@ -942,51 +944,60 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
   );
 }
 
-function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: string }) {
+/** Review type of a DelniDB id, from its prefix (DT- daily trip, WT- weekly trip). */
+export function reviewTypeOf(id?: string): ReviewType | null {
+  if (!id) return null;
+  if (/^DT-/i.test(id)) return "daily";
+  if (/^WT-/i.test(id)) return "weekly";
+  return null;
+}
+
+/**
+ * Visible reviews of one item from DelniDB, and a form for a signed-in tourist.
+ * The server accepts a review only after a documented booking or stay.
+ */
+export function ReviewsSection({ type, itemId }: { type: ReviewType; itemId: string }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [isOpen, setIsOpen] = useState(false);
-  const [reviews, setReviews] = useState<{ id: string; name: string; rating: number; date: string; comment: string }[]>([
-    {
-      id: "rev-1",
-      name: isAr ? "د. طارق السويح" : "Dr. Tarek Al-Sweih",
-      rating: 5,
-      date: isAr ? "منذ أسبوع" : "1 week ago",
-      comment: isAr ? "تجربة ممتازة وخدمة استثنائية! التنظيم كان رائعاً والاهتمام بأدق التفاصيل ملحوظ جداً." : "Excellent experience and exceptional service! Very well organized.",
-    },
-    {
-      id: "rev-2",
-      name: isAr ? "سارة الزوي" : "Sara Al-Zway",
-      rating: 5,
-      date: isAr ? "منذ أسبوعين" : "2 weeks ago",
-      comment: isAr ? "المكان والخدمات فاقت التوقعات، أنصح بشدة كل من يزور ليبيا بتجربتها." : "The place and services exceeded expectations, highly recommended!",
-    },
-  ]);
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
+  const [average, setAverage] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  const session = getStoredSession();
+  const isTourist = !!session.token && session.role === "tourist";
+
+  const load = async () => {
+    const res = await apiGetReviews(type, itemId);
+    setLoadError(res.error || "");
+    setReviews(res.reviews);
+    setAverage(res.average);
+  };
+
+  useEffect(() => {
+    load();
+  }, [type, itemId]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!comment.trim()) return;
-
-    const newRev = {
-      id: `rev-${Date.now()}`,
-      name: isAr ? "أحمد الشريف (سائح موثّق)" : "Ahmed Al-Sharif (Verified Tourist)",
-      rating,
-      date: isAr ? "الآن" : "Just now",
-      comment: comment.trim(),
-    };
-
-    setReviews([newRev, ...reviews]);
+    setSubmitting(true);
+    setSubmitMessage(null);
+    const res = await apiAddReview(type, itemId, rating, comment.trim());
+    setSubmitting(false);
+    if (res.status !== "success") {
+      setSubmitMessage({ ok: false, text: res.message || (isAr ? "تعذر حفظ التقييم" : "Could not save the review") });
+      return;
+    }
     setComment("");
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setShowForm(false);
-    }, 2000);
+    setSubmitMessage({ ok: true, text: res.message || (isAr ? "تم حفظ تقييمك" : "Review saved") });
+    setShowForm(false);
+    load();
   }
 
   return (
@@ -1000,7 +1011,7 @@ function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: stri
           <span className="text-amber-500 text-sm">⭐</span>
           <span>{isAr ? "تقييمات وآراء السياح والزوار" : "Tourist Reviews & Feedback"}</span>
           <span className="text-[11px] font-bold text-muted-foreground bg-white px-2 py-0.5 rounded-full border border-border">
-            {reviews.length} {isAr ? "تقييمات" : "reviews"}
+            {average !== null ? `${average} / 5 · ` : ""}{reviews.length} {isAr ? "تقييمات" : "reviews"}
           </span>
         </div>
         <span className="text-muted-foreground transition-transform duration-200">
@@ -1010,30 +1021,53 @@ function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: stri
 
       {isOpen && (
         <div className="mt-3 space-y-3 p-3 rounded-2xl bg-muted/50 border border-border animate-in fade-in">
+          {loadError && (
+            <div className="p-2.5 rounded-xl bg-red-50 text-red-700 text-xs font-bold">
+              {isAr ? "تعذر تحميل التقييمات: " : "Could not load reviews: "}{loadError}
+            </div>
+          )}
+          {!loadError && reviews.length === 0 && (
+            <div className="p-2.5 rounded-xl bg-white border border-border text-xs text-muted-foreground">
+              {isAr ? "لا توجد تقييمات بعد." : "No reviews yet."}
+            </div>
+          )}
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {reviews.map((r) => (
-              <div key={r.id} className="p-3 rounded-xl bg-white border border-border space-y-1 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-foreground flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] grid place-items-center font-bold">
-                      {r.name.charAt(0)}
+            {reviews.map((r) => {
+              const name = r.tourist_name || (isAr ? "سائح" : "Tourist");
+              return (
+                <div key={r.id} className="p-3 rounded-xl bg-white border border-border space-y-1 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-foreground flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] grid place-items-center font-bold">
+                        {name.charAt(0)}
+                      </span>
+                      {name}
                     </span>
-                    {r.name}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-amber-500 text-xs">{"★".repeat(r.rating)}</span>
-                    <span className="text-[10px] text-muted-foreground">({r.date})</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-500 text-xs">{"★".repeat(r.stars_rating)}</span>
+                      <span className="text-[10px] text-muted-foreground">({String(r.created_at || "").slice(0, 10)})</span>
+                    </div>
                   </div>
+                  {r.comment_text && <p className="text-xs text-muted-foreground leading-relaxed">{r.comment_text}</p>}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{r.comment}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {!showForm ? (
+          {submitMessage && (
+            <div className={`text-center py-2 text-xs font-black rounded-xl ${submitMessage.ok ? "bg-emerald-100 text-emerald-800" : "bg-red-50 text-red-700"}`}>
+              {submitMessage.text}
+            </div>
+          )}
+
+          {!isTourist ? (
+            <div className="text-[11px] text-muted-foreground text-center">
+              {isAr ? "يمكن للسائح المسجل تقييم هذه الخدمة بعد حجز موثّق وانتهاء الرحلة." : "Registered tourists can review after a documented, completed booking."}
+            </div>
+          ) : !showForm ? (
             <button
               type="button"
-              onClick={() => setShowForm(true)}
+              onClick={() => { setShowForm(true); setSubmitMessage(null); }}
               className="w-full py-2.5 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-black hover:bg-primary/5 transition flex items-center justify-center gap-1.5"
             >
               ✍️ {isAr ? "أضف تقييمك وتجربتك" : "Write a Review"}
@@ -1042,7 +1076,7 @@ function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: stri
             <form onSubmit={handleSubmit} className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2.5 animate-in fade-in">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-black text-amber-900">
-                  <span>👤 {isAr ? "الحساب: أحمد الشريف" : "Account: Ahmed Sharif"}</span>
+                  <span>👤 {isAr ? `الحساب: ${session.user?.full_name || ""}` : `Account: ${session.user?.full_name || ""}`}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -1059,35 +1093,30 @@ function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: stri
               </div>
 
               <textarea
-                placeholder={isAr ? "اكتب انطباعك ورأيك حول هذه الخدمة..." : "Write your feedback..."}
+                placeholder={isAr ? "اكتب انطباعك ورأيك حول هذه الخدمة (اختياري)..." : "Write your feedback (optional)..."}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                required
+                maxLength={2000}
                 rows={2}
                 className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-white outline-none focus:border-primary font-medium resize-none"
               />
 
-              {submitted ? (
-                <div className="text-center py-2 bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl">
-                  ✅ {isAr ? "شكراً لك! تم إضافة تقييمك بنجاح" : "Thank you! Review submitted successfully"}
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-black hover:bg-primary/90 transition shadow-sm"
-                  >
-                    {isAr ? "إرسال التقييم" : "Submit Review"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="px-3 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition"
-                  >
-                    {isAr ? "إلغاء" : "Cancel"}
-                  </button>
-                </div>
-              )}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-black hover:bg-primary/90 transition shadow-sm disabled:opacity-50"
+                >
+                  {submitting ? (isAr ? "جارٍ الإرسال..." : "Submitting...") : (isAr ? "إرسال التقييم" : "Submit Review")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-3 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition"
+                >
+                  {isAr ? "إلغاء" : "Cancel"}
+                </button>
+              </div>
             </form>
           )}
         </div>
@@ -1148,6 +1177,7 @@ export type ScheduledTrip = {
   price: number;
   tripTitle?: string;
   kind?: string;
+  tripDate?: string; // YYYY-MM-DD departure day of a daily trip
 };
 
 export function TripScheduleModal({
@@ -1184,6 +1214,24 @@ export function TripScheduleModal({
   const [bookingConfirmedCode, setBookingConfirmedCode] = useState<string>("");
   const [totalSeatsAfterBooking, setTotalSeatsAfterBooking] = useState<number>(0);
   const [isAccountRestricted, setIsAccountRestricted] = useState(false);
+  const [scheduleBookingError, setScheduleBookingError] = useState<string | null>(null);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  // Daily trips: one schedule per bookable departure day, read from the server.
+  const dailyTripId: string | undefined = (() => {
+    const id = trip?.daily_trip_id || trip?.id || tripId;
+    return id && (kind === "daily" || /^DT-/i.test(id)) && !/^WT-/i.test(id) ? id : undefined;
+  })();
+  const [departures, setDepartures] = useState<DailyDeparture[] | null>(null);
+
+  useEffect(() => {
+    if (!open || !dailyTripId) return;
+    let cancelled = false;
+    setDepartures(null);
+    apiGetDailyDepartures(dailyTripId).then((list) => {
+      if (!cancelled) setDepartures(list);
+    });
+    return () => { cancelled = true; };
+  }, [open, dailyTripId]);
 
   useEffect(() => {
     if (open) {
@@ -1192,48 +1240,29 @@ export function TripScheduleModal({
       setStep("pick");
       setShowAuthWarning(false);
       setIsAccountRestricted(false);
-      setBookingConfirmedCode(`DL-${Math.floor(Math.random() * 90000 + 10000)}`);
+      setScheduleBookingError(null);
+      setIsSubmittingBooking(false);
+      setBookingConfirmedCode("");
 
       // Check account restriction status & prior bookings for this tourist
       try {
         const session = getStoredSession();
         const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id;
         const targetTripId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId;
-        const targetTitle = customTitle || tripTitle || trip?.title;
 
         if (session.role === "tourist" && touristId) {
-          if (session.user?.account_status === "مقيّد") {
-            setIsAccountRestricted(true);
-          }
-          fetch(`http://127.0.0.1:5001/api/db/tourists?tourist_id=${encodeURIComponent(touristId)}`)
-            .then(r => r.json())
-            .then(res => {
-              if (res && res.success && res.data) {
-                const restricted = res.data.account_status === "مقيّد";
-                setIsAccountRestricted(restricted);
-                if (session.user) {
-                  session.user.account_status = res.data.account_status;
-                  localStorage.setItem("delni_session", JSON.stringify(session));
-                }
-              }
-            })
-            .catch(() => {});
-
-          const localDaily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
-          const localWeekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
-          const allUserBookings = [...localDaily, ...localWeekly].filter(
-            (b: any) =>
-              (b.tourist_id === touristId || b.passengers_names === session.user?.full_name) &&
-              (b.daily_trip_id === targetTripId ||
-                b.weekly_trip_id === targetTripId ||
-                b.trip_title === targetTitle)
-          );
-
-          const totalPrev = allUserBookings.reduce(
-            (sum: number, b: any) => sum + (Number(b.number_of_seats) || 0),
-            0
-          );
-          setPriorBookedSeats(totalPrev);
+          // Seats this tourist already booked on this trip, read from DelniDB.
+          setPriorBookedSeats(0);
+          apiGetTouristBookings(touristId).then((res) => {
+            const allUserBookings = [...res.daily, ...res.weekly].filter(
+              (b: any) => b.daily_trip_id === targetTripId || b.weekly_trip_id === targetTripId
+            );
+            const totalPrev = allUserBookings.reduce(
+              (sum: number, b: any) => sum + (Number(b.number_of_seats) || 0),
+              0
+            );
+            setPriorBookedSeats(totalPrev);
+          });
         } else {
           setPriorBookedSeats(0);
         }
@@ -1243,21 +1272,28 @@ export function TripScheduleModal({
     }
   }, [open, trip, tripId, customTitle, tripTitle]);
 
-  const defaultDaily: ScheduledTrip[] = [
-    { id: "d1", date: isAr ? "الأربعاء 23 يوليو 2026" : "Wed 23 Jul 2026", time: isAr ? "08:00 ص" : "08:00 AM", seats: 20, taken: 14, guide: isAr ? "خالد الورفلي" : "Khaled Al-Warfali", price: 180 },
-    { id: "d2", date: isAr ? "الخميس 24 يوليو 2026" : "Thu 24 Jul 2026", time: isAr ? "08:00 ص" : "08:00 AM", seats: 20, taken: 7, guide: isAr ? "سامي العبيدي" : "Sami Al-Obaidi", price: 180 },
-  ];
-
-  const defaultWeekly: ScheduledTrip[] = [
-    { id: "w1", date: isAr ? "السبت 26 يوليو 2026" : "Sat 26 Jul 2026", time: isAr ? "انطلاق صباحي" : "Morning Departure", seats: 12, taken: 8, guide: isAr ? "فريق دَلِّني الكامل" : "Dallani Full Team", price: 2400 },
-    { id: "w2", date: isAr ? "السبت 2 أغسطس 2026" : "Sat 2 Aug 2026", time: isAr ? "انطلاق صباحي" : "Morning Departure", seats: 12, taken: 4, guide: isAr ? "أحمد الفيتوري" : "Ahmed Al-Fitouri", price: 2400 },
-  ];
-
   let schedules: ScheduledTrip[];
-  if (customSchedules && customSchedules.length > 0) {
+  if (dailyTripId) {
+    const realPrice = customPrice !== undefined ? customPrice : Number(trip?.price ?? trip?.price_per_seat) || 0;
+    const realTitle = customTitle || tripTitle || trip?.title || (isAr ? "رحلة يومية" : "Daily trip");
+    const realGuide = trip?.guide?.name || trip?.guide?.full_name || (isAr ? "مرشد سياحي معتمد" : "Certified guide");
+    schedules = (departures || []).map((d) => ({
+      id: `${dailyTripId}|${d.date}`,
+      tripId: dailyTripId,
+      tripDate: d.date,
+      date: `${d.weekday} ${d.date}`,
+      time: d.departure_time,
+      seats: d.max_capacity,
+      taken: d.booked,
+      guide: realGuide,
+      price: realPrice,
+      tripTitle: realTitle,
+      kind: "daily",
+    }));
+  } else if (customSchedules && customSchedules.length > 0) {
     schedules = customSchedules;
-  } else if (trip || tripId || customPrice !== undefined || customTitle || tripTitle) {
-    const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId || (kind === "weekly" ? "WT-220" : "DT-366");
+  } else if (trip || tripId) {
+    const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId;
     const realPrice = customPrice !== undefined
       ? customPrice
       : (trip?.type === "daily" ? trip.price : (trip?.seatPrice ?? (trip?.price ?? (kind === "weekly" ? 1200 : 120))));
@@ -1265,8 +1301,8 @@ export function TripScheduleModal({
     const realGuide = trip?.guide?.name || "مرشد سياحي معتمد";
     const realSeats = trip?.targetPersons || trip?.max_capacity || 25;
     const realAvail = trip?.availableSeats !== undefined ? trip.availableSeats : (trip?.available_seats !== undefined ? trip.available_seats : realSeats);
-    const realDate = trip?.daysOfWeek || (trip?.startDate ? `${trip.startDate} إلى ${trip.endDate}` : (isAr ? "الموعد القادم المتاح" : "Upcoming Scheduled Date"));
-    const realTime = kind === "weekly" ? (isAr ? "انطلاق صباحي 07:00 ص" : "Morning 07:00 AM") : (isAr ? "08:00 ص" : "08:00 AM");
+    const realDate = trip?.startDate ? `${trip.startDate} إلى ${trip.endDate}` : (trip?.start_date ? `${trip.start_date} إلى ${trip.end_date}` : (isAr ? "الموعد القادم المتاح" : "Upcoming Scheduled Date"));
+    const realTime = isAr ? "حسب برنامج الرحلة" : "Per trip itinerary";
 
     schedules = [
       {
@@ -1283,7 +1319,8 @@ export function TripScheduleModal({
       }
     ];
   } else {
-    schedules = kind === "daily" ? defaultDaily : defaultWeekly;
+    // No trip from DelniDB was passed in: nothing can be booked.
+    schedules = [];
   }
 
   // Auto-select schedule so the date is instantly active and button enabled if seats available
@@ -1329,6 +1366,14 @@ export function TripScheduleModal({
                 ? (isAr ? "الرحلات اليومية تنطلق صباحاً وتعود مساءً — تم تحديد الموعد المتاح أدناه:" : "Daily trips depart in the morning & return evening — date selected:")
                 : (isAr ? "الرحلات الأسبوعية برنامج ٥-٧ أيام شامل — اختر أسبوع انطلاقك:" : "Weekly tours are 5-7 days all-inclusive — select your departure week:")}
             </p>
+            {dailyTripId && departures === null && (
+              <div className="p-4 rounded-2xl bg-muted/30 text-xs text-[#526078] font-bold">{isAr ? "جارٍ تحميل مواعيد الانطلاق..." : "Loading departures..."}</div>
+            )}
+            {dailyTripId && departures !== null && departures.length === 0 && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold">
+                {isAr ? "لا توجد مواعيد انطلاق متاحة للحجز حالياً (يُغلق الحجز قبل الانطلاق بـ 24 ساعة)." : "No bookable departures right now (booking closes 24h before departure)."}
+              </div>
+            )}
             {schedules.map((s) => {
               const avail = s.seats - s.taken;
               const full = avail === 0;
@@ -1508,44 +1553,24 @@ export function TripScheduleModal({
               const n = parseInt(seats, 10);
               if (isNaN(n) || n < 1 || n > avail) return;
 
-              // Connect to real DelniDB
-              try {
-                const session = getStoredSession();
-                const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
-                const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
-                const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id || (isWeekly ? "WT-220" : "DT-366");
-                const targetTitle = selectedTrip?.tripTitle || customTitle || tripTitle || (isWeekly ? "رحلة أسبوعية" : "رحلة يومية");
+              // Save the booking in DelniDB; only a confirmed save shows the ticket.
+              const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id;
+              const isWeekly = selectedTrip.kind === "weekly" || /^WT-/i.test(targetTripId || "") || kindLabel.includes("أسبوع");
+              setScheduleBookingError(null);
+              setIsSubmittingBooking(true);
+              const res = isWeekly
+                ? await apiBookWeeklyTrip({ weekly_trip_id: targetTripId, number_of_seats: n })
+                : await apiBookDailyTrip({ daily_trip_id: targetTripId, trip_date: selectedTrip.tripDate || "", number_of_seats: n });
+              setIsSubmittingBooking(false);
 
-                const code = bookingConfirmedCode || `DL-${Math.floor(Math.random() * 90000 + 10000)}`;
-                setBookingConfirmedCode(code);
-                const newTotal = priorBookedSeats + n;
-                setTotalSeatsAfterBooking(newTotal);
-
-                if (isWeekly) {
-                  await apiBookWeeklyTrip({
-                    tourist_id: touristId,
-                    weekly_trip_id: targetTripId,
-                    trip_title: targetTitle,
-                    seat_per_price: selectedTrip.price,
-                    number_of_seats: n,
-                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
-                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
-                  });
-                } else {
-                  await apiBookDailyTrip({
-                    tourist_id: touristId,
-                    daily_trip_id: targetTripId,
-                    trip_title: targetTitle,
-                    price_per_seat: selectedTrip.price,
-                    number_of_seats: n,
-                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
-                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
-                  });
-                }
-              } catch (err) {
-                console.error("TripScheduleModal Booking API error:", err);
+              if (res.status !== "success") {
+                setScheduleBookingError(res.message || (isAr ? "تعذر إتمام الحجز" : "Booking failed"));
+                return;
               }
 
+              const savedBooking = res.booking || {};
+              setBookingConfirmedCode(savedBooking.booking_daily_id || savedBooking.booking_weekly_id || "");
+              setTotalSeatsAfterBooking(priorBookedSeats + n);
               setStep("done");
             }}
           >
@@ -1674,13 +1699,21 @@ export function TripScheduleModal({
                   {(() => {
                     const session = getStoredSession();
                     const isTourist = !!session.token && session.role === "tourist";
-                    const isBtnDisabled = hasErr || !isTourist || isAccountRestricted;
+                    const isBtnDisabled = hasErr || !isTourist || isAccountRestricted || isSubmittingBooking;
                     return (
+                      <>
+                      {scheduleBookingError && (
+                        <div className="mb-2 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+                          ⚠️ {scheduleBookingError}
+                        </div>
+                      )}
                       <button
                         disabled={isBtnDisabled}
                         className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
                       >
-                        {isAccountRestricted
+                        {isSubmittingBooking
+                          ? (isAr ? "جاري حفظ الحجز في قاعدة البيانات..." : "Saving booking...")
+                          : isAccountRestricted
                           ? (isAr ? "⛔ حسابك مقيّد من قِبل الإدارة ولا يمكنك الحجز" : "Account Restricted from Booking")
                           : !isTourist
                           ? (isAr ? "🔒 يجب التسجيل في المنصة كسائح لتأكيد الحجز" : "Tourist account required to book")
@@ -1688,6 +1721,7 @@ export function TripScheduleModal({
                           ? (isAr ? "يرجى تحديد مقاعد متاحة" : "Select valid seats")
                           : (isAr ? "تأكيد الحجز (الدفع بموقع الشركة)" : "Confirm Booking (Pay at Company Office)")}
                       </button>
+                      </>
                     );
                   })()}
                 </div>
@@ -1832,7 +1866,7 @@ export function PrivateTripModal({
     return TOUR_GUIDES_DATA.find((g) => g.licenseNumber === selectedGuideLicense) || null;
   }, [selectedGuideLicense]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!phone.match(/^09\d{8}$/)) {
@@ -1840,48 +1874,33 @@ export function PrivateTripModal({
       return;
     }
 
-    const tripId = `PRV-${Date.now().toString().slice(-5)}`;
-    setCreatedTripId(tripId);
-
     const session = getStoredSession();
-    const touristId = session?.user?.role === "tourist" ? (session?.user?.id || session?.user?.username) : null;
+    if (!session.token || session.role !== "tourist") {
+      alert(isAr ? "يجب تسجيل الدخول بحساب سائح لإرسال طلب الرحلة الخاصة" : "Please sign in with a tourist account to request a private trip");
+      return;
+    }
+    if (!startDate) {
+      alert(isAr ? "يرجى تحديد تاريخ بداية الرحلة" : "Please choose the trip start date");
+      return;
+    }
 
-    // Payload strictly matching SQL Server DelniDB private_trips columns
-    const payload = {
-      private_trip_id: tripId,
-      status_order: "بانتظار تسعير الإدارة",
+    // Saved in DelniDB (private_trips) for the signed-in tourist; the admin prices it later.
+    const res = await apiRequestPrivateTrip({
       customer_description: selectedLandmark ? (isAr ? selectedLandmark.name : selectedLandmark.nameEn) : "رحلة سياحية خاصة",
-      preferred_start_date: startDate || new Date().toISOString().split("T")[0],
+      preferred_start_date: startDate,
       duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
-      number_of_companions: Math.max(1, parseInt(companions, 10) || 1),
+      number_of_companions: Math.max(0, parseInt(companions, 10) || 0),
       guide_license_number: selectedGuideLicense || null,
-      tourist_id: touristId,
-      customer_name: (customerName || session?.user?.name || "سائح دلّني").trim(),
       customer_phone: phone.trim(),
-      customer_requirements: `وسيلة النقل: ${vehicleType}.${selectedGuide ? ` المرشد: ${selectedGuide.name} (${selectedGuide.licenseNumber}).` : ''}${notes ? ` ملاحظات: ${notes}` : ''}`.trim(),
-      quoted_price: null,
-      admin_itinerary_plan: null,
-    };
+      customer_requirements: `وسيلة النقل: ${vehicleType}.${selectedGuide ? ` المرشد المفضل: ${selectedGuide.name} (${selectedGuide.licenseNumber}).` : ''}${notes ? ` ملاحظات: ${notes}` : ''}`.trim(),
+    });
 
-    // Save directly to SQL Server DelniDB private_trips endpoint
-    fetch("http://127.0.0.1:5001/api/db/private_trips", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(console.error);
+    if (res.status !== "success") {
+      alert(res.message || (isAr ? "تعذر حفظ طلب الرحلة الخاصة" : "Could not save the private trip request"));
+      return;
+    }
 
-    // Save locally for instant rendering in tourist & admin dashboards
-    try {
-      const existing = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-      existing.unshift({
-        ...payload,
-        guide_name: selectedGuide ? selectedGuide.name : null,
-        created_at: new Date().toISOString(),
-      });
-      localStorage.setItem("delni_private_trips", JSON.stringify(existing));
-      localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
-    } catch {}
-
+    setCreatedTripId(res.trip?.private_trip_id || "");
     setStep("done");
   };
 

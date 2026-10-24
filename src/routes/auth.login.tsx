@@ -24,7 +24,7 @@ export const Route = createFileRoute("/auth/login")({
   component: LoginPage,
 });
 
-type Role = "tourist" | "admin" | "guide" | "transport" | "driver";
+type Role = "tourist" | "guide" | "transport" | "driver";
 
 const LANDMARK_SLIDES = [
   { img: heroImg, titleAr: "لبدة الكبرى — تحفة البحر المتوسط", locationAr: "الخمس" },
@@ -58,7 +58,6 @@ function LoginPage() {
 
   const roles = [
     { id: "tourist" as const, label: "سائح", desc: "تصفح واحجز رحلاتك", emoji: "🧳" },
-    { id: "admin" as const, label: "مدير النظام (الأدمن)", desc: "لوحة التحكم الشاملة", emoji: "👑" },
     { id: "guide" as const, label: "مرشد سياحي", desc: "أدر جولاتك ومواعيدك", emoji: "🗺️" },
     { id: "transport" as const, label: "شركة نقل", desc: "أدر أسطولك وسائقيك", emoji: "🚌" },
     { id: "driver" as const, label: "سائق", desc: "استقبل الرحلات المخصصة", emoji: "🚗" },
@@ -67,55 +66,29 @@ function LoginPage() {
   const handleRoleSelect = (rId: Role) => {
     setRole(rId);
     setErrorMsg("");
-    if (rId === "admin") {
-      setEmail("admin@dalni.ly");
-      setPassword("admin123");
-    } else {
-      setEmail("");
-      setPassword("");
-    }
+    setEmail("");
+    setPassword("");
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    const isLoginAsAdmin = role === "admin" || email.toLowerCase().trim().includes("admin");
-
-    if (isLoginAsAdmin) {
-      const cleanEmail = email.trim().toLowerCase();
-      if ((cleanEmail === "admin@dalni.ly" || cleanEmail === "admin") && (password === "admin123" || password === "admin")) {
-        localStorage.setItem("dalni_token", "admin_session_token");
-        localStorage.setItem("dalni_role", "admin");
-        localStorage.setItem(
-          "dalni_user",
-          JSON.stringify({
-            name: "مدير النظام",
-            fullName: "مدير النظام (الأدمن)",
-            email: "admin@dalni.ly",
-            role: "admin",
-            loginTime: new Date().toISOString(),
-          })
-        );
-        navigate({ to: "/dashboard/admin" });
-        return;
-      } else {
-        setErrorMsg("عذراً، بيانات دخول مدير النظام غير صحيحة! البريد: admin@dalni.ly | كلمة المرور: admin123");
-        return;
-      }
-    }
-
     // Connect to live Laravel API
     try {
       const res = await apiLogin({ role, login: email, password });
       if (res && res.status === "success" && res.token) {
-        if (role === "guide") {
+        // Route by the role confirmed by the server (the admin account signs in from any role card).
+        const signedInRole = res.role || role;
+        if (signedInRole === "admin") {
+          navigate({ to: "/dashboard/admin" });
+        } else if (signedInRole === "guide") {
           navigate({ to: "/dashboard/guide" });
-        } else if (role === "transport") {
+        } else if (signedInRole === "transport") {
           navigate({ to: "/dashboard/transport" });
-        } else if (role === "driver") {
+        } else if (signedInRole === "driver") {
           navigate({ to: "/dashboard/driver" });
-        } else if (role === "tourist") {
+        } else if (signedInRole === "tourist") {
           // Open Home page directly for tourists
           navigate({ to: "/" });
         } else {
@@ -219,7 +192,7 @@ function LoginPage() {
           </div>
 
           {/* Role Selector Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-6">
             {roles.map((r) => {
               const isSelected = role === r.id;
               return (

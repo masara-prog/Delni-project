@@ -7,6 +7,7 @@ import type { TourGuide } from "@/lib/dbSchema";
 import {
   getStoredSession,
   apiGetGuideDashboard,
+  apiGetGuideReviews,
   apiUpdateGuideProfile,
   apiGuideRespondTrip,
   apiToggleAttendance,
@@ -46,7 +47,10 @@ type TouristManifestItem = {
   payment_status: "paid" | "unpaid" | "cash_at_office";
   attended: boolean;
   passengers_names?: string;
+  trip_date?: string; // travel day of a daily booking (bookings_daily.trip_date)
 };
+
+type GuideReview = { id: string; type: string; trip_title: string | null; stars_rating: number; comment_text: string | null; created_at: string; tourist_name: string | null };
 
 const REGIONS_LIST = [
   { id: "tripoli", nameAr: "طرابلس وضواحيها", nameEn: "Tripoli & Suburbs" },
@@ -88,6 +92,7 @@ function GuideDashboard() {
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
     { id: "assigned_trips", label: isAr ? "الرحلات المسندة والقبول" : "Assigned Tours", icon: "🧭" },
     { id: "active_tourists", label: isAr ? "كشف حضور سياح الرحلة" : "Active Manifest", icon: "☑️" },
+    { id: "reviews", label: isAr ? "تقييمات رحلاتي" : "My Reviews", icon: "⭐" },
     { id: "profile", label: isAr ? "الملف الشخصي والشهادات" : "Profile & Credentials", icon: "📄" },
   ];
 
@@ -130,6 +135,21 @@ function GuideDashboard() {
   // Real Active Trip Tourists (Empty until actual bookings in DelniDB)
   const [tourists, setTourists] = useState<TouristManifestItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Visible reviews of the trips this guide led (reviews_daily_trips / reviews_weekly_trips)
+  const [guideReviews, setGuideReviews] = useState<GuideReview[]>([]);
+  const [reviewsAverage, setReviewsAverage] = useState<number | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  useEffect(() => {
+    const lic = getStoredSession().user?.license_number;
+    if (!lic) return;
+    apiGetGuideReviews(lic).then((res) => {
+      setReviewsError(res.error || null);
+      setGuideReviews(res.reviews);
+      setReviewsAverage(res.average);
+    });
+  }, []);
 
   // Fetch Live Data from DelniDB on mount
   useEffect(() => {
@@ -143,7 +163,8 @@ function GuideDashboard() {
       }
 
       const data = await apiGetGuideDashboard(lic);
-      if (data && data.guide) {
+      setLoadError(data.error || null);
+      if (data.guide) {
         const g = data.guide;
         setGuideInfo({
           license_number: g.license_number || "",
@@ -181,7 +202,7 @@ function GuideDashboard() {
               date: d.recurring_days || "أسبوعياً",
               time_or_duration: "يوم كامل",
               tourist_group_name: d.trip_title || d.title || "رحلة يومية",
-              seats_booked: d.bookings ? d.bookings.length : 0,
+              seats_booked: Array.isArray(d.bookings) ? d.bookings.reduce((sum: number, b: any) => sum + (Number(b.number_of_seats) || 0), 0) : 0,
               status: "مقبولة",
               is_active_now: Boolean(d.is_active),
             });
@@ -196,7 +217,7 @@ function GuideDashboard() {
               date: `${w.start_date ? new Date(w.start_date).toLocaleDateString("ar-LY") : ""} - ${w.end_date ? new Date(w.end_date).toLocaleDateString("ar-LY") : ""}`,
               time_or_duration: "6 أيام",
               tourist_group_name: w.trip_title || w.title || "رحلة أسبوعية",
-              seats_booked: w.bookings ? w.bookings.length : 0,
+              seats_booked: Array.isArray(w.bookings) ? w.bookings.reduce((sum: number, b: any) => sum + (Number(b.number_of_seats) || 0), 0) : 0,
               status: "مقبولة",
               is_active_now: Boolean(w.is_active),
             });
@@ -236,6 +257,7 @@ function GuideDashboard() {
                   payment_status: b.payment_status || (b.is_paid ? "paid" : "cash_at_office"),
                   attended: Boolean(b.attended ?? b.attendance_status),
                   passengers_names: b.passengers_names || b.notes || "",
+                  trip_date: b.trip_date ? String(b.trip_date).slice(0, 10) : undefined,
                 });
               });
             }
@@ -292,18 +314,22 @@ function GuideDashboard() {
   })();
 
   const handleTripResponse = async (tripId: string, status: "مقبولة" | "مرفوضة", reason?: string) => {
-    try {
-      await apiGuideRespondTrip(guideInfo.license_number, {
-        trip_id: tripId,
-        status,
-        rejection_reason: reason,
-      });
-    } catch (err) {
-      console.error(err);
-    }
-    setAssignedTrips(assignedTrips.map((t) => (t.id === tripId ? { ...t, status, rejection_reason: reason } : t)));
+    const res = await apiGuideRespondTrip(guideInfo.license_number, {
+      trip_id: tripId,
+      status,
+      rejection_reason: reason,
+    });
     setRejectionModalTrip(null);
     setRejectionReasonInput("");
+    if (res.status !== "success") {
+      alert(res.message || "تعذر حفظ ردك على الرحلة في قاعدة البيانات");
+      return;
+    }
+    alert(res.message);
+    // Declining removes the assignment in DelniDB, so the trip leaves the guide's list.
+    setAssignedTrips((prev) =>
+      status === "مرفوضة" ? prev.filter((t) => t.id !== tripId) : prev.map((t) => (t.id === tripId ? { ...t, status } : t))
+    );
   };
 
   const handleToggleAttendance = async (bookingId: string) => {
@@ -312,10 +338,10 @@ function GuideDashboard() {
     const newAttended = !current.attended;
     const type = bookingId.startsWith("BK-D") ? "daily" : "weekly";
     const rawBookingId = bookingId.replace(/^BK-[DW]-/, "");
-    try {
-      await apiToggleAttendance({ type, booking_id: rawBookingId, attended: newAttended });
-    } catch (err) {
-      console.error(err);
+    const res = await apiToggleAttendance({ type, booking_id: rawBookingId, attended: newAttended });
+    if (res.status !== "success") {
+      alert(res.message || "تعذر حفظ الحضور في قاعدة البيانات");
+      return;
     }
     setTourists(tourists.map((t) => (t.booking_id === bookingId ? { ...t, attended: newAttended } : t)));
   };
@@ -349,19 +375,11 @@ function GuideDashboard() {
       return;
     }
 
-    try {
-      const res = await apiUpdateGuideProfile(guideInfo.license_number, guideInfo);
-      if (res && res.status === "success") {
-        alert("تم حفظ التعديلات وتحديث ملفك بنجاح ✓");
-        const session = getStoredSession();
-        if (session.user) {
-          localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...guideInfo }));
-        }
-      } else {
-        alert(res?.message || "تم حفظ البيانات بنجاح");
-      }
-    } catch {
-      alert("تم حفظ البيانات محلياً");
+    const res = await apiUpdateGuideProfile(guideInfo.license_number, guideInfo);
+    if (res.status === "success") {
+      alert("تم حفظ التعديلات في قاعدة البيانات بنجاح ✓");
+    } else {
+      alert(res.message || "تعذر حفظ التعديلات في قاعدة البيانات");
     }
   };
 
@@ -374,6 +392,11 @@ function GuideDashboard() {
       active={active}
       onNavigate={setActive}
     >
+      {loadError && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 text-right">
+          ⚠️ تعذر تحميل بياناتك من قاعدة البيانات: {loadError}
+        </div>
+      )}
       {/* Calm, Eye-Friendly Executive Welcome Banner */}
       <div className="rounded-3xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-sm mb-6 relative overflow-hidden text-right">
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#D96B27]/15 to-[#1B5A78]/20 rounded-full blur-3xl pointer-events-none" />
@@ -646,6 +669,7 @@ function GuideDashboard() {
                         <th className="p-2.5">رقم الحجز</th>
                         <th className="p-2.5">اسم السائح</th>
                         <th className="p-2.5">رقم الهاتف</th>
+                        <th className="p-2.5">يوم الرحلة</th>
                         <th className="p-2.5">عدد المقاعد</th>
                         <th className="p-2.5">أسماء المرافقين</th>
                         <th className="p-2.5">حالة الدفع</th>
@@ -658,6 +682,7 @@ function GuideDashboard() {
                           <td className="p-2.5 font-mono text-[11px] font-bold text-stone-600">{tr.booking_id}</td>
                           <td className="p-2.5 font-bold text-stone-900">{tr.tourist_name}</td>
                           <td className="p-2.5 font-mono text-stone-600 text-[11px]" dir="ltr">{tr.phone_number}</td>
+                          <td className="p-2.5 font-mono text-[11px] text-stone-600" dir="ltr">{tr.trip_date || "-"}</td>
                           <td className="p-2.5 font-bold text-[#1B5A78]">{tr.seats_count} مقاعد</td>
                           <td className="p-2.5 text-stone-500 text-[11px]">{tr.passengers_names || "-"}</td>
                           <td className="p-2.5">
@@ -695,6 +720,28 @@ function GuideDashboard() {
               لا توجد رحلة نشطة قيد الإجراء حالياً. يتم إظهار قائمة السياح وتعداد الحضور فقط للرحلات الجارية الآن.
             </div>
           )}
+        </SectionCard>
+      )}
+
+      {/* Reviews Tab */}
+      {active === "reviews" && (
+        <SectionCard title={`تقييمات السياح لرحلاتي${reviewsAverage !== null ? ` · المتوسط ${reviewsAverage} / 5` : ""}`}>
+          <div className="space-y-3 text-right">
+            {reviewsError && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">تعذر تحميل التقييمات: {reviewsError}</div>}
+            {!reviewsError && guideReviews.length === 0 && (
+              <div className="p-6 rounded-xl border border-dashed border-stone-200 text-center text-xs text-stone-500">لا توجد تقييمات على رحلاتك حتى الآن.</div>
+            )}
+            {guideReviews.map((r) => (
+              <div key={r.id} className="p-3.5 rounded-xl border border-stone-200 bg-white space-y-1">
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                  <span className="font-bold text-stone-900 text-xs">{r.trip_title || "-"} <span className="text-stone-500 font-medium">({r.type === "daily" ? "يومية" : "أسبوعية"})</span></span>
+                  <span className="text-amber-500 text-xs font-bold">{"★".repeat(r.stars_rating)} ({r.stars_rating}/5)</span>
+                </div>
+                <div className="text-[11px] text-stone-500">👤 {r.tourist_name || "سائح"} · 🗓️ {String(r.created_at || "").slice(0, 10)}</div>
+                {r.comment_text && <p className="text-xs text-stone-700">{r.comment_text}</p>}
+              </div>
+            ))}
+          </div>
         </SectionCard>
       )}
 
