@@ -48,15 +48,15 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   };
 
   const sizeClasses = {
-    sm: "w-7 h-7 text-xs",
-    md: "w-8 h-8 text-sm",
-    lg: "w-10 h-10 text-base",
+    sm: "w-8 h-8 text-xs",
+    md: "w-9 h-9 sm:w-10 sm:h-10 text-sm",
+    lg: "w-11 h-11 text-base",
   };
 
   const heartSizes = {
-    sm: "w-3.5 h-3.5",
-    md: "w-4 h-4",
-    lg: "w-5 h-5",
+    sm: "w-4 h-4",
+    md: "w-5 h-5",
+    lg: "w-6 h-6",
   };
 
   return (
@@ -67,13 +67,15 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       title={active ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
       className={`rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer select-none ${
         active
-          ? "bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 shadow-xs"
-          : "bg-white/90 text-slate-500 hover:text-red-500 hover:bg-white border border-slate-200 shadow-xs backdrop-blur-xs"
+          ? "bg-rose-600 text-white border-2 border-rose-500 hover:bg-rose-700 shadow-md"
+          : "bg-white/95 text-rose-600 hover:text-rose-700 hover:bg-white border-2 border-rose-200/90 hover:border-rose-400 shadow-md backdrop-blur-md"
       } ${showLabel ? "px-3.5 h-9 w-auto gap-1.5" : sizeClasses[size]} ${animating ? "scale-125" : "hover:scale-105 active:scale-95"} ${className}`}
     >
       <svg
-        className={`${heartSizes[size]} transition-colors duration-200 ${
-          active ? "fill-red-500 stroke-red-500" : "fill-transparent stroke-current stroke-[2]"
+        className={`${heartSizes[size]} transition-all duration-200 drop-shadow-xs ${
+          active
+            ? "fill-white stroke-white stroke-[1.8]"
+            : "fill-transparent stroke-rose-600 hover:fill-rose-50/80 stroke-[2.4]"
         }`}
         viewBox="0 0 24 24"
       >

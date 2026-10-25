@@ -788,7 +788,6 @@ function AttractionsPage() {
                         itemId={city.id}
                         itemTitle={city.name}
                         size="md"
-                        className="bg-black/50 hover:bg-black/80 text-white border-white/25 shadow-md"
                       />
                     </div>
                   </div>
@@ -849,7 +848,6 @@ function AttractionsPage() {
                         itemId={city.id}
                         itemTitle={city.name}
                         size="md"
-                        className="bg-black/50 hover:bg-black/80 text-white border-white/25 shadow-md"
                       />
                     </div>
                   </div>

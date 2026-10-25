@@ -1829,7 +1829,7 @@ export function PrivateTripModal({
   const isAr = language === 'ar';
   const [step, setStep] = useState<"form" | "done">("form");
 
-  // User session & strict role check (Tourists ONLY)
+  // User session state
   const [sessionData, setSessionData] = useState(() => getStoredSession());
   const currentRole = sessionData?.user?.role || sessionData?.role || null;
   const isTourist = Boolean(sessionData?.token && currentRole === "tourist");
@@ -1844,107 +1844,80 @@ export function PrivateTripModal({
     ? (isAr ? "شركة نقل سياحي" : "Transport Company")
     : (isAr ? "زائر غير مسجل" : "Guest");
 
-  // Dynamic attractions state: combining canonical LIBYAN_ATTRACTIONS with database places
+  // Dynamic attractions state fetched directly from MySQL / DelniDB places_tourist
   const [dbPlaces, setDbPlaces] = useState<any[]>([]);
-  useEffect(() => {
-    if (open) {
-      setSessionData(getStoredSession());
-      fetch("http://127.0.0.1:5001/api/db/places")
-        .then((r) => r.json())
-        .then((res) => {
-          if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-            setDbPlaces(res.data);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [open]);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [placesError, setPlacesError] = useState<string | null>(null);
 
-  const allAttractions = useMemo(() => {
-    const map = new Map<string, {
-      id: string;
-      name: string;
-      nameEn: string;
-      city: string;
-      cityEn: string;
-      region: string;
-      category: string;
-      isUnesco: boolean;
-      unescoYear?: string | number | null;
-    }>();
+  // Modal prompt when unauthenticated user attempts to confirm
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    LIBYAN_ATTRACTIONS.forEach((a) => {
-      map.set(a.id, {
-        id: a.id,
-        name: a.name,
-        nameEn: a.nameEn,
-        city: a.city,
-        cityEn: a.cityEn,
-        region: a.region,
-        category: a.category,
-        isUnesco: a.isUnesco,
-        unescoYear: a.unescoYear,
+  // Fetch genuine landmarks from database (strictly excluding UNESCO sites)
+  const loadLandmarks = () => {
+    setLoadingPlaces(true);
+    setPlacesError(null);
+    fetch("http://127.0.0.1:5001/api/db/places?exclude_unesco=true")
+      .then((r) => {
+        if (!r.ok) throw new Error("تعذر جلب المعالم من خادم المنصة");
+        return r.json();
+      })
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data)) {
+          // Strictly exclude UNESCO sites per platform policy
+          const nonUnesco = res.data.filter((p: any) => !p.is_unesco);
+          setDbPlaces(nonUnesco);
+        } else {
+          throw new Error("لم يتم العثور على معالم مسجلة بقاعدة البيانات");
+        }
+      })
+      .catch((err) => {
+        console.warn("[PrivateTripModal] DB places load error:", err.message);
+        setPlacesError(
+          isAr
+            ? "تعذر الاتصال بقاعدة بيانات المعالم السياحية. يرجى التحقق من تشغيل الخادم والمحاولة مجدداً."
+            : "Failed to load landmarks from database. Please verify connection and retry."
+        );
+      })
+      .finally(() => {
+        setLoadingPlaces(false);
       });
-    });
+  };
 
-    // Also include destinations & cities added to the platform
-    LIBYAN_CITIES.forEach((c) => {
-      if (!map.has(c.id)) {
-        map.set(c.id, {
-          id: c.id,
-          name: c.name,
-          nameEn: c.nameEn,
-          city: c.shortName,
-          cityEn: c.shortNameEn,
-          region: c.region,
-          category: c.categoryTag || "مدينة سياحية",
-          isUnesco: false,
-        });
-      }
+  // Canonical landmark items derived purely from database records
+  const allAttractions = useMemo(() => {
+    return dbPlaces.map((p) => {
+      const pid = String(p.place_id || p.id || "").trim();
+      return {
+        id: pid,
+        name: p.place_name || p.name || pid,
+        nameEn: p.place_name || p.name || pid,
+        city: p.city || "ليبيا",
+        cityEn: p.city || "Libya",
+        region: p.region || p.city || "ليبيا",
+        category: p.category || "معلم سياحي",
+        image: p.place_image || p.photo || resolveTripImage(p.place_name),
+        isUnesco: Boolean(p.is_unesco),
+      };
     });
-
-    dbPlaces.forEach((p) => {
-      const pid = p.place_id || p.id;
-      if (!pid) return;
-      if (!map.has(pid)) {
-        map.set(pid, {
-          id: pid,
-          name: p.place_name || p.name || pid,
-          nameEn: p.place_name || p.name || pid,
-          city: p.city || "ليبيا",
-          cityEn: p.city || "Libya",
-          region: p.region || p.city || "ليبيا",
-          category: p.category || "معلم سياحي",
-          isUnesco: Boolean(p.is_unesco),
-          unescoYear: p.unesco_year,
-        });
-      }
-    });
-
-    // Exclude UNESCO sites strictly from custom private tours per platform rule
-    return Array.from(map.values()).filter((a) => !a.isUnesco);
   }, [dbPlaces]);
 
-  // Multi-select state for tourist landmarks (Non-UNESCO destinations & cities only)
-  const [selectedLandmarkIds, setSelectedLandmarkIds] = useState<string[]>(() => {
-    if (initialDestination) {
-      const clean = initialDestination.toLowerCase();
-      const found = LIBYAN_ATTRACTIONS.find(
-        (a) =>
-          !a.isUnesco &&
-          (a.name.toLowerCase().includes(clean) ||
-            clean.includes(a.name.toLowerCase()) ||
-            (a.city && clean.includes(a.city.toLowerCase())))
-      );
-      if (found) return [found.id];
-    }
-    return ["city-tripoli"]; // Default to non-UNESCO destination
-  });
+  // Extract available cities for filtering
+  const availableCities = useMemo(() => {
+    const set = new Set<string>();
+    allAttractions.forEach((a) => {
+      if (a.city && a.city.trim()) set.add(a.city.trim());
+    });
+    return Array.from(set);
+  }, [allAttractions]);
 
+  // Multi-select state for tourist landmarks (stores genuine database IDs)
+  const [selectedLandmarkIds, setSelectedLandmarkIds] = useState<string[]>([]);
   const [landmarkSearch, setLandmarkSearch] = useState("");
+  const [landmarkCityFilter, setLandmarkCityFilter] = useState("all");
   const [landmarkCategoryFilter, setLandmarkCategoryFilter] = useState("all");
 
-  // Dynamic guides state: static TOUR_GUIDES_DATA merged with DB guides
+  // Dynamic guides state
   const [dbGuides, setDbGuides] = useState<any[]>([]);
   useEffect(() => {
     if (open) {
@@ -2044,25 +2017,44 @@ export function PrivateTripModal({
   const [formError, setFormError] = useState<string | null>(null);
   const [createdTripId, setCreatedTripId] = useState("");
 
-  // Sync state whenever modal opens or initial props change
+  // Auto-fill and pending state restoration on modal open
   useEffect(() => {
     if (open) {
       setStep("form");
       setFormError(null);
+      setShowAuthModal(false);
       const session = getStoredSession();
       setSessionData(session);
+      loadLandmarks();
 
+      // Check for saved pending private trip choices in sessionStorage
+      try {
+        const savedPending = sessionStorage.getItem("delni_pending_private_trip");
+        if (savedPending) {
+          const parsed = JSON.parse(savedPending);
+          if (Array.isArray(parsed.selectedLandmarkIds) && parsed.selectedLandmarkIds.length > 0) {
+            setSelectedLandmarkIds(parsed.selectedLandmarkIds);
+          }
+          if (parsed.startDate) setStartDate(parsed.startDate);
+          if (parsed.durationDays) setDurationDays(parsed.durationDays);
+          if (parsed.companions) setCompanions(parsed.companions);
+          if (parsed.selectedGuideLicense) setSelectedGuideLicense(parsed.selectedGuideLicense);
+          if (parsed.notes) setNotes(parsed.notes);
+          if (parsed.phone) setPhone(parsed.phone);
+          if (parsed.customerName) setCustomerName(parsed.customerName);
+          sessionStorage.removeItem("delni_pending_private_trip");
+        }
+      } catch (_) {}
+
+      // Auto-fill tourist details from active authenticated account
       if (session?.user && session?.role === "tourist") {
-        setCustomerName(session.user.full_name || session.user.fullName || session.user.name || "");
-        setPhone(session.user.phone_number || session.user.phone || "");
-      } else {
-        setCustomerName("");
-        setPhone("");
+        setCustomerName((prev) => prev || session.user.full_name || session.user.fullName || session.user.name || "");
+        setPhone((prev) => prev || session.user.phone_number || session.user.phone || "");
       }
 
       if (initialDestination) {
         const clean = initialDestination.toLowerCase();
-        const found = LIBYAN_ATTRACTIONS.find(
+        const found = allAttractions.find(
           (a) =>
             a.name.toLowerCase().includes(clean) ||
             clean.includes(a.name.toLowerCase()) ||
@@ -2078,14 +2070,24 @@ export function PrivateTripModal({
     }
   }, [open, initialDestination, initialGuide]);
 
-  // Selected landmarks array
+  // Set default landmark when database landmarks arrive if none selected yet
+  useEffect(() => {
+    if (allAttractions.length > 0 && selectedLandmarkIds.length === 0) {
+      setSelectedLandmarkIds([allAttractions[0].id]);
+    }
+  }, [allAttractions, selectedLandmarkIds.length]);
+
+  // Selected landmarks array derived from database IDs
   const selectedLandmarks = useMemo(() => {
     return allAttractions.filter((a) => selectedLandmarkIds.includes(a.id));
   }, [allAttractions, selectedLandmarkIds]);
 
-  // Filtered landmarks for search/category (UNESCO excluded)
+  // Filtered landmarks for search, city, and category
   const filteredLandmarks = useMemo(() => {
     return allAttractions.filter((lm) => {
+      if (landmarkCityFilter !== "all" && lm.city !== landmarkCityFilter) {
+        return false;
+      }
       if (landmarkCategoryFilter !== "all") {
         if (!lm.category || !lm.category.includes(landmarkCategoryFilter)) return false;
       }
@@ -2098,7 +2100,7 @@ export function PrivateTripModal({
       }
       return true;
     });
-  }, [allAttractions, landmarkCategoryFilter, landmarkSearch]);
+  }, [allAttractions, landmarkCityFilter, landmarkCategoryFilter, landmarkSearch]);
 
   const toggleLandmark = (id: string) => {
     setSelectedLandmarkIds((prev) => {
@@ -2116,24 +2118,20 @@ export function PrivateTripModal({
   // Filtered guides list
   const filteredGuides = useMemo(() => {
     return allGuides.filter((g) => {
-      // 1. Gender filter (ذكور / إناث)
       if (guideGenderFilter !== "all" && g.gender !== guideGenderFilter) {
         return false;
       }
-      // 2. Language filter
       if (guideLanguageFilter !== "all") {
         const hasLang = g.languages?.some(
           (l) => l.code === guideLanguageFilter || l.nameAr.includes(guideLanguageFilter)
         );
         if (!hasLang) return false;
       }
-      // 3. Region filter
       if (guideRegionFilter !== "all") {
         const matchPrimary = g.primaryRegion === guideRegionFilter;
         const matchOps = Array.isArray(g.operatingRegions) && g.operatingRegions.includes(guideRegionFilter);
         if (!matchPrimary && !matchOps) return false;
       }
-      // 4. Search term
       if (guideSearchTerm.trim()) {
         const term = guideSearchTerm.toLowerCase();
         const matchName = g.name.toLowerCase().includes(term);
@@ -2151,31 +2149,22 @@ export function PrivateTripModal({
     return allGuides.find((g) => g.licenseNumber === selectedGuideLicense) || null;
   }, [allGuides, selectedGuideLicense]);
 
-  // Form submission handler
-  const handleSubmit = (e: React.FormEvent) => {
+  // Submission handler with comprehensive role, activation, and session verification
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
-    // 1. Strict Role Enforcement: Tourists ONLY
-    if (!isTourist) {
-      setFormError(
-        isAr
-          ? "عذراً، طلب حجز الرحلات الخاصة متاح حصرياً لحسابات السياح المعتمدة. لا يمكن تقديم الطلب بحساب إدارة أو حساب مهني."
-          : "Private tour requests are strictly reserved for tourist accounts."
-      );
-      return;
-    }
-
-    // 2. Validate at least one destination landmark selected
+    // 1. Validate destination landmarks selection
     if (selectedLandmarkIds.length === 0) {
       setFormError(
         isAr
-          ? "يرجى تحديد معلم سياحي واحد على الأقل من قائمة المعالم السياحية في ليبيا."
+          ? "يرجى اختيار معلم سياحي واحد على الأقل من قائمة المعالم لتحديد مسار الرحلة الخاصة."
           : "Please select at least one tourist destination landmark."
       );
       return;
     }
 
-    // 3. Validate Libyan Phone Number
+    // 2. Validate Libyan Phone Number
     if (!phone.match(/^09\d{8}$/)) {
       setFormError(
         isAr
@@ -2185,16 +2174,62 @@ export function PrivateTripModal({
       return;
     }
 
-    setFormError(null);
+    // 3. Authentication & Account Status Verification
+    const session = getStoredSession();
+    const token = session?.token;
+    const role = session?.role || session?.user?.role;
 
+    // Case 2: User is NOT logged in -> Save pending trip data & show login prompt
+    if (!token || !role) {
+      try {
+        sessionStorage.setItem(
+          "delni_pending_private_trip",
+          JSON.stringify({
+            selectedLandmarkIds,
+            startDate,
+            durationDays,
+            companions,
+            selectedGuideLicense,
+            notes,
+            customerName,
+            phone,
+          })
+        );
+      } catch (_) {}
+
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Case 4: Logged in with a NON-TOURIST role (Admin, Driver, Guide, Transport)
+    if (role !== "tourist") {
+      setFormError(
+        isAr
+          ? `عذراً، طلب وحجز الرحلات الخاصة متاح حصرياً لحسابات السياح المعتمدة. حسابك الحالي مسجل كـ (${userRoleTitle}). يرجى تسجيل الدخول بحساب سائح لإتمام الطلب.`
+          : "Custom private tour booking is reserved exclusively for tourist accounts."
+      );
+      return;
+    }
+
+    // Case 3: Tourist account is suspended / inactive
+    const touristStatus = session?.user?.account_status;
+    if (touristStatus && (touristStatus === "معلق" || touristStatus === "محظور" || touristStatus === "غير نشط")) {
+      setFormError(
+        isAr
+          ? "عذراً، حسابك بحاجة إلى تفعيل من قبل إدارة المنصة قبل تأكيد طلب الرحلة الخاصة. يرجى مراجعة إدارة المنصة أو الدعم الفني."
+          : "Your tourist account requires activation before submitting private tour requests. Please contact platform support."
+      );
+      return;
+    }
+
+    // Case 1: Active Logged-in Tourist -> Process and Save to Database
+    setIsSubmitting(true);
     const tripId = `PRV-${Date.now().toString().slice(-5)}`;
     setCreatedTripId(tripId);
 
-    const touristId = sessionData?.user?.tourist_id || sessionData?.user?.id || sessionData?.user?.username || null;
-
-    // Build multi-destination string
-    const placesNames = selectedLandmarks.map((l) => (isAr ? l.name : l.nameEn)).join(" • ");
-    const placesWithCities = selectedLandmarks.map((l) => `${isAr ? l.name : l.nameEn} (${isAr ? l.city : l.cityEn})`).join("، ");
+    const touristId = session?.user?.tourist_id || session?.user?.id || session?.user?.username || null;
+    const placesNames = selectedLandmarks.map((l) => l.name).join(" • ");
+    const placesWithCities = selectedLandmarks.map((l) => `${l.name} (${l.city})`).join("، ");
 
     const guideRequirement = selectedGuide
       ? `المرشد المفضل: ${selectedGuide.name} [ترخيص: ${selectedGuide.licenseNumber} - ${selectedGuide.gender === "female" ? "مرشدة" : "مرشد"}]. `
@@ -2202,51 +2237,63 @@ export function PrivateTripModal({
 
     const requirements = `المعالم السياحية المستهدفة: ${placesWithCities}. ${guideRequirement}${notes ? `ملاحظات ومتطلبات السائح: ${notes}` : ""}`.trim();
 
-    // Payload matching SQL Server DelniDB private_trips columns
+    // Payload matching SQL Server DelniDB private_trips and places_trip_private schema
     const payload = {
       private_trip_id: tripId,
       status_order: "بانتظار تسعير الإدارة",
-      customer_description: placesNames || "رحلة سياحية خاصة متعددة الوجهات",
+      customer_description: placesNames || "رحلة سياحية خاصة متعددة المعالم",
       preferred_start_date: startDate || new Date().toISOString().split("T")[0],
       duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
       number_of_companions: Math.max(1, parseInt(companions, 10) || 1),
       guide_license_number: selectedGuideLicense || null,
       tourist_id: touristId,
-      customer_name: (customerName || sessionData?.user?.full_name || sessionData?.user?.name || "سائح دلّني").trim(),
+      customer_name: (customerName || session?.user?.full_name || session?.user?.name || "سائح دلّني").trim(),
       customer_phone: phone.trim(),
       customer_requirements: requirements,
       quoted_price: null,
       admin_itinerary_plan: null,
+      place_ids: selectedLandmarkIds,
     };
 
-    // Save to SQL Server DelniDB private_trips endpoint
-    fetch("http://127.0.0.1:5001/api/db/private_trips", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(console.error);
-
-    // Save locally for instant rendering in tourist & admin dashboards
     try {
-      const existing = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-      existing.unshift({
-        ...payload,
-        guide_name: selectedGuide ? selectedGuide.name : null,
-        created_at: new Date().toISOString(),
+      const res = await fetch("http://127.0.0.1:5001/api/db/private_trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      localStorage.setItem("delni_private_trips", JSON.stringify(existing));
-      localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
-    } catch {}
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.error || "فشل حفظ طلب الرحلة في قاعدة البيانات");
+      }
 
-    setStep("done");
+      // Sync locally for instant dashboard preview
+      try {
+        const existing = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+        existing.unshift({
+          ...payload,
+          places: selectedLandmarks,
+          guide_name: selectedGuide ? selectedGuide.name : null,
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem("delni_private_trips", JSON.stringify(existing));
+        localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
+      } catch (_) {}
+
+      sessionStorage.removeItem("delni_pending_private_trip");
+      setStep("done");
+    } catch (err: any) {
+      setFormError(err.message || "حدث خطأ أثناء إرسال وتأكيد الطلب. يرجى المحاولة مرة أخرى.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Modal open={open} onClose={onClose} size="2xl">
       {step === "form" ? (
-        <div className="p-5 sm:p-8 pb-10 sm:pb-12 bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-6" dir={dir}>
+        <div className="p-5 sm:p-8 pb-10 sm:pb-12 bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-6 relative" dir={dir}>
           
-          {/* ── 1. Header Banner: Clean Libyan Heritage Aesthetic (NO IMAGE) ── */}
+          {/* ── 1. Header Banner: Clean Libyan Heritage Aesthetic (NO LOGIN BANNER AT TOP) ── */}
           <div className="text-center pt-1 border-b border-[#E8E2D6] dark:border-slate-800 pb-5">
             <div className="flex items-center justify-center gap-3 mb-2">
               <span className="h-px w-12 sm:w-24 bg-[#D4A373]/60" />
@@ -2263,60 +2310,14 @@ export function PrivateTripModal({
 
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-2xl mx-auto leading-relaxed">
               {isAr
-                ? "صمّم خط سير رحلتك الخاصة باختيار معالمك المفضلة وتحديد مواصفات المرشد السياحي الأنسب، لتتولى إدارة المنصة دراسة المسار وتقديم تسعيرة رسمية معتمدة."
+                ? "صمّم خط سير رحلتك الخاصة باختيار معالمك المفضلة من قاعدة بيانات المنصة وتحديد مواصفات المرشد السياحي، لتتولى إدارة المنصة دراسة المسار وتقديم تسعيرة رسمية معتمدة."
                 : "Curate your bespoke private itinerary across Libyan landmarks with tailor-fit tour guide filtering and official administration quotation."}
             </p>
           </div>
 
-          {/* ── 2. Tourist Account Verification & Auto-Fill Information Banner ── */}
-          {!isTourist ? (
-            <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border-2 border-amber-400 text-amber-950 dark:text-amber-200 text-xs space-y-2.5 animate-in fade-in">
-              <div className="flex items-center gap-2 font-black text-sm text-amber-900 dark:text-amber-300">
-                <span className="text-xl">🔒</span>
-                <span>
-                  {isAr ? "تنبيه: حجز الرحلات الخاصة متاح لحسابات السياح" : "Tourist Account Required for Booking"}
-                </span>
-              </div>
-              <p className="font-medium leading-relaxed">
-                {isAr
-                  ? "حجز الرحلات السياحية بجميع أنواعها متاح للمسجلين بحساب سائح لأخذ بياناتك وربط معلوماتك تلقائياً بالحجز. إذا كنت غير مسجل أو مسجلاً بحساب آخر، يرجى تسجيل الدخول بحساب سائح أو إنشاء حساب جديد للمتابعة:"
-                  : "All trip bookings are available for registered tourist accounts to automatically link passenger details. Please log in or create a tourist account to continue:"}
-              </p>
-              <div className="flex items-center gap-2.5 pt-1 flex-wrap">
-                <a
-                  href="/auth/login?role=tourist"
-                  className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-flex items-center gap-1.5"
-                >
-                  <span>🔑</span>
-                  <span>{isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}</span>
-                </a>
-                <a
-                  href="/auth/signup?role=tourist"
-                  className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs transition shadow-sm inline-flex items-center gap-1.5"
-                >
-                  <span>✨</span>
-                  <span>{isAr ? "إنشاء حساب سائح جديد" : "Sign Up as Tourist"}</span>
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 text-xs flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">👤</span>
-                <span className="font-black text-[#003580] dark:text-blue-300">
-                  {isAr ? `الحساب: ${customerName || sessionData?.user?.full_name || "سائح"}` : `Account: ${customerName}`}
-                </span>
-                <span className="text-slate-500 font-medium">({phone || sessionData?.user?.phone_number || "رقم الهاتف مرتبط تلقائياً"})</span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
-                {isAr ? "بياناتك مرتبطة تلقائياً ✓" : "Linked to account ✓"}
-              </span>
-            </div>
-          )}
-
           {formError && (
-            <div className="p-3.5 rounded-2xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs font-bold flex items-center gap-2">
-              <span>⚠️</span>
+            <div className="p-4 rounded-2xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <span className="text-base shrink-0">⚠️</span>
               <span>{formError}</span>
             </div>
           )}
@@ -2324,7 +2325,7 @@ export function PrivateTripModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* ══════════════════════════════════════════════════════════════════════
-                قسم 1: اختيار المعالم السياحية المتعددة في ليبيا (Multi-Select)
+                قسم 1: اختيار المعالم السياحية من قاعدة البيانات (Dynamic MySQL/SQL Server)
             ══════════════════════════════════════════════════════════════════════ */}
             <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -2334,12 +2335,12 @@ export function PrivateTripModal({
                   </span>
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                      {isAr ? "المعالم والوجهات السياحية المستهدفة في ليبيا" : "Target Libyan Destinations & Landmarks"}
+                      {isAr ? "اختيار المعالم والوجهات السياحية من قاعدة البيانات" : "Select Destinations from Database"}
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       {isAr
-                        ? "يمكنك اختيار أكثر من معلم سياحي لتشكيل مسار متكامل للرحلة"
-                        : "You can select multiple destinations to create a custom combined route"}
+                        ? "معالم حقيقية مسجلة بالمنصة. يمكنك اختيار معلم واحد أو عدة معالم لتشكيل مسار متكامل"
+                        : "Live landmarks from platform catalog. Select one or multiple to curate your custom route"}
                     </p>
                   </div>
                 </div>
@@ -2358,7 +2359,7 @@ export function PrivateTripModal({
                   {selectedLandmarks.map((lm) => (
                     <span
                       key={lm.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-[#B85D36]/30 text-slate-800 dark:text-slate-100 text-xs font-bold shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-[#B85D36]/40 text-slate-800 dark:text-slate-100 text-xs font-bold shadow-2xs"
                     >
                       <span className="text-amber-600">🏛️</span>
                       <span>{isAr ? lm.name : lm.nameEn}</span>
@@ -2375,20 +2376,21 @@ export function PrivateTripModal({
                   ))}
                   {selectedLandmarks.length === 0 && (
                     <span className="text-xs text-rose-500 font-bold">
-                      {isAr ? "يرجى تحديد معلم سياحي واحد على الأقل من القائمة أدناه" : "Please select at least one landmark"}
+                      {isAr ? "يرجى اختيار معلم سياحي واحد على الأقل من القائمة أدناه" : "Please select at least one landmark"}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Search & Category Filter for Landmarks */}
+              {/* Search & City Filter Bar */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                {/* Search Text Input */}
                 <div className="relative flex-1">
                   <input
                     type="text"
                     value={landmarkSearch}
                     onChange={(e) => setLandmarkSearch(e.target.value)}
-                    placeholder={isAr ? "🔍 ابحث عن معلم أو مدينة (لبدة، صبراتة، شحات، أوباري، غدامس...)" : "Search landmark or city..."}
+                    placeholder={isAr ? "🔍 ابحث عن معلم أو مدينة (طرابلس، الخمس، غريان، أوباري، بنغازي...)" : "Search landmark or city..."}
                     className="w-full h-9 px-3 text-xs font-bold rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 outline-none focus:border-[#B85D36]"
                   />
                   {landmarkSearch && (
@@ -2402,69 +2404,95 @@ export function PrivateTripModal({
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs font-bold">
-                  {[
-                    { id: "all", label: isAr ? "الكل" : "All" },
-                    { id: "آثار", label: isAr ? "آثار وتاريخ" : "Historical" },
-                    { id: "صحراء", label: isAr ? "صحراء وواحات" : "Desert" },
-                    { id: "طبيعة", label: isAr ? "طبيعة وجبال" : "Nature" },
-                    { id: "مدينة", label: isAr ? "مدن سياحية" : "Cities" },
-                  ].map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setLandmarkCategoryFilter(cat.id)}
-                      className={`px-3 h-8 rounded-xl transition whitespace-nowrap cursor-pointer ${
-                        landmarkCategoryFilter === cat.id
-                          ? "bg-[#B85D36] text-white shadow-xs"
-                          : "bg-[#FAF7F2] dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#E8E2D6]"
-                      }`}
+                {/* City Filter Dropdown */}
+                {availableCities.length > 0 && (
+                  <div className="sm:w-44">
+                    <select
+                      value={landmarkCityFilter}
+                      onChange={(e) => setLandmarkCityFilter(e.target.value)}
+                      className="w-full h-9 px-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
                     >
-                      {cat.label}
-                    </button>
+                      <option value="all">{isAr ? "جميع المدن" : "All Cities"}</option>
+                      {availableCities.map((city) => (
+                        <option key={city} value={city}>
+                          📍 {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Multi-Select Landmarks Grid with Loading / Error / Dynamic Cards */}
+              {loadingPlaces ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-2">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="h-20 rounded-2xl bg-slate-200/60 dark:bg-slate-800 animate-pulse border border-slate-200/50" />
                   ))}
                 </div>
-              </div>
-
-              {/* Multi-Select Landmarks Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1 border border-[#E8E2D6]/80 dark:border-slate-800 rounded-2xl bg-[#FAF7F2]/40 dark:bg-slate-900/50">
-                {filteredLandmarks.map((lm) => {
-                  const isChecked = selectedLandmarkIds.includes(lm.id);
-                  return (
-                    <div
-                      key={lm.id}
-                      onClick={() => toggleLandmark(lm.id)}
-                      className={`p-3 rounded-xl border text-right transition cursor-pointer select-none flex items-start justify-between gap-2 ${
-                        isChecked
-                          ? "bg-white dark:bg-slate-800 border-[#B85D36] ring-1 ring-[#B85D36] shadow-xs"
-                          : "bg-white/80 dark:bg-slate-900 border-[#E8E2D6] dark:border-slate-800 hover:border-[#B85D36]/50"
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-black text-xs text-slate-900 dark:text-white">
-                            {isAr ? lm.name : lm.nameEn}
-                          </span>
-                          {lm.isUnesco && (
-                            <span className="px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-black">
-                              اليونسكو
-                            </span>
+              ) : placesError ? (
+                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs flex flex-col items-center justify-center gap-2 text-center">
+                  <span>⚠️ {placesError}</span>
+                  <button
+                    type="button"
+                    onClick={loadLandmarks}
+                    className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition text-xs cursor-pointer shadow-sm"
+                  >
+                    {isAr ? "إعادة المحاولة" : "Retry"}
+                  </button>
+                </div>
+              ) : filteredLandmarks.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400 font-bold border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+                  {isAr ? "لا توجد معالم تطابق معايير البحث والفلترة المحددة." : "No landmarks match your search criteria."}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1.5 border border-[#E8E2D6]/80 dark:border-slate-800 rounded-2xl bg-[#FAF7F2]/40 dark:bg-slate-900/50">
+                  {filteredLandmarks.map((lm) => {
+                    const isChecked = selectedLandmarkIds.includes(lm.id);
+                    return (
+                      <div
+                        key={lm.id}
+                        onClick={() => toggleLandmark(lm.id)}
+                        className={`p-3 rounded-2xl border text-right transition cursor-pointer select-none flex items-center justify-between gap-3 ${
+                          isChecked
+                            ? "bg-amber-50/70 dark:bg-slate-800 border-[#B85D36] ring-2 ring-[#B85D36]/30 shadow-xs"
+                            : "bg-white dark:bg-slate-900 border-[#E8E2D6] dark:border-slate-800 hover:border-[#B85D36]/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {lm.image ? (
+                            <img
+                              src={lm.image}
+                              alt={lm.name}
+                              className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-[#B85D36]/10 text-[#B85D36] flex items-center justify-center text-xl shrink-0 font-bold">
+                              🏛️
+                            </div>
                           )}
+                          <div className="space-y-0.5 min-w-0 flex-1">
+                            <div className="font-black text-xs text-slate-900 dark:text-white truncate">
+                              {isAr ? lm.name : lm.nameEn}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
+                              <span>📍 {isAr ? lm.city : lm.cityEn}</span>
+                              {lm.category && <span>• {lm.category}</span>}
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                          📍 {isAr ? lm.city : lm.cityEn}
-                        </p>
-                      </div>
 
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold shrink-0 transition ${
-                        isChecked ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
-                      }`}>
-                        {isChecked ? "✓" : ""}
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 transition ${
+                          isChecked ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
+                        }`}>
+                          {isChecked ? "✓" : ""}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ══════════════════════════════════════════════════════════════════════
@@ -2510,7 +2538,7 @@ export function PrivateTripModal({
                     <button
                       type="button"
                       onClick={() => setDurationDays(String(Math.max(1, (parseInt(durationDays, 10) || 1) - 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
                     >
                       -
                     </button>
@@ -2526,7 +2554,7 @@ export function PrivateTripModal({
                     <button
                       type="button"
                       onClick={() => setDurationDays(String(Math.min(30, (parseInt(durationDays, 10) || 1) + 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
                     >
                       +
                     </button>
@@ -2543,7 +2571,7 @@ export function PrivateTripModal({
                     <button
                       type="button"
                       onClick={() => setCompanions(String(Math.max(1, (parseInt(companions, 10) || 1) - 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
                     >
                       -
                     </button>
@@ -2559,7 +2587,7 @@ export function PrivateTripModal({
                     <button
                       type="button"
                       onClick={() => setCompanions(String(Math.min(50, (parseInt(companions, 10) || 1) + 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
                     >
                       +
                     </button>
@@ -2811,21 +2839,30 @@ export function PrivateTripModal({
             </div>
 
             {/* ══════════════════════════════════════════════════════════════════════
-                قسم 4: بيانات التواصل والمتطلبات الخاصة
+                قسم 4: بيانات التواصل وملاحظات السائح (Auto-populated for tourists)
             ══════════════════════════════════════════════════════════════════════ */}
             <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
-                  4
-                </span>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                    {isAr ? "بيانات التواصل وملاحظات السائح" : "Contact Information & Special Requests"}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {isAr ? "يرجى التحقق من صحة رقم الهاتف لتلقي إشعار التسعيرة الرسمية" : "Ensure contact number is correct to receive your official quote"}
-                  </p>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
+                    4
+                  </span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
+                      {isAr ? "بيانات التواصل وملاحظات السائح" : "Contact Information & Tourist Notes"}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {isAr ? "يرجى التحقق من صحة رقم الهاتف لتلقي إشعار التسعيرة الرسمية" : "Ensure contact number is correct to receive your official quote"}
+                    </p>
+                  </div>
                 </div>
+
+                {isTourist && (
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold border border-emerald-300/60 flex items-center gap-1.5">
+                    <span>✓</span>
+                    <span>{isAr ? "تم جلب بياناتك تلقائياً من حسابك" : "Auto-filled from account"}</span>
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2880,33 +2917,85 @@ export function PrivateTripModal({
             </div>
 
             {/* ══════════════════════════════════════════════════════════════════════
-                زر الإرسال النهائي وتأكيد الشروط
+                زر تأكيد طلب الرحلة الخاصة للإدارة
             ══════════════════════════════════════════════════════════════════════ */}
             <div className="pt-2 space-y-2 text-center">
               <button
                 type="submit"
-                disabled={!isTourist}
-                className={`w-full h-12 rounded-full font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  isTourist
-                    ? "bg-[#B85D36] hover:bg-[#a04e2c] text-white hover:shadow-lg active:scale-[0.99]"
-                    : "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed shadow-none"
-                }`}
+                disabled={isSubmitting}
+                className="w-full h-12 rounded-full font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#B85D36] hover:bg-[#a04e2c] text-white hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
               >
-                <span>
-                  {isTourist
-                    ? (isAr ? "إرسال طلب الرحلة الخاصة للإدارة (تسعير واعتماد المسار)" : "Submit Custom Tour Request to Admin")
-                    : (isAr ? "🚫 تقديم الطلب متاح لحسابات السياح فقط" : "Tourist Account Required to Submit")}
-                </span>
-                <span className="text-base">➔</span>
+                {isSubmitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{isAr ? "جارٍ معالجة وتأكيد الطلب..." : "Processing Custom Tour Request..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{isAr ? "تأكيد طلب الرحلة الخاصة للإدارة (تسعير واعتماد المسار)" : "Confirm Custom Tour Request"}</span>
+                    <span className="text-base">➔</span>
+                  </>
+                )}
               </button>
 
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg mx-auto">
                 {isAr
-                  ? "💡 بمجرد تقديم الطلب، ستتولى إدارة المنصة دراسة مسار المعالم المختارة وإعداد البرنامج المقترح والتسعيرة الرسمية وإشعارك فوراً عبر المنصة."
+                  ? "💡 بمجرد تأكيد الطلب، ستتولى إدارة المنصة دراسة مسار المعالم المختارة وإعداد البرنامج المقترح والتسعيرة الرسمية وإشعارك فوراً عبر المنصة."
                   : "Platform administration will review your requested landmarks, create an itinerary, and notify you with an official price quote."}
               </p>
             </div>
           </form>
+
+          {/* ══════════════════════════════════════════════════════════════════════
+              نافذة التحقق والمصادقة عند الضغط على تأكيد الطلب (Case 2: Not logged in)
+          ══════════════════════════════════════════════════════════════════════ */}
+          {showAuthModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-amber-300 dark:border-amber-700 text-center space-y-4 animate-in zoom-in-95 duration-200" dir={dir}>
+                <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-xs">
+                  🔒
+                </div>
+                
+                <div className="space-y-1.5">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    {isAr ? "تسجيل الدخول مطلوب لتأكيد الطلب" : "Tourist Account Required"}
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                    {isAr
+                      ? "حجز وتأكيد الرحلات الخاصة متاح حصرياً لحسابات السياح المعتمدة في نظام دلني. لقد قمنا بحفظ اختياراتك ومعالمك المحددة لتستكمل تأكيد الطلب فور تسجيل الدخول دون أن تضطر لإعادة إدخالها."
+                      : "Booking is reserved for tourist accounts. Your selected landmarks and options have been temporarily saved."}
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2.5 pt-2">
+                  <a
+                    href="/auth/login?role=tourist"
+                    className="w-full py-3 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span>🔑</span>
+                    <span>{isAr ? "تسجيل الدخول بحساب سائح" : "Log In as Tourist"}</span>
+                  </a>
+
+                  <a
+                    href="/auth/signup?role=tourist"
+                    className="w-full py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs transition shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <span>✨</span>
+                    <span>{isAr ? "إنشاء حساب سائح جديد" : "Create Tourist Account"}</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAuthModal(false)}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold py-1.5 transition cursor-pointer"
+                  >
+                    {isAr ? "الرجوع ومواصلة تعديل الطلب" : "Cancel & Keep Editing"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       ) : (
         /* ══════════════════════════════════════════════════════════════════════

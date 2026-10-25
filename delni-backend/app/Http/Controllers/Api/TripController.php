@@ -26,9 +26,18 @@ class TripController extends Controller
         return response()->json($trips);
     }
 
-    public function places()
+    public function places(Request $request)
     {
-        return response()->json(PlaceTourist::all());
+        $query = PlaceTourist::query();
+        if ($request->boolean('exclude_unesco') || $request->input('is_unesco') === '0' || $request->input('is_unesco') === 'false') {
+            $query->where(function($q) {
+                $q->where('is_unesco', false)->orWhereNull('is_unesco')->orWhere('is_unesco', 0);
+            });
+        }
+        if ($request->filled('city') && $request->input('city') !== 'all') {
+            $query->where('city', $request->input('city'));
+        }
+        return response()->json($query->orderBy('place_name')->get());
     }
 
     public function hotels()
@@ -49,39 +58,75 @@ class TripController extends Controller
     public function requestPrivateTrip(Request $request)
     {
         $validated = $request->validate([
-            'customer_description' => 'required|string|max:100',
+            'customer_description' => 'nullable|string|max:255',
             'preferred_start_date' => 'required|date',
             'duration_days' => 'required|integer|min:1',
             'number_of_companions' => 'required|integer|min:0',
             'customer_name' => 'nullable|string|max:100',
-            'customer_phone' => 'nullable|string|max:20',
+            'customer_phone' => 'required|string|max:20',
             'customer_requirements' => 'nullable|string',
             'guide_license_number' => 'nullable|string|exists:tour_guides,license_number',
             'tourist_id' => 'nullable|string|exists:tourists,tourist_id',
+            'place_ids' => 'nullable|array|min:1',
+            'place_ids.*' => 'string|exists:places_tourist,place_id',
         ]);
+
+        // Role & Account Status Verification
+        $user = $request->user();
+        $touristId = $validated['tourist_id'] ?? ($user ? ($user->tourist_id ?? $user->id) : null);
+
+        if ($user && isset($user->role) && $user->role !== 'tourist') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'عذراً، طلب حجز الرحلات الخاصة متاح حصرياً لحسابات السياح.',
+            ], 403);
+        }
+
+        if ($touristId) {
+            $tourist = \App\Models\Tourist::where('tourist_id', $touristId)->first();
+            if ($tourist && in_array($tourist->account_status, ['معلق', 'محظور', 'غير نشط'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'حساب السائح غير مفعّل أو معلّق. يرجى التواصل مع إدارة المنصة لتفعيل الحساب قبل تأكيد الطلب.',
+                ], 403);
+            }
+        }
 
         $newId = 'PT-' . rand(1000, 9999);
 
-        $privateTrip = PrivateTrip::create([
-            'private_trip_id' => $newId,
-            'status_order' => 'قيد الدراسة',
-            'customer_description' => $validated['customer_description'],
-            'preferred_start_date' => $validated['preferred_start_date'],
-            'duration_days' => $validated['duration_days'],
-            'number_of_companions' => $validated['number_of_companions'],
-            'quoted_price' => null,
-            'admin_itinerary_plan' => null,
-            'guide_license_number' => $validated['guide_license_number'] ?? null,
-            'tourist_id' => $validated['tourist_id'] ?? null,
-            'customer_name' => $validated['customer_name'] ?? null,
-            'customer_phone' => $validated['customer_phone'] ?? null,
-            'customer_requirements' => $validated['customer_requirements'] ?? null,
-        ]);
+        $privateTrip = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $newId, $touristId) {
+            $trip = PrivateTrip::create([
+                'private_trip_id' => $newId,
+                'status_order' => 'بانتظار تسعير الإدارة',
+                'customer_description' => $validated['customer_description'] ?? 'رحلة سياحية خاصة متعددة المعالم',
+                'preferred_start_date' => $validated['preferred_start_date'],
+                'duration_days' => $validated['duration_days'],
+                'number_of_companions' => $validated['number_of_companions'],
+                'quoted_price' => null,
+                'admin_itinerary_plan' => null,
+                'guide_license_number' => $validated['guide_license_number'] ?? null,
+                'tourist_id' => $touristId,
+                'customer_name' => $validated['customer_name'] ?? null,
+                'customer_phone' => $validated['customer_phone'] ?? null,
+                'customer_requirements' => $validated['customer_requirements'] ?? null,
+            ]);
+
+            // Sync Many-to-Many Places with visit order
+            if (!empty($validated['place_ids'])) {
+                $syncData = [];
+                foreach ($validated['place_ids'] as $index => $placeId) {
+                    $syncData[$placeId] = ['visit_order' => $index + 1];
+                }
+                $trip->places()->sync($syncData);
+            }
+
+            return $trip;
+        });
 
         return response()->json([
             'status' => 'success',
             'message' => 'تم إرسال طلب الرحلة الخاصة بنجاح للإدارة لدراستها واعتماد السعر',
-            'trip' => $privateTrip,
+            'trip' => $privateTrip->load('places'),
         ], 201);
     }
 
@@ -443,6 +488,120 @@ class TripController extends Controller
                 'message' => 'تمت إضافة العنصر إلى المفضلة ❤️',
                 'data' => $fav
             ], 201);
+        }
+    }
+
+    public function places(Request $request)
+    {
+        $query = \App\Models\PlaceTourist::query();
+
+        if ($request->has('city') && !empty($request->query('city'))) {
+            $query->where('city', $request->query('city'));
+        }
+
+        if ($request->has('category') && !empty($request->query('category'))) {
+            $query->where('category', $request->query('category'));
+        }
+
+        if ($request->boolean('exclude_unesco')) {
+            $query->where('is_unesco', false);
+        }
+
+        $places = $query->orderBy('place_name', 'asc')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $places
+        ]);
+    }
+
+    public function requestPrivateTrip(Request $request)
+    {
+        $user = auth('sanctum')->user() ?? auth()->user();
+        $touristId = $request->input('tourist_id');
+        $tourist = null;
+
+        if ($user) {
+            if ($user->role !== 'tourist') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'عذراً، طلب الرحلات الخاصة متاح حصرياً لحسابات السياح المعتمدة.'
+                ], 403);
+            }
+            $tourist = \App\Models\Tourist::where('email', $user->email)->orWhere('tourist_id', $user->id)->first();
+        } elseif ($touristId) {
+            $tourist = \App\Models\Tourist::where('tourist_id', $touristId)->orWhere('phone_number', $touristId)->first();
+        }
+
+        if (!$tourist) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'UNAUTHENTICATED',
+                'message' => 'يرجى تسجيل الدخول بحساب سائح معتمد لتأكيد طلب الرحلة الخاصة.'
+            ], 401);
+        }
+
+        if ($tourist->account_status && $tourist->account_status !== 'نشط') {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'ACCOUNT_SUSPENDED',
+                'message' => 'عذراً، حساب السائح غير مفعّل أو مقيّد حالياً. يرجى مراجعة إدارة المنصة لتفعيل حسابك.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'place_ids' => 'required|array|min:1',
+            'place_ids.*' => 'string',
+            'preferred_start_date' => 'required|date',
+            'duration_days' => 'required|integer|min:1|max:30',
+            'number_of_companions' => 'required|integer|min:1|max:50',
+            'guide_license_number' => 'nullable|string',
+            'customer_phone' => 'nullable|string',
+            'customer_requirements' => 'nullable|string',
+        ]);
+
+        \DB::beginTransaction();
+        try {
+            $tripId = 'PRV-' . rand(10000, 99999);
+            $selectedPlaces = \App\Models\PlaceTourist::whereIn('place_id', $validated['place_ids'])->get();
+            $placesNames = $selectedPlaces->pluck('place_name')->join(' • ');
+
+            $privateTrip = \App\Models\PrivateTrip::create([
+                'private_trip_id' => $tripId,
+                'status_order' => 'بانتظار تسعير الإدارة',
+                'customer_description' => $placesNames ?: 'رحلة خاصة مخصصة',
+                'preferred_start_date' => $validated['preferred_start_date'],
+                'duration_days' => $validated['duration_days'],
+                'number_of_companions' => $validated['number_of_companions'],
+                'guide_license_number' => $validated['guide_license_number'] ?? null,
+                'tourist_id' => $tourist->tourist_id,
+                'customer_name' => $tourist->full_name,
+                'customer_phone' => $validated['customer_phone'] ?? $tourist->phone_number,
+                'customer_requirements' => $validated['customer_requirements'] ?? null,
+                'quoted_price' => null,
+                'admin_itinerary_plan' => null,
+            ]);
+
+            $pivotData = [];
+            foreach ($validated['place_ids'] as $idx => $pId) {
+                $pivotData[$pId] = ['visit_order' => $idx + 1];
+            }
+            $privateTrip->places()->sync($pivotData);
+
+            \DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'تم استلام وتأكيد طلب رحلتك الخاصة بنجاح! سيتم مراجعة المسار وإرسال التسعيرة الرسمية.',
+                'trip_id' => $tripId,
+                'data' => $privateTrip->load('places')
+            ], 201);
+        } catch (\Throwable $e) {
+            \DB::rollBack();
+            \Log::error('Private Trip Request Error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'تعذر حفظ طلب الرحلة الخاصة: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

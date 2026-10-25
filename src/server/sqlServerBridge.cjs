@@ -245,6 +245,55 @@ async function ensureDatabaseSchema(p) {
           CONSTRAINT UQ_tourist_favorites UNIQUE (tourist_id, item_type, item_id)
         );
       END;
+
+      -- Private Trip Places Junction Table (العلاقة متعدد إلى متعدد بين الرحلات الخاصة والمعالم السياحية)
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'places_trip_private')
+      BEGIN
+        CREATE TABLE places_trip_private (
+          private_trip_id VARCHAR(50) NOT NULL,
+          place_id VARCHAR(50) NOT NULL,
+          visit_order INT DEFAULT 1,
+          created_at DATETIME DEFAULT GETDATE(),
+          PRIMARY KEY (private_trip_id, place_id)
+        );
+      END;
+
+      -- Seed / Sync canonical non-UNESCO landmarks into places_tourist table in DelniDB
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-tripoli-castle')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-tripoli-castle', N'قلعة السراي الحمراء والمدينة القديمة', N'الحصن التاريخي المطل على ميناء طرابلس ومجمع المتاحف التاريخية والأسواق العتيقة.', N'طرابلس', N'المنطقة الغربية', 13.1802, 32.8950, N'مدن قديمة وقلاع', '/assets/dest-tripoli.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-gharyan-caves')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-gharyan-caves', N'بيوت الحفر التراثية في غريان', N'العمارة التحت-أرضية الفريدة المنحوتة في الصخور الجبلية ومتاجر الفخار والخزف التقليدي.', N'غريان', N'جبل نفوسة', 13.0167, 32.1667, N'طبيعة وجبال', '/assets/dest-gharyan-cave.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-nalut-ksar')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-nalut-ksar', N'قصور وقلاع الجبل الغربي (نالوت وكاباو)', N'قلاع التخزين الأمازيغية الدائرية الشاهقة على حافة الجرف الجبلي وأزقة المدينة العتيقة.', N'نالوت / كاباو', N'جبل نفوسة', 10.9833, 31.8667, N'مدن قديمة وقلاع', '/assets/dest-ksar-desert.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-jabal-green')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-jabal-green', N'وادي الكوف وغابات الجبل الأخضر', N'أكبر الغابات الطبيعية وجسر وادي الكوف المعلق وأودية الطبيعة الجبلية الساحرة.', N'البيضاء / الجبل الأخضر', N'المنطقة الشرقية', 21.7500, 32.7667, N'طبيعة وجبال', '/assets/dest-jabal-akhdar-panorama.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-ubari-lakes')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-ubari-lakes', N'بحيرات رملة أوباري وقبر عون', N'عجائب الصحراء الكبرى: بحيرات مالحة بديعة وسط كثبان الرمال الذهبية الشاهقة والواحات.', N'أوباري', N'المنطقة الجنوبية', 12.8791, 26.5677, N'واحات صحراوية', '/assets/dest-ubari.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-apollonia')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-apollonia', N'مدينة أبولونيا ومنحوتات أسلونطة الصخرية', N'الميناء الإغريقي الغارق القديم على ساحل البحر والمتحف المفتوح ومنحوتات أسلونطة.', N'سوسة / شحات', N'المنطقة الشرقية', 21.9667, 32.9000, N'آثار تاريخية', '/assets/dest-cyrene.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-villa-silin')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('att-villa-silin', N'فيلا سيلين والموزاييك الروماني الفاخر', N'الفيلا الرومانية الساحلية الأشهر في المتوسط بأرضيات الفسيفساء الأثرية السليمة تماماً.', N'الخمس', N'المنطقة الغربية', 14.2667, 32.6500, N'آثار تاريخية', '/assets/hero-leptis.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'city-tripoli')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('city-tripoli', N'مدينة طرابلس التاريخية والأسواق القديمة', N'العاصمة العريقة بأسواقها وسراياها وقوس ماركوس أوريليوس وأزقتها الأندلسية العتيقة.', N'طرابلس', N'المنطقة الغربية', 13.1802, 32.8950, N'مدن سياحية', '/assets/dest-tripoli.jpg', 0);
+
+      IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'city-benghazi')
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, is_unesco)
+        VALUES ('city-benghazi', N'مدينة بنغازي التاريخية والبحيرات', N'عروس البحر المتوسط، بمبانيها التاريخية وبحيراتها وشواطئها الممتدة.', N'بنغازي', N'المنطقة الشرقية', 20.0667, 32.1167, N'مدن سياحية', '/assets/dest-harbor-coast.jpg', 0);
     `);
     try {
       await p.request().query("UPDATE tourists SET created_at = GETDATE() WHERE created_at IS NULL;");
@@ -1518,7 +1567,26 @@ const server = http.createServer(async (req, res) => {
 
     // 12. Places / Attractions: GET
     if (pathname === '/api/db/places' && req.method === 'GET') {
-      const result = await db.request().query('SELECT * FROM places_tourist ORDER BY place_name ASC');
+      const excludeUnesco = url.searchParams.get('exclude_unesco') === 'true' || url.searchParams.get('is_unesco') === 'false' || url.searchParams.get('is_unesco') === '0';
+      const city = url.searchParams.get('city');
+      const reqPlaces = db.request();
+      let query = 'SELECT * FROM places_tourist';
+      const conditions = [];
+
+      if (excludeUnesco) {
+        conditions.push('(is_unesco = 0 OR is_unesco IS NULL)');
+      }
+      if (city && city !== 'all') {
+        reqPlaces.input('city', sql.NVarChar(100), city);
+        conditions.push('city = @city');
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+      query += ' ORDER BY place_name ASC';
+
+      const result = await reqPlaces.query(query);
       return sendJson(res, 200, { success: true, data: result.recordset });
     }
 
@@ -2829,6 +2897,36 @@ const server = http.createServer(async (req, res) => {
         ) ptv ON pt.private_trip_id = ptv.private_trip_id
         ORDER BY pt.preferred_start_date DESC
       `);
+
+      try {
+        const placesRes = await db.request().query(`
+          SELECT ptp.private_trip_id, ptp.place_id, ptp.visit_order,
+                 p.place_name, p.city, p.region, p.category, p.place_image
+          FROM places_trip_private ptp
+          JOIN places_tourist p ON ptp.place_id = p.place_id
+          ORDER BY ptp.visit_order ASC
+        `);
+        const placesMap = {};
+        for (const row of placesRes.recordset) {
+          if (!placesMap[row.private_trip_id]) placesMap[row.private_trip_id] = [];
+          placesMap[row.private_trip_id].push({
+            place_id: row.place_id,
+            place_name: row.place_name,
+            city: row.city,
+            region: row.region,
+            category: row.category,
+            place_image: row.place_image,
+            visit_order: row.visit_order,
+          });
+        }
+        for (const trip of result.recordset) {
+          trip.places = placesMap[trip.private_trip_id] || [];
+          trip.place_ids = (trip.places || []).map(p => p.place_id);
+        }
+      } catch (placesLoadErr) {
+        console.warn('[DelniDB] Could not load private trip places:', placesLoadErr.message);
+      }
+
       return sendJson(res, 200, { success: true, data: result.recordset });
     }
 
@@ -2850,10 +2948,49 @@ const server = http.createServer(async (req, res) => {
         quoted_price,
         admin_itinerary_plan,
         assigned_vehicle,
+        place_ids,
+        places,
       } = body;
 
       const cleanId = String(private_trip_id || `PRV-${Date.now().toString().slice(-5)}`).trim();
       const cleanStatus = String(status_order || 'بانتظار تسعير الإدارة').trim();
+
+      // Tourist Account Verification (تأكيد أن الحساب مفعّل ونشط وغير معلق)
+      let validTouristId = null;
+      if (tourist_id) {
+        try {
+          const tCheck = db.request();
+          tCheck.input('tid', sql.VarChar(50), String(tourist_id).trim());
+          const tRes = await tCheck.query('SELECT tourist_id, account_status, full_name FROM tourists WHERE tourist_id = @tid');
+          if (tRes.recordset && tRes.recordset.length > 0) {
+            const tStatus = String(tRes.recordset[0].account_status || 'نشط').trim();
+            if (tStatus === 'معلق' || tStatus === 'محظور' || tStatus.includes('تعليق') || tStatus === 'غير نشط') {
+              return sendJson(res, 403, {
+                success: false,
+                error: 'حساب السائح غير مفعّل أو معلّق. يرجى التواصل مع إدارة المنصة لتفعيل الحساب قبل تأكيد طلب الرحلة الخاصة.'
+              });
+            }
+            validTouristId = tRes.recordset[0].tourist_id;
+          } else {
+            const altCheck = db.request();
+            altCheck.input('val', sql.NVarChar(150), String(tourist_id).trim());
+            const altRes = await altCheck.query('SELECT tourist_id, account_status FROM tourists WHERE email = @val OR phone_number = @val');
+            if (altRes.recordset && altRes.recordset.length > 0) {
+              const altStatus = String(altRes.recordset[0].account_status || 'نشط').trim();
+              if (altStatus === 'معلق' || altStatus === 'محظور' || altStatus.includes('تعليق') || altStatus === 'غير نشط') {
+                return sendJson(res, 403, {
+                  success: false,
+                  error: 'حساب السائح غير مفعّل أو معلّق. يرجى التواصل مع إدارة المنصة لتفعيل الحساب قبل تأكيد طلب الرحلة الخاصة.'
+                });
+              }
+              validTouristId = altRes.recordset[0].tourist_id;
+            }
+          }
+        } catch (tErr) {
+          console.warn('[Tourist Status Check Notice]:', tErr.message);
+        }
+      }
+
       let rawPlate = assigned_vehicle || body.assigned_vehicle_plate || body.vehicle_plate || null;
       if (Array.isArray(rawPlate)) {
         rawPlate = rawPlate[0] || null;
@@ -2871,7 +3008,7 @@ const server = http.createServer(async (req, res) => {
       request.input('guide_lic', sql.NVarChar(50), guide_license_number ? String(guide_license_number).trim() : null);
       request.input('desc', sql.NVarChar(sql.MAX), String(customer_description || 'برنامج رحلة خاصة بالمعالم السياحية').trim());
       request.input('reqs', sql.NVarChar(sql.MAX), String(customer_requirements || '').trim());
-      request.input('tourist_id', sql.VarChar(50), tourist_id ? String(tourist_id).trim() : null);
+      request.input('tourist_id', sql.VarChar(50), validTouristId);
       request.input('price', sql.Decimal(10, 2), quoted_price !== null && quoted_price !== undefined ? Number(quoted_price) : null);
       request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan).trim() : null);
       request.input('veh_plate', sql.VarChar(30), vehPlate ? String(vehPlate).trim() : null);
@@ -2922,6 +3059,37 @@ const server = http.createServer(async (req, res) => {
           END
         END
       `);
+
+      // Save Many-to-Many Places (العلاقة متعدد إلى متعدد بين الرحلات الخاصة والمعالم السياحية في places_trip_private)
+      const targetPlaceIds = Array.isArray(place_ids) ? place_ids : (Array.isArray(places) ? places.map(p => typeof p === 'string' ? p : (p.place_id || p.id)) : []);
+      if (targetPlaceIds && targetPlaceIds.length > 0) {
+        try {
+          const delPlacesReq = db.request();
+          delPlacesReq.input('ptid', sql.VarChar(50), cleanId);
+          await delPlacesReq.query('DELETE FROM places_trip_private WHERE private_trip_id = @ptid');
+
+          for (let i = 0; i < targetPlaceIds.length; i++) {
+            const rawPid = targetPlaceIds[i];
+            const cleanPid = String(rawPid || '').trim();
+            if (!cleanPid) continue;
+
+            const insPlaceReq = db.request();
+            insPlaceReq.input('ptid', sql.VarChar(50), cleanId);
+            insPlaceReq.input('pid', sql.VarChar(50), cleanPid);
+            insPlaceReq.input('order', sql.Int, i + 1);
+            await insPlaceReq.query(`
+              IF EXISTS (SELECT 1 FROM places_tourist WHERE place_id = @pid)
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM places_trip_private WHERE private_trip_id = @ptid AND place_id = @pid)
+                  INSERT INTO places_trip_private (private_trip_id, place_id, visit_order, created_at)
+                  VALUES (@ptid, @pid, @order, GETDATE());
+              END
+            `);
+          }
+        } catch (placesJuncErr) {
+          console.warn('[places_trip_private Warning]:', placesJuncErr.message);
+        }
+      }
 
       // Real-time Event Trigger: Private Trips
       try {
@@ -3010,6 +3178,8 @@ const server = http.createServer(async (req, res) => {
       const request = db.request();
       request.input('id', sql.VarChar(50), id);
       await request.query(`
+        DELETE FROM places_trip_private WHERE private_trip_id = @id;
+        DELETE FROM private_trip_vehicles WHERE private_trip_id = @id;
         DELETE FROM private_trips WHERE private_trip_id = @id;
       `);
       return sendJson(res, 200, { success: true, message: 'تم حذف طلب الرحلة الخاصة بنجاح من DelniDB' });

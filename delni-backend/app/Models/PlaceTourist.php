@@ -45,4 +45,9 @@ class PlaceTourist extends Model
     {
         return $this->belongsToMany(DailyTrip::class, 'places_trip_daily', 'place_id', 'daily_trip_id');
     }
+
+    public function privateTrips()
+    {
+        return $this->belongsToMany(PrivateTrip::class, 'places_trip_private', 'place_id', 'private_trip_id')->withPivot('visit_order');
+    }
 }

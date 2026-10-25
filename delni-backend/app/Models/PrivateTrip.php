@@ -54,4 +54,15 @@ class PrivateTrip extends Model
     {
         return $this->belongsToMany(Vehicle::class, 'private_trip_vehicles', 'private_trip_id', 'plate_number');
     }
+
+    public function places()
+    {
+        return $this->belongsToMany(PlaceTourist::class, 'places_trip_private', 'private_trip_id', 'place_id')
+                    ->withPivot('visit_order');
+    }
+
+    public function attractions()
+    {
+        return $this->places();
+    }
 }
