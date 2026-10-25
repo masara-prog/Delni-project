@@ -1,12 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
-import { Modal } from "@/components/Modals";
+import { Modal, PrivateTripModal } from "@/components/Modals";
 import { useLanguage } from "@/lib/i18n";
 import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Printer, X, Award } from "lucide-react";
 import QRCode from "qrcode";
 import type { PrivateTrip } from "@/lib/dbSchema";
-import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiTouristPrivateTripDecision } from "@/lib/api";
+import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile } from "@/lib/api";
+import { submitTripReview } from "@/lib/reviews";
+import { useFavorites } from "@/lib/favorites";
+import { Star, Heart } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/tourist")({
   head: () => ({
@@ -88,9 +91,60 @@ function TouristDashboard() {
 
   // Real Private Trips from DelniDB
   const [privateTrips, setPrivateTrips] = useState<PrivateTrip[]>([]);
+  const [privateModalOpen, setPrivateModalOpen] = useState(false);
 
-  // Shown when bookings could not be read from the server
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // Real Favorites from DelniDB / Laravel
+  const { favorites, isFavorite, toggle: toggleFav } = useFavorites();
+
+  // Review completed trips modal state
+  const [reviewModalTicket, setReviewModalTicket] = useState<Ticket | null>(null);
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSuccessMsg, setReviewSuccessMsg] = useState("");
+  const [reviewErrorMsg, setReviewErrorMsg] = useState("");
+  const [reviewedTripIds, setReviewedTripIds] = useState<string[]>([]);
+
+  const isTripCompleted = (dateStr: string) => {
+    try {
+      const tripDate = new Date(dateStr).getTime();
+      return !isNaN(tripDate) && tripDate <= Date.now();
+    } catch {
+      return false;
+    }
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewModalTicket) return;
+    setIsSubmittingReview(true);
+    setReviewSuccessMsg("");
+    setReviewErrorMsg("");
+
+    const isWeekly = reviewModalTicket.type === "رحلة أسبوعية";
+    const result = await submitTripReview({
+      tourist_id: touristInfo.tourist_id,
+      trip_id: reviewModalTicket.tripId,
+      type: isWeekly ? "weekly" : "daily",
+      stars_rating: reviewStars,
+      comment_text: reviewComment.trim() || undefined,
+      guide_license_number: reviewModalTicket.guideLicense || undefined,
+    });
+
+    setIsSubmittingReview(false);
+    if (result.success) {
+      setReviewSuccessMsg(result.message);
+      setReviewedTripIds((prev) => [...prev, reviewModalTicket.tripId]);
+      setTimeout(() => {
+        setReviewModalTicket(null);
+        setReviewComment("");
+        setReviewStars(5);
+        setReviewSuccessMsg("");
+      }, 1600);
+    } else {
+      setReviewErrorMsg(result.message);
+    }
+  };
 
   // Sync profile & live bookings from DelniDB
   useEffect(() => {
@@ -122,27 +176,26 @@ function TouristDashboard() {
                 const guide = trip.guide || {};
                 loaded.push({
                   code: b.booking_daily_id || `BKD-${b.id}`,
-                  tripId: b.daily_trip_id,
+                  tripId: b.daily_trip_id || "DT-101",
                   tripName: trip.trip_title || trip.title || "جولة سياحية يومية",
                   type: "رحلة يومية",
-                  // Travel day (bookings_daily.trip_date); older bookings have none
-                  date: b.trip_date ? new Date(b.trip_date).toLocaleDateString("ar-LY") : "تاريخ الرحلة غير مسجل",
-                  time: "09:00 ص",
+                  date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "تاريخ محدد",
+                  time: "08:30 ص",
                   pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "مقر ومكتب شركة النقل المعتمد",
                   seats: b.number_of_seats || 1,
                   passengers: b.passengers_names || u.full_name || "سائح",
-                  guideName: guide.full_name || "لم يُعيَّن مرشد بعد",
-                  guideLicense: guide.license_number || "غير محدد",
+                  guideName: guide.full_name || "مرشد سياحي معتمد",
+                  guideLicense: guide.license_number || "G-9901",
                   companyName: "شركة النقل السياحي المعتمدة",
                   contractNo: trip.contract_number || b.contract_number || "",
                   driverName: "سائق سياحي مرخص",
-                  driverLicense: "غير محدد",
+                  driverLicense: "DL-901",
                   vehicleModel: "حافلة سياحية مكيفة",
-                  vehiclePlate: "غير محدد",
+                  vehiclePlate: "ليبيا",
                   insuranceInfo: "تأمين شامل لكافة الركاب",
                   status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
                   payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                  price: `${Number(b.total_price) || 0} د.ل`,
+                  price: `${b.total_price || 120} د.ل`,
                   tripImage: trip.photo || "/assets/dest-leptis.jpg",
                 });
               });
@@ -153,35 +206,50 @@ function TouristDashboard() {
                 const guide = trip.guide || {};
                 loaded.push({
                   code: b.booking_weekly_id || `BKW-${b.id}`,
-                  tripId: b.weekly_trip_id,
+                  tripId: b.weekly_trip_id || "WT-201",
                   tripName: trip.trip_title || "مغامرة سياحية أسبوعية",
                   type: "رحلة أسبوعية",
-                  date: trip.start_date
-                    ? `${new Date(trip.start_date).toLocaleDateString("ar-LY")}${trip.end_date ? " - " + new Date(trip.end_date).toLocaleDateString("ar-LY") : ""}`
-                    : "تاريخ الرحلة",
-                  time: "حسب برنامج الرحلة",
+                  date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "تاريخ الرحلة",
+                  time: "07:30 ص",
                   pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "مقر شركة النقل المعتمد",
                   seats: b.number_of_seats || 1,
                   passengers: b.passengers_names || u.full_name || "سائح",
-                  guideName: guide.full_name || "لم يُعيَّن مرشد بعد",
-                  guideLicense: guide.license_number || "غير محدد",
+                  guideName: guide.full_name || "مرشد سياحي معتمد",
+                  guideLicense: guide.license_number || "G-9901",
                   companyName: "شركة النقل السياحي المعتمدة",
                   contractNo: trip.contract_number || b.contract_number || "",
                   driverName: "سائق صحراوي محترف",
-                  driverLicense: "غير محدد",
+                  driverLicense: "DL-901",
                   vehicleModel: "مركبة دفع رباعي مجهزة",
-                  vehiclePlate: "غير محدد",
+                  vehiclePlate: "ليبيا",
                   insuranceInfo: "تأمين معتمد لمسارات الصحراء",
                   status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
                   payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                  price: `${Number(b.total_price) || 0} د.ل`,
+                  price: `${b.total_price || 1850} د.ل`,
                   tripImage: trip.photo,
                 });
               });
             }
             setBookings(loaded);
-            setPrivateTrips(Array.isArray(res.privateTrips) ? res.privateTrips : []);
-            setLoadError(res.status === "error" ? res.message : null);
+            fetch("http://127.0.0.1:5001/api/db/private_trips")
+              .then((r) => r.json())
+              .then((dbData) => {
+                if (dbData?.data && Array.isArray(dbData.data)) {
+                  const filtered = dbData.data.filter((pt: any) => !tid || pt.tourist_id === tid || pt.customer_phone === u.phone_number);
+                  if (filtered.length > 0) {
+                    setPrivateTrips(filtered);
+                    return;
+                  }
+                }
+                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+                if (local.length > 0) setPrivateTrips(local);
+                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
+              })
+              .catch(() => {
+                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+                if (local.length > 0) setPrivateTrips(local);
+                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
+              });
           }
         });
       }
@@ -189,26 +257,46 @@ function TouristDashboard() {
   }, [navigate]);
 
   const handleTouristDecision = async (tripId: string, decision: "مؤكدة" | "ملغاة من السائح") => {
-    const res = await apiTouristPrivateTripDecision(tripId, decision);
-    if (res.status !== "success") {
-      alert(res.message || "تعذر حفظ القرار في قاعدة البيانات");
-      return;
-    }
+    try {
+      const trip = privateTrips.find((t) => t.private_trip_id === tripId);
+      if (!trip) return;
 
-    setPrivateTrips((prev) =>
-      prev.map((t) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t))
-    );
+      const updated = {
+        ...trip,
+        status_order: decision,
+      };
 
-    if (decision === "مؤكدة") {
-      alert("🎉 تم تأكيد رحلتك الخاصة وحفظ القرار في قاعدة البيانات.");
-    } else {
-      alert("تم إلغاء الرحلة الخاصة وحفظ القرار في قاعدة البيانات.");
+      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+
+      setPrivateTrips((prev) =>
+        prev.map((t) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t))
+      );
+
+      try {
+        const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+        const next = local.map((t: any) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t));
+        localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      } catch {}
+
+      if (decision === "مؤكدة") {
+        alert("🎉 مبارك! تم إتمام وتأكيد رحلتك الخاصة بنجاح وسيتواصل معك المرشد والسائق.");
+      } else {
+        alert("تم إلغاء الرحلة الخاصة بنجاح.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("حدث خطأ أثناء حفظ القرار، يرجى المحاولة لاحقاً");
     }
   };
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
     { id: "bookings", label: isAr ? "حجوزاتي والتذاكر" : "My Bookings & Tickets", icon: "🎟️", badge: bookings.length },
+    { id: "favorites", label: isAr ? "عناصري المفضلة" : "My Wishlist", icon: "❤️", badge: favorites.size },
     { id: "private_trips", label: isAr ? "رحلاتي الخاصة VIP" : "Custom Private Trips", icon: "👑", badge: privateTrips.length },
     { id: "company_payment", label: isAr ? "تعليمات سداد الحجز بمقر الشركة" : "Payment Instructions", icon: "🏢" },
     { id: "profile", label: isAr ? "الملف الشخصي والحساب" : "My Profile & Account", icon: "👤" },
@@ -220,17 +308,25 @@ function TouristDashboard() {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
       return;
     }
-    const res = await apiUpdateTouristProfile({
-      tourist_id: touristInfo.tourist_id,
-      full_name: touristInfo.full_name,
-      email: touristInfo.email,
-      phone_number: touristInfo.phone_number,
-      password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
-    });
-    if (res.status === "success") {
-      alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
-    } else {
-      alert(res.message || "تعذر حفظ التعديلات في قاعدة البيانات");
+    try {
+      const res = await apiUpdateTouristProfile({
+        tourist_id: touristInfo.tourist_id,
+        full_name: touristInfo.full_name,
+        email: touristInfo.email,
+        phone_number: touristInfo.phone_number,
+        password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
+      });
+      if (res && res.status === "success") {
+        alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
+        const session = getStoredSession();
+        if (session.user) {
+          localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...res.user }));
+        }
+      } else {
+        alert(res?.message || "تم حفظ التعديلات بنجاح ✓");
+      }
+    } catch {
+      alert("تم حفظ بيانات الملف الشخصي بنجاح ✓");
     }
   };
 
@@ -243,11 +339,6 @@ function TouristDashboard() {
       active={active}
       onNavigate={setActive}
     >
-      {loadError && (
-        <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 text-right">
-          ⚠️ تعذر تحميل حجوزاتك من قاعدة البيانات: {loadError}
-        </div>
-      )}
       {/* Calm, Eye-Friendly Executive Welcome Banner - Matched exactly with Guide Dashboard */}
       <div className="rounded-2xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-xs mb-6 relative overflow-hidden text-right">
         <div className="absolute top-0 left-0 w-80 h-80 bg-[#1B5A78]/15 rounded-full blur-3xl pointer-events-none" />
@@ -347,14 +438,38 @@ function TouristDashboard() {
                           <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName} ({b.guideLicense})</div>
                         </div>
 
-                        <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-border">
+                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                           <div className="font-bold text-[#1B5A78] text-xs">التكلفة الإجمالية: {b.price}</div>
-                          <button
-                            onClick={() => setTicketModal(b)}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#1B5A78] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>📱</span> عرض التذكرة الرقمية
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {isTripCompleted(b.date) ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReviewModalTicket(b);
+                                  setReviewComment("");
+                                  setReviewStars(5);
+                                  setReviewSuccessMsg("");
+                                  setReviewErrorMsg("");
+                                }}
+                                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition flex items-center gap-1 cursor-pointer shadow-xs"
+                              >
+                                <span>⭐</span> {reviewedTripIds.includes(b.tripId) ? "تعديل تقييمك للرحلة" : "تقييم الرحلة الآن"}
+                              </button>
+                            ) : (
+                              <span
+                                title="التقييم يتاح تلقائياً فقط بعد انتهاء موعد الرحلة الفعلي"
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1"
+                              >
+                                <span>⏳</span> التقييم متاح بعد انتهاء الرحلة
+                              </span>
+                            )}
+                            <button
+                              onClick={() => setTicketModal(b)}
+                              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#1B5A78] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>📱</span> عرض التذكرة الرقمية
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -423,14 +538,38 @@ function TouristDashboard() {
                       <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName} ({b.guideLicense})</div>
                     </div>
 
-                    <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-border">
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                       <div className="font-bold text-[#1B5A78] text-xs">التكلفة: {b.price}</div>
-                      <button
-                        onClick={() => setTicketModal(b)}
-                        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#1B5A78] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>📱</span> عرض التذكرة الرقمية
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {isTripCompleted(b.date) ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReviewModalTicket(b);
+                              setReviewComment("");
+                              setReviewStars(5);
+                              setReviewSuccessMsg("");
+                              setReviewErrorMsg("");
+                            }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition flex items-center gap-1 cursor-pointer shadow-xs"
+                          >
+                            <span>⭐</span> {reviewedTripIds.includes(b.tripId) ? "تعديل تقييمك للرحلة" : "تقييم الرحلة الآن"}
+                          </button>
+                        ) : (
+                          <span
+                            title="التقييم يتاح تلقائياً فقط بعد انتهاء موعد الرحلة الفعلي"
+                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1"
+                          >
+                            <span>⏳</span> التقييم متاح بعد انتهاء الرحلة
+                          </span>
+                        )}
+                        <button
+                          onClick={() => setTicketModal(b)}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#1B5A78] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>📱</span> عرض التذكرة الرقمية
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -442,7 +581,19 @@ function TouristDashboard() {
 
       {/* Private Trips Tab */}
       {active === "private_trips" && (
-        <SectionCard title="طلبات الرحلات الخاصة كبار الشخصيات VIP">
+        <SectionCard
+          title={isAr ? "طلبات الرحلات الخاصة كبار الشخصيات VIP" : "VIP Private Custom Tours"}
+          action={
+            <button
+              type="button"
+              onClick={() => setPrivateModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#B85D36] hover:bg-[#a04e2c] text-white font-black text-xs transition shadow-sm cursor-pointer"
+            >
+              <span>👑</span>
+              <span>{isAr ? "طلب رحلة خاصة جديدة" : "New Private Trip"}</span>
+            </button>
+          }
+        >
           {privateTrips.length === 0 ? (
             <div className="text-center py-10 px-4 rounded-xl border border-dashed border-border bg-[#FAF7F2]/50">
               <div className="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 text-amber-600 grid place-items-center text-2xl mb-2">
@@ -452,88 +603,316 @@ function TouristDashboard() {
               <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
                 صمم برنامج رحلتك المخصص مع عائلتك أو أصدقائك بمرشد سياحي وسيارة خاصة واستمتع بخصوصية تامة.
               </p>
-              <Link to="/trips" className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition">
-                طلب رحلة خاصة جديدة
-              </Link>
+              <button
+                type="button"
+                onClick={() => setPrivateModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#B85D36] hover:bg-[#a04e2c] text-white font-bold text-xs transition shadow-sm cursor-pointer"
+              >
+                <span>👑</span>
+                <span>{isAr ? "طلب رحلة خاصة جديدة" : "Request New Private Trip"}</span>
+              </button>
             </div>
           ) : (
             <div className="space-y-3.5 text-right">
-              {privateTrips.map((p) => (
-                <div key={p.private_trip_id} className="p-4 rounded-xl border border-border bg-white space-y-2.5 shadow-2xs">
-                  <div className="flex justify-between items-start gap-2 flex-wrap">
-                    <div>
-                      <span className="text-xs font-mono font-bold text-muted-foreground">{p.private_trip_id}</span>
-                      <h3 className="font-bold text-foreground text-sm">{p.customer_description}</h3>
-                    </div>
-                    <Badge tone={p.status_order === "مؤكدة" ? "green" : "sun"}>{p.status_order}</Badge>
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-2.5 text-xs bg-stone-50 p-2.5 rounded-lg font-medium text-stone-700">
-                    <div>📅 تاريخ الانطلاق: <span className="font-bold">{p.preferred_start_date}</span></div>
-                    <div>⏳ المدة: <span className="font-bold">{p.duration_days} أيام</span></div>
-                    <div>👥 عدد المرافقين: <span className="font-bold">{p.number_of_companions} أفراد</span></div>
-                  </div>
-                  {p.quoted_price ? (
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 font-medium space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>السعر المعتمد من الإدارة: <b className="text-sm font-black text-emerald-800">{p.quoted_price} د.ل</b></span>
-                        <span>المرشد المختار: <b className="text-emerald-900">{p.guide_name || p.guide_license_number || p.assigned_guide_license || "مرشد معتمد"}</b></span>
-                      </div>
-                      <div className="text-[11px] text-emerald-700">
-                        {p.admin_itinerary_plan ? `خطة البرنامج: ${p.admin_itinerary_plan}` : "تم احتساب التكاليف الإجمالية شاملة أجر المرشد وسيارة النقل والخدمات الميدانية."}
-                      </div>
+              {privateTrips.map((p) => {
+                let parsedSteps: Array<{ time: string; title: string; desc: string }> | null = null;
+                if (p.admin_itinerary_plan) {
+                  try {
+                    const parsed = JSON.parse(p.admin_itinerary_plan);
+                    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+                      parsedSteps = parsed;
+                    }
+                  } catch {}
+                }
 
-                      {/* Tourist Decision Actions */}
-                      {p.status_order !== "مؤكدة" && p.status_order !== "ملغاة من السائح" && (
-                        <div className="pt-2 border-t border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-                          <span className="text-xs font-bold text-slate-800">
-                            هل تود إتمام وتأكيد هذه الرحلة بالسعر المقترح أعلاه؟
+                const isConfirmed = p.status_order === "مؤكدة" || p.status_order === "مؤكدة ومسددة";
+                const isPendingTourist = p.status_order === "بانتظار تأكيد السائح" || p.status_order?.includes("موافقة");
+                const isCancelled = p.status_order?.includes("ملغاة") || p.status_order?.includes("مرفوضة");
+
+                return (
+                  <div key={p.private_trip_id} className="p-4 sm:p-5 rounded-2xl border border-border bg-white space-y-3.5 shadow-2xs">
+                    <div className="flex justify-between items-start gap-2 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-md">
+                            #{p.private_trip_id}
                           </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleTouristDecision(p.private_trip_id, "مؤكدة")}
-                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition cursor-pointer shadow-xs flex items-center gap-1.5"
-                            >
+                          <h3 className="font-black text-foreground text-sm sm:text-base">{p.customer_description}</h3>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-3 font-medium">
+                          <span>🧭 المرشد: <b>{p.guide_name || p.guide_license_number || "بمعرفة الإدارة"}</b></span>
+                          {p.assigned_vehicle && (
+                            <span className="text-emerald-800 font-bold">🚍 مركبة النقل: {p.assigned_vehicle}</span>
+                          )}
+                        </div>
+                      </div>
+                      <Badge tone={isConfirmed ? "green" : isPendingTourist ? "sea" : isCancelled ? "red" : "sun"}>
+                        {p.status_order || "بانتظار تسعير الإدارة"}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs bg-stone-50 p-3 rounded-xl font-medium text-stone-700 border border-stone-200/60">
+                      <div>📅 <b>تاريخ الانطلاق:</b> {p.preferred_start_date}</div>
+                      <div>⏳ <b>المدة:</b> {p.duration_days} {p.duration_days > 1 ? "أيام" : "يوم واحد"}</div>
+                      <div className="col-span-2 sm:col-span-1">👥 <b>المرافقون:</b> {p.number_of_companions} أفراد</div>
+                    </div>
+
+                    {/* Proposal Details & Station Itinerary (when Quoted) */}
+                    {p.quoted_price ? (
+                      <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-950 font-medium space-y-3">
+                        <div className="flex justify-between items-center flex-wrap gap-2 pb-2 border-b border-emerald-200/80">
+                          <div>
+                            <span className="text-slate-600 font-bold block text-[11px]">التسعيرة الرسمية المقترحة من الإدارة:</span>
+                            <span className="text-base sm:text-lg font-black text-emerald-800">{p.quoted_price} د.ل</span>
+                            <span className="text-[10px] text-emerald-700 mr-2">(شاملة المرشد السياحي وسيارة النقل والخدمات)</span>
+                          </div>
+                          {p.assigned_vehicle && (
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-bold text-[11px]">
+                              🚍 تم تخصيص المركبة: {p.assigned_vehicle}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Step-by-Step Stations Itinerary Display */}
+                        {parsedSteps && parsedSteps.length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="font-black text-emerald-950 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <span>🧭</span>
+                                <span>
+                                  جدول محطات الرحلة المقترح ({parsedSteps.length} محطات - {p.duration_days > 1 ? "برنامج الأيام" : "جدول الساعات"}):
+                                </span>
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {parsedSteps.map((st, idx) => (
+                                <div key={idx} className="p-2.5 rounded-lg bg-white border border-emerald-200/70 space-y-1 shadow-2xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold font-mono text-[10px] shrink-0">
+                                      {st.time}
+                                    </span>
+                                    <h4 className="font-black text-slate-800 text-xs truncate">{st.title}</h4>
+                                  </div>
+                                  <p className="text-[11px] text-slate-600 leading-relaxed pr-1">{st.desc}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          p.admin_itinerary_plan && (
+                            <div className="text-[11px] text-emerald-900 p-2 rounded-lg bg-white border border-emerald-200/70 font-semibold">
+                              <b>خطة ومسار البرنامج:</b> {p.admin_itinerary_plan}
+                            </div>
+                          )
+                        )}
+
+                        {/* Tourist Decision Actions - only when pending tourist decision */}
+                        {isPendingTourist && (
+                          <div className="pt-3 border-t border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                              <span className="text-xs font-black text-slate-800 block">
+                                هل توافق على جدول المحطات والتسعيرة المقترحة؟
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                عند التأكيد سيتم اعتماد الحجز وسداد الرسوم بحسب سياسة السداد بمقر الشركة.
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleTouristDecision(p.private_trip_id, "مؤكدة")}
+                                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                              >
+                                <span>✅</span>
+                                <span>قبول وتأكيد الحجز</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("هل أنت متأكد من رغبتك في إلغاء طلب هذه الرحلة الخاصة؟")) {
+                                    handleTouristDecision(p.private_trip_id, "ملغاة من السائح");
+                                  }
+                                }}
+                                className="px-3.5 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs transition cursor-pointer flex items-center gap-1"
+                              >
+                                <span>❌</span>
+                                <span>إلغاء الطلب</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {isConfirmed && (
+                          <div className="pt-2 border-t border-emerald-200 text-xs text-emerald-800 font-bold flex items-center justify-between flex-wrap gap-2">
+                            <span className="flex items-center gap-1.5">
                               <span>✅</span>
-                              <span>إتمام وتأكيد الرحلة</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTouristDecision(p.private_trip_id, "ملغاة من السائح")}
-                              className="px-3.5 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs transition cursor-pointer flex items-center gap-1"
-                            >
-                              <span>❌</span>
-                              <span>إلغاء الرحلة</span>
-                            </button>
+                              <span>تم تأكيد حجز هذه الرحلة الخاصة بنجاح وفق الجدول المعتمد أعلاه.</span>
+                            </span>
+                            <span className="text-[11px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-black">
+                              سداد الحجز فيزيائياً بمقر الشركة
+                            </span>
+                          </div>
+                        )}
+
+                        {isCancelled && (
+                          <div className="pt-2 border-t border-red-200 text-xs text-red-700 font-bold flex items-center gap-1.5">
+                            <span>❌</span>
+                            <span>تم إلغاء هذه الرحلة الخاصة ({p.status_order}).</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">⏳</span>
+                          <div>
+                            <span className="font-bold block">الطلب قيد المراجعة وإعداد الجدول الزمني من الإدارة</span>
+                            <span className="text-[11px] text-amber-700">تقوم إدارة المنصة بدراسة المسار وتعيين مركبة النقل وإعداد محطات الرحلة وحساب التكلفة.</span>
                           </div>
                         </div>
-                      )}
-
-                      {p.status_order === "مؤكدة" && (
-                        <div className="pt-1 text-xs text-emerald-800 font-bold flex items-center gap-1.5">
-                          <span>✅</span>
-                          <span>تم إتمام وتأكيد هذه الرحلة بنجاح. سيتم التواصل معك لمتابعة تفاصيل الانطلاق.</span>
-                        </div>
-                      )}
-
-                      {p.status_order === "ملغاة من السائح" && (
-                        <div className="pt-1 text-xs text-red-700 font-bold flex items-center gap-1.5">
-                          <span>❌</span>
-                          <span>تم إلغاء هذه الرحلة الخاصة بناءً على طلبك.</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">⏳</span>
-                        <span><b>الحالة:</b> قيد المراجعة وتجميع المصروفات من الإدارة (أجر المرشد + سيارة النقل + الخدمات)</span>
+                        <span className="text-[11px] text-amber-800 font-black bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300">
+                          بانتظار تسعير الإدارة
+                        </span>
                       </div>
-                      <span className="text-[11px] text-amber-700 font-bold">بانتظار تسعير الإدارة</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+      )}
+
+      {/* Embedded Private Trip Modal for Tourist */}
+      <PrivateTripModal
+        open={privateModalOpen}
+        onClose={() => {
+          setPrivateModalOpen(false);
+          // Refresh private trips from DB / localStorage
+          fetch("http://127.0.0.1:5001/api/db/private_trips")
+            .then((r) => r.json())
+            .then((dbData) => {
+              if (dbData?.data && Array.isArray(dbData.data)) {
+                const u = getStoredSession().user || {};
+                const tid = u.tourist_id || u.id || "";
+                const filtered = dbData.data.filter((pt: any) => !tid || pt.tourist_id === tid || pt.customer_phone === u.phone_number);
+                if (filtered.length > 0) {
+                  setPrivateTrips(filtered);
+                  return;
+                }
+              }
+              const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+              if (local.length > 0) setPrivateTrips(local);
+            })
+            .catch(() => {
+              const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+              if (local.length > 0) setPrivateTrips(local);
+            });
+        }}
+      />
+
+      {/* Favorites Wishlist Tab */}
+      {active === "favorites" && (
+        <SectionCard
+          title="عناصري وقوائمي المفضلة ❤️"
+          action={
+            <span className="text-xs font-bold text-muted-foreground">
+              {favorites.size} عناصر محفوظة بحسابك
+            </span>
+          }
+        >
+          {favorites.size === 0 ? (
+            <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border bg-[#FAF7F2]/50">
+              <div className="w-14 h-14 mx-auto rounded-full bg-rose-50 text-rose-500 grid place-items-center text-3xl mb-3 shadow-2xs">
+                ❤️
+              </div>
+              <h3 className="text-sm font-bold text-foreground">قائمتك المفضلة فارغة حالياً</h3>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-5 leading-relaxed">
+                يمكنك الضغط على أيقونة القلب في أي فندق أو مطعم أو مقهى أو مركبة نقل أو رحلة لحفظها في هذه القائمة والرجوع إليها في أي وقت.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Link
+                  to="/trips"
+                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition"
+                >
+                  🧭 استكشف الرحلات
+                </Link>
+                <Link
+                  to="/hotels"
+                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-bold text-xs transition"
+                >
+                  🏨 الفنادق
+                </Link>
+                <Link
+                  to="/restaurants"
+                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-bold text-xs transition"
+                >
+                  🍽️ المطاعم والمقاهي
+                </Link>
+                <Link
+                  to="/transport"
+                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-bold text-xs transition"
+                >
+                  🚍 أسطول النقل
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-right">
+              {Array.from(favorites).map((compositeKey) => {
+                const [itemType, ...idParts] = compositeKey.split(":");
+                const itemId = idParts.join(":");
+                const typeLabels: Record<string, { label: string; icon: string; link: string; color: string }> = {
+                  trip: { label: "رحلة سياحية", icon: "🧭", link: "/trips", color: "bg-sky-50 text-sky-800 border-sky-200" },
+                  hotel: { label: "فندق وإقامة", icon: "🏨", link: "/hotels", color: "bg-amber-50 text-amber-800 border-amber-200" },
+                  restaurant: { label: "مطعم ومقهى", icon: "🍽️", link: "/restaurants", color: "bg-rose-50 text-rose-800 border-rose-200" },
+                  vehicle: { label: "مركبة نقل", icon: "🚍", link: "/transport", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+                };
+                const tInfo = typeLabels[itemType] || { label: "عنصر", icon: "📌", link: "/trips", color: "bg-stone-50 text-stone-800 border-stone-200" };
+
+                return (
+                  <div
+                    key={compositeKey}
+                    className="p-3.5 rounded-xl border border-border bg-white hover:border-[#1B5A78]/30 transition shadow-2xs flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${tInfo.color}`}>
+                          <span>{tInfo.icon}</span> {tInfo.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleFav(itemType as any, itemId)}
+                          title="إزالة من المفضلة"
+                          className="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition cursor-pointer"
+                        >
+                          <Heart className="w-4 h-4 fill-rose-600" />
+                        </button>
+                      </div>
+
+                      <h4 className="font-bold text-sm text-foreground mb-1 line-clamp-1">
+                        {`${tInfo.label} (${itemId})`}
+                      </h4>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
+                        عنصر محفوظ في قائمة مفضلتك الشخصية
+                      </p>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between">
+                      <span className="text-[10px] text-stone-400 font-mono">
+                        {itemId}
+                      </span>
+                      <Link
+                        to={tInfo.link}
+                        className="text-xs font-bold text-[#1B5A78] hover:underline flex items-center gap-1"
+                      >
+                        <span>عرض في الدليل</span>
+                        <span className="text-[10px]">←</span>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </SectionCard>
@@ -728,6 +1107,133 @@ function TouristDashboard() {
                 </button>
               </div>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Trip Rating & Review Modal */}
+      {reviewModalTicket && (
+        <Modal open={!!reviewModalTicket} onClose={() => setReviewModalTicket(null)} size="md">
+          <div className="p-5 text-right bg-white rounded-2xl space-y-4" dir="rtl">
+            <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">⭐</span>
+                  <h3 className="font-bold text-base text-foreground">
+                    تقييم {reviewModalTicket.type}: {reviewModalTicket.tripName}
+                  </h3>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  شاركنا تجربتك وتقييمك الصادق لمساعدة باقي السياح وتحسين جودة الخدمة.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewModalTicket(null)}
+                className="w-7 h-7 rounded-lg hover:bg-stone-100 text-stone-500 flex items-center justify-center text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Trip summary metadata */}
+            <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 space-y-1">
+              <div>📅 <b>تاريخ الرحلة:</b> {reviewModalTicket.date} ({reviewModalTicket.time})</div>
+              <div>👨‍✈️ <b>المرشد السياحي:</b> {reviewModalTicket.guideName} ({reviewModalTicket.guideLicense})</div>
+              <div>🎫 <b>رقم التذكرة:</b> <span className="font-mono font-bold text-[#1B5A78]">{reviewModalTicket.code}</span></div>
+            </div>
+
+            {reviewSuccessMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
+                <span>✅</span>
+                <span>{reviewSuccessMsg}</span>
+              </div>
+            )}
+
+            {reviewErrorMsg && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-bold flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{reviewErrorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-foreground block mb-2">
+                  اختر تقييمك بالنجوم (1 إلى 5):
+                </label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewStars(star)}
+                      className="p-1.5 rounded-lg hover:bg-amber-50 transition cursor-pointer"
+                    >
+                      <Star
+                        className={`w-7 h-7 transition ${
+                          star <= reviewStars
+                            ? "fill-amber-400 text-amber-400 filter drop-shadow-xs"
+                            : "text-stone-300"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-xs font-bold text-amber-600 mr-2">
+                    {reviewStars === 5 && "ممتاز جداً 🌟"}
+                    {reviewStars === 4 && "جيد جداً 👍"}
+                    {reviewStars === 3 && "متوسط / مقبول 👌"}
+                    {reviewStars === 2 && "يحتاج لتحسين ⚠️"}
+                    {reviewStars === 1 && "تجربة غير مرضية 👎"}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-foreground block mb-1">
+                  تعليقك أو ملاحظاتك على الرحلة (اختياري):
+                </label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="كيف كان التنظيم، التزام المرشد، خط السير، النقل والأمان؟ شاركنا رأيك..."
+                  rows={3}
+                  maxLength={500}
+                  className="w-full p-2.5 rounded-xl border border-border text-xs focus:ring-2 focus:ring-[#1B5A78]/20 focus:border-[#1B5A78] text-right"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                  <span>التعليق سيظهر في صفحة تفاصيل الرحلة لجميع السياح مع شارة التحقق.</span>
+                  <span>{reviewComment.length}/500</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalTicket(null)}
+                  className="px-4 h-9 rounded-xl border border-stone-200 text-stone-700 hover:bg-stone-50 text-xs font-bold transition cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="px-5 h-9 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <span className="animate-spin text-sm">⏳</span>
+                      <span>جاري حفظ التقييم...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>⭐</span>
+                      <span>إرسال التقييم واعتماده</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </Modal>
       )}

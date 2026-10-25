@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "db:server": "node src/server/sqlServerBridge.cjs",
+    "db:server": "node src/server/supervisor.cjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",

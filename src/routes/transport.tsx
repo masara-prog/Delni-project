@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getTransportCompanies, getVehicles as getApiVehicles, getDrivers } from "@/lib/api";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import {
   Car,
   ShieldCheck,
@@ -617,15 +618,14 @@ function TransportPage() {
                       </div>
 
                       {/* Wishlist Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => toggleLike(v.id, e)}
-                        className={`absolute top-3.5 left-3.5 z-10 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-md cursor-pointer ${
-                          isFav ? "bg-white text-red-500" : "bg-black/30 text-white hover:bg-white hover:text-red-500"
-                        }`}
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-red-500" : ""}`} />
-                      </button>
+                      <div className="absolute top-3.5 left-3.5 z-10">
+                        <FavoriteButton
+                          itemType="vehicle"
+                          itemId={v.id || v.plateNumber}
+                          itemTitle={`${v.name || 'مركبة نقل'} (${v.plateNumber})`}
+                          size="sm"
+                        />
+                      </div>
 
                       {/* Libyan Plate Frame + City Badge */}
                       <div className="absolute bottom-3 right-3 left-3 z-10 flex items-center justify-between">
@@ -753,15 +753,14 @@ function TransportPage() {
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => toggleLike(v.id, e)}
-                      className={`absolute top-3.5 left-3.5 z-10 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition shadow-md cursor-pointer ${
-                        isFav ? "bg-white text-red-500" : "bg-black/30 text-white hover:bg-white hover:text-red-500"
-                      }`}
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-red-500" : ""}`} />
-                    </button>
+                    <div className="absolute top-3.5 left-3.5 z-10">
+                      <FavoriteButton
+                        itemType="vehicle"
+                        itemId={v.id || v.plateNumber}
+                        itemTitle={`${v.name || 'مركبة نقل'} (${v.plateNumber})`}
+                        size="sm"
+                      />
+                    </div>
 
                     <div className="absolute bottom-3 right-3 left-3 z-10 flex items-center justify-between">
                       <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg border-2 border-[#003580]/30 shadow-md flex items-center gap-1 font-mono text-[10px] font-black text-[#003580] tracking-wider">

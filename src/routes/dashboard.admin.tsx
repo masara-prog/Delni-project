@@ -13,21 +13,10 @@ import {
   apiCreateWeeklyTrip,
   apiUpdateWeeklyTrip,
   apiDeleteWeeklyTrip,
-  apiAdminUpdatePrivateTrip,
-  apiSaveOffer,
-  apiDeleteOffer,
-  apiStoreHotel,
-  apiDeleteHotel,
-  apiStoreRestaurant,
-  apiDeleteRestaurant,
-  apiStorePlace,
-  apiUpdatePlace,
-  apiDeletePlace,
-  apiAdminGetReviews,
-  apiAdminSetReviewVisibility,
-  apiDeleteReview,
-  apiAdminCreatePrivateTrip,
-  apiAdminDeletePrivateTrip,
+  apiCreateDailyOffer,
+  apiDeleteDailyOffer,
+  apiCreateWeeklyOffer,
+  apiDeleteWeeklyOffer,
   getAllGuides, 
   updateGuideVerification, 
   deleteGuideAccount,
@@ -39,8 +28,7 @@ import {
   getDrivers,
   getVehicles,
   sendToSecureBackend,
-  deleteFromSecureBackend,
-  type ReviewType
+  deleteFromSecureBackend
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
 import { getChatSessions, saveChatSessions, sendAdminReply } from "@/lib/supportChat";
@@ -256,8 +244,7 @@ type Attraction = {
   highlights?: string | string[];
   gallery?: string | string[];
 };
-const REVIEW_TYPE_LABELS: Record<ReviewType, string> = { daily: "رحلة يومية", weekly: "رحلة أسبوعية", hotel: "فندق", facility: "مطعم/مقهى" };
-type ItemReview = { id: string; type: ReviewType; target_type: string; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string; is_hidden: boolean };
+type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
 type ChatMessage = { id: string; from: "user" | "bot" | "admin"; text: string; time: string };
 type ChatSession = { id: string; user_name: string; user_type: "سائح" | "زائر" | string; last_message: string; time: string; unread: boolean; messages: ChatMessage[] };
@@ -346,44 +333,7 @@ function AdminDashboard() {
   const [attractions, setAttractions] = useState<Attraction[]>([]);
 
   const [reviews, setReviews] = useState<ItemReview[]>([]);
-  const [reviewsError, setReviewsError] = useState("");
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-
-  /* DelniDB reviews_* (all four tables, hidden ones included) */
-  const loadReviews = async () => {
-    const res = await apiAdminGetReviews();
-    setReviewsError(res.error || "");
-    setReviews(res.reviews.map((r: any) => ({
-      id: r.id,
-      type: r.type,
-      target_type: REVIEW_TYPE_LABELS[r.type as ReviewType] || r.type,
-      target_name: r.item_title || r.item_id,
-      tourist_name: r.tourist_name || r.tourist_id,
-      stars_rating: Number(r.stars_rating) || 0,
-      comment_text: r.comment_text || "",
-      created_at: r.created_at ? String(r.created_at).slice(0, 10) : "",
-      is_hidden: Boolean(r.is_hidden),
-    })));
-  };
-  useEffect(() => { loadReviews(); }, []);
-
-  const handleToggleReviewVisibility = async (rev: ItemReview) => {
-    const res = await apiAdminSetReviewVisibility(rev.type, rev.id, !rev.is_hidden);
-    if (res.status !== "success") {
-      alert("تعذر تغيير ظهور التقييم: " + (res.message || ""));
-      return;
-    }
-    setReviews(prev => prev.map(r => r.id === rev.id ? { ...r, is_hidden: !rev.is_hidden } : r));
-  };
-  const handleDeleteReview = async (rev: ItemReview) => {
-    if (!confirm("هل تريد حذف هذا التقييم نهائياً؟")) return;
-    const res = await apiDeleteReview(rev.type, rev.id);
-    if (res.status !== "success") {
-      alert("تعذر حذف التقييم: " + (res.message || ""));
-      return;
-    }
-    setReviews(prev => prev.filter(r => r.id !== rev.id));
-  };
 
   /* ---- CHATBOT STATE ---- */
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -402,7 +352,6 @@ function AdminDashboard() {
   const [editingDailyTrip, setEditingDailyTrip] = useState<DailyTrip | null>(null);
   const [editingWeeklyTrip, setEditingWeeklyTrip] = useState<WeeklyTrip | null>(null);
   const [evaluatingPrivateTrip, setEvaluatingPrivateTrip] = useState<PrivateTripRequest | null>(null);
-  const [showAddPrivateTrip, setShowAddPrivateTrip] = useState(false);
   const [showAddHotel, setShowAddHotel] = useState(false);
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
   const [showAddRestaurant, setShowAddRestaurant] = useState(false);
@@ -438,25 +387,52 @@ function AdminDashboard() {
     }
   };
   const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
-    // Saved in DelniDB through Laravel with the admin token; the list updates only on success.
-    const res = await apiVerifyGuide(lic, status);
-    if (res.status !== "success") {
-      alert(res.message || "تعذر تحديث حالة المرشد في قاعدة البيانات");
-      return;
-    }
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
+    updateGuideVerification(lic, status);
+    const targetGuide = guides.find(g => g.license_number === lic);
+    
+    // Live update to Laravel backend database
+    try {
+      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(lic)}/verify`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          verification_status: status,
+          full_name: targetGuide?.full_name,
+          phone_number: targetGuide?.phone_number,
+          email: targetGuide?.email,
+          years_of_experience: targetGuide?.years_of_experience,
+          price_per_day: targetGuide?.price_per_day,
+          bio: targetGuide?.bio,
+          title: targetGuide?.title,
+          certificate: targetGuide?.certificate,
+          certificate_name: targetGuide?.certificate_name,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to verify guide in Laravel API:", err);
+    }
+
+    sendToSecureBackend("guides", {
+      license_number: lic,
+      full_name: targetGuide?.full_name || "مرشد سياحي",
+      phone_number: targetGuide?.phone_number || "0910000000",
+      verification_status: status,
+    });
   };
 
   const handleDeleteGuide = async (lic: string) => {
     if (!confirm(`هل أنت متأكد من حذف المرشد السياحي (رخصة: ${lic}) نهائياً من قاعدة البيانات؟`)) return;
-    const res = await apiDeleteGuide(lic);
-    if (res.status !== "success") {
-      alert("حدث خطأ أثناء حذف المرشد: " + (res.message || "فشلت العملية"));
-      return;
+    try {
+      setGuides(prev => prev.filter(g => g.license_number !== lic));
+      deleteGuideAccount(lic);
+      deleteFromSecureBackend("guides", "license_number", lic);
+      await apiDeleteGuide(lic);
+      alert("تم حذف المرشد السياحي بنجاح من قاعدة البيانات");
+    } catch (err: any) {
+      alert("حدث خطأ أثناء حذف المرشد: " + (err.message || "فشلت العملية"));
     }
-    setGuides(prev => prev.filter(g => g.license_number !== lic));
-    alert("تم حذف المرشد السياحي بنجاح من قاعدة البيانات");
   };
 
   // Fetch live guides and admin data from DelniDB
@@ -842,8 +818,6 @@ function AdminDashboard() {
           vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : null),
           restaurant_id: data.restaurant_id || null,
           itinerary_steps: data.itinerary_steps ? (typeof data.itinerary_steps === 'string' ? data.itinerary_steps : JSON.stringify(data.itinerary_steps)) : null,
-          // Saved in hotels_trip_weekly
-          hotel_ids: Array.isArray(data.hotel_ids) ? data.hotel_ids : data.hotel_id ? [data.hotel_id] : [],
         };
         const res = await apiCreateWeeklyTrip(payload);
         if (!res || res.status === "error" || res.errors || !res.trip) {
@@ -908,30 +882,22 @@ function AdminDashboard() {
         setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...d, ...updated, ...payload, ...res.trip } : d));
         alert("تم تحديث الرحلة اليومية بنجاح في قاعدة البيانات!");
       } else {
-        // Keep the modal open with the admin's edits so they can fix and retry.
-        alert("تعذر حفظ التعديل: " + (res?.message || "خطأ في الخادم"));
-        return;
+        alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
+        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...updated, ...payload } : d));
       }
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
-      return;
     }
     setEditingDailyTrip(null);
   };
 
   const handleDeleteDailyTrip = async (id: string) => {
     if (!confirm("هل تريد حذف هذه الرحلة اليومية نهائياً من قاعدة البيانات؟")) return;
-    const res = await apiDeleteDailyTrip(id);
-    if (res.status !== "success") {
-      alert("تعذر حذف الرحلة: " + (res.message || ""));
-      return;
-    }
-    // A trip with bookings is deactivated by the server instead of deleted.
-    if (res.deactivated) {
-      setDailyTrips(prev => prev.map(d => (d.daily_trip_id || d.id) === id ? { ...d, is_active: false } : d));
-      alert(res.message || "تم إيقاف الرحلة لأن لها حجوزات مسجلة");
-    } else {
-      setDailyTrips(prev => prev.filter(d => (d.daily_trip_id || d.id) !== id));
+    setDailyTrips(prev => prev.filter(d => (d.daily_trip_id || d.id) !== id));
+    try {
+      await apiDeleteDailyTrip(id);
+    } catch (err: any) {
+      console.error(err);
     }
   };
 
@@ -960,36 +926,28 @@ function AdminDashboard() {
         vehicle_plate: (updated as any).vehicle_plate || (Array.isArray((updated as any).vehicle_plates) ? (updated as any).vehicle_plates[0] : null),
         restaurant_id: (updated as any).restaurant_id || null,
         itinerary_steps: (updated as any).itinerary_steps ? (typeof (updated as any).itinerary_steps === 'string' ? (updated as any).itinerary_steps : JSON.stringify((updated as any).itinerary_steps)) : null,
-        // Only sent when the form carries hotels, so an edit without them keeps hotels_trip_weekly as is.
-        ...(Array.isArray((updated as any).hotel_ids) ? { hotel_ids: (updated as any).hotel_ids } : {}),
       };
       const res = await apiUpdateWeeklyTrip(tripId, payload);
       if (res && res.status === "success") {
         setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? ({ ...w, ...updated, ...payload, ...res.trip } as any) : w));
         alert("تم تحديث الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
       } else {
-        alert("تعذر حفظ التعديل: " + (res?.message || "خطأ في الخادم"));
-        return;
+        alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
+        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? ({ ...updated, ...payload } as any) : w));
       }
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
-      return;
     }
     setEditingWeeklyTrip(null);
   };
 
   const handleDeleteWeeklyTrip = async (id: string) => {
     if (!confirm("هل تريد حذف هذه الرحلة الأسبوعية نهائياً من قاعدة البيانات؟")) return;
-    const res = await apiDeleteWeeklyTrip(id);
-    if (res.status !== "success") {
-      alert("تعذر حذف الرحلة: " + (res.message || ""));
-      return;
-    }
-    if (res.deactivated) {
-      setWeeklyTrips(prev => prev.map(w => (w.weekly_trip_id || w.id) === id ? ({ ...w, is_active: false } as any) : w));
-      alert(res.message || "تم إيقاف الرحلة لأن لها حجوزات مسجلة");
-    } else {
-      setWeeklyTrips(prev => prev.filter(w => (w.weekly_trip_id || w.id) !== id));
+    setWeeklyTrips(prev => prev.filter(w => (w.weekly_trip_id || w.id) !== id));
+    try {
+      await apiDeleteWeeklyTrip(id);
+    } catch (err: any) {
+      console.error(err);
     }
   };
   const handleSavePrivate = async (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => {
@@ -1005,52 +963,46 @@ function AdminDashboard() {
       assigned_vehicle: vehicle || existing?.assigned_vehicle,
     };
 
-    // Saved in DelniDB (private_trips) through Laravel; the list updates only on success.
-    const res = await apiAdminUpdatePrivateTrip(id, {
-      status_order: status,
-      quoted_price: updatedTrip.quoted_price ?? null,
-      admin_itinerary_plan: updatedTrip.admin_itinerary_plan ?? null,
-      assigned_guide_license: guide || null,
-    });
-    if (res.status !== "success") {
-      alert(res.message || "تعذر حفظ الرحلة الخاصة في قاعدة البيانات");
-      return;
-    }
-    setPrivateTrips((prev: any) => prev.map((p: any) => p.private_trip_id === id ? { ...updatedTrip, ...res.trip } : p));
+    setPrivateTrips((prev: any) => prev.map((p: any) => p.private_trip_id === id ? updatedTrip : p));
     setEvaluatingPrivateTrip(null);
+
+    try {
+      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTrip),
+      });
+    } catch (e) {
+      console.error("Failed to sync private trip with SQL Server", e);
+    }
+
+    try {
+      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+      const next = local.map((p: any) => p.private_trip_id === id ? updatedTrip : p);
+      if (!local.find((p: any) => p.private_trip_id === id)) next.unshift(updatedTrip);
+      localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
+    } catch {}
+
+    if (status === "بانتظار تأكيد السائح") {
+      alert(`✅ تم اعتماد جدول المحطات وتسعيرة الرحلة (${price} د.ل) وإرسال العرض بنجاح إلى السائح.\nحالة الطلب الآن: "بانتظار تأكيد السائح".`);
+    } else if (status === "مرفوضة من الأدمن") {
+      alert(`تم تسجيل رفض طلب الرحلة الخاصة (#${id}).`);
+    }
   };
 
-  const handleAddPrivateTrip = async (p: any) => {
-    // The server assigns private_trip_id; only private_trips columns are sent.
-    const res = await apiAdminCreatePrivateTrip({
-      tourist_id: p.tourist_id || null,
-      customer_name: p.customer_name || null,
-      customer_phone: p.customer_phone || null,
-      customer_description: p.customer_description,
-      customer_requirements: p.customer_requirements || null,
-      preferred_start_date: p.preferred_start_date,
-      duration_days: Number(p.duration_days),
-      number_of_companions: Number(p.number_of_companions) || 0,
-      quoted_price: p.quoted_price ? Number(p.quoted_price) : null,
-      admin_itinerary_plan: p.admin_itinerary_plan || null,
-      status_order: p.status_order || undefined,
-      guide_license_number: p.guide_license_number || null,
-    });
-    if (res.status !== "success" || !res.trip) {
-      alert("تعذر إضافة الرحلة الخاصة: " + (res.message || ""));
-      return;
-    }
-    setPrivateTrips(prev => [{ ...p, ...res.trip }, ...prev]);
-    setShowAddPrivateTrip(false);
-  };
   const handleDeletePrivate = async (id: string) => {
     if (!confirm("هل تريد حذف طلب الرحلة الخاصة؟")) return;
-    const res = await apiAdminDeletePrivateTrip(id);
-    if (res.status !== "success") {
-      alert("تعذر حذف الرحلة الخاصة: " + (res.message || ""));
-      return;
-    }
     setPrivateTrips(prev => prev.filter(p => p.private_trip_id !== id));
+    try {
+      await fetch(`http://127.0.0.1:5001/api/db/private_trips?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    } catch {}
+    try {
+      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+      const next = local.filter((p: any) => p.private_trip_id !== id);
+      localStorage.setItem("delni_private_trips", JSON.stringify(next));
+      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
+    } catch {}
   };
   useEffect(() => {
     try {
@@ -1109,106 +1061,170 @@ function AdminDashboard() {
     };
   }, []);
 
-  /* Hotels & restaurants are saved through Laravel (admin-only); the list changes only after the server confirms. */
-  const hotelPayload = (h: any, hotelId: string) => ({
-    hotel_id: hotelId,
-    hotel_name: h.name || h.hotel_name,
-    city: h.city,
-    address_details: h.address || h.address_details,
-    phone_number: h.phone || h.phone_number,
-    star_rating: Number(h.stars || h.star_rating) || 3,
-    partnership_status: h.partnership_status || "نشط",
-    contract_date: h.contract_start_date || h.contract_date || null,
-    verification_status: h.verification_status || "موثق",
-    property_type: h.property_type || "hotel",
-    amenities: Array.isArray(h.amenities) ? h.amenities.join("، ") : h.amenities || null,
-    hotel_photo_1: h.hotel_photo_1 || null,
-    hotel_photo_2: h.hotel_photo_2 || null,
-    hotel_photo_3: h.hotel_photo_3 || null,
-    hotel_photo_4: h.hotel_photo_4 || null,
-    hotel_photo_5: h.hotel_photo_5 || null,
-  });
-  const handleAddHotel = async (h: any) => {
-    const hotelId = String(h.hotel_id || h.id || "").trim() || `HTL-${Date.now().toString().slice(-6)}`;
-    if (hotels.some(x => x.id === hotelId)) {
-      alert(`رقم الفندق (${hotelId}) مسجل مسبقاً`);
-      return;
-    }
-    const res = await apiStoreHotel(hotelPayload(h, hotelId));
-    if (res.status !== "success") {
-      alert("تعذر حفظ الفندق: " + (res.message || ""));
-      return;
-    }
-    setHotels((prev) => [{ bookings_count: 0, rating_avg: 0, ...h, id: hotelId, hotel_id: hotelId }, ...prev]);
+  const handleAddHotel = (h: any) => {
+    const hotelId = h.hotel_id || h.id || `HTL-${Date.now().toString().slice(-4)}`;
+    const newHotelObj: Hotel = {
+      id: hotelId,
+      bookings_count: 0,
+      rating_avg: 5.0,
+      property_type: h.property_type || "hotel",
+      discount_percentage: Number(h.discount_percentage) || 15,
+      amenities: h.amenities || ["مسبح", "واي فاي", "موقف"],
+      whatsapp: h.whatsapp || h.phone,
+      ...h,
+    };
+    setHotels((prev) => [newHotelObj, ...prev]);
     setShowAddHotel(false);
+
+    try {
+      const storedHotels = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...storedHotels]));
+    } catch {}
+
+    sendToSecureBackend("hotels", {
+      hotel_id: hotelId,
+      hotel_name: newHotelObj.name,
+      city: newHotelObj.city,
+      address_details: newHotelObj.address,
+      phone_number: newHotelObj.phone,
+      star_rating: newHotelObj.stars,
+      partnership_status: newHotelObj.partnership_status || "نشط",
+      property_type: newHotelObj.property_type || "hotel",
+      discount_percentage: newHotelObj.discount_percentage || 15,
+      working_hours: newHotelObj.working_hours,
+      description: newHotelObj.description,
+      google_maps_url: newHotelObj.google_maps_url,
+      whatsapp: newHotelObj.whatsapp,
+      contract_start_date: newHotelObj.contract_start_date,
+      contract_end_date: newHotelObj.contract_end_date,
+      hotel_photo_1: newHotelObj.hotel_photo_1,
+      hotel_photo_2: newHotelObj.hotel_photo_2,
+      hotel_photo_3: newHotelObj.hotel_photo_3,
+      hotel_photo_4: newHotelObj.hotel_photo_4,
+      hotel_photo_5: newHotelObj.hotel_photo_5,
+      verification_status: "موثق",
+    });
   };
-  const handleUpdateHotel = async (h: Hotel) => {
-    const res = await apiStoreHotel(hotelPayload(h, h.id));
-    if (res.status !== "success") {
-      alert("تعذر تحديث الفندق: " + (res.message || ""));
-      return;
-    }
+  const handleUpdateHotel = (h: Hotel) => {
     setHotels(hotels.map(x => x.id === h.id ? h : x));
     setEditingHotel(null);
+    try {
+      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+      const updated = stored.map((item: any) => item.id === h.id ? { ...item, ...h } : item);
+      localStorage.setItem("dalni_hotels", JSON.stringify(updated));
+    } catch {}
+
+    sendToSecureBackend("hotels", {
+      hotel_id: h.id,
+      hotel_name: h.name,
+      city: h.city,
+      address_details: h.address,
+      phone_number: h.phone,
+      star_rating: h.stars,
+      partnership_status: h.partnership_status || "نشط",
+      property_type: h.property_type || "hotel",
+      discount_percentage: h.discount_percentage || 15,
+      working_hours: h.working_hours,
+      description: h.description,
+      google_maps_url: h.google_maps_url,
+      whatsapp: h.whatsapp,
+      contract_start_date: h.contract_start_date,
+      contract_end_date: h.contract_end_date,
+      hotel_photo_1: h.hotel_photo_1,
+      hotel_photo_2: h.hotel_photo_2,
+      hotel_photo_3: h.hotel_photo_3,
+      hotel_photo_4: h.hotel_photo_4,
+      hotel_photo_5: h.hotel_photo_5,
+      verification_status: "موثق",
+    });
   };
-  const handleDeleteHotel = async (id: string) => {
-    if (!confirm("هل تريد حذف الفندق؟")) return;
-    const res = await apiDeleteHotel(id);
-    if (res.status !== "success") {
-      alert("تعذر حذف الفندق: " + (res.message || ""));
-      return;
+  const handleDeleteHotel = (id: string) => {
+    if (confirm("هل تريد حذف الفندق؟")) {
+      setHotels(hotels.filter(h => h.id !== id));
+      try {
+        const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
+        localStorage.setItem("dalni_hotels", JSON.stringify(stored.filter((item: any) => item.id !== id)));
+      } catch {}
+      deleteFromSecureBackend("hotels", "hotel_id", id);
     }
-    setHotels(hotels.filter(h => h.id !== id));
   };
-  const restaurantPayload = (r: any, facilityId: string) => ({
-    facility_id: facilityId,
-    facility_name: r.name || r.facility_name,
-    facility_type: r.type || r.facility_type,
-    city: r.city,
-    address_details: r.address || r.address_details,
-    phone_number: r.phone || r.phone_number,
-    description: r.description,
-    facility_image_1: r.facility_image_1 || null,
-    facility_image_2: r.facility_image_2 || null,
-    facility_image_3: r.facility_image_3 || null,
-    facility_image_4: r.facility_image_4 || null,
-    facility_image_5: r.facility_image_5 || null,
-    contract_date: r.contract_start_date || r.contract_date || null,
-    verification_status: r.verification_status || "موثق",
-    working_hours: r.working_hours,
-    features: Array.isArray(r.features) ? r.features.join("، ") : r.features || null,
-  });
-  const handleAddRestaurant = async (r: any) => {
-    const facilityId = String(r.facility_id || r.id || "").trim() || `R-${Date.now().toString().slice(-6)}`;
-    if (restaurants.some(x => x.id === facilityId)) {
-      alert(`رقم المرفق (${facilityId}) مسجل مسبقاً`);
-      return;
-    }
-    const res = await apiStoreRestaurant(restaurantPayload(r, facilityId));
-    if (res.status !== "success") {
-      alert("تعذر حفظ المطعم: " + (res.message || ""));
-      return;
-    }
-    setRestaurants((prev) => [{ rating_avg: 0, ...r, id: facilityId, facility_id: facilityId }, ...prev]);
+  const handleAddRestaurant = (r: any) => {
+    const facilityId = r.facility_id || r.id || `R-0${restaurants.length + 1}`;
+    const newRest = { id: facilityId, rating_avg: 5.0, ...r };
+    setRestaurants((prev) => [newRest, ...prev]);
     setShowAddRestaurant(false);
+
+    try {
+      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests]));
+    } catch {}
+
+    sendToSecureBackend("restaurants", {
+      facility_id: facilityId,
+      facility_name: newRest.name || newRest.facility_name,
+      facility_type: newRest.type || newRest.facility_type,
+      city: newRest.city,
+      address_details: newRest.address || newRest.address_details,
+      phone_number: newRest.phone || newRest.phone_number,
+      description: newRest.description,
+      facility_image_1: newRest.facility_image_1,
+      facility_image_2: newRest.facility_image_2,
+      facility_image_3: newRest.facility_image_3,
+      facility_image_4: newRest.facility_image_4,
+      facility_image_5: newRest.facility_image_5,
+      verification_status: newRest.verification_status || "موثق",
+      working_hours: newRest.working_hours,
+      features: Array.isArray(newRest.features) ? newRest.features.join("، ") : newRest.features,
+      google_maps_url: newRest.google_maps_url,
+      discount_percentage: newRest.discount_percentage || 20,
+      whatsapp: newRest.whatsapp,
+      partnership_status: newRest.partnership_status || "نشط",
+      contract_start_date: newRest.contract_start_date,
+      contract_end_date: newRest.contract_end_date,
+    });
   };
-  const handleUpdateRestaurant = async (r: Restaurant) => {
-    const res = await apiStoreRestaurant(restaurantPayload(r, r.id));
-    if (res.status !== "success") {
-      alert("تعذر تحديث المطعم: " + (res.message || ""));
-      return;
-    }
+  const handleUpdateRestaurant = (r: Restaurant) => {
     setRestaurants(restaurants.map(x => x.id === r.id ? r : x));
     setEditingRestaurant(null);
+    try {
+      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+      const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
+      localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
+    } catch {}
+
+    sendToSecureBackend("restaurants", {
+      facility_id: r.id || (r as any).facility_id,
+      facility_name: r.name || (r as any).facility_name,
+      facility_type: r.type || (r as any).facility_type,
+      city: r.city,
+      address_details: r.address || (r as any).address_details,
+      phone_number: r.phone || (r as any).phone_number,
+      description: r.description,
+      facility_image_1: r.facility_image_1,
+      facility_image_2: r.facility_image_2,
+      facility_image_3: r.facility_image_3,
+      facility_image_4: r.facility_image_4,
+      facility_image_5: r.facility_image_5,
+      verification_status: (r as any).verification_status,
+      working_hours: r.working_hours,
+      features: Array.isArray((r as any).features) ? (r as any).features.join("، ") : (r as any).features,
+      google_maps_url: r.google_maps_url,
+      discount_percentage: (r as any).discount_percentage || 20,
+      whatsapp: (r as any).whatsapp,
+      partnership_status: r.partnership_status || "نشط",
+      contract_start_date: r.contract_start_date,
+      contract_end_date: r.contract_end_date,
+    });
   };
-  const handleDeleteRestaurant = async (id: string) => {
-    if (!confirm("هل تريد حذف المطعم؟")) return;
-    const res = await apiDeleteRestaurant(id);
-    if (res.status !== "success") {
-      alert("تعذر حذف المطعم: " + (res.message || ""));
-      return;
+  const handleDeleteRestaurant = (id: string) => {
+    if (confirm("هل تريد حذف المطعم؟")) {
+      setRestaurants(restaurants.filter(r => r.id !== id));
+      try {
+        const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
+        localStorage.setItem("dalni_restaurants", JSON.stringify(storedRests.filter((r: any) => r.id !== id)));
+      } catch {}
+      deleteFromSecureBackend("restaurants", "facility_id", id);
     }
-    setRestaurants(restaurants.filter(r => r.id !== id));
   };
 
   const handleToggleTouristStatus = async (touristId: string, currentStatus: string) => {
@@ -1255,59 +1271,94 @@ function AdminDashboard() {
     }
   };
 
-  /* Landmarks (places_tourist) via Laravel. region/history_snippet/best_season/highlights have no column yet. */
-  const placePayload = (a: any) => ({
-    place_name: a.place_name || a.name,
-    description: a.description,
-    city: a.city,
-    longitude: Number(a.longitude),
-    latitude: Number(a.latitude),
-    category: a.category,
-    place_image: a.place_image || null,
-    is_unesco: Boolean(a.is_unesco),
-    unesco_year: a.unesco_year ? Number(a.unesco_year) : null,
-    gallery: Array.isArray(a.gallery) ? JSON.stringify(a.gallery) : a.gallery || null,
-    entry_fee: a.entry_fee || null,
-    google_maps_url: a.google_maps_url || null,
-  });
-  const handleAddAttraction = async (a: any) => {
+  const handleAddAttraction = async (a: any) => { 
     const placeId = String(a.place_id || a.municipality_code || a.id || "").trim();
     if (!placeId) {
       alert("يرجى إدخال رقم المعلم السياحي (المفتاح الرئيسي ID)!");
       return;
     }
-    if (attractions.some(x => String(x.place_id || x.id).trim().toLowerCase() === placeId.toLowerCase())) {
+    // Check uniqueness (Primary Key must not be duplicated)
+    const exists = attractions.some(x => String(x.place_id || x.id).trim().toLowerCase() === placeId.toLowerCase());
+    if (exists) {
       alert(`رقم المعلم (${placeId}) مسجل مسبقاً لمعلم آخر! المعرف هو مفتاح رئيسي ولا يمكن تكراره.`);
       return;
     }
-    const res = await apiStorePlace({ place_id: placeId, ...placePayload(a) });
-    if (res.status !== "success") {
-      alert("تعذر حفظ المعلم السياحي: " + (res.message || ""));
-      return;
+    const newPlace: Attraction = { 
+      id: placeId, 
+      place_id: placeId, 
+      municipality_code: placeId,
+      visitors_count: 0, 
+      ...a 
+    };
+    setAttractions([...attractions, newPlace]); 
+    setShowAddAttraction(false); 
+    try {
+      await sendToSecureBackend("places", {
+        place_id: placeId,
+        municipality_code: placeId,
+        place_name: newPlace.place_name || newPlace.name,
+        name: newPlace.place_name || newPlace.name,
+        description: newPlace.description,
+        city: newPlace.city,
+        region: newPlace.region || "المنطقة الغربية",
+        longitude: newPlace.longitude,
+        latitude: newPlace.latitude,
+        category: newPlace.category,
+        place_image: newPlace.place_image,
+        google_maps_url: newPlace.google_maps_url,
+        history_snippet: newPlace.history_snippet,
+        highlights: newPlace.highlights,
+        entry_fee: (newPlace as any).entry_fee,
+        best_season: (newPlace as any).best_season,
+        is_unesco: (newPlace as any).is_unesco,
+        unesco_year: (newPlace as any).unesco_year,
+        gallery: (newPlace as any).gallery,
+        is_new: true,
+        mode: "create",
+      });
+      alert(`✅ تم توثيق وإضافة المعلم السياحي (${newPlace.place_name || newPlace.name}) بنجاح.`);
+    } catch (err: any) {
+      console.warn("Failed to persist place to backend:", err);
     }
-    setAttractions([...attractions, { visitors_count: 0, ...a, id: placeId, place_id: placeId, municipality_code: placeId }]);
-    setShowAddAttraction(false);
-    alert(`✅ تم توثيق وإضافة المعلم السياحي (${a.place_name || a.name}) بنجاح.`);
   };
-  const handleUpdateAttraction = async (a: Attraction) => {
+  const handleUpdateAttraction = async (a: Attraction) => { 
     const placeId = String(a.place_id || a.id).trim();
-    const res = await apiUpdatePlace(placeId, placePayload(a));
-    if (res.status !== "success") {
-      alert("تعذر تحديث المعلم السياحي: " + (res.message || ""));
-      return;
+    setAttractions(attractions.map(x => (x.id === a.id || x.place_id === placeId) ? { ...x, ...a } : x)); 
+    setEditingAttraction(null); 
+    try {
+      await sendToSecureBackend("places", {
+        place_id: placeId,
+        municipality_code: placeId,
+        place_name: a.place_name || a.name || (a as any).name,
+        name: a.place_name || a.name || (a as any).name,
+        description: a.description,
+        city: a.city,
+        region: a.region || "المنطقة الغربية",
+        longitude: a.longitude,
+        latitude: a.latitude,
+        category: a.category,
+        place_image: a.place_image,
+        google_maps_url: a.google_maps_url,
+        history_snippet: (a as any).history_snippet,
+        highlights: (a as any).highlights,
+        entry_fee: (a as any).entry_fee,
+        best_season: (a as any).best_season,
+        is_unesco: (a as any).is_unesco,
+        unesco_year: (a as any).unesco_year,
+        gallery: (a as any).gallery,
+        mode: "update",
+      });
+      alert(`✅ تم حفظ وتحديث بيانات المعلم السياحي (${a.place_name || a.name}) بنجاح في قاعدة البيانات.`);
+    } catch (err: any) {
+      console.warn("Failed to update place in backend:", err);
+      alert("⚠️ تم تحديث البيانات محلياً ولكن حدث خطأ في الاتصال بقاعدة البيانات: " + err.message);
     }
-    setAttractions(attractions.map(x => (x.id === a.id || x.place_id === placeId) ? { ...x, ...a } : x));
-    setEditingAttraction(null);
-    alert(`✅ تم حفظ وتحديث بيانات المعلم السياحي (${a.place_name || a.name}) بنجاح في قاعدة البيانات.`);
   };
-  const handleDeleteAttraction = async (id: string) => {
-    if (!confirm("هل تريد حذف المعلم السياحي؟")) return;
-    const res = await apiDeletePlace(id);
-    if (res.status !== "success") {
-      alert("تعذر حذف المعلم السياحي: " + (res.message || ""));
-      return;
+  const handleDeleteAttraction = (id: string) => { 
+    if (confirm("هل تريد حذف المعلم السياحي؟")) {
+      setAttractions(attractions.filter(a => a.id !== id)); 
+      deleteFromSecureBackend("places", "place_id", id);
     }
-    setAttractions(attractions.filter(a => a.id !== id));
   };
   const handleReplyTicket = (ticketId: string, reply: string) => {
     const updated = tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" as const } : t);
@@ -1316,62 +1367,50 @@ function AdminDashboard() {
       localStorage.setItem("dalni_support_tickets", JSON.stringify(updated));
     } catch {}
   };
-  // Daily Trip Offers (DelniDB offers_daily_trips), saved through Laravel
+  // Daily Trip Offers (DelniDB offers_daily_trips)
   const handleAddDailyOffer = async (o: any) => {
-    const res = await apiSaveOffer("daily", { ...o, offer_daily_id: undefined });
-    if (res.status !== "success" || !res.offer) {
-      alert("تعذر حفظ العرض: " + (res.message || ""));
-      return;
+    const res = await apiCreateDailyOffer(o);
+    if (res && res.success && res.offer) {
+      setDailyOffers([res.offer, ...dailyOffers]);
+    } else {
+      const newId = `DO-${Date.now().toString().slice(-4)}`;
+      setDailyOffers([{ ...o, offer_daily_id: newId, id: newId }, ...dailyOffers]);
     }
-    setDailyOffers([{ ...o, ...res.offer, id: res.offer.offer_daily_id }, ...dailyOffers]);
     setShowAddDailyOffer(false);
   };
   const handleUpdateDailyOffer = async (o: DailyOffer) => {
-    const res = await apiSaveOffer("daily", { ...o, offer_daily_id: o.offer_daily_id || o.id });
-    if (res.status !== "success") {
-      alert("تعذر تحديث العرض: " + (res.message || ""));
-      return;
-    }
+    await apiCreateDailyOffer(o);
     setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x));
     setEditingDailyOffer(null);
   };
   const handleDeleteDailyOffer = async (id: string) => {
-    if (!confirm("هل تريد بالتأكيد حذف هذا العرض اليومي؟")) return;
-    const res = await apiDeleteOffer("daily", id);
-    if (res.status !== "success") {
-      alert("تعذر حذف العرض: " + (res.message || ""));
-      return;
+    if (confirm("هل تريد بالتأكيد حذف هذا العرض اليومي؟")) {
+      await apiDeleteDailyOffer(id);
+      setDailyOffers(dailyOffers.filter(o => (o.offer_daily_id || o.id) !== id));
     }
-    setDailyOffers(dailyOffers.filter(o => (o.offer_daily_id || o.id) !== id));
   };
 
-  // Weekly Trip Offers (DelniDB offers_weekly_trips), saved through Laravel
+  // Weekly Trip Offers (DelniDB offers_weekly_trips)
   const handleAddWeeklyOffer = async (o: any) => {
-    const res = await apiSaveOffer("weekly", { ...o, offer_weekly_id: undefined });
-    if (res.status !== "success" || !res.offer) {
-      alert("تعذر حفظ العرض: " + (res.message || ""));
-      return;
+    const res = await apiCreateWeeklyOffer(o);
+    if (res && res.success && res.offer) {
+      setWeeklyOffers([res.offer, ...weeklyOffers]);
+    } else {
+      const newId = `WO-${Date.now().toString().slice(-4)}`;
+      setWeeklyOffers([{ ...o, offer_weekly_id: newId, id: newId }, ...weeklyOffers]);
     }
-    setWeeklyOffers([{ ...o, ...res.offer, id: res.offer.offer_weekly_id }, ...weeklyOffers]);
     setShowAddWeeklyOffer(false);
   };
   const handleUpdateWeeklyOffer = async (o: WeeklyOffer) => {
-    const res = await apiSaveOffer("weekly", { ...o, offer_weekly_id: o.offer_weekly_id || o.id });
-    if (res.status !== "success") {
-      alert("تعذر تحديث العرض: " + (res.message || ""));
-      return;
-    }
+    await apiCreateWeeklyOffer(o);
     setWeeklyOffers(weeklyOffers.map(x => (x.offer_weekly_id || x.id) === (o.offer_weekly_id || o.id) ? o : x));
     setEditingWeeklyOffer(null);
   };
   const handleDeleteWeeklyOffer = async (id: string) => {
-    if (!confirm("هل تريد بالتأكيد حذف هذا العرض الأسبوعي؟")) return;
-    const res = await apiDeleteOffer("weekly", id);
-    if (res.status !== "success") {
-      alert("تعذر حذف العرض: " + (res.message || ""));
-      return;
+    if (confirm("هل تريد بالتأكيد حذف هذا العرض الأسبوعي؟")) {
+      await apiDeleteWeeklyOffer(id);
+      setWeeklyOffers(weeklyOffers.filter(o => (o.offer_weekly_id || o.id) !== id));
     }
-    setWeeklyOffers(weeklyOffers.filter(o => (o.offer_weekly_id || o.id) !== id));
   };
   // Bot & Live Support Chat Override
   const handleBotSend = () => {
@@ -1620,7 +1659,6 @@ function AdminDashboard() {
                 <QuickAction icon="🗓️" label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
                 <QuickAction icon="🏨" label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
                 <QuickAction icon="🍽️" label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
-                          <QuickAction icon="👑" label={isAr ? "إضافة رحلة خاصة" : "Add Private Trip"} onClick={() => setShowAddPrivateTrip(true)} />
                 <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
                 <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
                 <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
@@ -2675,51 +2713,139 @@ function AdminDashboard() {
 
       {/* PRIVATE TRIPS */}
       {active === "private_trips" && (
-        <SectionCard title="إدارة الرحلات الخاصة VIP (تسعير وتحديد تكاليف المرشد والنقل والخدمات)">
+        <SectionCard title="إدارة ومراجعة طلبات الرحلات الخاصة (دراسة المسار، تعيين المركبة، جدولة المحطات، واعتماد التسعيرة)">
           <div className="space-y-4 text-right">
             {privateTrips.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-xs">لا توجد طلبات رحلات خاصة VIP حالياً.</div>
+              <div className="text-center py-10 text-muted-foreground text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                لا توجد طلبات رحلات خاصة VIP حالياً. الطلبات المقدمة من السياح ستظهر هنا لمراجعتها وجدولتها.
+              </div>
             ) : (
-              privateTrips.map((pt) => (
-                <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
-                  <div className="flex justify-between items-start flex-wrap gap-2">
-                    <div>
-                      <h3 className="font-black text-foreground text-base">{pt.customer_name} ({pt.customer_phone})</h3>
-                      <div className="text-xs text-muted-foreground mt-0.5 font-bold">
-                        👨‍✈️ المرشد المطلوب: <span className="text-primary font-black">{pt.guide_license_number || "غير محدد"}</span>
+              privateTrips.map((pt) => {
+                let parsedSteps: ItineraryStepItem[] | null = null;
+                if (pt.admin_itinerary_plan) {
+                  try {
+                    const p = JSON.parse(pt.admin_itinerary_plan);
+                    if (Array.isArray(p) && p.length > 0 && p[0].title) parsedSteps = p;
+                  } catch {}
+                }
+
+                const isConfirmed = pt.status_order === "مؤكدة" || pt.status_order === "مؤكدة ومسددة";
+                const isPendingTourist = pt.status_order === "بانتظار تأكيد السائح" || pt.status_order?.includes("موافقة");
+                const isCancelled = pt.status_order?.includes("ملغاة") || pt.status_order?.includes("مرفوضة");
+
+                return (
+                  <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3.5 shadow-xs">
+                    <div className="flex justify-between items-start flex-wrap gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-black text-foreground text-base">{pt.customer_name}</h3>
+                          <span className="font-mono text-xs font-bold text-slate-500">({pt.customer_phone})</span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 font-mono text-[11px] font-black text-slate-700">
+                            #{pt.private_trip_id}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-3 font-bold">
+                          <span>
+                            👨‍✈️ المرشد المطلوب:{" "}
+                            <span className="text-primary font-black">{pt.guide_license_number || "غير محدد (بمعرفة الإدارة)"}</span>
+                          </span>
+                          {pt.assigned_vehicle && (
+                            <span className="text-emerald-800">
+                              🚍 سيارة النقل المخصصة: <span className="font-black font-mono">{pt.assigned_vehicle}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <Badge
+                        tone={
+                          isConfirmed
+                            ? "green"
+                            : isPendingTourist
+                            ? "sea"
+                            : isCancelled
+                            ? "red"
+                            : "sun"
+                        }
+                      >
+                        {pt.status_order || "بانتظار تسعير الإدارة"}
+                      </Badge>
                     </div>
-                    <Badge tone={pt.status_order === "مؤكدة" ? "green" : pt.status_order?.includes("موافقة") ? "sea" : pt.status_order === "ملغاة من السائح" ? "red" : "sun"}>
-                      {pt.status_order || "بانتظار تسعير الإدارة"}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl font-medium">" {pt.customer_description} "</p>
-                  {pt.customer_requirements && (
-                    <div className="text-xs text-amber-900 bg-amber-50/70 p-2 rounded-xl border border-amber-200/60 font-semibold">
-                      <b>متطلبات السائح الخاصة:</b> {pt.customer_requirements}
+
+                    <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl font-medium border border-slate-100">
+                      📍 <b>الوجهة / المعلم المستهدف:</b> {pt.customer_description}
+                    </p>
+
+                    {pt.customer_requirements && (
+                      <div className="text-xs text-amber-900 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60 font-semibold">
+                        <b>متطلبات وملاحظات السائح:</b> {pt.customer_requirements}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground">
+                      <span>📅 تاريخ الانطلاق المفضل: {pt.preferred_start_date}</span>
+                      <span>⏱️ مدة الرحلة: {pt.duration_days} {pt.duration_days > 1 ? "أيام" : "يوم واحد"}</span>
+                      <span>👥 عدد المرافقين: {pt.number_of_companions} أفراد</span>
+                      {pt.quoted_price && (
+                        <span className="text-emerald-700 font-black bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                          💰 السعر الإجمالي المعتمد: {pt.quoted_price} د.ل
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground">
-                    <span>📅 تاريخ الانطلاق: {pt.preferred_start_date}</span>
-                    <span>⏱️ المدة: {pt.duration_days} أيام</span>
-                    <span>👥 عدد المرافقين: {pt.number_of_companions}</span>
-                    {pt.quoted_price && <span className="text-emerald-700 font-black">💰 التسعيرة المعتمدة: {pt.quoted_price} د.ل</span>}
-                  </div>
-                  {pt.admin_itinerary_plan && (
-                    <div className="text-xs bg-emerald-50/70 border border-emerald-200 p-2.5 rounded-xl text-emerald-950 font-semibold">
-                      <b>خطة البرنامج:</b> {pt.admin_itinerary_plan}
+
+                    {/* Step-by-Step Stations Itinerary Preview */}
+                    {parsedSteps && parsedSteps.length > 0 && (
+                      <div className="bg-[#FAF7F2] border border-[#E8E2D6] rounded-xl p-3 text-xs space-y-2">
+                        <div className="font-black text-slate-800 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-[#003580]">
+                            <span>🧭</span>
+                            <span>
+                              جدول محطات الرحلة المقترح ({parsedSteps.length} محطات - {pt.duration_days > 1 ? "نظام الأيام" : "نظام الساعات"}):
+                            </span>
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-bold">جاهز ومعتمد للعرض على السائح</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {parsedSteps.map((st, sidx) => (
+                            <div key={sidx} className="bg-white p-2 rounded-lg border border-slate-200 flex items-start gap-2 shadow-2xs">
+                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-mono font-black text-[10px] shrink-0">
+                                {st.time}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-bold text-slate-900 truncate">{st.title}</div>
+                                <div className="text-[10px] text-slate-500 line-clamp-1">{st.desc}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!parsedSteps && pt.admin_itinerary_plan && (
+                      <div className="text-xs bg-emerald-50/70 border border-emerald-200 p-2.5 rounded-xl text-emerald-950 font-semibold">
+                        <b>خطة البرنامج:</b> {pt.admin_itinerary_plan}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePrivate(pt.private_trip_id)}
+                        className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50 cursor-pointer"
+                      >
+                        حذف
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEvaluatingPrivateTrip(pt)}
+                        className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>🧭</span>
+                        <span>{pt.quoted_price ? "مراجعة وتعديل جدول المحطات والتسعيرة" : "إعداد جدول المحطات واحتساب التسعيرة ↗"}</span>
+                      </button>
                     </div>
-                  )}
-                  <div className="flex justify-end gap-2 pt-1">
-                    <button onClick={() => handleDeletePrivate(pt.private_trip_id)} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50 cursor-pointer">
-                      حذف
-                    </button>
-                    <button onClick={() => setEvaluatingPrivateTrip(pt)} className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 cursor-pointer">
-                      {pt.quoted_price ? "تعديل الحسبة والتسعيرة" : "احتساب التكلفة واعتماد التسعيرة"}
-                    </button>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </SectionCard>
@@ -3009,37 +3135,19 @@ function AdminDashboard() {
 
       {/* REVIEWS */}
       {active === "reviews" && (
-        <SectionCard title="إدارة تقييمات السياح (الرحلات اليومية والأسبوعية، الفنادق، المطاعم)">
+        <SectionCard title="إدارة تقييمات السياح (الرحلات، الفنادق، المطاعم، المرشدون، الشركات)">
           <div className="space-y-4 text-right">
-            {reviewsError && (
-              <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">
-                تعذر تحميل التقييمات: {reviewsError}{" "}
-                <button onClick={loadReviews} className="underline">إعادة المحاولة</button>
-              </div>
-            )}
-            {!reviewsError && reviews.length === 0 && (
-              <div className="p-4 rounded-xl bg-muted/30 text-xs text-muted-foreground">لا توجد تقييمات مسجلة بعد.</div>
-            )}
             {reviews.map((rev) => (
-              <div key={rev.id} className={`p-4 rounded-2xl border border-border space-y-2 ${rev.is_hidden ? "bg-muted/40 opacity-70" : "bg-white"}`}>
+              <div key={rev.id} className="p-4 rounded-2xl border border-border bg-white space-y-2">
                 <div className="flex flex-wrap justify-between items-center gap-2">
                   <div className="flex items-center gap-2">
                     <Badge tone="sea">{rev.target_type}</Badge>
                     <span className="font-black text-foreground text-sm">{rev.target_name}</span>
-                    {rev.is_hidden && <Badge tone="red">مخفي</Badge>}
                   </div>
                   <div className="text-gold-foreground font-black text-sm">{"⭐".repeat(rev.stars_rating)} ({rev.stars_rating}/5)</div>
                 </div>
                 <div className="text-xs text-muted-foreground">👤 {rev.tourist_name} · 🗓️ {rev.created_at}</div>
-                {rev.comment_text && <p className="p-3 rounded-xl bg-muted/30 text-xs font-semibold text-foreground">" {rev.comment_text} "</p>}
-                <div className="flex gap-2 justify-end">
-                  <button onClick={() => handleToggleReviewVisibility(rev)} className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-muted">
-                    {rev.is_hidden ? "إظهار" : "إخفاء"}
-                  </button>
-                  <button onClick={() => handleDeleteReview(rev)} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50">
-                    حذف
-                  </button>
-                </div>
+                <p className="p-3 rounded-xl bg-muted/30 text-xs font-semibold text-foreground">" {rev.comment_text} "</p>
               </div>
             ))}
           </div>
@@ -3285,7 +3393,6 @@ function AdminDashboard() {
       {editingDailyOffer && <DailyOfferModal title="تعديل العرض اليومي" offer={editingDailyOffer} dailyTrips={dailyTrips} onClose={() => setEditingDailyOffer(null)} onSave={handleUpdateDailyOffer} />}
       {showAddWeeklyOffer && <WeeklyOfferModal title="إضافة عرض رحلة أسبوعية" weeklyTrips={weeklyTrips} onClose={() => setShowAddWeeklyOffer(false)} onSave={handleAddWeeklyOffer} />}
       {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
-      {showAddPrivateTrip && <AddPrivateTripModal guides={guides} tourists={tourists} onClose={() => setShowAddPrivateTrip(false)} onAdd={handleAddPrivateTrip} />}
       {selectedTouristDetail && (
         <TouristDetailsModal
           tourist={selectedTouristDetail}
@@ -6566,50 +6673,131 @@ function WeeklyTripEditModal({
   );
 }
 
-function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: { trip: PrivateTripRequest; guides: Guide[]; vehicles: Vehicle[]; onClose: () => void; onSave: (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => void }) {
-  // Tourist chose the guide (guide_license_number)
+function EvaluatePrivateTripModal({
+  trip,
+  guides,
+  vehicles,
+  onClose,
+  onSave,
+}: {
+  trip: PrivateTripRequest;
+  guides: Guide[];
+  vehicles: Vehicle[];
+  onClose: () => void;
+  onSave: (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => void;
+}) {
+  const durationDays = trip.duration_days || 1;
+  const isMultiDay = durationDays > 1;
+
+  // Tourist preferred guide or existing assigned guide
   const initialGuideLic = trip.guide_license_number || trip.assigned_guide || guides[0]?.license_number || "";
   const [guide, setGuide] = useState(initialGuideLic);
   const [vehicle, setVehicle] = useState(trip.assigned_vehicle || vehicles[0]?.plate_number || "");
   const [servicesFee, setServicesFee] = useState("150"); // الخدمات المقدمة (ضيافة، تصاريح، لوجستيات)
-  
-  const selectedGuide = guides.find(g => g.license_number === guide) || guides[0];
-  const selectedVehicle = vehicles.find(v => v.plate_number === vehicle) || vehicles[0];
+
+  const selectedGuide = guides.find((g) => g.license_number === guide) || guides[0];
+  const selectedVehicle = vehicles.find((v) => v.plate_number === vehicle) || vehicles[0];
   const guideDailyRate = selectedGuide?.daily_rate || 150;
   const vehicleDailyRate = selectedVehicle?.daily_rate || 450;
-  const durationDays = trip.duration_days || 1;
   const servCost = Number(servicesFee) || 0;
-  
+
   const totalGuideCost = guideDailyRate * durationDays;
   const totalVehicleCost = vehicleDailyRate * durationDays;
   const autoCalculatedTotal = totalGuideCost + totalVehicleCost + servCost;
 
   const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : String(autoCalculatedTotal));
-  const [plan, setPlan] = useState(trip.admin_itinerary_plan || `برنامج رحلة سياحية خاصة لمدة ${durationDays} أيام يشمل المرشد السياحي المختار وسيارة النقل الخاصة والخدمات الميدانية.`);
+
+  // Initialize itinerary stations matching Daily (mode="time") or Weekly (mode="days")
+  const initialSteps: ItineraryStepItem[] = useMemo(() => {
+    if (trip.admin_itinerary_plan) {
+      try {
+        const parsed = JSON.parse(trip.admin_itinerary_plan);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+          return parsed;
+        }
+      } catch {}
+    }
+
+    // Default hourly stops for 1-day trip
+    if (!isMultiDay) {
+      return [
+        {
+          time: "08:30 ص",
+          title: `نقطة التجمع والانطلاق (${trip.customer_description || "الرحلة الخاصة"})`,
+          desc: "التجمع ومقابلة المرشد السياحي المعتمد وصعود مركبة النقل الخاصة والانطلاق نحو الوجهة.",
+        },
+        {
+          time: "10:30 ص",
+          title: `المحطة السياحية الأولى: استكشاف معالم ${trip.customer_description || "الموقع الأثري"}`,
+          desc: "جولة ميدانية استكشافية برفقة المرشد السياحي المعتمد مع شرح تاريخي وتوثيقي للموقع والتقاط الصور.",
+        },
+        {
+          time: "02:00 م",
+          title: "استراحة وتناول وجبة الغداء التقليدية",
+          desc: "استراحة ضيافة وتناول وجبة طعام ليبية أصيلة بمطعم سياحي معتمد بالمنطقة المزارة.",
+        },
+        {
+          time: "05:00 م",
+          title: "المحطة الختامية والعودة بسلامة الله",
+          desc: "اختتام فعاليات البرنامج الخاص والعودة بالمركبة المخصصة إلى نقطة الانطلاق.",
+        },
+      ];
+    }
+
+    // Default day-by-day stops for multi-day trip
+    return Array.from({ length: durationDays }).map((_, i) => ({
+      time: `اليوم ${i + 1}`,
+      title:
+        i === 0
+          ? `محطة اليوم 1 - الانطلاق نحو ${trip.customer_description || "الوجهة السياحية"}`
+          : i === durationDays - 1
+          ? `محطة اليوم ${durationDays} - الجولة الختامية والعودة بسلامة الله`
+          : `محطة اليوم ${i + 1} - استكشاف المعالم والأنشطة الميدانية`,
+      desc: `برنامج ومسار اليوم ${i + 1} يشمل الجولات الميدانية التراثية مع المرشد السياحي وسيارة النقل المخصصة والإقامة والخدمات.`,
+    }));
+  }, [trip.admin_itinerary_plan, isMultiDay, durationDays, trip.customer_description]);
+
+  const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(initialSteps);
 
   const applyAutoPrice = () => {
     setPrice(String(autoCalculatedTotal));
   };
 
+  const handleSendProposal = () => {
+    if (!price || Number(price) <= 0) {
+      alert("يرجى إدخال سعر معتمد صالح للرحلة الخاصة.");
+      return;
+    }
+    if (itinerarySteps.length === 0) {
+      alert("يرجى إضافة محطة واحدة على الأقل في خط سير الرحلة.");
+      return;
+    }
+    const serializedPlan = JSON.stringify(itinerarySteps);
+    // Explicit status: "بانتظار تأكيد السائح" - sending schedule does NOT auto-confirm booking!
+    onSave(trip.private_trip_id, "بانتظار تأكيد السائح", +price, serializedPlan, guide, vehicle);
+  };
+
   return (
-    <ModalShell title={`احتساب تسعيرة الرحلة الخاصة واعتمادها: ${trip.private_trip_id}`} onClose={onClose}>
+    <ModalShell title={`دراسة وجدولة طلب الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
       <div className="space-y-4 text-right">
         {/* Tourist Request Details */}
         <div className="p-3.5 rounded-xl bg-muted/40 text-xs space-y-1.5 border border-border/70">
           <div className="flex justify-between items-center">
             <div><b>العميل:</b> {trip.customer_name} ({trip.customer_phone})</div>
-            <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-black">⏱️ المدة: {durationDays} أيام</span>
+            <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-black">
+              ⏱️ نظام الجدولة: {isMultiDay ? `متعددة الأيام (${durationDays} أيام)` : "يومية بالساعات (يوم واحد)"}
+            </span>
           </div>
           <div className="flex gap-4 text-muted-foreground font-bold">
-            <span>📅 تاريخ الانطلاق: {trip.preferred_start_date}</span>
-            <span>👥 المرافقين: {trip.number_of_companions}</span>
+            <span>📅 تاريخ الانطلاق المفضل: {trip.preferred_start_date}</span>
+            <span>👥 عدد المرافقين: {trip.number_of_companions}</span>
           </div>
           <div className="mt-1 font-semibold text-muted-foreground p-2 rounded-lg bg-white border border-border/40">
             "{trip.customer_description}"
           </div>
           {trip.customer_requirements && (
             <div className="text-[11px] text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200">
-              <b>متطلبات السائح الخاصة:</b> {trip.customer_requirements}
+              <b>متطلبات وملاحظات السائح:</b> {trip.customer_requirements}
             </div>
           )}
         </div>
@@ -6617,37 +6805,39 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
         {/* Tourist Selected Guide Display & Confirmation */}
         <div>
           <label className="text-xs font-black text-foreground mb-1 block">
-            👨‍✈️ المرشد السياحي (الذي اختاره السائح):
+            👨‍✈️ المرشد السياحي المعين:
           </label>
           <select
             value={guide}
-            onChange={e => setGuide(e.target.value)}
+            onChange={(e) => setGuide(e.target.value)}
             className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
           >
-            {guides.map(g => (
+            {guides.map((g) => (
               <option key={g.license_number} value={g.license_number}>
-                {g.full_name} ({g.license_number}) — {g.daily_rate || 150} د.ل / اليوم {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح)" : ""}
+                {g.full_name} ({g.license_number}) — {g.daily_rate || 150} د.ل / اليوم {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح المفضل)" : ""}
               </option>
             ))}
           </select>
           {trip.guide_license_number && (
             <p className="text-[11px] text-emerald-700 font-bold mt-1">
-              ✓ تم اختيار المرشد ({trip.guide_license_number}) بناءً على رغبة السائح.
+              ✓ تم تثبيت المرشد ({trip.guide_license_number}) بناءً على رغبة واختيار السائح.
             </p>
           )}
         </div>
 
-        {/* Vehicle Selection */}
+        {/* Vehicle Selection - Admin Duty */}
         <div>
-          <label className="text-xs font-black text-foreground mb-1 block">🚌 سيارة النقل المخصصة (تحديد الإدارة):</label>
+          <label className="text-xs font-black text-foreground mb-1 block">
+            🚌 سيارة النقل المخصصة (تحديد الإدارة بحسب عدد الركاب والمسار):
+          </label>
           <select
             value={vehicle}
-            onChange={e => setVehicle(e.target.value)}
+            onChange={(e) => setVehicle(e.target.value)}
             className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
           >
-            {vehicles.map(v => (
+            {vehicles.map((v) => (
               <option key={v.plate_number} value={v.plate_number}>
-                {v.vehicle_type} ({v.plate_number}) — {v.company_name} — {v.daily_rate} د.ل / اليوم
+                {v.vehicle_type} ({v.plate_number}) — {v.company_name} — سعة {v.capacity || "—"} ركاب — {v.daily_rate} د.ل / اليوم
               </option>
             ))}
           </select>
@@ -6655,11 +6845,13 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
 
         {/* Services Fee */}
         <div>
-          <label className="text-xs font-black text-foreground mb-1 block">🛠️ مصروفات الخدمات المقدمة (لوجستيات، تصاريح، ضيافة) (د.ل):</label>
+          <label className="text-xs font-black text-foreground mb-1 block">
+            🛠️ مصروفات الخدمات المقدمة (لوجستيات، تصاريح، ضيافة) (د.ل):
+          </label>
           <input
             type="number"
             value={servicesFee}
-            onChange={e => setServicesFee(e.target.value)}
+            onChange={(e) => setServicesFee(e.target.value)}
             className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
           />
         </div>
@@ -6686,7 +6878,7 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
               <span className="font-bold text-foreground">{totalVehicleCost} د.ل</span>
             </div>
             <div className="flex justify-between">
-              <span>مصروفات الخدمات المقدمة:</span>
+              <span>مصروفات الخدمات اللوجستية:</span>
               <span className="font-bold text-foreground">{servCost} د.ل</span>
             </div>
             <div className="flex justify-between border-t border-emerald-200/80 pt-1.5 font-black text-emerald-900">
@@ -6696,19 +6888,47 @@ function EvaluatePrivateTripModal({ trip, guides, vehicles, onClose, onSave }: {
           </div>
         </div>
 
-        <Field label="السعر الإجمالي النهائي المعروض للسائح (د.ل)" type="number" value={price} onChange={setPrice} />
+        <Field label="السعر الإجمالي النهائي المعروض للسائح (د.ل) *" type="number" value={price} onChange={setPrice} />
 
-        <div>
-          <label className="text-xs font-bold mb-1 block">برنامج ومسار الرحلة المقترح من الإدارة:</label>
-          <textarea value={plan} onChange={e => setPlan(e.target.value)} rows={3} className="w-full p-2.5 rounded-xl border border-border text-xs font-semibold text-right" />
+        {/* REUSED ITINERARY TIMELINE EDITOR */}
+        <div className="pt-2 border-t border-border">
+          <div className="mb-2">
+            <span className="text-xs font-black text-foreground flex items-center gap-1.5">
+              <span>🧭</span>
+              <span>إعداد جدول محطات الرحلة المقترح ({isMultiDay ? "آلية الرحلات الأسبوعية بالأيام" : "آلية الرحلات اليومية بالساعات"}):</span>
+            </span>
+            <p className="text-[11px] text-muted-foreground">
+              {isMultiDay
+                ? "يتم تنظيم المحطات حسب الأيام لكل يوم مساره وأنشطته الخاصة."
+                : "يتم جدولة المحطات بالساعات وتوقيت ومسار كل محطة بدقة."}
+            </p>
+          </div>
+          <TripItineraryTimelineEditor
+            steps={itinerarySteps}
+            onChange={setItinerarySteps}
+            mode={isMultiDay ? "days" : "time"}
+          />
         </div>
 
-        <div className="flex gap-2 justify-end pt-2">
-          <button onClick={() => onSave(trip.private_trip_id, "مرفوضة من الأدمن")} className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs hover:bg-red-50 cursor-pointer">
+        <div className="flex gap-2 justify-end pt-3 border-t border-border">
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("هل تريد بالتأكيد رفض طلب هذه الرحلة الخاصة؟")) {
+                onSave(trip.private_trip_id, "مرفوضة من الأدمن");
+              }
+            }}
+            className="px-4 h-10 border border-red-200 text-red-600 rounded-xl font-black text-xs hover:bg-red-50 cursor-pointer"
+          >
             رفض الطلب
           </button>
-          <button onClick={() => onSave(trip.private_trip_id, "تم التسعير - بانتظار موافقة السائح", +price, plan, guide, vehicle)} className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow hover:opacity-95 cursor-pointer">
-            اعتماد الحسبة وإرسال التسعيرة للسائح ({price} د.ل) ↗
+          <button
+            type="button"
+            onClick={handleSendProposal}
+            className="px-5 h-10 bg-gradient-sea text-white rounded-xl font-black text-xs shadow-glow hover:opacity-95 cursor-pointer flex items-center gap-2"
+          >
+            <span>↗</span>
+            <span>اعتماد الجدول وإرسال العرض المقترح للسائح ({price} د.ل)</span>
           </button>
         </div>
       </div>

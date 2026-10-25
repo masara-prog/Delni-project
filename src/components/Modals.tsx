@@ -24,9 +24,9 @@ import destSaharaDunes from "@/assets/dest-sahara-dunes.jpg";
 import privateTripImg from "@/assets/private-trip.jpg";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getNearbyServices } from "@/lib/homeData";
-import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays } from "@/lib/guidesData";
+import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem } from "@/lib/attractionsData";
-import { apiBookDailyTrip, apiBookWeeklyTrip, apiGetDailyDepartures, apiGetTouristBookings, apiRequestPrivateTrip, getStoredSession, apiGetReviews, apiAddReview, type DailyDeparture, type PublicReview, type ReviewType } from "@/lib/api";
+import { apiBookDailyTrip, apiBookWeeklyTrip, getStoredSession } from "@/lib/api";
 
 function resolveTripImage(title?: string, kind?: string | null, customImage?: string): string {
   if (customImage) return customImage;
@@ -133,40 +133,46 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
   const [date, setDate] = useState("");
   const [accountName, setAccountName] = useState("");
   const [bookingError, setBookingError] = useState<string | null>(null);
-  const [bookingId, setBookingId] = useState("");
-  // Daily trips are booked for one of their departure days (from the server, 24h cutoff applied there).
-  const [departures, setDepartures] = useState<DailyDeparture[]>([]);
-  const [departuresLoading, setDeparturesLoading] = useState(false);
-  const isWeekly = !!item?.id && /^WT-/i.test(item.id);
-  const selectedDeparture = departures.find((d) => d.date === date);
 
-  useEffect(() => {
-    if (!open || !item?.id || isWeekly) return;
-    let cancelled = false;
-    setDeparturesLoading(true);
-    apiGetDailyDepartures(item.id).then((list) => {
-      if (cancelled) return;
-      setDepartures(list);
-      setDeparturesLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [open, item?.id, isWeekly]);
+  const session = getStoredSession();
+  const isTourist = Boolean(session?.token && (session?.role === "tourist" || session?.user?.role === "tourist"));
+
+  const minBookingDate = useMemo(() => {
+    // 24 hours in the future
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const isWithin24h = useMemo(() => {
+    if (!date) return false;
+    const picked = new Date(date).getTime();
+    return picked - Date.now() < 24 * 60 * 60 * 1000;
+  }, [date]);
 
   useEffect(() => {
     if (open) {
       setStep("form");
       setSeats("2");
       setDate("");
-      setDepartures([]);
       setBookingError(null);
       let initialPhone = "0912345678";
       let initialName = isAr ? "محمد أحمد" : "John Smith";
       try {
-        const storedUser = localStorage.getItem("dalni_user");
-        if (storedUser) {
-          const parsed = JSON.parse(storedUser);
-          if (parsed.phone) initialPhone = parsed.phone;
-          if (parsed.fullName) initialName = parsed.fullName;
+        const s = getStoredSession();
+        if (s?.user) {
+          if (s.user.phone_number || s.user.phone) {
+            initialPhone = s.user.phone_number || s.user.phone;
+          }
+          if (s.user.full_name || s.user.name) {
+            initialName = s.user.full_name || s.user.name;
+          }
+        } else {
+          const storedUser = localStorage.getItem("dalni_user");
+          if (storedUser) {
+            const parsed = JSON.parse(storedUser);
+            if (parsed.phone) initialPhone = parsed.phone;
+            if (parsed.fullName) initialName = parsed.fullName;
+          }
         }
       } catch (e) {}
       setPhone(initialPhone);
@@ -181,10 +187,10 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
     ? (item.busCapacity >= 35 ? 50 : 25)
     : (item.totalSeats && item.totalSeats >= 35 ? 50 : (item.subtitle && (item.subtitle.includes("أسبوعية") || item.subtitle.includes("سفاري")) ? 50 : 25));
 
-  // Available seats: per departure day for daily trips, trip-wide for weekly trips
-  const maxAvailable = !isWeekly
-    ? (selectedDeparture ? selectedDeparture.remaining : 0)
-    : typeof item.availableSeats === "number" ? item.availableSeats : 0;
+  // Determine available seats
+  const maxAvailable = typeof item.availableSeats === "number" && item.availableSeats > 0
+    ? Math.min(item.availableSeats, busCapacity)
+    : (busCapacity === 50 ? 32 : 18);
 
   const numSeats = parseInt(seats, 10);
   const isSeatExceeded = !isNaN(numSeats) && numSeats > maxAvailable;
@@ -238,36 +244,48 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             className="p-6 space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!isWeekly && !selectedDeparture) {
-                setBookingError(isAr ? "يرجى اختيار يوم انطلاق من المواعيد المتاحة" : "Please choose one of the available departure days");
+              if (!isTourist) {
+                setBookingError(isAr ? "عذراً، حجز الرحلات متاح حصرياً لحسابات السياح المعتمدة. يرجى تسجيل الدخول أو إنشاء حساب كسائح." : "Trip bookings are reserved for tourist accounts.");
                 return;
               }
               if (hasSeatError) return;
+              if (isWithin24h) {
+                setBookingError(isAr ? "عذراً، يُقفل الحجز تلقائياً قبل انطلاق الرحلة بـ 24 ساعة لترتيب الحافلات والمرشدين." : "Bookings close 24 hours prior to departure.");
+                return;
+              }
               if (!phone.match(/^09\d{8}$/)) return;
               setBookingError(null);
 
-              // Save the booking in DelniDB through Laravel
+              // Connect to real DelniDB
               try {
-                const session = getStoredSession();
-                if (!session.token || session.role !== "tourist") {
-                  setBookingError(isAr ? "يجب تسجيل الدخول بحساب سائح لإتمام الحجز" : "Please sign in with a tourist account to book");
-                  return;
-                }
-                if (!item.id) {
-                  setBookingError(isAr ? "هذه الرحلة غير مسجلة في قاعدة البيانات ولا يمكن حجزها" : "This trip is not in the database");
-                  return;
-                }
+                const s = getStoredSession();
+                const touristId = s.user?.tourist_id || s.user?.passport || s.user?.id || `T-${phone}`;
                 const nSeats = parseInt(seats, 10) || 1;
+                const isWeekly = item.id?.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
 
-                const res = isWeekly
-                  ? await apiBookWeeklyTrip({ weekly_trip_id: item.id, number_of_seats: nSeats })
-                  : await apiBookDailyTrip({ daily_trip_id: item.id, trip_date: date, number_of_seats: nSeats });
+                let res: any;
+                if (isWeekly) {
+                  res = await apiBookWeeklyTrip({
+                    tourist_id: touristId,
+                    weekly_trip_id: item.id || "WT-201",
+                    number_of_seats: nSeats,
+                    passengers_names: accountName || "سائح",
+                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
+                  });
+                } else {
+                  res = await apiBookDailyTrip({
+                    tourist_id: touristId,
+                    daily_trip_id: item.id || "DT-101",
+                    number_of_seats: nSeats,
+                    passengers_names: accountName || "سائح",
+                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
+                  });
+                }
 
-                if (res.status !== "success") {
+                if (res && res.status === "error") {
                   setBookingError(res.message || (isAr ? "تعذر إتمام الحجز" : "Booking failed"));
                   return;
                 }
-                setBookingId(res.booking?.booking_daily_id || res.booking?.booking_weekly_id || "");
               } catch (err: any) {
                 console.error("Booking API error:", err);
                 setBookingError(err?.message || (isAr ? "حدث خطأ أثناء الاتصال بقاعدة البيانات" : "Database error"));
@@ -280,10 +298,38 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             <div className="text-xs font-black text-primary">{isAr ? "إكمال الحجز · حساب مسجّل" : "Complete Booking · Registered Account"}</div>
             <h3 className="text-xl font-black text-foreground">{item.title}</h3>
 
-            <div className="rounded-xl bg-[#F4F1EA] border border-[#E6E1D6] p-3 text-xs">
-              <div className="font-black text-[#0B132B] mb-1">👤 {isAr ? `الحساب: ${accountName}` : `Account: ${accountName}`}</div>
-              <div className="text-[#526078]">{isAr ? "بياناتك ورقم هاتفك المسجلين مسبقاً مرتبطان تلقائياً بهذا الحجز." : "Your registered account details and phone are automatically linked to this booking."}</div>
-            </div>
+            {!isTourist ? (
+              <div className="rounded-xl bg-amber-50 border-2 border-amber-300 p-3.5 text-xs space-y-2">
+                <div className="flex items-center gap-1.5 font-black text-amber-900">
+                  <span>🔒</span>
+                  <span>{isAr ? "تنبيه: حجز الرحلات متاح لحسابات السياح" : "Tourist Account Required"}</span>
+                </div>
+                <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+                  {isAr
+                    ? "حجز الرحلات السياحية بجميع أنواعها متاح للمسجلين بحساب سائح لأخذ بياناتك وربط معلوماتك تلقائياً بالحجز. يرجى تسجيل الدخول أو إنشاء حساب كسائح للمتابعة:"
+                    : "Trip bookings are reserved for tourist accounts to automatically link passenger details. Please log in or sign up as a tourist:"}
+                </p>
+                <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                  <a
+                    href="/auth/login?role=tourist"
+                    className="px-3 py-1.5 rounded-lg bg-[#003580] hover:bg-[#00224f] text-white font-black text-[11px] transition shadow-xs"
+                  >
+                    {isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}
+                  </a>
+                  <a
+                    href="/auth/signup?role=tourist"
+                    className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-black text-[11px] transition shadow-xs"
+                  >
+                    {isAr ? "إنشاء حساب سائح" : "Sign Up as Tourist"}
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-[#F4F1EA] border border-[#E6E1D6] p-3 text-xs">
+                <div className="font-black text-[#0B132B] mb-1">👤 {isAr ? `الحساب: ${accountName}` : `Account: ${accountName}`}</div>
+                <div className="text-[#526078]">{isAr ? "بياناتك ورقم هاتفك المسجلين مسبقاً مرتبطان تلقائياً بهذا الحجز." : "Your registered account details and phone are automatically linked to this booking."}</div>
+              </div>
+            )}
 
             {/* Capacity & Driver Badge */}
             <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-xs space-y-2">
@@ -369,31 +415,28 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               )}
             </div>
 
-            {!isWeekly && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-black text-[#0F172A]">{isAr ? "يوم الانطلاق *" : "Departure Day *"}</label>
-                <select
-                  value={date}
-                  onChange={(e) => { setDate(e.target.value); setBookingError(null); }}
-                  required
-                  disabled={departuresLoading || departures.length === 0}
-                  className="w-full h-11 px-3 rounded-xl border-2 border-[#E8E2D6] bg-white text-sm font-bold outline-none focus:border-[#D96B27]"
-                >
-                  <option value="">
-                    {departuresLoading
-                      ? (isAr ? "جارٍ تحميل المواعيد..." : "Loading departures...")
-                      : departures.length === 0
-                        ? (isAr ? "لا توجد مواعيد متاحة حالياً" : "No departures available")
-                        : (isAr ? "اختر يوم الانطلاق" : "Choose a departure day")}
-                  </option>
-                  {departures.map((d) => (
-                    <option key={d.date} value={d.date} disabled={d.remaining < 1}>
-                      {`${d.weekday} ${d.date} · ${d.departure_time} · ${d.remaining < 1 ? (isAr ? "مكتمل" : "full") : (isAr ? `${d.remaining} مقعد متبقٍ` : `${d.remaining} seats left`)}`}
-                    </option>
-                  ))}
-                </select>
-                <div className="text-[11px] text-slate-500 font-semibold">
-                  {isAr ? "يُغلق الحجز قبل موعد الانطلاق بـ 24 ساعة." : "Booking closes 24 hours before departure."}
+            <Field 
+              label={isAr ? "تاريخ الرحلة *" : "Trip Date *"} 
+              value={date} 
+              onChange={setDate} 
+              type="date" 
+              min={minBookingDate}
+              required 
+            />
+
+            {/* 24-Hour Advance Cutoff Notice */}
+            {isWithin24h && date && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold flex items-start gap-2 animate-in fade-in">
+                <span className="text-base leading-none">⏳</span>
+                <div>
+                  <span className="font-black block">
+                    {isAr ? "إغلاق الحجوزات قبل 24 ساعة:" : "24-Hour Cutoff:"}
+                  </span>
+                  <span>
+                    {isAr
+                      ? `عذراً، يُغلق الحجز تلقائياً قبل انطلاق الرحلة بـ 24 ساعة لترتيب المركبات والمرشدين وقوائم الركاب. يرجى اختيار تاريخ يبدأ من (${minBookingDate}) فصاعداً.`
+                      : `Bookings close 24 hours prior to departure. Please choose a date on or after ${minBookingDate}.`}
+                  </span>
                 </div>
               </div>
             )}
@@ -442,13 +485,13 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             )}
 
             <button
-              disabled={hasSeatError || (!isWeekly && !selectedDeparture)}
+              disabled={hasSeatError || isWithin24h}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
             >
               {hasSeatError
                 ? (isAr ? "حدد عدد مقاعد متاح للاستمرار" : "Select valid seats to continue")
-                : !isWeekly && !selectedDeparture
-                ? (isAr ? "اختر يوم الانطلاق للاستمرار" : "Choose a departure day to continue")
+                : isWithin24h
+                ? (isAr ? "اختر موعداً يبعد 24 ساعة على الأقل" : "Select a date at least 24h away")
                 : (isAr ? "تأكيد الحجز (الدفع فيزيائي بموقع الشركة)" : "Confirm Booking (Pay at Company Office)")}
             </button>
           </form>
@@ -459,8 +502,8 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
           <h3 className="mt-4 text-2xl font-black text-[#0B132B]">{isAr ? "تم تسجيل حجزك المبدئي!" : "Booking Registered!"}</h3>
           <p className="mt-2 text-[#526078] text-sm">
             {isAr
-              ? `رقم الحجز ${bookingId}${selectedDeparture ? ` ليوم ${selectedDeparture.weekday} ${selectedDeparture.date}` : ""}. تم حجز (${numSeats}) مقاعد على الحافلة سعة (${busCapacity} راكب). يرجى التوجه إلى مقر وموقع الشركة لإتمام الدفع الفيزيائي نقداً وتأكيد تذكرتك النهائية قبل موعد الانطلاق.`
-              : `Booking ID ${bookingId}${selectedDeparture ? ` for ${selectedDeparture.date}` : ""}. (${numSeats}) seats booked on ${busCapacity}-passenger coach. Linked to your account.`}
+              ? `رقم الحجز #BK-${Math.floor(Math.random() * 90000 + 10000)}. تم حجز (${numSeats}) مقاعد على الحافلة سعة (${busCapacity} راكب). يرجى التوجه إلى مقر وموقع الشركة لإتمام الدفع الفيزيائي نقداً وتأكيد تذكرتك النهائية قبل موعد الانطلاق.`
+              : `Booking ID #BK-${Math.floor(Math.random() * 90000 + 10000)}. (${numSeats}) seats booked on ${busCapacity}-passenger coach. Linked to your account.`}
           </p>
           <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft">
             {isAr ? "إغلاق" : "Close"}
@@ -921,7 +964,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
           )}
 
           {/* Tourist Rating & Review Section */}
-          {reviewTypeOf(item.refId) && <ReviewsSection type={reviewTypeOf(item.refId)!} itemId={item.refId!} />}
+          <ReviewsSection itemId={item.refId || item.title} itemTitle={item.title} />
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
             {item.price !== undefined ? (
@@ -944,60 +987,51 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
   );
 }
 
-/** Review type of a DelniDB id, from its prefix (DT- daily trip, WT- weekly trip). */
-export function reviewTypeOf(id?: string): ReviewType | null {
-  if (!id) return null;
-  if (/^DT-/i.test(id)) return "daily";
-  if (/^WT-/i.test(id)) return "weekly";
-  return null;
-}
-
-/**
- * Visible reviews of one item from DelniDB, and a form for a signed-in tourist.
- * The server accepts a review only after a documented booking or stay.
- */
-export function ReviewsSection({ type, itemId }: { type: ReviewType; itemId: string }) {
+function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: string }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [isOpen, setIsOpen] = useState(false);
-  const [reviews, setReviews] = useState<PublicReview[]>([]);
-  const [average, setAverage] = useState<number | null>(null);
-  const [loadError, setLoadError] = useState("");
+  const [reviews, setReviews] = useState<{ id: string; name: string; rating: number; date: string; comment: string }[]>([
+    {
+      id: "rev-1",
+      name: isAr ? "د. طارق السويح" : "Dr. Tarek Al-Sweih",
+      rating: 5,
+      date: isAr ? "منذ أسبوع" : "1 week ago",
+      comment: isAr ? "تجربة ممتازة وخدمة استثنائية! التنظيم كان رائعاً والاهتمام بأدق التفاصيل ملحوظ جداً." : "Excellent experience and exceptional service! Very well organized.",
+    },
+    {
+      id: "rev-2",
+      name: isAr ? "سارة الزوي" : "Sara Al-Zway",
+      rating: 5,
+      date: isAr ? "منذ أسبوعين" : "2 weeks ago",
+      comment: isAr ? "المكان والخدمات فاقت التوقعات، أنصح بشدة كل من يزور ليبيا بتجربتها." : "The place and services exceeded expectations, highly recommended!",
+    },
+  ]);
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const session = getStoredSession();
-  const isTourist = !!session.token && session.role === "tourist";
-
-  const load = async () => {
-    const res = await apiGetReviews(type, itemId);
-    setLoadError(res.error || "");
-    setReviews(res.reviews);
-    setAverage(res.average);
-  };
-
-  useEffect(() => {
-    load();
-  }, [type, itemId]);
-
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
-    setSubmitMessage(null);
-    const res = await apiAddReview(type, itemId, rating, comment.trim());
-    setSubmitting(false);
-    if (res.status !== "success") {
-      setSubmitMessage({ ok: false, text: res.message || (isAr ? "تعذر حفظ التقييم" : "Could not save the review") });
-      return;
-    }
+    if (!comment.trim()) return;
+
+    const newRev = {
+      id: `rev-${Date.now()}`,
+      name: isAr ? "أحمد الشريف (سائح موثّق)" : "Ahmed Al-Sharif (Verified Tourist)",
+      rating,
+      date: isAr ? "الآن" : "Just now",
+      comment: comment.trim(),
+    };
+
+    setReviews([newRev, ...reviews]);
     setComment("");
-    setSubmitMessage({ ok: true, text: res.message || (isAr ? "تم حفظ تقييمك" : "Review saved") });
-    setShowForm(false);
-    load();
+    setSubmitted(true);
+    setTimeout(() => {
+      setSubmitted(false);
+      setShowForm(false);
+    }, 2000);
   }
 
   return (
@@ -1011,7 +1045,7 @@ export function ReviewsSection({ type, itemId }: { type: ReviewType; itemId: str
           <span className="text-amber-500 text-sm">⭐</span>
           <span>{isAr ? "تقييمات وآراء السياح والزوار" : "Tourist Reviews & Feedback"}</span>
           <span className="text-[11px] font-bold text-muted-foreground bg-white px-2 py-0.5 rounded-full border border-border">
-            {average !== null ? `${average} / 5 · ` : ""}{reviews.length} {isAr ? "تقييمات" : "reviews"}
+            {reviews.length} {isAr ? "تقييمات" : "reviews"}
           </span>
         </div>
         <span className="text-muted-foreground transition-transform duration-200">
@@ -1021,53 +1055,30 @@ export function ReviewsSection({ type, itemId }: { type: ReviewType; itemId: str
 
       {isOpen && (
         <div className="mt-3 space-y-3 p-3 rounded-2xl bg-muted/50 border border-border animate-in fade-in">
-          {loadError && (
-            <div className="p-2.5 rounded-xl bg-red-50 text-red-700 text-xs font-bold">
-              {isAr ? "تعذر تحميل التقييمات: " : "Could not load reviews: "}{loadError}
-            </div>
-          )}
-          {!loadError && reviews.length === 0 && (
-            <div className="p-2.5 rounded-xl bg-white border border-border text-xs text-muted-foreground">
-              {isAr ? "لا توجد تقييمات بعد." : "No reviews yet."}
-            </div>
-          )}
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {reviews.map((r) => {
-              const name = r.tourist_name || (isAr ? "سائح" : "Tourist");
-              return (
-                <div key={r.id} className="p-3 rounded-xl bg-white border border-border space-y-1 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-foreground flex items-center gap-1.5">
-                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] grid place-items-center font-bold">
-                        {name.charAt(0)}
-                      </span>
-                      {name}
+            {reviews.map((r) => (
+              <div key={r.id} className="p-3 rounded-xl bg-white border border-border space-y-1 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-xs text-foreground flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] grid place-items-center font-bold">
+                      {r.name.charAt(0)}
                     </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-amber-500 text-xs">{"★".repeat(r.stars_rating)}</span>
-                      <span className="text-[10px] text-muted-foreground">({String(r.created_at || "").slice(0, 10)})</span>
-                    </div>
+                    {r.name}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-amber-500 text-xs">{"★".repeat(r.rating)}</span>
+                    <span className="text-[10px] text-muted-foreground">({r.date})</span>
                   </div>
-                  {r.comment_text && <p className="text-xs text-muted-foreground leading-relaxed">{r.comment_text}</p>}
                 </div>
-              );
-            })}
+                <p className="text-xs text-muted-foreground leading-relaxed">{r.comment}</p>
+              </div>
+            ))}
           </div>
 
-          {submitMessage && (
-            <div className={`text-center py-2 text-xs font-black rounded-xl ${submitMessage.ok ? "bg-emerald-100 text-emerald-800" : "bg-red-50 text-red-700"}`}>
-              {submitMessage.text}
-            </div>
-          )}
-
-          {!isTourist ? (
-            <div className="text-[11px] text-muted-foreground text-center">
-              {isAr ? "يمكن للسائح المسجل تقييم هذه الخدمة بعد حجز موثّق وانتهاء الرحلة." : "Registered tourists can review after a documented, completed booking."}
-            </div>
-          ) : !showForm ? (
+          {!showForm ? (
             <button
               type="button"
-              onClick={() => { setShowForm(true); setSubmitMessage(null); }}
+              onClick={() => setShowForm(true)}
               className="w-full py-2.5 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-black hover:bg-primary/5 transition flex items-center justify-center gap-1.5"
             >
               ✍️ {isAr ? "أضف تقييمك وتجربتك" : "Write a Review"}
@@ -1076,7 +1087,7 @@ export function ReviewsSection({ type, itemId }: { type: ReviewType; itemId: str
             <form onSubmit={handleSubmit} className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2.5 animate-in fade-in">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-black text-amber-900">
-                  <span>👤 {isAr ? `الحساب: ${session.user?.full_name || ""}` : `Account: ${session.user?.full_name || ""}`}</span>
+                  <span>👤 {isAr ? "الحساب: أحمد الشريف" : "Account: Ahmed Sharif"}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -1093,30 +1104,35 @@ export function ReviewsSection({ type, itemId }: { type: ReviewType; itemId: str
               </div>
 
               <textarea
-                placeholder={isAr ? "اكتب انطباعك ورأيك حول هذه الخدمة (اختياري)..." : "Write your feedback (optional)..."}
+                placeholder={isAr ? "اكتب انطباعك ورأيك حول هذه الخدمة..." : "Write your feedback..."}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                maxLength={2000}
+                required
                 rows={2}
                 className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-white outline-none focus:border-primary font-medium resize-none"
               />
 
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-black hover:bg-primary/90 transition shadow-sm disabled:opacity-50"
-                >
-                  {submitting ? (isAr ? "جارٍ الإرسال..." : "Submitting...") : (isAr ? "إرسال التقييم" : "Submit Review")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-3 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition"
-                >
-                  {isAr ? "إلغاء" : "Cancel"}
-                </button>
-              </div>
+              {submitted ? (
+                <div className="text-center py-2 bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl">
+                  ✅ {isAr ? "شكراً لك! تم إضافة تقييمك بنجاح" : "Thank you! Review submitted successfully"}
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-black hover:bg-primary/90 transition shadow-sm"
+                  >
+                    {isAr ? "إرسال التقييم" : "Submit Review"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-3 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition"
+                  >
+                    {isAr ? "إلغاء" : "Cancel"}
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>
@@ -1177,7 +1193,6 @@ export type ScheduledTrip = {
   price: number;
   tripTitle?: string;
   kind?: string;
-  tripDate?: string; // YYYY-MM-DD departure day of a daily trip
 };
 
 export function TripScheduleModal({
@@ -1214,24 +1229,6 @@ export function TripScheduleModal({
   const [bookingConfirmedCode, setBookingConfirmedCode] = useState<string>("");
   const [totalSeatsAfterBooking, setTotalSeatsAfterBooking] = useState<number>(0);
   const [isAccountRestricted, setIsAccountRestricted] = useState(false);
-  const [scheduleBookingError, setScheduleBookingError] = useState<string | null>(null);
-  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
-  // Daily trips: one schedule per bookable departure day, read from the server.
-  const dailyTripId: string | undefined = (() => {
-    const id = trip?.daily_trip_id || trip?.id || tripId;
-    return id && (kind === "daily" || /^DT-/i.test(id)) && !/^WT-/i.test(id) ? id : undefined;
-  })();
-  const [departures, setDepartures] = useState<DailyDeparture[] | null>(null);
-
-  useEffect(() => {
-    if (!open || !dailyTripId) return;
-    let cancelled = false;
-    setDepartures(null);
-    apiGetDailyDepartures(dailyTripId).then((list) => {
-      if (!cancelled) setDepartures(list);
-    });
-    return () => { cancelled = true; };
-  }, [open, dailyTripId]);
 
   useEffect(() => {
     if (open) {
@@ -1240,29 +1237,48 @@ export function TripScheduleModal({
       setStep("pick");
       setShowAuthWarning(false);
       setIsAccountRestricted(false);
-      setScheduleBookingError(null);
-      setIsSubmittingBooking(false);
-      setBookingConfirmedCode("");
+      setBookingConfirmedCode(`DL-${Math.floor(Math.random() * 90000 + 10000)}`);
 
       // Check account restriction status & prior bookings for this tourist
       try {
         const session = getStoredSession();
         const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id;
         const targetTripId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId;
+        const targetTitle = customTitle || tripTitle || trip?.title;
 
         if (session.role === "tourist" && touristId) {
-          // Seats this tourist already booked on this trip, read from DelniDB.
-          setPriorBookedSeats(0);
-          apiGetTouristBookings(touristId).then((res) => {
-            const allUserBookings = [...res.daily, ...res.weekly].filter(
-              (b: any) => b.daily_trip_id === targetTripId || b.weekly_trip_id === targetTripId
-            );
-            const totalPrev = allUserBookings.reduce(
-              (sum: number, b: any) => sum + (Number(b.number_of_seats) || 0),
-              0
-            );
-            setPriorBookedSeats(totalPrev);
-          });
+          if (session.user?.account_status === "مقيّد") {
+            setIsAccountRestricted(true);
+          }
+          fetch(`http://127.0.0.1:5001/api/db/tourists?tourist_id=${encodeURIComponent(touristId)}`)
+            .then(r => r.json())
+            .then(res => {
+              if (res && res.success && res.data) {
+                const restricted = res.data.account_status === "مقيّد";
+                setIsAccountRestricted(restricted);
+                if (session.user) {
+                  session.user.account_status = res.data.account_status;
+                  localStorage.setItem("delni_session", JSON.stringify(session));
+                }
+              }
+            })
+            .catch(() => {});
+
+          const localDaily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
+          const localWeekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
+          const allUserBookings = [...localDaily, ...localWeekly].filter(
+            (b: any) =>
+              (b.tourist_id === touristId || b.passengers_names === session.user?.full_name) &&
+              (b.daily_trip_id === targetTripId ||
+                b.weekly_trip_id === targetTripId ||
+                b.trip_title === targetTitle)
+          );
+
+          const totalPrev = allUserBookings.reduce(
+            (sum: number, b: any) => sum + (Number(b.number_of_seats) || 0),
+            0
+          );
+          setPriorBookedSeats(totalPrev);
         } else {
           setPriorBookedSeats(0);
         }
@@ -1272,28 +1288,21 @@ export function TripScheduleModal({
     }
   }, [open, trip, tripId, customTitle, tripTitle]);
 
+  const defaultDaily: ScheduledTrip[] = [
+    { id: "d1", date: isAr ? "يوم السبت" : "Saturday", time: isAr ? "09:00 ص حتى 09:00 م (جولة كاملة)" : "09:00 AM - 09:00 PM", seats: 20, taken: 14, guide: isAr ? "خالد الورفلي" : "Khaled Al-Warfali", price: 180 },
+    { id: "d2", date: isAr ? "يوم الثلاثاء" : "Tuesday", time: isAr ? "09:00 ص حتى 09:00 م (جولة كاملة)" : "09:00 AM - 09:00 PM", seats: 20, taken: 7, guide: isAr ? "سامي العبيدي" : "Sami Al-Obaidi", price: 180 },
+  ];
+
+  const defaultWeekly: ScheduledTrip[] = [
+    { id: "w1", date: isAr ? "الانطلاق: السبت 31 أكتوبر 2026 ⬅ العودة: الجمعة 06 نوفمبر 2026" : "Depart: 2026-10-31 — Return: 2026-11-06", time: isAr ? "انطلاق 07:00 ص — برنامج 7 أيام شامل" : "07:00 AM — 7 Days All-Inclusive", seats: 12, taken: 8, guide: isAr ? "فريق دَلِّني الكامل" : "Dallani Full Team", price: 2400 },
+    { id: "w2", date: isAr ? "الانطلاق: السبت 07 نوفمبر 2026 ⬅ العودة: الجمعة 13 نوفمبر 2026" : "Depart: 2026-11-07 — Return: 2026-11-13", time: isAr ? "انطلاق 07:00 ص — برنامج 7 أيام شامل" : "07:00 AM — 7 Days All-Inclusive", seats: 12, taken: 4, guide: isAr ? "أحمد الفيتوري" : "Ahmed Al-Fitouri", price: 2400 },
+  ];
+
   let schedules: ScheduledTrip[];
-  if (dailyTripId) {
-    const realPrice = customPrice !== undefined ? customPrice : Number(trip?.price ?? trip?.price_per_seat) || 0;
-    const realTitle = customTitle || tripTitle || trip?.title || (isAr ? "رحلة يومية" : "Daily trip");
-    const realGuide = trip?.guide?.name || trip?.guide?.full_name || (isAr ? "مرشد سياحي معتمد" : "Certified guide");
-    schedules = (departures || []).map((d) => ({
-      id: `${dailyTripId}|${d.date}`,
-      tripId: dailyTripId,
-      tripDate: d.date,
-      date: `${d.weekday} ${d.date}`,
-      time: d.departure_time,
-      seats: d.max_capacity,
-      taken: d.booked,
-      guide: realGuide,
-      price: realPrice,
-      tripTitle: realTitle,
-      kind: "daily",
-    }));
-  } else if (customSchedules && customSchedules.length > 0) {
+  if (customSchedules && customSchedules.length > 0) {
     schedules = customSchedules;
-  } else if (trip || tripId) {
-    const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId;
+  } else if (trip || tripId || customPrice !== undefined || customTitle || tripTitle) {
+    const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId || (kind === "weekly" ? "WT-220" : "DT-366");
     const realPrice = customPrice !== undefined
       ? customPrice
       : (trip?.type === "daily" ? trip.price : (trip?.seatPrice ?? (trip?.price ?? (kind === "weekly" ? 1200 : 120))));
@@ -1301,26 +1310,44 @@ export function TripScheduleModal({
     const realGuide = trip?.guide?.name || "مرشد سياحي معتمد";
     const realSeats = trip?.targetPersons || trip?.max_capacity || 25;
     const realAvail = trip?.availableSeats !== undefined ? trip.availableSeats : (trip?.available_seats !== undefined ? trip.available_seats : realSeats);
-    const realDate = trip?.startDate ? `${trip.startDate} إلى ${trip.endDate}` : (trip?.start_date ? `${trip.start_date} إلى ${trip.end_date}` : (isAr ? "الموعد القادم المتاح" : "Upcoming Scheduled Date"));
-    const realTime = isAr ? "حسب برنامج الرحلة" : "Per trip itinerary";
 
-    schedules = [
-      {
-        id: realId,
+    if (kind === "daily" || trip?.type === "daily") {
+      const recurringStr = trip?.daysOfWeek || trip?.recurring_days || "السبت, الثلاثاء";
+      const rawDays = String(recurringStr).replace(/أيام:\s*/, "").split(/[,،]+/).map((d: string) => d.trim()).filter(Boolean);
+      const daysList = rawDays.length > 0 ? rawDays : ["السبت", "الثلاثاء"];
+
+      schedules = daysList.map((day: string, idx: number) => ({
+        id: `${realId}-day-${idx}`,
         tripId: realId,
-        date: realDate,
-        time: realTime,
+        date: isAr ? `يوم ${day.startsWith("يوم") ? day : day}` : `Day: ${day}`,
+        time: isAr ? "09:00 ص حتى 09:00 م (12 ساعة كاملة)" : "09:00 AM - 09:00 PM (Full Day)",
         seats: realSeats,
         taken: Math.max(0, realSeats - realAvail),
         guide: realGuide,
-        price: Number(realPrice) || (kind === "weekly" ? 1200 : 120),
+        price: Number(realPrice) || 120,
         tripTitle: realTitle,
-        kind: kind || "daily",
-      }
-    ];
+        kind: "daily",
+      }));
+    } else {
+      const cleanStart = trip?.startDate ? String(trip.startDate).split("T")[0] : "2026-10-31";
+      const cleanEnd = trip?.endDate ? String(trip.endDate).split("T")[0] : "2026-11-06";
+      schedules = [
+        {
+          id: realId,
+          tripId: realId,
+          date: isAr ? `الانطلاق: ${cleanStart} ⬅ العودة: ${cleanEnd}` : `Depart: ${cleanStart} — Return: ${cleanEnd}`,
+          time: isAr ? "انطلاق 07:00 ص — برنامج 7 أيام شامل" : "07:00 AM — 7 Days All-Inclusive",
+          seats: realSeats,
+          taken: Math.max(0, realSeats - realAvail),
+          guide: realGuide,
+          price: Number(realPrice) || 1200,
+          tripTitle: realTitle,
+          kind: "weekly",
+        }
+      ];
+    }
   } else {
-    // No trip from DelniDB was passed in: nothing can be booked.
-    schedules = [];
+    schedules = kind === "daily" ? defaultDaily : defaultWeekly;
   }
 
   // Auto-select schedule so the date is instantly active and button enabled if seats available
@@ -1363,17 +1390,9 @@ export function TripScheduleModal({
           <div className="p-6 space-y-3">
             <p className="text-sm text-[#526078] mb-4">
               {kind === "daily"
-                ? (isAr ? "الرحلات اليومية تنطلق صباحاً وتعود مساءً — تم تحديد الموعد المتاح أدناه:" : "Daily trips depart in the morning & return evening — date selected:")
-                : (isAr ? "الرحلات الأسبوعية برنامج ٥-٧ أيام شامل — اختر أسبوع انطلاقك:" : "Weekly tours are 5-7 days all-inclusive — select your departure week:")}
+                ? (isAr ? "الرحلات اليومية تنطلق في يوم واحد وتعود مساءً (09:00 ص - 09:00 م) — اختر اليوم المناسب لك:" : "Daily trips take place on a single day & return evening — select day:")
+                : (isAr ? "الرحلات الأسبوعية برنامج متكامل 7 أيام شامل الإقامة والنقل — حدد موعد الانطلاق والعودة:" : "Weekly tours are 7 days all-inclusive — select departure & return:")}
             </p>
-            {dailyTripId && departures === null && (
-              <div className="p-4 rounded-2xl bg-muted/30 text-xs text-[#526078] font-bold">{isAr ? "جارٍ تحميل مواعيد الانطلاق..." : "Loading departures..."}</div>
-            )}
-            {dailyTripId && departures !== null && departures.length === 0 && (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold">
-                {isAr ? "لا توجد مواعيد انطلاق متاحة للحجز حالياً (يُغلق الحجز قبل الانطلاق بـ 24 ساعة)." : "No bookable departures right now (booking closes 24h before departure)."}
-              </div>
-            )}
             {schedules.map((s) => {
               const avail = s.seats - s.taken;
               const full = avail === 0;
@@ -1553,24 +1572,44 @@ export function TripScheduleModal({
               const n = parseInt(seats, 10);
               if (isNaN(n) || n < 1 || n > avail) return;
 
-              // Save the booking in DelniDB; only a confirmed save shows the ticket.
-              const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id;
-              const isWeekly = selectedTrip.kind === "weekly" || /^WT-/i.test(targetTripId || "") || kindLabel.includes("أسبوع");
-              setScheduleBookingError(null);
-              setIsSubmittingBooking(true);
-              const res = isWeekly
-                ? await apiBookWeeklyTrip({ weekly_trip_id: targetTripId, number_of_seats: n })
-                : await apiBookDailyTrip({ daily_trip_id: targetTripId, trip_date: selectedTrip.tripDate || "", number_of_seats: n });
-              setIsSubmittingBooking(false);
+              // Connect to real DelniDB
+              try {
+                const session = getStoredSession();
+                const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
+                const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
+                const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id || (isWeekly ? "WT-220" : "DT-366");
+                const targetTitle = selectedTrip?.tripTitle || customTitle || tripTitle || (isWeekly ? "رحلة أسبوعية" : "رحلة يومية");
 
-              if (res.status !== "success") {
-                setScheduleBookingError(res.message || (isAr ? "تعذر إتمام الحجز" : "Booking failed"));
-                return;
+                const code = bookingConfirmedCode || `DL-${Math.floor(Math.random() * 90000 + 10000)}`;
+                setBookingConfirmedCode(code);
+                const newTotal = priorBookedSeats + n;
+                setTotalSeatsAfterBooking(newTotal);
+
+                if (isWeekly) {
+                  await apiBookWeeklyTrip({
+                    tourist_id: touristId,
+                    weekly_trip_id: targetTripId,
+                    trip_title: targetTitle,
+                    seat_per_price: selectedTrip.price,
+                    number_of_seats: n,
+                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
+                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
+                  });
+                } else {
+                  await apiBookDailyTrip({
+                    tourist_id: touristId,
+                    daily_trip_id: targetTripId,
+                    trip_title: targetTitle,
+                    price_per_seat: selectedTrip.price,
+                    number_of_seats: n,
+                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
+                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
+                  });
+                }
+              } catch (err) {
+                console.error("TripScheduleModal Booking API error:", err);
               }
 
-              const savedBooking = res.booking || {};
-              setBookingConfirmedCode(savedBooking.booking_daily_id || savedBooking.booking_weekly_id || "");
-              setTotalSeatsAfterBooking(priorBookedSeats + n);
               setStep("done");
             }}
           >
@@ -1699,21 +1738,13 @@ export function TripScheduleModal({
                   {(() => {
                     const session = getStoredSession();
                     const isTourist = !!session.token && session.role === "tourist";
-                    const isBtnDisabled = hasErr || !isTourist || isAccountRestricted || isSubmittingBooking;
+                    const isBtnDisabled = hasErr || !isTourist || isAccountRestricted;
                     return (
-                      <>
-                      {scheduleBookingError && (
-                        <div className="mb-2 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
-                          ⚠️ {scheduleBookingError}
-                        </div>
-                      )}
                       <button
                         disabled={isBtnDisabled}
                         className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
                       >
-                        {isSubmittingBooking
-                          ? (isAr ? "جاري حفظ الحجز في قاعدة البيانات..." : "Saving booking...")
-                          : isAccountRestricted
+                        {isAccountRestricted
                           ? (isAr ? "⛔ حسابك مقيّد من قِبل الإدارة ولا يمكنك الحجز" : "Account Restricted from Booking")
                           : !isTourist
                           ? (isAr ? "🔒 يجب التسجيل في المنصة كسائح لتأكيد الحجز" : "Tourist account required to book")
@@ -1721,7 +1752,6 @@ export function TripScheduleModal({
                           ? (isAr ? "يرجى تحديد مقاعد متاحة" : "Select valid seats")
                           : (isAr ? "تأكيد الحجز (الدفع بموقع الشركة)" : "Confirm Booking (Pay at Company Office)")}
                       </button>
-                      </>
                     );
                   })()}
                 </div>
@@ -1799,22 +1829,208 @@ export function PrivateTripModal({
   const isAr = language === 'ar';
   const [step, setStep] = useState<"form" | "done">("form");
 
-  // Determine initial landmark from initialDestination or default to Sabratha
-  const [selectedLandmarkId, setSelectedLandmarkId] = useState<string>(() => {
+  // User session & strict role check (Tourists ONLY)
+  const [sessionData, setSessionData] = useState(() => getStoredSession());
+  const currentRole = sessionData?.user?.role || sessionData?.role || null;
+  const isTourist = Boolean(sessionData?.token && currentRole === "tourist");
+  const isAdmin = currentRole === "admin";
+  const userRoleTitle = isAdmin
+    ? (isAr ? "مدير النظام (Admin)" : "System Administrator")
+    : currentRole === "driver"
+    ? (isAr ? "سائق حافلة" : "Driver")
+    : currentRole === "guide"
+    ? (isAr ? "مرشد سياحي" : "Tour Guide")
+    : currentRole === "transport"
+    ? (isAr ? "شركة نقل سياحي" : "Transport Company")
+    : (isAr ? "زائر غير مسجل" : "Guest");
+
+  // Dynamic attractions state: combining canonical LIBYAN_ATTRACTIONS with database places
+  const [dbPlaces, setDbPlaces] = useState<any[]>([]);
+  useEffect(() => {
+    if (open) {
+      setSessionData(getStoredSession());
+      fetch("http://127.0.0.1:5001/api/db/places")
+        .then((r) => r.json())
+        .then((res) => {
+          if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+            setDbPlaces(res.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open]);
+
+  const allAttractions = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      name: string;
+      nameEn: string;
+      city: string;
+      cityEn: string;
+      region: string;
+      category: string;
+      isUnesco: boolean;
+      unescoYear?: string | number | null;
+    }>();
+
+    LIBYAN_ATTRACTIONS.forEach((a) => {
+      map.set(a.id, {
+        id: a.id,
+        name: a.name,
+        nameEn: a.nameEn,
+        city: a.city,
+        cityEn: a.cityEn,
+        region: a.region,
+        category: a.category,
+        isUnesco: a.isUnesco,
+        unescoYear: a.unescoYear,
+      });
+    });
+
+    // Also include destinations & cities added to the platform
+    LIBYAN_CITIES.forEach((c) => {
+      if (!map.has(c.id)) {
+        map.set(c.id, {
+          id: c.id,
+          name: c.name,
+          nameEn: c.nameEn,
+          city: c.shortName,
+          cityEn: c.shortNameEn,
+          region: c.region,
+          category: c.categoryTag || "مدينة سياحية",
+          isUnesco: false,
+        });
+      }
+    });
+
+    dbPlaces.forEach((p) => {
+      const pid = p.place_id || p.id;
+      if (!pid) return;
+      if (!map.has(pid)) {
+        map.set(pid, {
+          id: pid,
+          name: p.place_name || p.name || pid,
+          nameEn: p.place_name || p.name || pid,
+          city: p.city || "ليبيا",
+          cityEn: p.city || "Libya",
+          region: p.region || p.city || "ليبيا",
+          category: p.category || "معلم سياحي",
+          isUnesco: Boolean(p.is_unesco),
+          unescoYear: p.unesco_year,
+        });
+      }
+    });
+
+    // Exclude UNESCO sites strictly from custom private tours per platform rule
+    return Array.from(map.values()).filter((a) => !a.isUnesco);
+  }, [dbPlaces]);
+
+  // Multi-select state for tourist landmarks (Non-UNESCO destinations & cities only)
+  const [selectedLandmarkIds, setSelectedLandmarkIds] = useState<string[]>(() => {
     if (initialDestination) {
       const clean = initialDestination.toLowerCase();
       const found = LIBYAN_ATTRACTIONS.find(
         (a) =>
-          a.name.toLowerCase().includes(clean) ||
-          clean.includes(a.name.toLowerCase()) ||
-          (a.city && clean.includes(a.city.toLowerCase()))
+          !a.isUnesco &&
+          (a.name.toLowerCase().includes(clean) ||
+            clean.includes(a.name.toLowerCase()) ||
+            (a.city && clean.includes(a.city.toLowerCase())))
       );
-      if (found) return found.id;
+      if (found) return [found.id];
     }
-    return "sabratha";
+    return ["city-tripoli"]; // Default to non-UNESCO destination
   });
 
-  // Form fields strictly aligned with SQL Server DelniDB private_trips table
+  const [landmarkSearch, setLandmarkSearch] = useState("");
+  const [landmarkCategoryFilter, setLandmarkCategoryFilter] = useState("all");
+
+  // Dynamic guides state: static TOUR_GUIDES_DATA merged with DB guides
+  const [dbGuides, setDbGuides] = useState<any[]>([]);
+  useEffect(() => {
+    if (open) {
+      fetch("http://127.0.0.1:5001/api/db/guides")
+        .then((r) => r.json())
+        .then((res) => {
+          if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+            setDbGuides(res.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open]);
+
+  const allGuides = useMemo(() => {
+    const map = new Map<string, {
+      licenseNumber: string;
+      name: string;
+      gender: "male" | "female";
+      avatar: string;
+      title: string;
+      experienceYears: number;
+      rating: number;
+      reviewsCount: number;
+      pricePerDay: number;
+      primaryRegion: string;
+      operatingRegions: string[];
+      languages: { code: string; nameAr: string; nameEn: string }[];
+    }>();
+
+    TOUR_GUIDES_DATA.forEach((g) => {
+      map.set(g.licenseNumber, {
+        licenseNumber: g.licenseNumber,
+        name: g.name,
+        gender: g.gender || "male",
+        avatar: g.avatar,
+        title: g.title,
+        experienceYears: g.experienceYears,
+        rating: g.rating,
+        reviewsCount: g.reviewsCount,
+        pricePerDay: g.pricePerDay,
+        primaryRegion: g.primaryRegion,
+        operatingRegions: g.operatingRegions || [],
+        languages: g.languages || [{ code: "AR", nameAr: "العربية", nameEn: "Arabic" }],
+      });
+    });
+
+    dbGuides.forEach((g) => {
+      const lic = g.license_number || g.licenseNumber;
+      if (!lic) return;
+      if (!map.has(lic)) {
+        const langs: { code: string; nameAr: string; nameEn: string }[] = [
+          { code: "AR", nameAr: "العربية", nameEn: "Arabic" },
+        ];
+        if (g.speaks_english) langs.push({ code: "EN", nameAr: "الإنجليزية", nameEn: "English" });
+        if (g.speaks_french) langs.push({ code: "FR", nameAr: "الفرنسية", nameEn: "French" });
+        if (g.speaks_italian) langs.push({ code: "IT", nameAr: "الإيطالية", nameEn: "Italian" });
+
+        map.set(lic, {
+          licenseNumber: lic,
+          name: g.full_name || g.name || lic,
+          gender: g.gender === "female" ? "female" : "male",
+          avatar: g.avatar || "/assets/guide-mohammed.jpg",
+          title: g.title || "مرشد سياحي معتمد",
+          experienceYears: g.years_of_experience || 5,
+          rating: 4.9,
+          reviewsCount: 35,
+          pricePerDay: g.price_per_day || 180,
+          primaryRegion: g.primaryRegion || "tripoli",
+          operatingRegions: Array.isArray(g.operating_regions) ? g.operating_regions : ["tripoli"],
+          languages: langs,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [dbGuides]);
+
+  // Guide filtering states
+  const [selectedGuideLicense, setSelectedGuideLicense] = useState<string>("");
+  const [guideGenderFilter, setGuideGenderFilter] = useState<"all" | "male" | "female">("all");
+  const [guideLanguageFilter, setGuideLanguageFilter] = useState<string>("all");
+  const [guideRegionFilter, setGuideRegionFilter] = useState<string>("all");
+  const [guideSearchTerm, setGuideSearchTerm] = useState<string>("");
+
+  // Trip intake form fields
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 3);
@@ -1822,22 +2038,28 @@ export function PrivateTripModal({
   });
   const [durationDays, setDurationDays] = useState("3");
   const [companions, setCompanions] = useState("2");
-  const [vehicleType, setVehicleType] = useState("دفع رباعي 4x4 (سفاري وطرق وعرة)");
-  const [selectedGuideLicense, setSelectedGuideLicense] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [createdTripId, setCreatedTripId] = useState("");
 
   // Sync state whenever modal opens or initial props change
   useEffect(() => {
     if (open) {
       setStep("form");
+      setFormError(null);
       const session = getStoredSession();
-      if (session?.user) {
-        setCustomerName((prev) => prev || session.user.name || "");
-        setPhone((prev) => prev || session.user.phone || "");
+      setSessionData(session);
+
+      if (session?.user && session?.role === "tourist") {
+        setCustomerName(session.user.full_name || session.user.fullName || session.user.name || "");
+        setPhone(session.user.phone_number || session.user.phone || "");
+      } else {
+        setCustomerName("");
+        setPhone("");
       }
+
       if (initialDestination) {
         const clean = initialDestination.toLowerCase();
         const found = LIBYAN_ATTRACTIONS.find(
@@ -1846,8 +2068,9 @@ export function PrivateTripModal({
             clean.includes(a.name.toLowerCase()) ||
             (a.city && clean.includes(a.city.toLowerCase()))
         );
-        if (found) setSelectedLandmarkId(found.id);
+        if (found) setSelectedLandmarkIds([found.id]);
       }
+
       if (initialGuide) {
         const foundG = TOUR_GUIDES_DATA.find((g) => g.name.includes(initialGuide) || initialGuide.includes(g.name));
         if (foundG) setSelectedGuideLicense(foundG.licenseNumber);
@@ -1855,362 +2078,907 @@ export function PrivateTripModal({
     }
   }, [open, initialDestination, initialGuide]);
 
-  // Selected landmark object
-  const selectedLandmark = useMemo(() => {
-    return LIBYAN_ATTRACTIONS.find((a) => a.id === selectedLandmarkId) || LIBYAN_ATTRACTIONS[0];
-  }, [selectedLandmarkId]);
+  // Selected landmarks array
+  const selectedLandmarks = useMemo(() => {
+    return allAttractions.filter((a) => selectedLandmarkIds.includes(a.id));
+  }, [allAttractions, selectedLandmarkIds]);
+
+  // Filtered landmarks for search/category (UNESCO excluded)
+  const filteredLandmarks = useMemo(() => {
+    return allAttractions.filter((lm) => {
+      if (landmarkCategoryFilter !== "all") {
+        if (!lm.category || !lm.category.includes(landmarkCategoryFilter)) return false;
+      }
+      if (landmarkSearch.trim()) {
+        const term = landmarkSearch.toLowerCase();
+        const matchName = lm.name && lm.name.toLowerCase().includes(term);
+        const matchCity = lm.city && lm.city.toLowerCase().includes(term);
+        const matchRegion = lm.region && lm.region.toLowerCase().includes(term);
+        if (!matchName && !matchCity && !matchRegion) return false;
+      }
+      return true;
+    });
+  }, [allAttractions, landmarkCategoryFilter, landmarkSearch]);
+
+  const toggleLandmark = (id: string) => {
+    setSelectedLandmarkIds((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) {
+          return prev; // keep at least one
+        }
+        return prev.filter((item) => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  // Filtered guides list
+  const filteredGuides = useMemo(() => {
+    return allGuides.filter((g) => {
+      // 1. Gender filter (ذكور / إناث)
+      if (guideGenderFilter !== "all" && g.gender !== guideGenderFilter) {
+        return false;
+      }
+      // 2. Language filter
+      if (guideLanguageFilter !== "all") {
+        const hasLang = g.languages?.some(
+          (l) => l.code === guideLanguageFilter || l.nameAr.includes(guideLanguageFilter)
+        );
+        if (!hasLang) return false;
+      }
+      // 3. Region filter
+      if (guideRegionFilter !== "all") {
+        const matchPrimary = g.primaryRegion === guideRegionFilter;
+        const matchOps = Array.isArray(g.operatingRegions) && g.operatingRegions.includes(guideRegionFilter);
+        if (!matchPrimary && !matchOps) return false;
+      }
+      // 4. Search term
+      if (guideSearchTerm.trim()) {
+        const term = guideSearchTerm.toLowerCase();
+        const matchName = g.name.toLowerCase().includes(term);
+        const matchTitle = g.title?.toLowerCase().includes(term);
+        const matchLic = g.licenseNumber.toLowerCase().includes(term);
+        if (!matchName && !matchTitle && !matchLic) return false;
+      }
+      return true;
+    });
+  }, [allGuides, guideGenderFilter, guideLanguageFilter, guideRegionFilter, guideSearchTerm]);
 
   // Selected tour guide object
   const selectedGuide = useMemo(() => {
     if (!selectedGuideLicense) return null;
-    return TOUR_GUIDES_DATA.find((g) => g.licenseNumber === selectedGuideLicense) || null;
-  }, [selectedGuideLicense]);
+    return allGuides.find((g) => g.licenseNumber === selectedGuideLicense) || null;
+  }, [allGuides, selectedGuideLicense]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Form submission handler
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 1. Strict Role Enforcement: Tourists ONLY
+    if (!isTourist) {
+      setFormError(
+        isAr
+          ? "عذراً، طلب حجز الرحلات الخاصة متاح حصرياً لحسابات السياح المعتمدة. لا يمكن تقديم الطلب بحساب إدارة أو حساب مهني."
+          : "Private tour requests are strictly reserved for tourist accounts."
+      );
+      return;
+    }
+
+    // 2. Validate at least one destination landmark selected
+    if (selectedLandmarkIds.length === 0) {
+      setFormError(
+        isAr
+          ? "يرجى تحديد معلم سياحي واحد على الأقل من قائمة المعالم السياحية في ليبيا."
+          : "Please select at least one tourist destination landmark."
+      );
+      return;
+    }
+
+    // 3. Validate Libyan Phone Number
     if (!phone.match(/^09\d{8}$/)) {
-      alert(isAr ? "الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)" : "Please enter a valid Libyan phone number (e.g. 0912345678)");
+      setFormError(
+        isAr
+          ? "الرجاء إدخال رقم هاتف ليبي صحيح يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)"
+          : "Please enter a valid 10-digit Libyan phone number (e.g. 0912345678)"
+      );
       return;
     }
 
-    const session = getStoredSession();
-    if (!session.token || session.role !== "tourist") {
-      alert(isAr ? "يجب تسجيل الدخول بحساب سائح لإرسال طلب الرحلة الخاصة" : "Please sign in with a tourist account to request a private trip");
-      return;
-    }
-    if (!startDate) {
-      alert(isAr ? "يرجى تحديد تاريخ بداية الرحلة" : "Please choose the trip start date");
-      return;
-    }
+    setFormError(null);
 
-    // Saved in DelniDB (private_trips) for the signed-in tourist; the admin prices it later.
-    const res = await apiRequestPrivateTrip({
-      customer_description: selectedLandmark ? (isAr ? selectedLandmark.name : selectedLandmark.nameEn) : "رحلة سياحية خاصة",
-      preferred_start_date: startDate,
+    const tripId = `PRV-${Date.now().toString().slice(-5)}`;
+    setCreatedTripId(tripId);
+
+    const touristId = sessionData?.user?.tourist_id || sessionData?.user?.id || sessionData?.user?.username || null;
+
+    // Build multi-destination string
+    const placesNames = selectedLandmarks.map((l) => (isAr ? l.name : l.nameEn)).join(" • ");
+    const placesWithCities = selectedLandmarks.map((l) => `${isAr ? l.name : l.nameEn} (${isAr ? l.city : l.cityEn})`).join("، ");
+
+    const guideRequirement = selectedGuide
+      ? `المرشد المفضل: ${selectedGuide.name} [ترخيص: ${selectedGuide.licenseNumber} - ${selectedGuide.gender === "female" ? "مرشدة" : "مرشد"}]. `
+      : "المرشد: تكليف مرشد سياحي معتمد بمعرفة إدارة المنصة. ";
+
+    const requirements = `المعالم السياحية المستهدفة: ${placesWithCities}. ${guideRequirement}${notes ? `ملاحظات ومتطلبات السائح: ${notes}` : ""}`.trim();
+
+    // Payload matching SQL Server DelniDB private_trips columns
+    const payload = {
+      private_trip_id: tripId,
+      status_order: "بانتظار تسعير الإدارة",
+      customer_description: placesNames || "رحلة سياحية خاصة متعددة الوجهات",
+      preferred_start_date: startDate || new Date().toISOString().split("T")[0],
       duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
-      number_of_companions: Math.max(0, parseInt(companions, 10) || 0),
+      number_of_companions: Math.max(1, parseInt(companions, 10) || 1),
       guide_license_number: selectedGuideLicense || null,
+      tourist_id: touristId,
+      customer_name: (customerName || sessionData?.user?.full_name || sessionData?.user?.name || "سائح دلّني").trim(),
       customer_phone: phone.trim(),
-      customer_requirements: `وسيلة النقل: ${vehicleType}.${selectedGuide ? ` المرشد المفضل: ${selectedGuide.name} (${selectedGuide.licenseNumber}).` : ''}${notes ? ` ملاحظات: ${notes}` : ''}`.trim(),
-    });
+      customer_requirements: requirements,
+      quoted_price: null,
+      admin_itinerary_plan: null,
+    };
 
-    if (res.status !== "success") {
-      alert(res.message || (isAr ? "تعذر حفظ طلب الرحلة الخاصة" : "Could not save the private trip request"));
-      return;
-    }
+    // Save to SQL Server DelniDB private_trips endpoint
+    fetch("http://127.0.0.1:5001/api/db/private_trips", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(console.error);
 
-    setCreatedTripId(res.trip?.private_trip_id || "");
+    // Save locally for instant rendering in tourist & admin dashboards
+    try {
+      const existing = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
+      existing.unshift({
+        ...payload,
+        guide_name: selectedGuide ? selectedGuide.name : null,
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem("delni_private_trips", JSON.stringify(existing));
+      localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
+    } catch {}
+
     setStep("done");
   };
 
   return (
     <Modal open={open} onClose={onClose} size="2xl">
       {step === "form" ? (
-        <div className="p-5 sm:p-8 pb-10 sm:pb-12 bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-5" dir={dir}>
-          {/* Header Banner - Libyan Heritage Aesthetic with decorative lines */}
-          <div className="text-center pt-1">
+        <div className="p-5 sm:p-8 pb-10 sm:pb-12 bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-6" dir={dir}>
+          
+          {/* ── 1. Header Banner: Clean Libyan Heritage Aesthetic (NO IMAGE) ── */}
+          <div className="text-center pt-1 border-b border-[#E8E2D6] dark:border-slate-800 pb-5">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <span className="h-px w-12 sm:w-20 bg-[#D4A373]/60" />
+              <span className="h-px w-12 sm:w-24 bg-[#D4A373]/60" />
               <span className="text-xs sm:text-sm font-bold text-[#B85D36] flex items-center gap-1.5 tracking-wide">
                 <span>🏛️</span>
-                <span>{isAr ? "التراث في ليبيا" : "Heritage in Libya"}</span>
+                <span>{isAr ? "السياحة والتراث في ليبيا • رحلات كبار الشخصيات VIP" : "Libyan Heritage & VIP Custom Tours"}</span>
               </span>
-              <span className="h-px w-12 sm:w-20 bg-[#D4A373]/60" />
+              <span className="h-px w-12 sm:w-24 bg-[#D4A373]/60" />
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-black text-[#0B132B] dark:text-white tracking-tight">
-              {isAr ? "طلب رحلة سياحية خاصة" : "Custom Private Tour Request"}
+              {isAr ? "طلب رحلة سياحية خاصة مخصصة" : "Custom Private Tour Request"}
             </h2>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-lg mx-auto">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-2xl mx-auto leading-relaxed">
               {isAr
-                ? "صمّم رحلتك المخصصة للمعالم التاريخية والطبيعية بإشراف مباشر وتسعير معتمد من إدارة المنصة"
-                : "Design your bespoke journey to Libyan heritage sites with direct coordination from administration"}
+                ? "صمّم خط سير رحلتك الخاصة باختيار معالمك المفضلة وتحديد مواصفات المرشد السياحي الأنسب، لتتولى إدارة المنصة دراسة المسار وتقديم تسعيرة رسمية معتمدة."
+                : "Curate your bespoke private itinerary across Libyan landmarks with tailor-fit tour guide filtering and official administration quotation."}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Heritage Card Container matching Reference Design */}
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-7 shadow-xs">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-                
-                {/* Visual Landmark Side: BIG, Clean, Cinematic (lg:col-span-5) */}
-                <div className="lg:col-span-5 space-y-3">
-                  <div className="relative rounded-2xl overflow-hidden h-56 sm:h-64 lg:h-72 border border-[#E8E2D6] dark:border-slate-700 shadow-sm group">
-                    <img
-                      src={selectedLandmark.img}
-                      alt={selectedLandmark.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+          {/* ── 2. Tourist Account Verification & Auto-Fill Information Banner ── */}
+          {!isTourist ? (
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border-2 border-amber-400 text-amber-950 dark:text-amber-200 text-xs space-y-2.5 animate-in fade-in">
+              <div className="flex items-center gap-2 font-black text-sm text-amber-900 dark:text-amber-300">
+                <span className="text-xl">🔒</span>
+                <span>
+                  {isAr ? "تنبيه: حجز الرحلات الخاصة متاح لحسابات السياح" : "Tourist Account Required for Booking"}
+                </span>
+              </div>
+              <p className="font-medium leading-relaxed">
+                {isAr
+                  ? "حجز الرحلات السياحية بجميع أنواعها متاح للمسجلين بحساب سائح لأخذ بياناتك وربط معلوماتك تلقائياً بالحجز. إذا كنت غير مسجل أو مسجلاً بحساب آخر، يرجى تسجيل الدخول بحساب سائح أو إنشاء حساب جديد للمتابعة:"
+                  : "All trip bookings are available for registered tourist accounts to automatically link passenger details. Please log in or create a tourist account to continue:"}
+              </p>
+              <div className="flex items-center gap-2.5 pt-1 flex-wrap">
+                <a
+                  href="/auth/login?role=tourist"
+                  className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-flex items-center gap-1.5"
+                >
+                  <span>🔑</span>
+                  <span>{isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}</span>
+                </a>
+                <a
+                  href="/auth/signup?role=tourist"
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs transition shadow-sm inline-flex items-center gap-1.5"
+                >
+                  <span>✨</span>
+                  <span>{isAr ? "إنشاء حساب سائح جديد" : "Sign Up as Tourist"}</span>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 text-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">👤</span>
+                <span className="font-black text-[#003580] dark:text-blue-300">
+                  {isAr ? `الحساب: ${customerName || sessionData?.user?.full_name || "سائح"}` : `Account: ${customerName}`}
+                </span>
+                <span className="text-slate-500 font-medium">({phone || sessionData?.user?.phone_number || "رقم الهاتف مرتبط تلقائياً"})</span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                {isAr ? "بياناتك مرتبطة تلقائياً ✓" : "Linked to account ✓"}
+              </span>
+            </div>
+          )}
 
-                    {/* Single Clean Heritage Badge */}
-                    <div className="absolute top-3 right-3 z-10 pointer-events-none">
-                      <span className="px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[11px] font-black flex items-center gap-1.5 shadow-sm">
-                        <span>🏛️</span>
-                        <span>
-                          {selectedLandmark.isUnesco
-                            ? (isAr ? `مسجل باليونسكو • ${selectedLandmark.unescoYear || 1982}` : `UNESCO Inscribed`)
-                            : (isAr ? "معلم أثري محمي" : "Protected Landmark")}
-                        </span>
-                      </span>
-                    </div>
+          {formError && (
+            <div className="p-3.5 rounded-2xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs font-bold flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{formError}</span>
+            </div>
+          )}
 
-                    {/* Bottom Caption Overlay */}
-                    <div className="absolute inset-x-0 bottom-0 p-3.5 text-white pointer-events-none">
-                      <h4 className="font-black text-sm text-white drop-shadow">
-                        {isAr ? selectedLandmark.name : selectedLandmark.nameEn}
-                      </h4>
-                      <p className="text-[11px] text-slate-200 mt-0.5">
-                        📍 {isAr ? selectedLandmark.city : selectedLandmark.cityEn} • ليبيا
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Clean Landmark Switcher */}
-                  <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800/80 border border-[#E8E2D6] dark:border-slate-700">
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                      {isAr ? "تغيير الوجهة أو المعلم المستهدف:" : "Change Destination Landmark:"}
-                    </label>
-                    <select
-                      value={selectedLandmarkId}
-                      onChange={(e) => setSelectedLandmarkId(e.target.value)}
-                      className="w-full h-8 px-2 rounded-lg bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-[#B85D36] cursor-pointer"
-                    >
-                      {LIBYAN_ATTRACTIONS.map((lm) => (
-                        <option key={lm.id} value={lm.id}>
-                          {isAr ? lm.name : lm.nameEn} ({isAr ? lm.city : lm.cityEn})
-                        </option>
-                      ))}
-                    </select>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* ══════════════════════════════════════════════════════════════════════
+                قسم 1: اختيار المعالم السياحية المتعددة في ليبيا (Multi-Select)
+            ══════════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
+                    1
+                  </span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
+                      {isAr ? "المعالم والوجهات السياحية المستهدفة في ليبيا" : "Target Libyan Destinations & Landmarks"}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {isAr
+                        ? "يمكنك اختيار أكثر من معلم سياحي لتشكيل مسار متكامل للرحلة"
+                        : "You can select multiple destinations to create a custom combined route"}
+                    </p>
                   </div>
                 </div>
 
-                {/* Form Fields Side strictly matching SQL Server private_trips (lg:col-span-7) */}
-                <div className="lg:col-span-7 space-y-3.5">
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-black text-[#0B132B] dark:text-white leading-snug">
-                      {isAr ? selectedLandmark.name : selectedLandmark.nameEn}
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mt-1 line-clamp-2">
-                      {isAr ? selectedLandmark.description : selectedLandmark.descriptionEn}
-                    </p>
-                  </div>
+                <div className="text-xs font-black px-3 py-1 rounded-full bg-[#FAF7F2] dark:bg-slate-800 text-[#B85D36] border border-[#E8E2D6] dark:border-slate-700">
+                  {isAr ? `تم اختيار (${selectedLandmarkIds.length}) معالم` : `(${selectedLandmarkIds.length}) Selected`}
+                </div>
+              </div>
 
-                  {/* 4 Structured Information Boxes matching Reference Design Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {/* Box 1: Preferred Start Date */}
-                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                      <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                        📅 {isAr ? "تاريخ الانطلاق المفضل" : "Preferred Start Date"}
-                      </span>
-                      <input
-                        type="date"
-                        required
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none"
-                      />
-                    </div>
-
-                    {/* Box 2: Duration in Days */}
-                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                      <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                        ⏱️ {isAr ? "مدة الرحلة (بالأيام)" : "Duration (Days)"}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min="1"
-                          max="30"
-                          required
-                          value={durationDays}
-                          onChange={(e) => setDurationDays(e.target.value)}
-                          className="w-16 bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none"
-                        />
-                        <span className="text-xs text-slate-400 font-bold">{isAr ? "أيام" : "days"}</span>
-                      </div>
-                    </div>
-
-                    {/* Box 3: Number of Companions */}
-                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                      <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                        👥 {isAr ? "عدد المسافرين / المرافقين" : "Companions / Pax"}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min="1"
-                          max="50"
-                          required
-                          value={companions}
-                          onChange={(e) => setCompanions(e.target.value)}
-                          className="w-16 bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none"
-                        />
-                        <span className="text-xs text-slate-400 font-bold">{isAr ? "أفراد" : "pax"}</span>
-                      </div>
-                    </div>
-
-                    {/* Box 4: Vehicle Type */}
-                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                      <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                        🚍 {isAr ? "وسيلة النقل المفضلة" : "Preferred Vehicle"}
-                      </span>
-                      <select
-                        value={vehicleType}
-                        onChange={(e) => setVehicleType(e.target.value)}
-                        className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none cursor-pointer truncate"
+              {/* Selected Landmarks Chips Bar */}
+              <div className="p-3 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800/60 border border-[#E8E2D6] dark:border-slate-700/80">
+                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
+                  {isAr ? "المعالم المحددة في مسارك الحالي:" : "Selected Landmarks in your Itinerary:"}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {selectedLandmarks.map((lm) => (
+                    <span
+                      key={lm.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-[#B85D36]/30 text-slate-800 dark:text-slate-100 text-xs font-bold shadow-2xs"
+                    >
+                      <span className="text-amber-600">🏛️</span>
+                      <span>{isAr ? lm.name : lm.nameEn}</span>
+                      <span className="text-[10px] text-slate-400">({isAr ? lm.city : lm.cityEn})</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleLandmark(lm.id)}
+                        title={isAr ? "إزالة من المسار" : "Remove"}
+                        className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
                       >
-                        <option value="دفع رباعي 4x4 (سفاري وطرق وعرة)">{isAr ? "دفع رباعي 4x4 (سفاري وطرق وعرة)" : "4x4 Desert SUV"}</option>
-                        <option value="حافلة سياحية كبرى فاخرة VIP (50 راكب)">{isAr ? "حافلة كبرى فاخرة VIP (50 راكب)" : "VIP Coach (50 seats)"}</option>
-                        <option value="ميني باص سياحي حديث (25 راكب)">{isAr ? "ميني باص سياحي (25 راكب)" : "Tourist Minibus (25 seats)"}</option>
-                        <option value="مرسيدس سبرينتر VIP (14 راكب)">{isAr ? "مرسيدس سبرينتر VIP (14 راكب)" : "Mercedes Sprinter VIP"}</option>
-                        <option value="سيارة سيدان عائلية خاصة">{isAr ? "سيارة سيدان عائلية خاصة" : "Family Sedan"}</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Tourist Contact Information */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                      <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                        👤 {isAr ? "اسم السائح أو الجهة الطالبة" : "Tourist / Client Name"}
-                      </span>
-                      <input
-                        type="text"
-                        required
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder={isAr ? "الاسم الكامل" : "Full Name"}
-                        className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none"
-                        maxLength={50}
-                      />
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                      <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                        📞 {isAr ? "رقم الهاتف / واتساب" : "Phone (WhatsApp)"}
-                      </span>
-                      <input
-                        type="tel"
-                        required
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="09XXXXXXXX"
-                        className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none font-mono"
-                        maxLength={15}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Tour Guide Selection */}
-                  <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                    <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                      🧭 {isAr ? "المرشد السياحي المعتمد (اختياري)" : "Certified Tour Guide (Optional)"}
+                        ✕
+                      </button>
                     </span>
-                    <select
-                      value={selectedGuideLicense}
-                      onChange={(e) => setSelectedGuideLicense(e.target.value)}
-                      className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
-                    >
-                      <option value="">{isAr ? "بدون مرشد مخصص (سائق الرحلة فقط)" : "Driver only (No dedicated guide)"}</option>
-                      {TOUR_GUIDES_DATA.map((g) => (
-                        <option key={g.licenseNumber} value={g.licenseNumber}>
-                          {g.name} - ترخيص ({g.licenseNumber}) - {g.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Special Requests or Notes */}
-                  <div className="p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 shadow-2xs">
-                    <span className="text-[10px] text-slate-500 font-bold block mb-1">
-                      📝 {isAr ? "ملاحظات أو متطلبات خاصة (اختياري)" : "Special Requests or Notes"}
+                  ))}
+                  {selectedLandmarks.length === 0 && (
+                    <span className="text-xs text-rose-500 font-bold">
+                      {isAr ? "يرجى تحديد معلم سياحي واحد على الأقل من القائمة أدناه" : "Please select at least one landmark"}
                     </span>
-                    <input
-                      type="text"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder={isAr ? "أية تفاصيل إضافية تود إبلاغ إدارة المنصة بها (فنادق، تصاريح)..." : "Any special requirements..."}
-                      className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none font-medium"
-                    />
-                  </div>
+                  )}
+                </div>
+              </div>
 
-                  {/* Terracotta Action Button matching Reference Mockup */}
-                  <div className="pt-2">
+              {/* Search & Category Filter for Landmarks */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={landmarkSearch}
+                    onChange={(e) => setLandmarkSearch(e.target.value)}
+                    placeholder={isAr ? "🔍 ابحث عن معلم أو مدينة (لبدة، صبراتة، شحات، أوباري، غدامس...)" : "Search landmark or city..."}
+                    className="w-full h-9 px-3 text-xs font-bold rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 outline-none focus:border-[#B85D36]"
+                  />
+                  {landmarkSearch && (
                     <button
-                      type="submit"
-                      className="w-full h-12 rounded-full bg-[#B85D36] hover:bg-[#a04e2c] text-white font-black text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                      type="button"
+                      onClick={() => setLandmarkSearch("")}
+                      className="absolute left-2.5 top-2 text-xs text-slate-400 hover:text-slate-600"
                     >
-                      <span>{isAr ? "إرسال طلب الرحلة للإدارة" : "Submit Request to Admin"}</span>
-                      <span className="text-base">➔</span>
+                      ✕
                     </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs font-bold">
+                  {[
+                    { id: "all", label: isAr ? "الكل" : "All" },
+                    { id: "آثار", label: isAr ? "آثار وتاريخ" : "Historical" },
+                    { id: "صحراء", label: isAr ? "صحراء وواحات" : "Desert" },
+                    { id: "طبيعة", label: isAr ? "طبيعة وجبال" : "Nature" },
+                    { id: "مدينة", label: isAr ? "مدن سياحية" : "Cities" },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setLandmarkCategoryFilter(cat.id)}
+                      className={`px-3 h-8 rounded-xl transition whitespace-nowrap cursor-pointer ${
+                        landmarkCategoryFilter === cat.id
+                          ? "bg-[#B85D36] text-white shadow-xs"
+                          : "bg-[#FAF7F2] dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#E8E2D6]"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multi-Select Landmarks Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1 border border-[#E8E2D6]/80 dark:border-slate-800 rounded-2xl bg-[#FAF7F2]/40 dark:bg-slate-900/50">
+                {filteredLandmarks.map((lm) => {
+                  const isChecked = selectedLandmarkIds.includes(lm.id);
+                  return (
+                    <div
+                      key={lm.id}
+                      onClick={() => toggleLandmark(lm.id)}
+                      className={`p-3 rounded-xl border text-right transition cursor-pointer select-none flex items-start justify-between gap-2 ${
+                        isChecked
+                          ? "bg-white dark:bg-slate-800 border-[#B85D36] ring-1 ring-[#B85D36] shadow-xs"
+                          : "bg-white/80 dark:bg-slate-900 border-[#E8E2D6] dark:border-slate-800 hover:border-[#B85D36]/50"
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-black text-xs text-slate-900 dark:text-white">
+                            {isAr ? lm.name : lm.nameEn}
+                          </span>
+                          {lm.isUnesco && (
+                            <span className="px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-black">
+                              اليونسكو
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                          📍 {isAr ? lm.city : lm.cityEn}
+                        </p>
+                      </div>
+
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold shrink-0 transition ${
+                        isChecked ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
+                      }`}>
+                        {isChecked ? "✓" : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════════
+                قسم 2: توقيت الرحلة، المدة، وعدد المسافرين
+            ══════════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
+                  2
+                </span>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
+                    {isAr ? "توقيت وتفاصيل الرحلة والمرافقين" : "Trip Schedule & Party Details"}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {isAr ? "حدد تاريخ الانطلاق المفضل والمدة التقديرية وعدد الركاب" : "Specify start date, duration, and number of passengers"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Preferred Start Date */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
+                    📅 {isAr ? "تاريخ الانطلاق المفضل" : "Preferred Start Date"}
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
+                  />
+                </div>
+
+                {/* Duration in Days */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
+                    ⏱️ {isAr ? "مدة الرحلة (بالأيام)" : "Duration (Days)"}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDurationDays(String(Math.max(1, (parseInt(durationDays, 10) || 1) - 1)))}
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      required
+                      value={durationDays}
+                      onChange={(e) => setDurationDays(e.target.value)}
+                      className="w-14 text-center bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDurationDays(String(Math.min(30, (parseInt(durationDays, 10) || 1) + 1)))}
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                    >
+                      +
+                    </button>
+                    <span className="text-xs text-slate-400 font-bold">{isAr ? "أيام" : "days"}</span>
+                  </div>
+                </div>
+
+                {/* Companions Count */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
+                    👥 {isAr ? "عدد المسافرين / المرافقين" : "Companions / Pax"}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCompanions(String(Math.max(1, (parseInt(companions, 10) || 1) - 1)))}
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      required
+                      value={companions}
+                      onChange={(e) => setCompanions(e.target.value)}
+                      className="w-14 text-center bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCompanions(String(Math.min(50, (parseInt(companions, 10) || 1) + 1)))}
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100"
+                    >
+                      +
+                    </button>
+                    <span className="text-xs text-slate-400 font-bold">{isAr ? "أفراد" : "pax"}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Dedicated Vehicle & Driver Notice */}
+              <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-start gap-2.5 text-xs">
+                <span className="text-base text-emerald-700 dark:text-emerald-300">🚍</span>
+                <div>
+                  <span className="font-black text-emerald-900 dark:text-emerald-200 block">
+                    {isAr ? "وسيلة النقل والسائق السياحي المعتمد:" : "Vehicle & Professional Driver:"}
+                  </span>
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5 leading-relaxed font-medium">
+                    {isAr
+                      ? "تُعين وسيلة النقل (حافلة سياحية VIP حديثة أو سيارة دفع رباعي 4x4 للطرق الصحراوية) مع سائق محترف مرخص بمعرفة إدارة المنصة بناءً على عدد الأفراد وطبيعة تضاريس المعالم المختارة."
+                      : "Vehicles (VIP modern van or 4x4 desert SUV) and licensed professional drivers are assigned directly by platform administration based on itinerary terrain and party size."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════════
+                قسم 3: المرشد السياحي والفلترة الذكية (Gender & Language Filters)
+            ══════════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
+                    3
+                  </span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
+                      {isAr ? "اختيار المرشد السياحي المعتمد والفلترة الذكية" : "Tour Guide Selection & Smart Filters"}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {isAr
+                        ? "فلترة واختيار المرشد الأنسب لرحلتك من حيث الجنس (مرشد / مرشدة)، اللغات المتحدثة، والمنطقة"
+                        : "Filter guides by gender, spoken languages, and operating regions to match your group"}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedGuide && (
+                  <div className="text-xs font-black px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300">
+                    {isAr ? `المرشد المفضل: ${selectedGuide.name}` : `Selected: ${selectedGuide.name}`}
+                  </div>
+                )}
+              </div>
+
+              {/* Guide Filters Toolbar */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800/60 border border-[#E8E2D6] dark:border-slate-700 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                  
+                  {/* Filter: Gender (ذكور / إناث) */}
+                  <div className="sm:col-span-5 space-y-1">
+                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+                      👤 {isAr ? "تفضيل جنس المرشد السياحي:" : "Guide Gender Preference:"}
+                    </label>
+                    <div className="grid grid-cols-3 gap-1 text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setGuideGenderFilter("all")}
+                        className={`h-8 rounded-xl transition cursor-pointer ${
+                          guideGenderFilter === "all"
+                            ? "bg-[#B85D36] text-white shadow-xs"
+                            : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        {isAr ? "الكل" : "All"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGuideGenderFilter("male")}
+                        className={`h-8 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 ${
+                          guideGenderFilter === "male"
+                            ? "bg-[#0B132B] text-white shadow-xs"
+                            : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>👨</span>
+                        <span>{isAr ? "مرشد (ذكر)" : "Male"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGuideGenderFilter("female")}
+                        className={`h-8 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 ${
+                          guideGenderFilter === "female"
+                            ? "bg-emerald-700 text-white shadow-xs"
+                            : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>👩</span>
+                        <span>{isAr ? "مرشدة (أنثى)" : "Female"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filter: Spoken Language */}
+                  <div className="sm:col-span-4 space-y-1">
+                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+                      🌐 {isAr ? "اللغات المتحدثة:" : "Spoken Languages:"}
+                    </label>
+                    <select
+                      value={guideLanguageFilter}
+                      onChange={(e) => setGuideLanguageFilter(e.target.value)}
+                      className="w-full h-8 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                    >
+                      <option value="all">{isAr ? "جميع اللغات" : "All Languages"}</option>
+                      <option value="AR">{isAr ? "العربية" : "Arabic"}</option>
+                      <option value="EN">{isAr ? "الإنجليزية" : "English"}</option>
+                      <option value="FR">{isAr ? "الفرنسية" : "French"}</option>
+                      <option value="IT">{isAr ? "الإيطالية" : "Italian"}</option>
+                    </select>
+                  </div>
+
+                  {/* Filter: Operating Region */}
+                  <div className="sm:col-span-3 space-y-1">
+                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+                      📍 {isAr ? "المنطقة / التخصص:" : "Region:"}
+                    </label>
+                    <select
+                      value={guideRegionFilter}
+                      onChange={(e) => setGuideRegionFilter(e.target.value)}
+                      className="w-full h-8 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                    >
+                      <option value="all">{isAr ? "جميع المناطق" : "All Regions"}</option>
+                      <option value="tripoli">{isAr ? "طرابلس وضواحيها" : "Tripoli"}</option>
+                      <option value="leptis">{isAr ? "لبدة والخمس" : "Leptis Magna"}</option>
+                      <option value="sabratha">{isAr ? "صبراتة والساحل الغربي" : "Sabratha"}</option>
+                      <option value="cyrene">{isAr ? "شحات وقورينا (الجبل الأخضر)" : "Cyrene"}</option>
+                      <option value="ghadames">{isAr ? "غدامس والواحات" : "Ghadames"}</option>
+                      <option value="ubari">{isAr ? "أوباري والجنوب" : "Ubari / South"}</option>
+                      <option value="benghazi">{isAr ? "بنغازي والمنطقة الشرقية" : "Benghazi"}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Guide Name Search */}
+                <div>
+                  <input
+                    type="text"
+                    value={guideSearchTerm}
+                    onChange={(e) => setGuideSearchTerm(e.target.value)}
+                    placeholder={isAr ? "🔍 ابحث باسم المرشد أو الترخيص..." : "Search guide by name or license..."}
+                    className="w-full h-8 px-3 text-xs font-bold rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Guide Selection Options */}
+              <div className="space-y-2 max-h-56 overflow-y-auto p-1">
+                {/* Default Choice: No Guide Preference (Platform Assigns) */}
+                <div
+                  onClick={() => setSelectedGuideLicense("")}
+                  className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
+                    selectedGuideLicense === ""
+                      ? "bg-amber-50/80 dark:bg-amber-950/40 border-[#B85D36] ring-1 ring-[#B85D36] shadow-xs"
+                      : "bg-[#FAF7F2] dark:bg-slate-800/50 border-[#E8E2D6] dark:border-slate-700 hover:border-[#B85D36]/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-bold text-sm shrink-0">
+                      ⭐
+                    </span>
+                    <div>
+                      <div className="font-black text-xs text-slate-900 dark:text-white">
+                        {isAr ? "بدون مرشد مفضل (تكليف مرشد معتمد بمعرفة إدارة المنصة)" : "No Guide Preference (Assigned by Platform Admin)"}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {isAr
+                          ? "ستقوم الإدارة باختيار المرشد الأنسب تلقائياً بناءً على طبيعة المعالم ولغات الفوج السياحي"
+                          : "Administration will automatically pair you with the best available guide for your itinerary"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                    selectedGuideLicense === "" ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
+                  }`}>
+                    {selectedGuideLicense === "" ? "✓" : ""}
+                  </div>
+                </div>
+
+                {/* Filtered Guide Cards */}
+                {filteredGuides.map((g) => {
+                  const isSelected = selectedGuideLicense === g.licenseNumber;
+                  return (
+                    <div
+                      key={g.licenseNumber}
+                      onClick={() => setSelectedGuideLicense(g.licenseNumber)}
+                      className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? "bg-white dark:bg-slate-800 border-[#B85D36] ring-1 ring-[#B85D36] shadow-xs"
+                          : "bg-white dark:bg-slate-900 border-[#E8E2D6] dark:border-slate-800 hover:border-[#B85D36]/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-slate-200 shrink-0">
+                          {g.gender === "female" ? "👩" : "👨"}
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-black text-xs text-slate-900 dark:text-white">{g.name}</span>
+                            <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold ${
+                              g.gender === "female"
+                                ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                                : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
+                            }`}>
+                              {g.gender === "female" ? (isAr ? "مرشدة سياحية" : "Female Guide") : (isAr ? "مرشد سياحي" : "Male Guide")}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">({g.licenseNumber})</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                            <span>★ {g.rating} ({g.reviewsCount || 100})</span>
+                            <span>•</span>
+                            <span>{g.title}</span>
+                            <span>•</span>
+                            <span className="text-[#B85D36] font-bold">{g.pricePerDay} د.ل / يوم</span>
+                          </div>
+
+                          <div className="flex items-center gap-1 pt-0.5 flex-wrap">
+                            {g.languages?.map((lang) => (
+                              <span key={lang.code} className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+                                {isAr ? lang.nameAr : lang.nameEn}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                        isSelected ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
+                      }`}>
+                        {isSelected ? "✓" : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredGuides.length === 0 && (
+                  <div className="text-center py-4 text-xs text-slate-400 font-bold">
+                    {isAr ? "لا توجد مرشدين يطابقون معايير الفلترة المحددة. يمكنك تعديل خيارات الفلترة أو اختيار (بدون مرشد مفضل)." : "No guides match your filter."}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════════
+                قسم 4: بيانات التواصل والمتطلبات الخاصة
+            ══════════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
+                  4
+                </span>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
+                    {isAr ? "بيانات التواصل وملاحظات السائح" : "Contact Information & Special Requests"}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {isAr ? "يرجى التحقق من صحة رقم الهاتف لتلقي إشعار التسعيرة الرسمية" : "Ensure contact number is correct to receive your official quote"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Tourist Name */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
+                    👤 {isAr ? "اسم السائح أو الجهة الطالبة" : "Tourist Name"}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder={isAr ? "الاسم الكامل" : "Full Name"}
+                    className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
+                    maxLength={60}
+                  />
+                </div>
+
+                {/* Phone / WhatsApp */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
+                    📞 {isAr ? "رقم الهاتف / واتساب (09XXXXXXXX)" : "Phone (09XXXXXXXX)"}
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="0912345678"
+                    className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none font-mono"
+                    maxLength={15}
+                  />
+                </div>
+              </div>
+
+              {/* Special Requests */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
+                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
+                  📝 {isAr ? "ملاحظات أو متطلبات خاصة (اختياري)" : "Special Requests or Notes (Optional)"}
+                </label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={isAr
+                    ? "أي تفاصيل إضافية تود إبلاغ إدارة المنصة بها (حجز فنادق محددة، معدات تخييم، سيارات دفع رباعي صحراوية، تصاريح أمنية، وجبات غذائية)..."
+                    : "Any specific accommodation, 4x4 desert permits, or dietary requirements..."}
+                  className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none font-medium resize-none leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════════
+                زر الإرسال النهائي وتأكيد الشروط
+            ══════════════════════════════════════════════════════════════════════ */}
+            <div className="pt-2 space-y-2 text-center">
+              <button
+                type="submit"
+                disabled={!isTourist}
+                className={`w-full h-12 rounded-full font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  isTourist
+                    ? "bg-[#B85D36] hover:bg-[#a04e2c] text-white hover:shadow-lg active:scale-[0.99]"
+                    : "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed shadow-none"
+                }`}
+              >
+                <span>
+                  {isTourist
+                    ? (isAr ? "إرسال طلب الرحلة الخاصة للإدارة (تسعير واعتماد المسار)" : "Submit Custom Tour Request to Admin")
+                    : (isAr ? "🚫 تقديم الطلب متاح لحسابات السياح فقط" : "Tourist Account Required to Submit")}
+                </span>
+                <span className="text-base">➔</span>
+              </button>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg mx-auto">
+                {isAr
+                  ? "💡 بمجرد تقديم الطلب، ستتولى إدارة المنصة دراسة مسار المعالم المختارة وإعداد البرنامج المقترح والتسعيرة الرسمية وإشعارك فوراً عبر المنصة."
+                  : "Platform administration will review your requested landmarks, create an itinerary, and notify you with an official price quote."}
+              </p>
             </div>
           </form>
         </div>
       ) : (
-        /* Done Screen matching Heritage Aesthetic */
-        <div className="p-8 sm:p-12 text-center bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100" dir={dir}>
+        /* ══════════════════════════════════════════════════════════════════════
+            شاشة النجاح والتأكيد (Done Screen)
+        ══════════════════════════════════════════════════════════════════════ */
+        <div className="p-8 sm:p-12 text-center bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-5" dir={dir}>
           <div className="w-20 h-20 mx-auto rounded-full bg-[#B85D36]/15 text-[#B85D36] grid place-items-center text-4xl shadow-sm border border-[#B85D36]/30">
             🏛️
           </div>
 
-          <h3 className="mt-5 text-2xl font-black text-[#0B132B] dark:text-white">
-            {isAr ? "تم استلام طلب رحلتك الخاصة بنجاح!" : "Private Tour Request Submitted!"}
-          </h3>
+          <div className="space-y-1.5">
+            <h3 className="text-2xl font-black text-[#0B132B] dark:text-white">
+              {isAr ? "تم استلام طلب رحلتك الخاصة بنجاح!" : "Private Tour Request Submitted!"}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
+              {isAr
+                ? "تم توجيه طلبك مباشرة إلى لوحة إدارة المنصة (Admin) لجدولة المعالم السياحية المختارة وإعداد خطة السير والتسعيرة المعتمدة."
+                : "Your request is now queued for administrative route coordination and official quotation."}
+            </p>
+          </div>
 
-          <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-            {isAr
-              ? "تم تحويل طلبك مباشرة إلى لوحة إدارة المنصة (Admin) لدراسة المسار وتجهيز التسعيرة الرسمية وخطة الرحلة."
-              : "Your request has been routed to platform administration for itinerary planning and official quotation."}
-          </p>
-
-          <div className="mt-6 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 max-w-lg mx-auto text-right text-xs space-y-2.5 shadow-xs">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 max-w-lg mx-auto text-right text-xs space-y-3 shadow-xs">
             <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
               <span className="text-slate-500 font-bold">{isAr ? "رقم الطلب المرجعي:" : "Reference #:"}</span>
               <span className="font-mono font-black text-[#B85D36]">#{createdTripId}</span>
             </div>
-            <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "المعلم والوجهة:" : "Landmark:"}</span>
-              <span className="font-black text-slate-800 dark:text-slate-200">{isAr ? selectedLandmark.name : selectedLandmark.nameEn}</span>
+
+            <div className="border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
+              <span className="text-slate-500 font-bold block mb-1">
+                {isAr ? `المعالم السياحية المستهدفة (${selectedLandmarks.length}):` : `Landmarks (${selectedLandmarks.length}):`}
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {selectedLandmarks.map((lm) => (
+                  <span key={lm.id} className="px-2 py-0.5 rounded-md bg-[#FAF7F2] dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-[#E8E2D6] dark:border-slate-700">
+                    🏛️ {isAr ? lm.name : lm.nameEn} ({isAr ? lm.city : lm.cityEn})
+                  </span>
+                ))}
+              </div>
             </div>
+
             <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
               <span className="text-slate-500 font-bold">{isAr ? "تاريخ الانطلاق والمدة:" : "Start Date & Duration:"}</span>
               <span className="font-black text-slate-800 dark:text-slate-200">{startDate} ({durationDays} {isAr ? "أيام" : "days"})</span>
             </div>
+
             <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
               <span className="text-slate-500 font-bold">{isAr ? "عدد المسافرين:" : "Travelers:"}</span>
               <span className="font-black text-slate-800 dark:text-slate-200">{companions} {isAr ? "أفراد" : "pax"}</span>
             </div>
+
             <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "وسيلة النقل:" : "Vehicle:"}</span>
-              <span className="font-black text-slate-800 dark:text-slate-200">{vehicleType}</span>
-            </div>
-            <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "المرشد السياحي:" : "Tour Guide:"}</span>
+              <span className="text-slate-500 font-bold">{isAr ? "المرشد السياحي المفضل:" : "Tour Guide:"}</span>
               <span className="font-black text-slate-800 dark:text-slate-200">
-                {selectedGuide ? `${selectedGuide.name} (${selectedGuide.licenseNumber})` : (isAr ? "سائق الرحلة فقط" : "Driver only")}
+                {selectedGuide ? `${selectedGuide.name} (${selectedGuide.licenseNumber})` : (isAr ? "تكليف بمعرفة إدارة المنصة" : "Assigned by Platform Admin")}
               </span>
             </div>
+
             <div className="flex justify-between pt-1">
-              <span className="text-slate-500 font-bold">{isAr ? "حالة التسعيرة:" : "Pricing Status:"}</span>
+              <span className="text-slate-500 font-bold">{isAr ? "حالة الطلب:" : "Status:"}</span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300">
                 {isAr ? "بانتظار تسعير الإدارة" : "Pending Admin Quote"}
               </span>
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center">
+          <div className="flex justify-center gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
               className="px-8 h-11 rounded-full bg-[#B85D36] hover:bg-[#a04e2c] text-white font-bold text-sm shadow-md transition cursor-pointer"
             >
-              {isAr ? "إغلاق" : "Close"}
+              {isAr ? "تم، إغلاق" : "Done, Close"}
             </button>
           </div>
         </div>

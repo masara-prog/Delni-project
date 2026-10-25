@@ -117,6 +117,7 @@ export function Header({ active }: HeaderProps) {
 
         {/* Auth State Control */}
         <div className="flex items-center gap-2 shrink-0">
+          {session && <NotificationBell />}
           {session ? (
             <div className="flex items-center gap-1.5 p-1 bg-black/35 hover:bg-black/45 backdrop-blur-xl rounded-full border border-white/20 shadow-md">
               <Link

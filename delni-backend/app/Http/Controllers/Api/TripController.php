@@ -310,4 +310,140 @@ class TripController extends Controller
         }
         return response()->json(['status' => 'error', 'message' => 'المرفق غير موجود'], 404);
     }
+
+    public function tripReviews(Request $request, $tripId)
+    {
+        $type = $request->query('type', 'daily');
+        if ($type === 'weekly') {
+            $reviews = \App\Models\ReviewWeeklyTrip::with('tourist')
+                ->where('weekly_trip_id', $tripId)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            $reviews = \App\Models\ReviewDailyTrip::with('tourist')
+                ->where('daily_trip_id', $tripId)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        return response()->json(['status' => 'success', 'data' => $reviews]);
+    }
+
+    public function storeReview(Request $request)
+    {
+        $validated = $request->validate([
+            'tourist_id' => 'required|string',
+            'trip_id' => 'required|string',
+            'type' => 'required|string|in:daily,weekly',
+            'stars_rating' => 'required|integer|min:1|max:5',
+            'comment_text' => 'nullable|string',
+        ]);
+
+        $touristId = $validated['tourist_id'];
+        $tripId = $validated['trip_id'];
+        $type = $validated['type'];
+
+        // 1. Verify Participation
+        if ($type === 'weekly') {
+            $booking = \App\Models\BookingWeekly::where('tourist_id', $touristId)
+                ->where('weekly_trip_id', $tripId)
+                ->first();
+        } else {
+            $booking = \App\Models\BookingDaily::where('tourist_id', $touristId)
+                ->where('daily_trip_id', $tripId)
+                ->first();
+        }
+
+        if (!$booking) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'عذراً، لا يمكنك تقييم هذه الرحلة لأنك لم تسجل أو تشارك فيها بالفعل.'
+            ], 403);
+        }
+
+        // 2. Verify Trip Ended
+        $tripDate = $booking->trip_date ?? $booking->booking_date;
+        if ($tripDate && strtotime($tripDate) > time()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'عذراً، لا يمكن تقييم الرحلة إلا بعد موعد انتهائها الفعلي.'
+            ], 400);
+        }
+
+        // 3. Upsert Review
+        if ($type === 'weekly') {
+            $revId = 'REV-W-' . substr(uniqid(), -6);
+            $review = \App\Models\ReviewWeeklyTrip::updateOrCreate(
+                ['tourist_id' => $touristId, 'weekly_trip_id' => $tripId],
+                [
+                    'review_weekly_id' => $revId,
+                    'stars_rating' => $validated['stars_rating'],
+                    'comment_text' => $validated['comment_text'] ?? null,
+                    'created_at' => now(),
+                ]
+            );
+        } else {
+            $revId = 'REV-D-' . substr(uniqid(), -6);
+            $review = \App\Models\ReviewDailyTrip::updateOrCreate(
+                ['tourist_id' => $touristId, 'daily_trip_id' => $tripId],
+                [
+                    'review_daily_id' => $revId,
+                    'stars_rating' => $validated['stars_rating'],
+                    'comment_text' => $validated['comment_text'] ?? null,
+                    'created_at' => now(),
+                ]
+            );
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تسجيل تقييمك للرحلة بنجاح! شكراً لمشاركتك.',
+            'review' => $review
+        ], 201);
+    }
+
+    public function touristFavorites(Request $request, $touristId)
+    {
+        $favorites = \App\Models\TouristFavorite::where('tourist_id', $touristId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return response()->json(['status' => 'success', 'data' => $favorites]);
+    }
+
+    public function toggleFavorite(Request $request)
+    {
+        $validated = $request->validate([
+            'tourist_id' => 'required|string',
+            'item_type' => 'required|string',
+            'item_id' => 'required|string',
+        ]);
+
+        $existing = \App\Models\TouristFavorite::where('tourist_id', $validated['tourist_id'])
+            ->where('item_type', $validated['item_type'])
+            ->where('item_id', $validated['item_id'])
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            return response()->json([
+                'status' => 'success',
+                'is_favorite' => false,
+                'message' => 'تمت إزالة العنصر من المفضلة'
+            ]);
+        } else {
+            $fav = \App\Models\TouristFavorite::create([
+                'favorite_id' => 'FAV-' . substr(uniqid(), -8),
+                'tourist_id' => $validated['tourist_id'],
+                'item_type' => $validated['item_type'],
+                'item_id' => $validated['item_id'],
+                'created_at' => now(),
+            ]);
+            return response()->json([
+                'status' => 'success',
+                'is_favorite' => true,
+                'message' => 'تمت إضافة العنصر إلى المفضلة ❤️',
+                'data' => $fav
+            ], 201);
+        }
+    }
 }
+

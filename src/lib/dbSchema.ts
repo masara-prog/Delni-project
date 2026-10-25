@@ -233,6 +233,8 @@ export interface PrivateTrip {
   customer_requirements?: string | null; // TEXT
   assigned_guide_license?: string | null; // VARCHAR(50) NULL FK -> TourGuides
   assigned_vehicle_plate?: string | null; // VARCHAR(30) NULL FK -> Vehicles
+  assigned_vehicle?: string | null;
+  assigned_guide?: string | null;
   guide_name?: string | null;
 }
 

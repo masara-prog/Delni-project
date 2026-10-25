@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 export type HotelData = {
   id: string;
@@ -158,14 +159,12 @@ export function HotelDetailsModal({
             >
               <span>{copiedLink ? "✓" : "🔗"}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setIsLiked(!isLiked)}
-              className="w-10 h-10 rounded-full bg-white/90 dark:bg-slate-800/90 hover:bg-white text-slate-700 dark:text-slate-200 shadow-md flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-700"
-              title={isAr ? "حفظ للمفضلة" : "Favorite"}
-            >
-              <span className={isLiked ? "text-rose-500 text-lg" : "text-slate-400 text-lg"}>{isLiked ? "❤️" : "🤍"}</span>
-            </button>
+            <FavoriteButton
+              itemType="hotel"
+              itemId={hotel.id}
+              itemTitle={hotel.name}
+              size="md"
+            />
             <button
               type="button"
               onClick={onClose}

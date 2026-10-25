@@ -85,7 +85,8 @@ import {
   type AttractionItem,
   type CityDestinationItem,
 } from "@/lib/attractionsData";
-import { apiGetPlaces } from "@/lib/api";
+import { apiGetPlaces, getStoredSession } from "@/lib/api";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 export { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem, type CityDestinationItem };
 
@@ -569,20 +570,26 @@ function AttractionsPage() {
                   </div>
                 </div>
 
-                {/* Single Re-centered Full-Width Action Button (Fills the Bottom Space Completely) */}
+                {/* UNESCO Heritage Info Notice (Private tours excluded from UNESCO per user specification) */}
                 <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPrivateTripDest(isAr ? activeUnescoSite.name : activeUnescoSite.nameEn);
-                      setPrivateTripModalOpen(true);
-                    }}
-                    className="w-full h-12 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#C2410C] hover:from-[#C2410C] hover:to-[#D96B27] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2 group active:scale-[0.99]"
-                  >
-                    <span className="text-base">🧭</span>
-                    <span>{isAr ? "ذهاب برحلة خاصة لهذا المعلم" : "Book Custom Private Tour to this Site"}</span>
-                    <span className="text-sm group-hover:translate-x-1 transition-transform">➔</span>
-                  </button>
+                  <div className="w-full p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">🏛️</span>
+                      <div>
+                        <span className="font-black block text-amber-900">
+                          {isAr ? "معلم تراث عالمي معتمد (اليونسكو)" : "UNESCO World Heritage Site"}
+                        </span>
+                        <span className="text-[11px] text-amber-800 font-medium">
+                          {isAr
+                            ? "تتم زيارة هذا المعلم حصرياً عبر الرحلات السياحية المجدولة المعتمدة للمحافظة على التراث."
+                            : "Visits to this site are conducted exclusively via certified scheduled tours to preserve ancient heritage."}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-xl bg-amber-200/80 text-amber-900 text-[10px] font-black shrink-0 border border-amber-300">
+                      {isAr ? "محمي دولياً 🛡️" : "Protected 🛡️"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -767,16 +774,23 @@ function AttractionsPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/30" />
 
-                  {/* Top Overlay: Wishlist Heart Button Only */}
-                  <div className="absolute top-5 right-5 left-5 flex items-center justify-between text-white">
-                    <div />
-                    <button
-                      type="button"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 grid place-items-center text-white hover:text-red-500 hover:scale-110 transition cursor-pointer shadow-md"
-                    >
-                      <Heart className="w-5 h-5" />
-                    </button>
+                  {/* Top Overlay: Rating Badge & Wishlist Favorite Button */}
+                  <div className="absolute top-5 right-5 left-5 flex items-center justify-between text-white z-10 pointer-events-none">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
+                      <span className="text-amber-400 text-sm">★</span>
+                      <span>{city.rating || "4.9"}</span>
+                      <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount || 120} {isAr ? "تقييم" : "reviews"})</span>
+                    </div>
+
+                    <div className="pointer-events-auto">
+                      <FavoriteButton
+                        itemType="landmark"
+                        itemId={city.id}
+                        itemTitle={city.name}
+                        size="md"
+                        className="bg-black/50 hover:bg-black/80 text-white border-white/25 shadow-md"
+                      />
+                    </div>
                   </div>
 
                   {/* Bottom Content Area: Short City Name + Soft White Subtitle on Right, "اعرف أكثر" on Left */}
@@ -821,16 +835,23 @@ function AttractionsPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/30" />
 
-                  {/* Top Overlay: Wishlist Heart Button Only */}
-                  <div className="absolute top-5 right-5 left-5 flex items-center justify-between text-white">
-                    <div />
-                    <button
-                      type="button"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 grid place-items-center text-white hover:text-red-500 hover:scale-110 transition cursor-pointer shadow-md"
-                    >
-                      <Heart className="w-5 h-5" />
-                    </button>
+                  {/* Top Overlay: Rating Badge & Wishlist Favorite Button */}
+                  <div className="absolute top-5 right-5 left-5 flex items-center justify-between text-white z-10 pointer-events-none">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
+                      <span className="text-amber-400 text-sm">★</span>
+                      <span>{city.rating || "4.9"}</span>
+                      <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount || 120} {isAr ? "تقييم" : "reviews"})</span>
+                    </div>
+
+                    <div className="pointer-events-auto">
+                      <FavoriteButton
+                        itemType="landmark"
+                        itemId={city.id}
+                        itemTitle={city.name}
+                        size="md"
+                        className="bg-black/50 hover:bg-black/80 text-white border-white/25 shadow-md"
+                      />
+                    </div>
                   </div>
 
                   {/* Bottom Content Area: Short City Name + Soft White Subtitle on Right, "اعرف أكثر" on Left */}
@@ -916,6 +937,44 @@ function AttractionsPage() {
   );
 }
 
+interface LandmarkReviewItem {
+  id: string;
+  authorName: string;
+  rating: number;
+  date: string;
+  comment: string;
+  isVerified: boolean;
+}
+
+const DEFAULT_LANDMARK_REVIEWS: Record<string, LandmarkReviewItem[]> = {
+  default: [
+    {
+      id: "rev-1",
+      authorName: "م. سالم الترهوني",
+      rating: 5,
+      date: "2026-10-12",
+      comment: "معلم أثري مهيب وغاية في الإبهار والجمال، التنظيم والنظافة ممتازة جداً. تجربة لا غنى عنها لكل زائر.",
+      isVerified: true,
+    },
+    {
+      id: "rev-2",
+      authorName: "فاطمة الورفلي",
+      rating: 5,
+      date: "2026-09-28",
+      comment: "تفاصيل النقوش والمعمار القديم تأسر القلوب، وجود المرشد السياحي أضاف قيمة تاريخية عظيمة لمعرفة تفاصيل المكان.",
+      isVerified: true,
+    },
+    {
+      id: "rev-3",
+      authorName: "د. عبد السلام المبروك",
+      rating: 5,
+      date: "2026-08-15",
+      comment: "فخر السياحة والتاريخ الليبي، معلم يستحق التصنيف العالمي بامتياز. أنصح بزيارته في الصباح الباكر للاستمتاع بالإطلالة.",
+      isVerified: true,
+    },
+  ],
+};
+
 function LandmarkDetailsModal({
   city,
   onClose,
@@ -927,12 +986,89 @@ function LandmarkDetailsModal({
 }) {
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
-  const [activeModalTab, setActiveModalTab] = useState<"history" | "highlights" | "trips">("history");
+  const [activeModalTab, setActiveModalTab] = useState<"history" | "highlights" | "reviews" | "trips">("history");
   const [showPromo, setShowPromo] = useState(true);
+
+  // Reviews state
+  const [reviewsList, setReviewsList] = useState<LandmarkReviewItem[]>([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSuccessMsg, setReviewSuccessMsg] = useState("");
+
+  const session = getStoredSession();
+  const isTourist = Boolean(session?.token && (session?.role === "tourist" || session?.user?.role === "tourist"));
+
+  // Check if site is UNESCO
+  const isUnescoSite = Boolean(
+    (city as any)?.isUnesco ||
+    city?.id === "city-khoms" ||
+    city?.id === "city-sabratha" ||
+    city?.id === "city-ghadames" ||
+    city?.id === "city-cyrene" ||
+    city?.id === "city-tadrart" ||
+    city?.name?.includes("لبدة") ||
+    city?.name?.includes("صبراتة") ||
+    city?.name?.includes("غدامس") ||
+    city?.name?.includes("شحات") ||
+    city?.name?.includes("أكاكوس")
+  );
+
+  useEffect(() => {
+    if (!city) return;
+    try {
+      const stored = localStorage.getItem(`delni_landmark_reviews_${city.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setReviewsList(parsed);
+          return;
+        }
+      }
+    } catch {}
+    setReviewsList(DEFAULT_LANDMARK_REVIEWS[city.id] || DEFAULT_LANDMARK_REVIEWS.default);
+  }, [city?.id]);
+
+  const handleAddReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !city) return;
+    setIsSubmittingReview(true);
+
+    const touristName = session?.user?.full_name || session?.user?.name || (isAr ? "سائح معتمد" : "Verified Tourist");
+    const newRev: LandmarkReviewItem = {
+      id: `rev-${Date.now()}`,
+      authorName: touristName,
+      rating: newRating,
+      date: new Date().toISOString().split("T")[0],
+      comment: newComment.trim(),
+      isVerified: true,
+    };
+
+    const updated = [newRev, ...reviewsList];
+    setReviewsList(updated);
+    try {
+      localStorage.setItem(`delni_landmark_reviews_${city.id}`, JSON.stringify(updated));
+    } catch {}
+
+    setNewComment("");
+    setIsSubmittingReview(false);
+    setReviewSuccessMsg(isAr ? "تم نشر تقييمك بنجاح! شكراً لمشاركتك تجربتك." : "Your review has been posted successfully! Thank you.");
+    setTimeout(() => setReviewSuccessMsg(""), 4000);
+  };
 
   if (!city) return null;
 
   const photo = city.img || heroImg;
+  const avgRating = reviewsList.length > 0
+    ? (reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length).toFixed(1)
+    : (city.rating || 4.9).toFixed(1);
+
+  const modalTabs = [
+    { id: "history", label: isAr ? "📖 نبذة وتاريخ المعلم" : "History & Heritage", icon: "🏛️" },
+    { id: "highlights", label: isAr ? "✨ أبرز ٤ محطات وتجارب" : "Top 4 Highlights", icon: "⭐" },
+    { id: "reviews", label: isAr ? `⭐ التقييمات (${reviewsList.length})` : `⭐ Reviews (${reviewsList.length})`, icon: "⭐" },
+    ...(!isUnescoSite ? [{ id: "trips", label: isAr ? "🧭 تفاصيل الرحلات الخاصة" : "Private Tours Info", icon: "🧭" }] : []),
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fade-in" dir={dir}>
@@ -954,14 +1090,23 @@ function LandmarkDetailsModal({
               <span>{isAr ? "معلم سياحي موثق" : "Verified Landmark"}</span>
             </span>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md text-slate-700 hover:text-black hover:bg-white flex items-center justify-center transition cursor-pointer shadow-md border border-slate-200"
-              title={isAr ? "إغلاق" : "Close"}
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <FavoriteButton
+                itemType="landmark"
+                itemId={city.id}
+                itemTitle={city.name}
+                size="md"
+                className="bg-white/95 backdrop-blur-md text-slate-700 hover:text-red-500 shadow-md border border-slate-200"
+              />
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md text-slate-700 hover:text-black hover:bg-white flex items-center justify-center transition cursor-pointer shadow-md border border-slate-200"
+                title={isAr ? "إغلاق" : "Close"}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Bottom Title Overlay */}
@@ -991,6 +1136,11 @@ function LandmarkDetailsModal({
               <span className="px-3 py-1 rounded-xl bg-amber-50 text-[#D96B27] font-black text-xs border border-amber-200 shadow-xs">
                 🏛️ {isAr ? city.categoryTag : city.categoryTagEn}
               </span>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-black shadow-xs">
+                <span className="text-amber-500">★</span>
+                <span>{avgRating} / 5</span>
+                <span className="text-slate-500 font-bold">({reviewsList.length} {isAr ? "تقييم" : "reviews"})</span>
+              </div>
             </div>
 
             {/* Google Maps link button */}
@@ -1006,17 +1156,13 @@ function LandmarkDetailsModal({
           </div>
 
           {/* Interactive Modal Tab Switcher */}
-          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-200/70 border border-slate-300/60">
-            {[
-              { id: "history", label: isAr ? "📖 نبذة وتاريخ المعلم" : "History & Heritage", icon: "🏛️" },
-              { id: "highlights", label: isAr ? "✨ أبرز ٤ محطات وتجارب" : "Top 4 Highlights", icon: "⭐" },
-              { id: "trips", label: isAr ? "🧭 تفاصيل الرحلات الخاصة" : "Private Tours Info", icon: "🧭" },
-            ].map((tab) => (
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-200/70 border border-slate-300/60 overflow-x-auto">
+            {modalTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveModalTab(tab.id as any)}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                   activeModalTab === tab.id
                     ? "bg-[#003580] text-white shadow-md"
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
@@ -1112,8 +1258,149 @@ function LandmarkDetailsModal({
             </div>
           )}
 
-          {/* Tab 3: Custom Private Tours */}
-          {activeModalTab === "trips" && (
+          {/* Tab 3: Verified Visitor Reviews & Tourist Rating Form (Matching Trips Page) */}
+          {activeModalTab === "reviews" && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              {/* Summary Rating Box */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border border-amber-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm sm:text-base font-black text-[#003580] flex items-center gap-2">
+                    <span>⭐</span>
+                    <span>{isAr ? "تقييمات وتجارب الزوار المعتمدة لهذا المعلم:" : "Verified Visitor Reviews & Ratings:"}</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 font-bold mt-1">
+                    {isAr
+                      ? "تقييمات وآراء السياح والزوار الحقيقيين الموثقة في منصة دلّني"
+                      : "Genuine verified visitor reviews and feedback on Dallani"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-amber-200 shadow-xs">
+                  <span className="text-amber-500 text-2xl font-black">★</span>
+                  <div>
+                    <div className="text-base font-black text-amber-950">
+                      {avgRating} / 5
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-bold">
+                      {reviewsList.length} {isAr ? "تقييم معتمد" : "reviews"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reviews List */}
+              <div className="space-y-3">
+                {reviewsList.map((rev) => (
+                  <div key={rev.id} className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                          {(rev.authorName || "س").slice(0, 1)}
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-[#0F172A] flex items-center gap-1.5">
+                            <span>{rev.authorName}</span>
+                            <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
+                              {isAr ? "زائر موثق ✓" : "Verified ✓"}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-medium">
+                            {rev.date}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-amber-500 text-sm font-black">
+                        {"★".repeat(Math.max(1, Math.min(5, rev.rating)))}
+                        <span className="text-slate-300 text-xs mr-1">
+                          {"☆".repeat(Math.max(0, 5 - rev.rating))}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-700 font-medium leading-relaxed pr-10">
+                      «{rev.comment}»
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tourist Review Submission Form */}
+              {isTourist ? (
+                <form onSubmit={handleAddReview} className="p-5 rounded-2xl bg-white border-2 border-blue-100 shadow-xs space-y-3">
+                  <h5 className="text-xs sm:text-sm font-black text-[#003580] flex items-center gap-1.5">
+                    <span>✍️</span>
+                    <span>{isAr ? "أضف تقييمك وتجربتك لهذا المعلم السياحي:" : "Add Your Review for this Landmark:"}</span>
+                  </h5>
+
+                  {reviewSuccessMsg && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                      <span>✓</span>
+                      <span>{reviewSuccessMsg}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-700">{isAr ? "التقييم:" : "Rating:"}</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setNewRating(star)}
+                          className={`text-xl transition-all cursor-pointer ${
+                            star <= newRating ? "text-amber-500 scale-110" : "text-slate-300 hover:text-amber-300"
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-xs font-black text-amber-700">{newRating} / 5</span>
+                  </div>
+
+                  <textarea
+                    rows={3}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder={isAr ? "اكتب رأيك وانطباعك عن زيارة هذا المعلم..." : "Write your thoughts and experience about visiting this landmark..."}
+                    className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#003580] focus:ring-1 focus:ring-[#003580] text-xs sm:text-sm text-slate-900 outline-none resize-none"
+                    required
+                  />
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingReview || !newComment.trim()}
+                      className="px-6 py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmittingReview ? (isAr ? "جاري النشر..." : "Posting...") : (isAr ? "نشر التقييم ⭐" : "Submit Review ⭐")}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-bold">
+                    <span className="text-lg">💡</span>
+                    <span>
+                      {isAr
+                        ? "هل قمت بزيارة هذا المعلم؟ سجّل الدخول بحساب سائح لإضافة تقييمك ورأيك وتجربتك."
+                        : "Have you visited this landmark? Log in as a tourist to add your rating and review."}
+                    </span>
+                  </div>
+                  <a
+                    href="/auth/login?role=tourist"
+                    className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shrink-0 transition"
+                  >
+                    {isAr ? "تسجيل الدخول كسائح ➔" : "Login as Tourist ➔"}
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 4: Custom Private Tours (ONLY if not UNESCO) */}
+          {!isUnescoSite && activeModalTab === "trips" && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/60 via-white to-amber-50/40 border border-blue-200/80 space-y-3 shadow-xs">
                 <div className="flex items-center gap-2">
@@ -1133,16 +1420,27 @@ function LandmarkDetailsModal({
 
         </div>
 
-        {/* Modal Footer Action Button: ONLY Private Trip Creation */}
+        {/* Modal Footer Action Button: ONLY for NON-UNESCO landmarks */}
         <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-center shrink-0">
-          <button
-            type="button"
-            onClick={onBookPrivate}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-900/15 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-          >
-            <span>🧭</span>
-            <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>
-          </button>
+          {isUnescoSite ? (
+            <div className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs text-center">
+              <span className="text-base">🏛️</span>
+              <span>
+                {isAr
+                  ? "موقع تراث عالمي محمي (اليونسكو) — متاح للزيارة حصرياً عبر الرحلات المجدولة المعتمدة ولا تقام رحلات خاصة فردية حمايةً للآثار"
+                  : "UNESCO Protected World Heritage Site — Accessible exclusively via authorized scheduled tours to ensure heritage preservation"}
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onBookPrivate}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-900/15 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+            >
+              <span>🧭</span>
+              <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

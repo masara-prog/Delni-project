@@ -18,8 +18,6 @@ const sql = require('mssql/msnodesqlv8');
 const PORT = 5001;
 const CONNECTION_STRING = 'Driver={ODBC Driver 18 for SQL Server};Server=localhost;Database=DelniDB;Trusted_Connection=yes;TrustServerCertificate=yes;';
 
-let pool = null;
-
 // Secure Password Hasher (HMAC-SHA256 with Salt)
 function hashPassword(password) {
   if (!password) return '';
@@ -46,10 +44,17 @@ process.on('unhandledRejection', (reason) => {
   console.error('[DelniDB Unhandled Rejection caught]:', reason);
 });
 
+let pool = null;
+let poolPromise = null;
+let schemaVerified = false;
+
 async function getPool() {
-  if (!pool) {
+  if (pool) return pool;
+  if (poolPromise) return poolPromise;
+
+  poolPromise = (async () => {
     try {
-      pool = await sql.connect({
+      const p = await sql.connect({
         connectionString: CONNECTION_STRING,
         connectionTimeout: 30000,
         requestTimeout: 60000,
@@ -59,20 +64,27 @@ async function getPool() {
           requestTimeout: 60000,
         },
         pool: {
-          max: 15,
-          min: 0,
+          max: 25,
+          min: 1,
           idleTimeoutMillis: 60000,
           acquireTimeoutMillis: 60000,
         }
       });
+      pool = p;
       console.log('[DelniDB] Successfully connected to Microsoft SQL Server (DelniDB)');
-      await ensureDatabaseSchema(pool);
+      if (!schemaVerified) {
+        schemaVerified = true;
+        await ensureDatabaseSchema(pool);
+      }
+      return pool;
     } catch (err) {
       pool = null;
+      poolPromise = null;
       throw err;
     }
-  }
-  return pool;
+  })();
+
+  return poolPromise;
 }
 
 async function ensureDatabaseSchema(p) {
@@ -172,15 +184,67 @@ async function ensureDatabaseSchema(p) {
           recipient_id NVARCHAR(100) NULL,
           link NVARCHAR(255) NULL,
           is_read BIT DEFAULT 0,
+          dedupe_key VARCHAR(100) NULL,
           created_at DATETIME DEFAULT GETDATE()
         );
       END;
+
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('notifications') AND name = 'dedupe_key')
+        ALTER TABLE notifications ADD dedupe_key VARCHAR(100) NULL;
+
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_notif_recipient' AND object_id = OBJECT_ID('notifications'))
+        CREATE NONCLUSTERED INDEX IX_notif_recipient ON notifications (recipient_id, recipient_role, is_read, created_at);
+
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_notif_dedupe' AND object_id = OBJECT_ID('notifications'))
+        CREATE NONCLUSTERED INDEX IX_notif_dedupe ON notifications (dedupe_key);
 
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('daily_trips') AND name = 'departure_date')
         ALTER TABLE daily_trips ADD departure_date DATETIME NULL;
 
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('daily_trips') AND name = 'return_date')
         ALTER TABLE daily_trips ADD return_date DATETIME NULL;
+
+      -- Private Trip Vehicles Allocation Table
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'private_trip_vehicles')
+      BEGIN
+        CREATE TABLE private_trip_vehicles (
+          private_alloc_id VARCHAR(50) NOT NULL PRIMARY KEY,
+          private_trip_id VARCHAR(50) NOT NULL,
+          plate_number VARCHAR(30) NOT NULL,
+          start_date DATE NOT NULL,
+          end_date DATE NOT NULL,
+          allocation_status VARCHAR(25) NOT NULL DEFAULT 'معينة'
+        );
+      END;
+
+      -- Direct assigned_vehicle column on private_trips table
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('private_trips') AND name = 'assigned_vehicle')
+        ALTER TABLE private_trips ADD assigned_vehicle NVARCHAR(50) NULL;
+
+      -- Ensure status_order in private_trips is NVARCHAR(50) for Arabic status text
+      IF EXISTS (
+        SELECT 1 FROM sys.columns c
+        JOIN sys.types t ON c.user_type_id = t.user_type_id
+        WHERE c.object_id = OBJECT_ID('private_trips')
+          AND c.name = 'status_order'
+          AND t.name = 'varchar'
+      )
+      BEGIN
+        ALTER TABLE private_trips ALTER COLUMN status_order NVARCHAR(50) NULL;
+      END;
+
+      -- Tourist Favorites Table (المفضلة الموحدة بالقلب لجميع العناصر)
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'tourist_favorites')
+      BEGIN
+        CREATE TABLE tourist_favorites (
+          favorite_id VARCHAR(50) NOT NULL PRIMARY KEY,
+          tourist_id VARCHAR(50) NOT NULL,
+          item_type NVARCHAR(50) NOT NULL,
+          item_id VARCHAR(50) NOT NULL,
+          created_at DATETIME DEFAULT GETDATE(),
+          CONSTRAINT UQ_tourist_favorites UNIQUE (tourist_id, item_type, item_id)
+        );
+      END;
     `);
     try {
       await p.request().query("UPDATE tourists SET created_at = GETDATE() WHERE created_at IS NULL;");
@@ -221,6 +285,42 @@ function readBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+// Notification creation helper with deduplication
+async function createNotificationInDb(dbPool, { type, title, body, recipient_role, recipient_id, link, dedupe_key }) {
+  if (!dbPool) return null;
+  try {
+    const cleanId = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const req = dbPool.request();
+    req.input('id', sql.VarChar(50), cleanId);
+    req.input('type', sql.NVarChar(50), String(type || 'system').trim());
+    req.input('title', sql.NVarChar(255), String(title || 'إشعار جديد').trim());
+    req.input('body', sql.NVarChar(sql.MAX), String(body || '').trim());
+    req.input('recipient_role', sql.NVarChar(50), String(recipient_role || 'all').trim());
+    req.input('recipient_id', sql.NVarChar(100), recipient_id ? String(recipient_id).trim() : null);
+    req.input('link', sql.NVarChar(255), link ? String(link).trim() : null);
+    req.input('dedupe_key', sql.VarChar(100), dedupe_key ? String(dedupe_key).trim() : null);
+
+    if (dedupe_key) {
+      await req.query(`
+        IF NOT EXISTS (SELECT 1 FROM notifications WITH (NOLOCK) WHERE dedupe_key = @dedupe_key)
+        BEGIN
+          INSERT INTO notifications (id, type, title, body, recipient_role, recipient_id, link, is_read, dedupe_key, created_at)
+          VALUES (@id, @type, @title, @body, @recipient_role, @recipient_id, @link, 0, @dedupe_key, GETDATE());
+        END
+      `);
+    } else {
+      await req.query(`
+        INSERT INTO notifications (id, type, title, body, recipient_role, recipient_id, link, is_read, dedupe_key, created_at)
+        VALUES (@id, @type, @title, @body, @recipient_role, @recipient_id, @link, 0, NULL, GETDATE());
+      `);
+    }
+    return cleanId;
+  } catch (err) {
+    console.warn('[Notification Create Warning]:', err.message);
+    return null;
+  }
 }
 
 const server = http.createServer(async (req, res) => {
@@ -463,6 +563,30 @@ const server = http.createServer(async (req, res) => {
           (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, @contract_start_date, @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
         END
       `);
+
+      // Real-time Event Trigger: Company Registration Notification
+      try {
+        if (isNew) {
+          await createNotificationInDb(db, {
+            type: 'system',
+            title: `🏢 تسجيل شركة نقل سياحي جديدة (${company_name})`,
+            body: `تم تسجيل وتوثيق شركة نقل جديدة (${company_name}) برقم عقد (${cleanContract}) في مدينة (${city || 'طرابلس'}).`,
+            recipient_role: 'admin',
+            link: '/dashboard/admin',
+            dedupe_key: `company-reg-${cleanContract}`,
+          });
+
+          await createNotificationInDb(db, {
+            type: 'system',
+            title: `🎉 مرحباً بكم في منصة دلني للسياحة الليبية`,
+            body: `تم توثيق وتفعيل حساب شركة (${company_name}) بنجاح. يمكنك الآن إدارة أسطول الحافلات والمركبات والسائقين واستقبال طلبات النقل.`,
+            recipient_role: 'company',
+            recipient_id: cleanContract,
+            link: '/dashboard/transport',
+            dedupe_key: `company-welcome-${cleanContract}`,
+          });
+        }
+      } catch (cErr) {}
 
       return sendJson(res, 201, { success: true, message: 'تم حفظ شركة النقل في SQL Server بنجاح' });
     }
@@ -836,8 +960,20 @@ const server = http.createServer(async (req, res) => {
             UPDATE drivers
             SET assigned_vehicle_plate = NULL
             WHERE assigned_vehicle_plate = @assigned_vehicle_plate AND driver_license_number <> @driver_license_number;
-          END
         `);
+
+        // Real-time Event Trigger: Vehicle assignment to driver
+        if (validPlate) {
+          await createNotificationInDb(db, {
+            type: 'assignment',
+            title: `🚍 تخصيص وتعيين مركبة جديدة لسجلك`,
+            body: `تم إسناد المركبة المعتمدة برقم اللوحة (${validPlate}) لملف قيادتك لدى شركة النقل.`,
+            recipient_role: 'driver',
+            recipient_id: cleanLic,
+            link: '/dashboard/driver',
+            dedupe_key: `driver-veh-${cleanLic}-${validPlate}`,
+          });
+        }
 
         return sendJson(res, 201, { success: true, message: 'تم حفظ السائق في DelniDB بنجاح' });
       } catch (sqlErr) {
@@ -967,9 +1103,9 @@ const server = http.createServer(async (req, res) => {
           t.phone_number, 
           COALESCE(t.account_status, N'نشط') as account_status,
           COALESCE(t.created_at, GETDATE()) as created_at,
-          (SELECT COUNT(*) FROM bookings_daily bd WHERE bd.tourist_id = t.tourist_id) as daily_bookings_count,
-          (SELECT COUNT(*) FROM bookings_weekly bw WHERE bw.tourist_id = t.tourist_id) as weekly_bookings_count
-        FROM tourists t 
+          (SELECT COUNT(*) FROM bookings_daily bd WITH (NOLOCK) WHERE bd.tourist_id = t.tourist_id) as daily_bookings_count,
+          (SELECT COUNT(*) FROM bookings_weekly bw WITH (NOLOCK) WHERE bw.tourist_id = t.tourist_id) as weekly_bookings_count
+        FROM tourists t WITH (NOLOCK)
         ORDER BY t.full_name ASC
       `);
       return sendJson(res, 200, { success: true, data: result.recordset || [] });
@@ -1811,6 +1947,56 @@ const server = http.createServer(async (req, res) => {
         console.warn('[places_trip_daily sync warning]:', pErr.message);
       }
 
+      // Real-time Event Trigger: Guide & Fleet/Driver Assignment
+      try {
+        if (guide_license_number) {
+          await createNotificationInDb(db, {
+            type: 'assignment',
+            title: `🧭 تكليف بمهمة إرشاد رحلة يومية جديدة`,
+            body: `تم إسنادك كمرشد سياحي معتمد لرحلة (${cleanTitle}) المتجهة إلى (${destination_city || 'المعلم السياحي'}).`,
+            recipient_role: 'guide',
+            recipient_id: String(guide_license_number).trim(),
+            link: '/dashboard/guide',
+            dedupe_key: `guide-assign-${cleanId}-${guide_license_number}`,
+          });
+        }
+
+        if (cleanPlate) {
+          const vInfoRes = await db.request().input('v_plate', sql.NVarChar(50), cleanPlate).query(`
+            SELECT d.driver_license_number, d.full_name as driver_name, v.contract_number, tc.company_name
+            FROM vehicles v
+            LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+            LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+            WHERE v.plate_number = @v_plate
+          `);
+          const vInfo = vInfoRes.recordset?.[0];
+          if (vInfo) {
+            if (vInfo.driver_license_number) {
+              await createNotificationInDb(db, {
+                type: 'assignment',
+                title: `🚍 تكليف برحلة جديدة للسائق`,
+                body: `تم إسناد مهمة قيادة ونقل رحلة (${cleanTitle}) على متن المركبة (${cleanPlate}).`,
+                recipient_role: 'driver',
+                recipient_id: String(vInfo.driver_license_number).trim(),
+                link: '/dashboard/driver',
+                dedupe_key: `driver-assign-${cleanId}-${vInfo.driver_license_number}`,
+              });
+            }
+            if (vInfo.contract_number) {
+              await createNotificationInDb(db, {
+                type: 'assignment',
+                title: `🚐 إسناد رحلة لأسطول شركتكم`,
+                body: `تم إسناد رحلة (${cleanTitle}) للمركبة (${cleanPlate}) التابعة لأسطولكم.`,
+                recipient_role: 'company',
+                recipient_id: String(vInfo.contract_number).trim(),
+                link: '/dashboard/transport',
+                dedupe_key: `company-assign-${cleanId}-${vInfo.contract_number}`,
+              });
+            }
+          }
+        }
+      } catch (gErr) {}
+
       return sendJson(res, 201, { success: true, message: 'تم حفظ الرحلة اليومية ومحطاتها بنجاح في DelniDB', trip_id: cleanId });
     }
 
@@ -1818,6 +2004,70 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/db/daily_trips' && req.method === 'DELETE') {
       const id = url.searchParams.get('daily_trip_id') || url.searchParams.get('id');
       if (!id) return sendJson(res, 400, { success: false, error: 'معرف الرحلة اليومية مطلوب للحذف' });
+
+      // Notify booked tourists, guide, driver, and company before deleting
+      try {
+        const tripDetailsRes = await db.request().input('d_id', sql.VarChar(50), id).query(`
+          SELECT dt.trip_title, dt.guide_license_number, dt.vehicle_plate,
+                 d.driver_license_number, v.contract_number
+          FROM daily_trips dt
+          LEFT JOIN vehicles v ON dt.vehicle_plate = v.plate_number
+          LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+          WHERE dt.daily_trip_id = @d_id
+        `);
+        const tripInfo = tripDetailsRes.recordset?.[0];
+
+        if (tripInfo) {
+          if (tripInfo.guide_license_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ إلغاء تكليف الإرشاد لرحلة (${tripInfo.trip_title})`,
+              body: `نحيطكم علماً بأنه قد تم إلغاء رحلة (${tripInfo.trip_title}) وإلغاء مهمة الإرشاد المسندة إليكم.`,
+              recipient_role: 'guide',
+              recipient_id: String(tripInfo.guide_license_number).trim(),
+              link: '/dashboard/guide',
+              dedupe_key: `trip-cancel-guide-${id}`,
+            });
+          }
+          if (tripInfo.driver_license_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ إلغاء رحلة مسندة للسائق (${tripInfo.trip_title})`,
+              body: `تم إلغاء رحلة (${tripInfo.trip_title}) التي كانت مسندة لمركبتكم (${tripInfo.vehicle_plate}).`,
+              recipient_role: 'driver',
+              recipient_id: String(tripInfo.driver_license_number).trim(),
+              link: '/dashboard/driver',
+              dedupe_key: `trip-cancel-driver-${id}`,
+            });
+          }
+          if (tripInfo.contract_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ إلغاء رحلة تابعة لأسطول شركتكم (${tripInfo.trip_title})`,
+              body: `تم إلغاء رحلة (${tripInfo.trip_title}) المسندة للمركبة (${tripInfo.vehicle_plate}).`,
+              recipient_role: 'company',
+              recipient_id: String(tripInfo.contract_number).trim(),
+              link: '/dashboard/transport',
+              dedupe_key: `trip-cancel-company-${id}`,
+            });
+          }
+        }
+
+        const bookedTourists = await db.request().input('d_id', sql.VarChar(50), id).query('SELECT b.tourist_id, dt.trip_title FROM bookings_daily b LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id WHERE b.daily_trip_id = @d_id');
+        if (bookedTourists.recordset?.length > 0) {
+          for (const b of bookedTourists.recordset) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ تم إلغاء الرحلة اليومية (${b.trip_title})`,
+              body: `نأسف لإعلامكم بإلغاء رحلة (${b.trip_title}) من قِبل الإدارة. يُرجى مراجعة الإدارة لاسترجاع التكلفة أو تغيير الموعد.`,
+              recipient_role: 'tourist',
+              recipient_id: b.tourist_id,
+              link: '/dashboard/tourist',
+              dedupe_key: `trip-cancel-${id}-${b.tourist_id}`,
+            });
+          }
+        }
+      } catch (delErr) {}
 
       const request = db.request();
       request.input('id', sql.VarChar(50), id);
@@ -2287,6 +2537,56 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      // Real-time Event Trigger: Guide & Fleet/Driver Assignment
+      try {
+        if (guideLic) {
+          await createNotificationInDb(db, {
+            type: 'assignment',
+            title: `🧭 تكليف بمهمة إرشاد رحلة أسبوعية جديدة`,
+            body: `تم إسنادك كمرشد سياحي معتمد لرحلة (${cleanTitle}) المتجهة إلى (${targetDest}).`,
+            recipient_role: 'guide',
+            recipient_id: String(guideLic).trim(),
+            link: '/dashboard/guide',
+            dedupe_key: `guide-assign-${cleanId}-${guideLic}`,
+          });
+        }
+
+        if (cleanPlate) {
+          const vInfoRes = await db.request().input('v_plate', sql.NVarChar(50), cleanPlate).query(`
+            SELECT d.driver_license_number, d.full_name as driver_name, v.contract_number, tc.company_name
+            FROM vehicles v
+            LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+            LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+            WHERE v.plate_number = @v_plate
+          `);
+          const vInfo = vInfoRes.recordset?.[0];
+          if (vInfo) {
+            if (vInfo.driver_license_number) {
+              await createNotificationInDb(db, {
+                type: 'assignment',
+                title: `🚍 تكليف برحلة أسبوعية جديدة للسائق`,
+                body: `تم إسناد مهمة قيادة ونقل رحلة أسبوعية (${cleanTitle}) على متن المركبة (${cleanPlate}).`,
+                recipient_role: 'driver',
+                recipient_id: String(vInfo.driver_license_number).trim(),
+                link: '/dashboard/driver',
+                dedupe_key: `driver-assign-${cleanId}-${vInfo.driver_license_number}`,
+              });
+            }
+            if (vInfo.contract_number) {
+              await createNotificationInDb(db, {
+                type: 'assignment',
+                title: `🚐 إسناد رحلة أسبوعية لأسطول شركتكم`,
+                body: `تم إسناد رحلة أسبوعية (${cleanTitle}) للمركبة (${cleanPlate}) التابعة لأسطولكم.`,
+                recipient_role: 'company',
+                recipient_id: String(vInfo.contract_number).trim(),
+                link: '/dashboard/transport',
+                dedupe_key: `company-assign-${cleanId}-${vInfo.contract_number}`,
+              });
+            }
+          }
+        }
+      } catch (gErr) {}
+
       return sendJson(res, 201, { success: true, message: 'تم حفظ الرحلة الأسبوعية ومحطاتها في DelniDB بنجاح', trip_id: cleanId });
     }
 
@@ -2294,6 +2594,70 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/db/weekly_trips' && req.method === 'DELETE') {
       const id = url.searchParams.get('weekly_trip_id') || url.searchParams.get('id');
       if (!id) return sendJson(res, 400, { success: false, error: 'معرف الرحلة الأسبوعية مطلوب للحذف' });
+
+      // Notify booked tourists, guide, driver, and company before deleting
+      try {
+        const tripDetailsRes = await db.request().input('w_id', sql.VarChar(50), id).query(`
+          SELECT wt.trip_title, wt.guide_license_number, wt.vehicle_plate,
+                 d.driver_license_number, v.contract_number
+          FROM weekly_trips wt
+          LEFT JOIN vehicles v ON wt.vehicle_plate = v.plate_number
+          LEFT JOIN drivers d ON d.assigned_vehicle_plate = v.plate_number
+          WHERE wt.weekly_trip_id = @w_id
+        `);
+        const tripInfo = tripDetailsRes.recordset?.[0];
+
+        if (tripInfo) {
+          if (tripInfo.guide_license_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ إلغاء تكليف الإرشاد لرحلة (${tripInfo.trip_title})`,
+              body: `نحيطكم علماً بأنه قد تم إلغاء رحلة (${tripInfo.trip_title}) وإلغاء مهمة الإرشاد المسندة إليكم.`,
+              recipient_role: 'guide',
+              recipient_id: String(tripInfo.guide_license_number).trim(),
+              link: '/dashboard/guide',
+              dedupe_key: `trip-cancel-guide-${id}`,
+            });
+          }
+          if (tripInfo.driver_license_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ إلغاء رحلة مسندة للسائق (${tripInfo.trip_title})`,
+              body: `تم إلغاء رحلة (${tripInfo.trip_title}) التي كانت مسندة لمركبتكم (${tripInfo.vehicle_plate}).`,
+              recipient_role: 'driver',
+              recipient_id: String(tripInfo.driver_license_number).trim(),
+              link: '/dashboard/driver',
+              dedupe_key: `trip-cancel-driver-${id}`,
+            });
+          }
+          if (tripInfo.contract_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ إلغاء رحلة تابعة لأسطول شركتكم (${tripInfo.trip_title})`,
+              body: `تم إلغاء رحلة (${tripInfo.trip_title}) المسندة للمركبة (${tripInfo.vehicle_plate}).`,
+              recipient_role: 'company',
+              recipient_id: String(tripInfo.contract_number).trim(),
+              link: '/dashboard/transport',
+              dedupe_key: `trip-cancel-company-${id}`,
+            });
+          }
+        }
+
+        const bookedTourists = await db.request().input('w_id', sql.VarChar(50), id).query('SELECT b.tourist_id, wt.trip_title FROM bookings_weekly b LEFT JOIN weekly_trips wt ON b.weekly_trip_id = wt.weekly_trip_id WHERE b.weekly_trip_id = @w_id');
+        if (bookedTourists.recordset?.length > 0) {
+          for (const b of bookedTourists.recordset) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `❌ تم إلغاء الرحلة الأسبوعية (${b.trip_title})`,
+              body: `نأسف لإعلامكم بإلغاء رحلة (${b.trip_title}) من قِبل الإدارة. يُرجى مراجعة الإدارة لاسترجاع التكلفة أو تغيير الموعد.`,
+              recipient_role: 'tourist',
+              recipient_id: b.tourist_id,
+              link: '/dashboard/tourist',
+              dedupe_key: `trip-cancel-${id}-${b.tourist_id}`,
+            });
+          }
+        }
+      } catch (delErr) {}
 
       const request = db.request();
       request.input('id', sql.VarChar(50), id);
@@ -2440,11 +2804,29 @@ const server = http.createServer(async (req, res) => {
     // 14.5 Private Trips: GET
     if (pathname === '/api/db/private_trips' && req.method === 'GET') {
       const result = await db.request().query(`
-        SELECT pt.*, 
+        SELECT pt.private_trip_id,
+               pt.status_order,
+               pt.customer_name,
+               pt.customer_phone,
+               pt.preferred_start_date,
+               pt.duration_days,
+               pt.number_of_companions,
+               pt.guide_license_number,
+               pt.customer_description,
+               pt.customer_requirements,
+               pt.tourist_id,
+               pt.quoted_price,
+               pt.admin_itinerary_plan,
+               COALESCE(pt.assigned_vehicle, ptv.plate_number) AS assigned_vehicle,
                g.full_name as guide_name, 
-               g.phone_number as guide_phone 
+               g.phone_number as guide_phone
         FROM private_trips pt
         LEFT JOIN tour_guides g ON pt.guide_license_number = g.license_number
+        LEFT JOIN (
+          SELECT private_trip_id, MAX(plate_number) as plate_number
+          FROM private_trip_vehicles
+          GROUP BY private_trip_id
+        ) ptv ON pt.private_trip_id = ptv.private_trip_id
         ORDER BY pt.preferred_start_date DESC
       `);
       return sendJson(res, 200, { success: true, data: result.recordset });
@@ -2467,10 +2849,16 @@ const server = http.createServer(async (req, res) => {
         tourist_id,
         quoted_price,
         admin_itinerary_plan,
+        assigned_vehicle,
       } = body;
 
       const cleanId = String(private_trip_id || `PRV-${Date.now().toString().slice(-5)}`).trim();
       const cleanStatus = String(status_order || 'بانتظار تسعير الإدارة').trim();
+      let rawPlate = assigned_vehicle || body.assigned_vehicle_plate || body.vehicle_plate || null;
+      if (Array.isArray(rawPlate)) {
+        rawPlate = rawPlate[0] || null;
+      }
+      const vehPlate = rawPlate ? String(rawPlate).split(',')[0].trim() : null;
 
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
@@ -2486,6 +2874,7 @@ const server = http.createServer(async (req, res) => {
       request.input('tourist_id', sql.VarChar(50), tourist_id ? String(tourist_id).trim() : null);
       request.input('price', sql.Decimal(10, 2), quoted_price !== null && quoted_price !== undefined ? Number(quoted_price) : null);
       request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan).trim() : null);
+      request.input('veh_plate', sql.VarChar(30), vehPlate ? String(vehPlate).trim() : null);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM private_trips WHERE private_trip_id = @id)
@@ -2502,7 +2891,8 @@ const server = http.createServer(async (req, res) => {
               customer_requirements = @reqs,
               tourist_id = @tourist_id,
               quoted_price = @price,
-              admin_itinerary_plan = @plan
+              admin_itinerary_plan = @plan,
+              assigned_vehicle = COALESCE(@veh_plate, assigned_vehicle)
           WHERE private_trip_id = @id;
         END
         ELSE
@@ -2511,15 +2901,103 @@ const server = http.createServer(async (req, res) => {
             private_trip_id, status_order, customer_name, customer_phone,
             preferred_start_date, duration_days, number_of_companions,
             guide_license_number, customer_description, customer_requirements,
-            tourist_id, quoted_price, admin_itinerary_plan
+            tourist_id, quoted_price, admin_itinerary_plan, assigned_vehicle
           ) VALUES (
             @id, @status, @cust_name, @cust_phone,
             @start_date, @duration, @companions,
             @guide_lic, @desc, @reqs,
-            @tourist_id, @price, @plan
+            @tourist_id, @price, @plan, @veh_plate
           );
         END
+
+        IF @veh_plate IS NOT NULL
+        BEGIN
+          IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'private_trip_vehicles')
+          BEGIN
+            IF EXISTS (SELECT 1 FROM private_trip_vehicles WHERE private_trip_id = @id)
+              UPDATE private_trip_vehicles SET plate_number = @veh_plate, allocation_status = N'معينة' WHERE private_trip_id = @id;
+            ELSE
+              INSERT INTO private_trip_vehicles (private_alloc_id, private_trip_id, plate_number, start_date, end_date, allocation_status)
+              VALUES ('PA-' + SUBSTRING(CONVERT(VARCHAR(40), NEWID()), 1, 8), @id, @veh_plate, @start_date, DATEADD(day, @duration, @start_date), N'معينة');
+          END
+        END
       `);
+
+      // Real-time Event Trigger: Private Trips
+      try {
+        if (!quoted_price || cleanStatus === 'بانتظار تسعير الإدارة' || cleanStatus === 'قيد المراجعة') {
+          await createNotificationInDb(db, {
+            type: 'private_trip',
+            title: `👑 تم استلام طلب رحلتك الخاصة (${cleanId})`,
+            body: `تم استلام وتسجيل طلب رحلتك الخاصة بنجاح (#${cleanId}). تقوم إدارة المنصة بدراسة المسار وإعداد البرنامج المقترح.`,
+            recipient_role: 'tourist',
+            recipient_id: tourist_id,
+            link: '/dashboard/tourist',
+            dedupe_key: `priv-new-${cleanId}`,
+          });
+
+          await createNotificationInDb(db, {
+            type: 'private_trip',
+            title: `👑 طلب رحلة خاصة VIP جديد (#${cleanId})`,
+            body: `طلب السائح (${customer_name || 'سائح دلني'}) رحلة خاصة (#${cleanId}) لمدة (${duration_days || 1}) أيام. بانتظار إعداد البرنامج والتسعير.`,
+            recipient_role: 'admin',
+            link: '/dashboard/admin',
+            dedupe_key: `admin-priv-new-${cleanId}`,
+          });
+        } else if (quoted_price && (cleanStatus === 'بانتظار تأكيد السائح' || cleanStatus.includes('تسعير') || cleanStatus.includes('مقترح'))) {
+          await createNotificationInDb(db, {
+            type: 'private_trip',
+            title: `📋 تم إعداد البرنامج المقترح لرحلتك الخاصة (${cleanId})`,
+            body: `أعدت الإدارة برنامجاً مقترحاً وتكلفة تقديرية (${quoted_price} د.ل) لرحلتك الخاصة (#${cleanId}). تنبيه: هذا برنامج مقترح يتطلب مراجعتك واعتمادك ولا يعني تأكيد الحجز بعد.`,
+            recipient_role: 'tourist',
+            recipient_id: tourist_id,
+            link: '/dashboard/tourist',
+            dedupe_key: `priv-quote-${cleanId}-${quoted_price}`,
+          });
+        } else if (cleanStatus === 'مؤكدة' || cleanStatus.includes('موافقة')) {
+          await createNotificationInDb(db, {
+            type: 'private_trip',
+            title: `🎉 اعتماد وتأكيد حجز الرحلة الخاصة (#${cleanId})`,
+            body: `تم تأكيد حجز رحلتك الخاصة (#${cleanId}) بنجاح واعتماد جدول المحطات والتسعيرة. نتمنى لكم رحلة VIP ممتعة!`,
+            recipient_role: 'tourist',
+            recipient_id: tourist_id,
+            link: '/dashboard/tourist',
+            dedupe_key: `priv-confirmed-t-${cleanId}`,
+          });
+
+          await createNotificationInDb(db, {
+            type: 'private_trip',
+            title: `🎉 موافقة السائح على الرحلة الخاصة (#${cleanId})`,
+            body: `وافق السائح (${customer_name || 'سائح دلني'}) على برنامج وتسعيرة الرحلة الخاصة (#${cleanId}). تم اعتماد الحجز بنجاح.`,
+            recipient_role: 'admin',
+            link: '/dashboard/admin',
+            dedupe_key: `admin-priv-confirmed-${cleanId}`,
+          });
+
+          if (guide_license_number) {
+            await createNotificationInDb(db, {
+              type: 'trip',
+              title: `🧭 تكليف بمهمة إرشاد رحلة خاصة VIP`,
+              body: `تم تكليفك كمرشد سياحي للرحلة الخاصة (#${cleanId}) مع السائح (${customer_name || 'VIP'}) لمدة (${duration_days || 1}) أيام.`,
+              recipient_role: 'guide',
+              recipient_id: String(guide_license_number).trim(),
+              link: '/dashboard/guide',
+              dedupe_key: `guide-priv-assign-${cleanId}-${guide_license_number}`,
+            });
+          }
+        } else if (cleanStatus.includes('ملغ') || cleanStatus.includes('مرفوض')) {
+          await createNotificationInDb(db, {
+            type: 'private_trip',
+            title: `❌ إلغاء طلب الرحلة الخاصة (#${cleanId})`,
+            body: `تم تحديث حالة الرحلة الخاصة (#${cleanId}) إلى: ${cleanStatus}.`,
+            recipient_role: 'admin',
+            link: '/dashboard/admin',
+            dedupe_key: `admin-priv-cancel-${cleanId}-${cleanStatus}`,
+          });
+        }
+      } catch (privNotifErr) {
+        console.warn('[Private Trip Notification Warning]:', privNotifErr.message);
+      }
 
       return sendJson(res, 201, { success: true, message: 'تم حفظ طلب الرحلة الخاصة بنجاح في DelniDB', trip_id: cleanId });
     }
@@ -2642,6 +3120,35 @@ const server = http.createServer(async (req, res) => {
         WHERE daily_trip_id = @trip_id;
       `);
 
+      // Real-time Event Trigger: Notify Tourist & Admin
+      try {
+        const tripNameRes = await db.request().input('t_id', sql.VarChar(50), cleanTrip).query('SELECT trip_title FROM daily_trips WHERE daily_trip_id = @t_id');
+        const touristNameRes = await db.request().input('tourist_id', sql.VarChar(50), cleanTourist).query('SELECT full_name FROM tourists WHERE tourist_id = @tourist_id');
+        const tripTitle = tripNameRes.recordset?.[0]?.trip_title || 'رحلة يومية';
+        const touristName = touristNameRes.recordset?.[0]?.full_name || 'سائح دلني';
+
+        await createNotificationInDb(db, {
+          type: 'booking',
+          title: `🎫 تم استلام وتسجيل حجزك بنجاح (${cleanId})`,
+          body: `تم تسجيل حجزك في رحلة (${tripTitle}) لعدد (${seatsCount}) مقاعد برقم التذكرة (${cleanId}).`,
+          recipient_role: 'tourist',
+          recipient_id: cleanTourist,
+          link: '/dashboard/tourist',
+          dedupe_key: `booking-created-${cleanId}`,
+        });
+
+        await createNotificationInDb(db, {
+          type: 'booking',
+          title: `🎫 حجز مقاعد جديد مسجل (${cleanId})`,
+          body: `سجّل السائح (${touristName}) حجزاً جديداً برقم التذكرة (${cleanId}) لعدد (${seatsCount}) مقاعد في رحلة (${tripTitle}).`,
+          recipient_role: 'admin',
+          link: '/dashboard/admin',
+          dedupe_key: `admin-booking-${cleanId}`,
+        });
+      } catch (notifErr) {
+        console.warn('[Booking Notification Trigger Warning]:', notifErr.message);
+      }
+
       return sendJson(res, 201, { success: true, message: 'تم تسجيل وتأكيد حجز الرحلة اليومية في DelniDB بنجاح', booking_id: cleanId });
     }
 
@@ -2670,6 +3177,64 @@ const server = http.createServer(async (req, res) => {
       request.input('id', sql.VarChar(50), id);
       await request.query('DELETE FROM bookings_daily WHERE booking_daily_id = @id');
       return sendJson(res, 200, { success: true, message: 'تم إلغاء وحذف الحجز بنجاح واستعادة المقاعد الشاغرة للرحلة' });
+    }
+
+    // 15.3 Daily Bookings: PUT (Update payment status & attendance)
+    if (pathname === '/api/db/bookings_daily' && req.method === 'PUT') {
+      const id = url.searchParams.get('booking_daily_id') || url.searchParams.get('id');
+      const body = await readBody(req);
+      const cleanId = String(id || body.booking_daily_id || body.id || '').trim();
+      if (!cleanId) return sendJson(res, 400, { success: false, error: 'معرف الحجز اليومي مطلوب للتحديث' });
+
+      const request = db.request();
+      request.input('id', sql.VarChar(50), cleanId);
+      request.input('pay_status', sql.VarChar(20), String(body.payment_status || 'paid').trim());
+      request.input('booking_status', sql.VarChar(20), String(body.booking_status || 'مؤكدة').trim());
+      request.input('attended', sql.Bit, body.attended ? 1 : 0);
+
+      await request.query(`
+        UPDATE bookings_daily
+        SET payment_status = @pay_status,
+            booking_status = @booking_status,
+            attended = @attended
+        WHERE booking_daily_id = @id;
+      `);
+
+      try {
+        const bInfoRes = await db.request().input('b_id', sql.VarChar(50), cleanId).query(`
+          SELECT b.tourist_id, dt.trip_title
+          FROM bookings_daily b
+          LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id
+          WHERE b.booking_daily_id = @b_id
+        `);
+        const bInfo = bInfoRes.recordset?.[0];
+        if (bInfo) {
+          const newStatus = String(body.booking_status || '').trim();
+          if (newStatus === 'مؤكدة' || newStatus === 'مؤكد') {
+            await createNotificationInDb(db, {
+              type: 'booking',
+              title: `✅ تم تأكيد حجز تذكرتك رسمياً (${cleanId})`,
+              body: `تم اعتماد وتأكيد حجزك رسمياً في رحلة (${bInfo.trip_title}) برقم التذكرة (${cleanId}). نتمنى لك رحلة ممتعة وآمنة!`,
+              recipient_role: 'tourist',
+              recipient_id: bInfo.tourist_id,
+              link: '/dashboard/tourist',
+              dedupe_key: `booking-status-${cleanId}-${newStatus}`,
+            });
+          } else if (newStatus.includes('ملغ')) {
+            await createNotificationInDb(db, {
+              type: 'booking',
+              title: `❌ تم إلغاء حجز الرحلة (${cleanId})`,
+              body: `تم إلغاء حجزك في رحلة (${bInfo.trip_title}) برقم التذكرة (${cleanId}).`,
+              recipient_role: 'tourist',
+              recipient_id: bInfo.tourist_id,
+              link: '/dashboard/tourist',
+              dedupe_key: `booking-status-${cleanId}-${newStatus}`,
+            });
+          }
+        }
+      } catch (err) {}
+
+      return sendJson(res, 200, { success: true, message: 'تم تحديث حالة الدفع والحضور للحجز اليومي بنجاح في DelniDB' });
     }
 
     // 16. Weekly Bookings: GET
@@ -2777,6 +3342,35 @@ const server = http.createServer(async (req, res) => {
         WHERE weekly_trip_id = @trip_id;
       `);
 
+      // Real-time Event Trigger: Notify Tourist & Admin
+      try {
+        const tripNameRes = await db.request().input('t_id', sql.VarChar(50), cleanTrip).query('SELECT trip_title FROM weekly_trips WHERE weekly_trip_id = @t_id');
+        const touristNameRes = await db.request().input('tourist_id', sql.VarChar(50), cleanTourist).query('SELECT full_name FROM tourists WHERE tourist_id = @tourist_id');
+        const tripTitle = tripNameRes.recordset?.[0]?.trip_title || 'رحلة أسبوعية';
+        const touristName = touristNameRes.recordset?.[0]?.full_name || 'سائح دلني';
+
+        await createNotificationInDb(db, {
+          type: 'booking',
+          title: `🎫 تم استلام وتسجيل حجزك بالرحلة الأسبوعية (${cleanId})`,
+          body: `تم تسجيل حجزك في رحلة (${tripTitle}) لعدد (${seatsCount}) مقاعد برقم التذكرة (${cleanId}).`,
+          recipient_role: 'tourist',
+          recipient_id: cleanTourist,
+          link: '/dashboard/tourist',
+          dedupe_key: `booking-created-${cleanId}`,
+        });
+
+        await createNotificationInDb(db, {
+          type: 'booking',
+          title: `🎫 حجز رحلة أسبوعية جديد (${cleanId})`,
+          body: `سجّل السائح (${touristName}) حجزاً لعدد (${seatsCount}) مقاعد في رحلة (${tripTitle}).`,
+          recipient_role: 'admin',
+          link: '/dashboard/admin',
+          dedupe_key: `admin-booking-${cleanId}`,
+        });
+      } catch (notifErr) {
+        console.warn('[Weekly Booking Notification Trigger Warning]:', notifErr.message);
+      }
+
       return sendJson(res, 201, { success: true, message: 'تم تسجيل وتأكيد حجز الرحلة الأسبوعية في DelniDB بنجاح', booking_id: cleanId });
     }
 
@@ -2807,91 +3401,62 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم إلغاء وحذف الحجز بنجاح واستعادة المقاعد الشاغرة للرحلة الأسبوعية' });
     }
 
-    // 17. Private Trips: GET
-    if (pathname === '/api/db/private_trips' && req.method === 'GET') {
-      const result = await db.request().query(`
-        SELECT pt.*, 
-               t.full_name as tourist_name, 
-               g.full_name as guide_name
-        FROM private_trips pt
-        LEFT JOIN tourists t ON pt.tourist_id = t.tourist_id
-        LEFT JOIN tour_guides g ON pt.guide_license_number = g.license_number
-        ORDER BY pt.private_trip_id DESC
-      `);
-      return sendJson(res, 200, { success: true, data: result.recordset });
-    }
-
-    // 17.1 Private Trips: POST
-    if (pathname === '/api/db/private_trips' && req.method === 'POST') {
+    // 16.3 Weekly Bookings: PUT (Update payment status & attendance)
+    if (pathname === '/api/db/bookings_weekly' && req.method === 'PUT') {
+      const id = url.searchParams.get('booking_weekly_id') || url.searchParams.get('id');
       const body = await readBody(req);
-      const {
-        private_trip_id, id, status_order, customer_description, description,
-        preferred_start_date, duration_days, number_of_companions, quoted_price,
-        admin_itinerary_plan, guide_license_number, tourist_id, customer_name,
-        customer_phone, customer_requirements
-      } = body;
-
-      const cleanId = String(private_trip_id || id || `PRV-${Date.now().toString().slice(-4)}`).trim();
+      const cleanId = String(id || body.booking_weekly_id || body.id || '').trim();
+      if (!cleanId) return sendJson(res, 400, { success: false, error: 'معرف الحجز الأسبوعي مطلوب للتحديث' });
 
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
-      request.input('status', sql.VarChar(25), String(status_order || 'قيد المراجعة').trim());
-      request.input('desc', sql.VarChar(100), String(customer_description || description || 'رحلة خاصة مخصصة').trim());
-      request.input('start_date', sql.Date, preferred_start_date || new Date());
-      request.input('duration', sql.Int, Number(duration_days) || 3);
-      request.input('companions', sql.Int, Number(number_of_companions) || 2);
-      request.input('price', sql.Decimal(10, 2), quoted_price ? Number(quoted_price) : null);
-      request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan) : null);
-      request.input('guide_lic', sql.VarChar(50), guide_license_number ? String(guide_license_number) : null);
-      request.input('tourist_id', sql.VarChar(50), tourist_id ? String(tourist_id) : null);
-      request.input('cust_name', sql.VarChar(100), customer_name ? String(customer_name) : null);
-      request.input('cust_phone', sql.VarChar(20), customer_phone ? String(customer_phone) : null);
-      request.input('reqs', sql.NVarChar(sql.MAX), customer_requirements ? String(customer_requirements) : null);
+      request.input('pay_status', sql.VarChar(20), String(body.payment_status || 'paid').trim());
+      request.input('booking_status', sql.VarChar(20), String(body.booking_status || 'مؤكدة').trim());
+      request.input('attended', sql.Bit, body.attended ? 1 : 0);
 
       await request.query(`
-        IF EXISTS (SELECT 1 FROM private_trips WHERE private_trip_id = @id)
-        BEGIN
-          UPDATE private_trips
-          SET status_order = @status,
-              customer_description = @desc,
-              preferred_start_date = @start_date,
-              duration_days = @duration,
-              number_of_companions = @companions,
-              quoted_price = @price,
-              admin_itinerary_plan = @plan,
-              guide_license_number = @guide_lic,
-              tourist_id = @tourist_id,
-              customer_name = @cust_name,
-              customer_phone = @cust_phone,
-              customer_requirements = @reqs
-          WHERE private_trip_id = @id;
-        END
-        ELSE
-        BEGIN
-          INSERT INTO private_trips (
-            private_trip_id, status_order, customer_description, preferred_start_date,
-            duration_days, number_of_companions, quoted_price, admin_itinerary_plan,
-            guide_license_number, tourist_id, customer_name, customer_phone, customer_requirements
-          ) VALUES (
-            @id, @status, @desc, @start_date,
-            @duration, @companions, @price, @plan,
-            @guide_lic, @tourist_id, @cust_name, @cust_phone, @reqs
-          );
-        END
+        UPDATE bookings_weekly
+        SET payment_status = @pay_status,
+            booking_status = @booking_status,
+            attended = @attended
+        WHERE booking_weekly_id = @id;
       `);
 
-      return sendJson(res, 201, { success: true, message: 'تم حفظ الرحلة الخاصة في DelniDB بنجاح', trip_id: cleanId });
-    }
+      try {
+        const bInfoRes = await db.request().input('b_id', sql.VarChar(50), cleanId).query(`
+          SELECT b.tourist_id, wt.trip_title
+          FROM bookings_weekly b
+          LEFT JOIN weekly_trips wt ON b.weekly_trip_id = wt.weekly_trip_id
+          WHERE b.booking_weekly_id = @b_id
+        `);
+        const bInfo = bInfoRes.recordset?.[0];
+        if (bInfo) {
+          const newStatus = String(body.booking_status || '').trim();
+          if (newStatus === 'مؤكدة' || newStatus === 'مؤكد') {
+            await createNotificationInDb(db, {
+              type: 'booking',
+              title: `✅ تم تأكيد حجز تذكرتك الأسبوعية رسمياً (${cleanId})`,
+              body: `تم اعتماد وتأكيد حجزك رسمياً في رحلة (${bInfo.trip_title}) برقم التذكرة (${cleanId}). نتمنى لك رحلة ممتعة وآمنة!`,
+              recipient_role: 'tourist',
+              recipient_id: bInfo.tourist_id,
+              link: '/dashboard/tourist',
+              dedupe_key: `booking-status-${cleanId}-${newStatus}`,
+            });
+          } else if (newStatus.includes('ملغ')) {
+            await createNotificationInDb(db, {
+              type: 'booking',
+              title: `❌ تم إلغاء حجز الرحلة الأسبوعية (${cleanId})`,
+              body: `تم إلغاء حجزك في رحلة (${bInfo.trip_title}) برقم التذكرة (${cleanId}).`,
+              recipient_role: 'tourist',
+              recipient_id: bInfo.tourist_id,
+              link: '/dashboard/tourist',
+              dedupe_key: `booking-status-${cleanId}-${newStatus}`,
+            });
+          }
+        }
+      } catch (err) {}
 
-    // 17.2 Private Trips: DELETE
-    if (pathname === '/api/db/private_trips' && req.method === 'DELETE') {
-      const id = url.searchParams.get('private_trip_id') || url.searchParams.get('id');
-      if (!id) return sendJson(res, 400, { success: false, error: 'معرف الرحلة الخاصة مطلوب للحذف' });
-
-      const request = db.request();
-      request.input('id', sql.VarChar(50), id);
-      await request.query('DELETE FROM private_trips WHERE private_trip_id = @id');
-      return sendJson(res, 200, { success: true, message: 'تم حذف الرحلة الخاصة بنجاح من DelniDB' });
+      return sendJson(res, 200, { success: true, message: 'تم تحديث حالة الدفع والحضور للحجز الأسبوعي بنجاح في DelniDB' });
     }
 
     // 18. Admin Unified Dashboard API: GET (Live sync of all entities from DelniDB)
@@ -3048,7 +3613,7 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 25. Notifications: GET
+    // 25. Notifications: GET (Strict User Isolation)
     if (pathname === '/api/db/notifications' && req.method === 'GET') {
       const role = url.searchParams.get('role') || 'all';
       const userId = url.searchParams.get('user_id') || '';
@@ -3057,18 +3622,41 @@ const server = http.createServer(async (req, res) => {
       request.input('userId', sql.NVarChar(100), userId);
       const resData = await request.query(`
         SELECT id, type, title, body, recipient_role, recipient_id, link, is_read as [read],
-               CONVERT(VARCHAR(16), created_at, 120) as [time]
-        FROM notifications 
-        WHERE recipient_role = 'all' OR recipient_role = @role OR (recipient_id IS NOT NULL AND recipient_id = @userId)
+               CONVERT(VARCHAR(16), created_at, 120) as [time],
+               created_at
+        FROM notifications WITH (NOLOCK)
+        WHERE 
+          (recipient_id IS NOT NULL AND recipient_id = @userId)
+          OR
+          (recipient_id IS NULL AND (recipient_role = 'all' OR recipient_role = @role))
         ORDER BY created_at DESC
       `);
       return sendJson(res, 200, { success: true, data: resData.recordset });
     }
 
-    // 25.1 Notifications: POST (Create)
+    // 25.0 Notifications: Unread Count
+    if (pathname === '/api/db/notifications/unread_count' && req.method === 'GET') {
+      const role = url.searchParams.get('role') || 'all';
+      const userId = url.searchParams.get('user_id') || '';
+      const request = db.request();
+      request.input('role', sql.NVarChar(50), role);
+      request.input('userId', sql.NVarChar(100), userId);
+      const resData = await request.query(`
+        SELECT COUNT(*) as unread_count
+        FROM notifications WITH (NOLOCK)
+        WHERE is_read = 0 AND (
+          (recipient_id IS NOT NULL AND recipient_id = @userId)
+          OR
+          (recipient_id IS NULL AND (recipient_role = 'all' OR recipient_role = @role))
+        )
+      `);
+      return sendJson(res, 200, { success: true, count: resData.recordset?.[0]?.unread_count || 0 });
+    }
+
+    // 25.1 Notifications: POST (Create with Deduplication)
     if (pathname === '/api/db/notifications' && req.method === 'POST') {
       const body = await readBody(req);
-      const { id, type, title, body: notifBody, recipient_role, recipient_id, link } = body;
+      const { id, type, title, body: notifBody, recipient_role, recipient_id, link, dedupe_key } = body;
       const cleanId = String(id || `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`).trim();
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
@@ -3078,10 +3666,22 @@ const server = http.createServer(async (req, res) => {
       request.input('recipient_role', sql.NVarChar(50), String(recipient_role || 'all').trim());
       request.input('recipient_id', sql.NVarChar(100), recipient_id ? String(recipient_id).trim() : null);
       request.input('link', sql.NVarChar(255), link ? String(link).trim() : null);
-      await request.query(`
-        INSERT INTO notifications (id, type, title, body, recipient_role, recipient_id, link, is_read, created_at)
-        VALUES (@id, @type, @title, @body, @recipient_role, @recipient_id, @link, 0, GETDATE())
-      `);
+      request.input('dedupe_key', sql.VarChar(100), dedupe_key ? String(dedupe_key).trim() : null);
+
+      if (dedupe_key) {
+        await request.query(`
+          IF NOT EXISTS (SELECT 1 FROM notifications WITH (NOLOCK) WHERE dedupe_key = @dedupe_key)
+          BEGIN
+            INSERT INTO notifications (id, type, title, body, recipient_role, recipient_id, link, is_read, dedupe_key, created_at)
+            VALUES (@id, @type, @title, @body, @recipient_role, @recipient_id, @link, 0, @dedupe_key, GETDATE());
+          END
+        `);
+      } else {
+        await request.query(`
+          INSERT INTO notifications (id, type, title, body, recipient_role, recipient_id, link, is_read, dedupe_key, created_at)
+          VALUES (@id, @type, @title, @body, @recipient_role, @recipient_id, @link, 0, NULL, GETDATE());
+        `);
+      }
       return sendJson(res, 201, { success: true, message: 'تم حفظ الإشعار في DelniDB بنجاح', id: cleanId });
     }
 
@@ -3096,13 +3696,269 @@ const server = http.createServer(async (req, res) => {
         await request.query(`
           UPDATE notifications 
           SET is_read = 1 
-          WHERE recipient_role = 'all' OR recipient_role = @role OR (recipient_id IS NOT NULL AND recipient_id = @userId)
+          WHERE (recipient_id IS NOT NULL AND recipient_id = @userId)
+             OR (recipient_id IS NULL AND (recipient_role = 'all' OR recipient_role = @role))
         `);
       } else if (id) {
         request.input('id', sql.VarChar(50), String(id).trim());
         await request.query(`UPDATE notifications SET is_read = 1 WHERE id = @id`);
       }
       return sendJson(res, 200, { success: true, message: 'تم تحديث حالة القراءة بنجاح' });
+    }
+
+    // 26. Favorites: GET
+    if (pathname === '/api/db/favorites' && req.method === 'GET') {
+      const touristId = url.searchParams.get('tourist_id');
+      const request = db.request();
+      let query = 'SELECT * FROM tourist_favorites';
+      if (touristId) {
+        request.input('tid', sql.VarChar(50), String(touristId).trim());
+        query += ' WHERE tourist_id = @tid';
+      }
+      query += ' ORDER BY created_at DESC';
+      const result = await request.query(query);
+      return sendJson(res, 200, { success: true, data: result.recordset || [] });
+    }
+
+    // 26.1 Favorites: POST (Atomic Toggle)
+    if (pathname === '/api/db/favorites' && req.method === 'POST') {
+      const body = await readBody(req);
+      const { tourist_id, item_type, item_id } = body;
+      const cleanTourist = String(tourist_id || '').trim();
+      const cleanType = String(item_type || '').trim();
+      const cleanItemId = String(item_id || '').trim();
+
+      if (!cleanTourist || !cleanType || !cleanItemId) {
+        return sendJson(res, 400, { success: false, error: 'tourist_id, item_type, and item_id are all required' });
+      }
+
+      const favId = `FAV-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
+      const request = db.request();
+      request.input('fav_id', sql.VarChar(50), favId);
+      request.input('tid', sql.VarChar(50), cleanTourist);
+      request.input('itype', sql.NVarChar(50), cleanType);
+      request.input('iid', sql.VarChar(50), cleanItemId);
+
+      const result = await request.query(`
+        IF EXISTS (SELECT 1 FROM tourist_favorites WHERE tourist_id = @tid AND item_type = @itype AND item_id = @iid)
+        BEGIN
+          DELETE FROM tourist_favorites WHERE tourist_id = @tid AND item_type = @itype AND item_id = @iid;
+          SELECT 0 as is_fav;
+        END
+        ELSE
+        BEGIN
+          INSERT INTO tourist_favorites (favorite_id, tourist_id, item_type, item_id, created_at)
+          VALUES (@fav_id, @tid, @itype, @iid, GETDATE());
+          SELECT 1 as is_fav;
+        END
+      `);
+
+      const isFav = result.recordset?.[0]?.is_fav === 1;
+      return sendJson(res, 200, {
+        success: true,
+        is_favorite: isFav,
+        message: isFav ? 'تمت إضافة العنصر إلى المفضلة بنجاح ❤️' : 'تمت إزالة العنصر من المفضلة بنجاح'
+      });
+    }
+
+    // 27. Reviews: GET
+    if (pathname === '/api/db/reviews' && req.method === 'GET') {
+      const tripId = url.searchParams.get('trip_id') || url.searchParams.get('id');
+      const tripType = url.searchParams.get('type') || 'daily';
+      const request = db.request();
+
+      if (tripId) {
+        request.input('trip_id', sql.VarChar(50), String(tripId).trim());
+        if (tripType === 'weekly') {
+          const resWeekly = await request.query(`
+            SELECT r.review_weekly_id as review_id, r.tourist_id, r.weekly_trip_id as trip_id,
+                   r.stars_rating, r.comment_text, wt.guide_license_number, r.created_at,
+                   t.full_name as tourist_name, t.phone_number as tourist_phone
+            FROM reviews_weekly_trips r
+            LEFT JOIN weekly_trips wt ON r.weekly_trip_id = wt.weekly_trip_id
+            LEFT JOIN tourists t ON r.tourist_id = t.tourist_id
+            WHERE r.weekly_trip_id = @trip_id
+            ORDER BY r.created_at DESC
+          `);
+          return sendJson(res, 200, { success: true, data: resWeekly.recordset || [] });
+        } else {
+          const resDaily = await request.query(`
+            SELECT r.review_daily_id as review_id, r.tourist_id, r.daily_trip_id as trip_id,
+                   r.stars_rating, r.comment_text, dt.guide_license_number, r.created_at,
+                   t.full_name as tourist_name, t.phone_number as tourist_phone
+            FROM reviews_daily_trips r
+            LEFT JOIN daily_trips dt ON r.daily_trip_id = dt.daily_trip_id
+            LEFT JOIN tourists t ON r.tourist_id = t.tourist_id
+            WHERE r.daily_trip_id = @trip_id
+            ORDER BY r.created_at DESC
+          `);
+          return sendJson(res, 200, { success: true, data: resDaily.recordset || [] });
+        }
+      }
+
+      const allRes = await request.query(`
+        SELECT r.review_daily_id as review_id, r.tourist_id, r.daily_trip_id as trip_id,
+               'daily' as trip_type, r.stars_rating, r.comment_text, dt.guide_license_number, r.created_at,
+               t.full_name as tourist_name
+        FROM reviews_daily_trips r
+        LEFT JOIN daily_trips dt ON r.daily_trip_id = dt.daily_trip_id
+        LEFT JOIN tourists t ON r.tourist_id = t.tourist_id
+        UNION ALL
+        SELECT r.review_weekly_id as review_id, r.tourist_id, r.weekly_trip_id as trip_id,
+               'weekly' as trip_type, r.stars_rating, r.comment_text, wt.guide_license_number, r.created_at,
+               t.full_name as tourist_name
+        FROM reviews_weekly_trips r
+        LEFT JOIN weekly_trips wt ON r.weekly_trip_id = wt.weekly_trip_id
+        LEFT JOIN tourists t ON r.tourist_id = t.tourist_id
+        ORDER BY created_at DESC
+      `);
+      return sendJson(res, 200, { success: true, data: allRes.recordset || [] });
+    }
+
+    // 27.1 Reviews: POST (Strict Validation: Participated + Trip Ended + Upsert)
+    if (pathname === '/api/db/reviews' && req.method === 'POST') {
+      const body = await readBody(req);
+      const {
+        tourist_id,
+        trip_id,
+        type,
+        stars_rating,
+        comment_text,
+        guide_license_number,
+      } = body;
+
+      const cleanTourist = String(tourist_id || '').trim();
+      const cleanTrip = String(trip_id || '').trim();
+      const cleanType = String(type || 'daily').toLowerCase().trim();
+      const stars = Math.min(5, Math.max(1, parseInt(stars_rating, 10) || 5));
+      const comment = String(comment_text || '').trim();
+      const guideLic = guide_license_number ? String(guide_license_number).trim() : null;
+
+      if (!cleanTourist || !cleanTrip) {
+        return sendJson(res, 400, { success: false, error: 'معرف السائح ومعرف الرحلة مطلوبان لتسجيل التقييم.' });
+      }
+
+      const valReq = db.request();
+      valReq.input('tid', sql.VarChar(50), cleanTourist);
+      valReq.input('trip_id', sql.VarChar(50), cleanTrip);
+
+      if (cleanType === 'weekly') {
+        const bRes = await valReq.query(`
+          SELECT b.booking_weekly_id, b.booking_date, b.booking_status, wt.departure_date, wt.start_date
+          FROM bookings_weekly b
+          LEFT JOIN weekly_trips wt ON b.weekly_trip_id = wt.weekly_trip_id
+          WHERE b.tourist_id = @tid AND b.weekly_trip_id = @trip_id
+        `);
+
+        if (!bRes.recordset || bRes.recordset.length === 0) {
+          return sendJson(res, 403, {
+            success: false,
+            error: 'عذراً، لا يمكنك تقييم هذه الرحلة لأنك لم تسجل أو تشارك فيها بالفعل.'
+          });
+        }
+
+        const booking = bRes.recordset[0];
+        const rawDate = booking.departure_date || booking.trip_date || booking.start_date || booking.booking_date;
+        const tripEndTime = new Date(rawDate).getTime();
+        const now = Date.now();
+        if (tripEndTime > now && (now - tripEndTime < 0)) {
+          return sendJson(res, 400, {
+            success: false,
+            error: 'عذراً، لا يمكنك تقييم الرحلة إلا بعد موعد انتهائها الفعلي.'
+          });
+        }
+
+        const revId = `REV-W-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
+        const upsertReq = db.request();
+        upsertReq.input('rev_id', sql.VarChar(50), revId);
+        upsertReq.input('tid', sql.VarChar(50), cleanTourist);
+        upsertReq.input('trip_id', sql.VarChar(50), cleanTrip);
+        upsertReq.input('stars', sql.Int, stars);
+        upsertReq.input('comment', sql.NVarChar(sql.MAX), comment || null);
+        upsertReq.input('guide_lic', sql.VarChar(50), guideLic);
+
+        await upsertReq.query(`
+          IF EXISTS (SELECT 1 FROM reviews_weekly_trips WHERE tourist_id = @tid AND weekly_trip_id = @trip_id)
+          BEGIN
+            UPDATE reviews_weekly_trips
+            SET stars_rating = @stars,
+                comment_text = @comment,
+                created_at = GETDATE()
+            WHERE tourist_id = @tid AND weekly_trip_id = @trip_id;
+          END
+          ELSE
+          BEGIN
+            INSERT INTO reviews_weekly_trips (
+              review_weekly_id, tourist_id, weekly_trip_id, stars_rating, comment_text, created_at
+            ) VALUES (
+              @rev_id, @tid, @trip_id, @stars, @comment, GETDATE()
+            );
+          END
+        `);
+
+        return sendJson(res, 201, {
+          success: true,
+          message: 'شكراً لك! تم تسجيل تقييمك للرحلة الأسبوعية بنجاح في نظام دلني.'
+        });
+      } else {
+        const bRes = await valReq.query(`
+          SELECT b.booking_daily_id, b.booking_date, b.booking_status, dt.departure_date
+          FROM bookings_daily b
+          LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id
+          WHERE b.tourist_id = @tid AND b.daily_trip_id = @trip_id
+        `);
+
+        if (!bRes.recordset || bRes.recordset.length === 0) {
+          return sendJson(res, 403, {
+            success: false,
+            error: 'عذراً، لا يمكنك تقييم هذه الرحلة لأنك لم تسجل أو تشارك فيها بالفعل.'
+          });
+        }
+
+        const booking = bRes.recordset[0];
+        const rawDate = booking.departure_date || booking.trip_date || booking.booking_date;
+        const tripEndTime = new Date(rawDate).getTime();
+        const now = Date.now();
+        if (tripEndTime > now && (now - tripEndTime < 0)) {
+          return sendJson(res, 400, {
+            success: false,
+            error: 'عذراً، لا يمكنك تقييم الرحلة إلا بعد موعد انتهائها الفعلي.'
+          });
+        }
+
+        const revId = `REV-D-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
+        const upsertReq = db.request();
+        upsertReq.input('rev_id', sql.VarChar(50), revId);
+        upsertReq.input('tid', sql.VarChar(50), cleanTourist);
+        upsertReq.input('trip_id', sql.VarChar(50), cleanTrip);
+        upsertReq.input('stars', sql.Int, stars);
+        upsertReq.input('comment', sql.NVarChar(sql.MAX), comment || null);
+        upsertReq.input('guide_lic', sql.VarChar(50), guideLic);
+
+        await upsertReq.query(`
+          IF EXISTS (SELECT 1 FROM reviews_daily_trips WHERE tourist_id = @tid AND daily_trip_id = @trip_id)
+          BEGIN
+            UPDATE reviews_daily_trips
+            SET stars_rating = @stars,
+                comment_text = @comment,
+                created_at = GETDATE()
+            WHERE tourist_id = @tid AND daily_trip_id = @trip_id;
+          END
+          ELSE
+          BEGIN
+            INSERT INTO reviews_daily_trips (
+              review_daily_id, tourist_id, daily_trip_id, stars_rating, comment_text, created_at
+            ) VALUES (
+              @rev_id, @tid, @trip_id, @stars, @comment, GETDATE()
+            );
+          END
+        `);
+
+        return sendJson(res, 201, {
+          success: true,
+          message: 'شكراً لك! تم تسجيل تقييمك للرحلة اليومية بنجاح في نظام دلني.'
+        });
+      }
     }
 
     // Default 404
@@ -3114,7 +3970,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`[DelniDB Secure Bridge] Listening on http://localhost:${PORT}`);
-  console.log(`[DelniDB Secure Bridge] Connected to Microsoft SQL Server DelniDB`);
+  try {
+    await getPool();
+  } catch (err) {
+    console.error('[DelniDB Startup Connection Warning]:', err?.message || err);
+  }
 });

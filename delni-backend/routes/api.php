@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\TripController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AiController;
+use App\Http\Controllers\Api\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,16 @@ Route::get('/restaurants', [TripController::class, 'restaurants']);
 Route::post('/restaurants', [TripController::class, 'storeRestaurant']);
 Route::delete('/restaurants/{id}', [TripController::class, 'deleteRestaurant']);
 Route::get('/guides', [TripController::class, 'guides']);
+Route::get('/trips/{tripId}/reviews', [TripController::class, 'tripReviews']);
+Route::post('/trips/reviews', [TripController::class, 'storeReview']);
+Route::get('/favorites/tourist/{touristId}', [TripController::class, 'touristFavorites']);
+Route::post('/favorites/toggle', [TripController::class, 'toggleFavorite']);
+
+// --- Notifications System ---
+Route::get('/notifications', [NotificationController::class, 'index']);
+Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+Route::post('/notifications', [NotificationController::class, 'store']);
+Route::post('/notifications/read', [NotificationController::class, 'markRead']);
 
 // --- Bookings & Manifests ---
 Route::post('/bookings/daily', [BookingController::class, 'bookDaily']);

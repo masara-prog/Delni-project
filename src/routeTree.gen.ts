@@ -14,6 +14,7 @@ import { Route as AttractionsRouteImport } from './routes/attractions'
 import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as HotelsRouteImport } from './routes/hotels'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as RestaurantsRouteImport } from './routes/restaurants'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SupportRouteImport } from './routes/support'
@@ -50,6 +51,11 @@ const HotelsRoute = HotelsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RestaurantsRoute = RestaurantsRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/guides': typeof GuidesRoute
   '/hotels': typeof HotelsRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/restaurants': typeof RestaurantsRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/guides': typeof GuidesRoute
   '/hotels': typeof HotelsRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/restaurants': typeof RestaurantsRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/guides': typeof GuidesRoute
   '/hotels': typeof HotelsRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/restaurants': typeof RestaurantsRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/guides'
     | '/hotels'
     | '/login'
+    | '/notifications'
     | '/restaurants'
     | '/signup'
     | '/support'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/guides'
     | '/hotels'
     | '/login'
+    | '/notifications'
     | '/restaurants'
     | '/signup'
     | '/support'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/guides'
     | '/hotels'
     | '/login'
+    | '/notifications'
     | '/restaurants'
     | '/signup'
     | '/support'
@@ -237,6 +249,7 @@ export interface RootRouteChildren {
   GuidesRoute: typeof GuidesRoute
   HotelsRoute: typeof HotelsRoute
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   RestaurantsRoute: typeof RestaurantsRoute
   SignupRoute: typeof SignupRoute
   SupportRoute: typeof SupportRoute
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/restaurants': {
@@ -381,6 +401,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesRoute: GuidesRoute,
   HotelsRoute: HotelsRoute,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   RestaurantsRoute: RestaurantsRoute,
   SignupRoute: SignupRoute,
   SupportRoute: SupportRoute,

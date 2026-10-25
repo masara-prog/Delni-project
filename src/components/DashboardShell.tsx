@@ -211,27 +211,29 @@ export function DashboardShell({
             {/* Divider */}
             <div className="my-4 h-px" style={{ background: "rgba(197,160,89,0.12)" }} />
 
-            {/* Help card */}
-            <div
-              className="p-4 rounded-2xl"
-              style={{ background: "linear-gradient(135deg, rgba(197,160,89,0.15) 0%, rgba(168,131,68,0.1) 100%)", border: "1px solid rgba(197,160,89,0.2)" }}
-            >
-              <div className="text-sm font-black text-white">{isAr ? "تحتاج مساعدة؟" : "Need Help?"}</div>
-              <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-                {isAr ? "تواصل مع الدعم عبر المحادثة الفورية." : "Contact live support anytime."}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSupportChat(true);
-                  setOpen(false);
-                }}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-xs hover:opacity-95"
-                style={{ background: "rgba(197,160,89,0.25)", color: "rgba(197,160,89,1)" }}
+            {/* Help card (hidden for admin) */}
+            {role !== "admin" && (
+              <div
+                className="p-4 rounded-2xl"
+                style={{ background: "linear-gradient(135deg, rgba(197,160,89,0.15) 0%, rgba(168,131,68,0.1) 100%)", border: "1px solid rgba(197,160,89,0.2)" }}
               >
-                {isAr ? "فتح المحادثة ←" : "Open Chat →"}
-              </button>
-            </div>
+                <div className="text-sm font-black text-white">{isAr ? "تحتاج مساعدة؟" : "Need Help?"}</div>
+                <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {isAr ? "تواصل مع الدعم عبر المحادثة الفورية." : "Contact live support anytime."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSupportChat(true);
+                    setOpen(false);
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-xs hover:opacity-95"
+                  style={{ background: "rgba(197,160,89,0.25)", color: "rgba(197,160,89,1)" }}
+                >
+                  {isAr ? "فتح المحادثة ←" : "Open Chat →"}
+                </button>
+              </div>
+            )}
 
             {/* Version */}
             <div className="pt-3 text-center">
@@ -300,11 +302,15 @@ export function StatCard({
   );
 }
 
-export function SectionCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+export function SectionCard({ title, action, children }: { title: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <div className="bg-white border border-border rounded-2xl shadow-soft">
       <div className="flex items-center justify-between p-5 border-b border-border">
-        <h3 className="font-black text-foreground">{title}</h3>
+        {typeof title === "string" ? (
+          <h3 className="font-black text-foreground">{title}</h3>
+        ) : (
+          <div className="font-black text-foreground flex-1">{title}</div>
+        )}
         {action}
       </div>
       <div className="p-5">{children}</div>

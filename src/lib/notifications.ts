@@ -6,63 +6,65 @@
 
 import { getStoredSession } from "./api";
 
+export type NotificationType =
+  | "chat"
+  | "trip"
+  | "booking"
+  | "system"
+  | "offer"
+  | "assignment"
+  | "private_trip";
+
 export type NotificationItem = {
   id: string;
-  type: "chat" | "trip" | "booking" | "system" | "offer";
+  type: NotificationType;
   title: string;
   body: string;
   time: string;
   read: boolean;
   recipientRole?: "all" | "admin" | "tourist" | "driver" | "guide" | "company";
-  recipientId?: string; // target user id, tourist_id, passport, or session id
+  recipientId?: string; // target user id, tourist_id, passport, license_number, or contract_number
   link?: string;
+  dedupeKey?: string;
+  createdAt?: string;
 };
 
 const STORAGE_KEY = "dalni_notifications";
-const NOTIF_EVENT = "dalni_notification_event";
+export const NOTIF_EVENT = "dalni_notification_event";
+const API_BASE = "http://127.0.0.1:5001/api/db";
 
-const defaultInitialNotifications: NotificationItem[] = [
-  {
-    id: "notif-init-1",
-    type: "trip",
-    title: "🧭 تعيين رحلة أسبوعية جديدة",
-    body: "تم تعيين وإطلاق رحلة الجبل الأخضر وسوسة للمرشد المعتمد خالد الورفلي.",
-    time: "منذ 10 دقائق",
-    read: false,
-    recipientRole: "all",
-  },
-  {
-    id: "notif-init-2",
-    type: "chat",
-    title: "💬 استفسار شات بوت جديد",
-    body: "أرسل السائح محمد عبد الله استفساراً عن مواعيد الانطلاق والتحقق.",
-    time: "منذ 25 دقيقة",
-    read: false,
-    recipientRole: "admin",
-  },
-  {
-    id: "notif-init-3",
-    type: "booking",
-    title: "🎫 سداد وحجز مقاعد",
-    body: "تم تسجيل حجز جديد وتأكيد الحضور بمقر الشركة.",
-    time: "منذ ساعة",
-    read: true,
-    recipientRole: "all",
-  },
-];
+/**
+ * Format timestamp to friendly Arabic relative time
+ */
+export function formatArabicTime(rawTime?: string | Date): string {
+  if (!rawTime) return "الآن";
+  try {
+    const d = new Date(rawTime);
+    if (isNaN(d.getTime())) return String(rawTime);
+    const now = Date.now();
+    const diffSec = Math.floor((now - d.getTime()) / 1000);
+
+    if (diffSec < 45) return "منذ لحظات";
+    if (diffSec < 90) return "منذ دقيقة";
+    if (diffSec < 3600) return `منذ ${Math.floor(diffSec / 60)} دقيقة`;
+    if (diffSec < 7200) return "منذ ساعة";
+    if (diffSec < 86400) return `منذ ${Math.floor(diffSec / 3600)} ساعة`;
+    if (diffSec < 172800) return "أمس";
+    return d.toLocaleDateString("ar-LY", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return String(rawTime);
+  }
+}
 
 export function getAllNotifications(): NotificationItem[] {
-  if (typeof window === "undefined") return defaultInitialNotifications;
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultInitialNotifications));
-      return defaultInitialNotifications;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : defaultInitialNotifications;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return defaultInitialNotifications;
+    return [];
   }
 }
 
@@ -74,15 +76,25 @@ export function saveAllNotifications(items: NotificationItem[]): void {
   } catch {}
 }
 
+/**
+ * Get cached notifications matching the active user session
+ */
 export function getUserNotifications(): NotificationItem[] {
   const all = getAllNotifications();
   const session = getStoredSession();
   const currentRole = session.role || "guest";
-  const currentUserId = session.user?.tourist_id || session.user?.passport || session.user?.id || session.user?.license_number;
+  const currentUserId =
+    session.user?.tourist_id ||
+    session.user?.passport ||
+    session.user?.license_number ||
+    session.user?.contract_number ||
+    session.user?.id;
 
   return all.filter((n) => {
     // If targeted to a specific user
-    if (n.recipientId && currentUserId && n.recipientId === currentUserId) return true;
+    if (n.recipientId) {
+      return currentUserId && String(n.recipientId).trim() === String(currentUserId).trim();
+    }
     // If targeted to all
     if (!n.recipientRole || n.recipientRole === "all") return true;
     // If matches current role
@@ -91,6 +103,81 @@ export function getUserNotifications(): NotificationItem[] {
   });
 }
 
+/**
+ * Fetch fresh notifications from the DelniDB SQL Server Bridge (with strict user isolation)
+ */
+export async function fetchUserNotifications(): Promise<NotificationItem[]> {
+  const session = getStoredSession();
+  const currentRole = session.role || "guest";
+  const currentUserId =
+    session.user?.tourist_id ||
+    session.user?.passport ||
+    session.user?.license_number ||
+    session.user?.contract_number ||
+    session.user?.id ||
+    "";
+
+  try {
+    const url = `${API_BASE}/notifications?role=${encodeURIComponent(currentRole)}&user_id=${encodeURIComponent(currentUserId)}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error("Failed to fetch notifications from bridge");
+    const json = await res.json();
+
+    if (json.success && Array.isArray(json.data)) {
+      const serverItems: NotificationItem[] = json.data.map((item: any) => ({
+        id: String(item.id),
+        type: (item.type as NotificationType) || "system",
+        title: item.title || "إشعار جديد",
+        body: item.body || "",
+        time: formatArabicTime(item.created_at || item.time),
+        read: Boolean(item.read || item.is_read),
+        recipientRole: item.recipient_role,
+        recipientId: item.recipient_id,
+        link: item.link,
+        createdAt: item.created_at,
+      }));
+
+      // Cache locally and dispatch event
+      saveAllNotifications(serverItems);
+      return serverItems;
+    }
+  } catch (err) {
+    // Fallback to local cache on network error
+  }
+
+  return getUserNotifications();
+}
+
+/**
+ * Fetch count of unread notifications for current user
+ */
+export async function fetchUnreadCount(): Promise<number> {
+  const session = getStoredSession();
+  const currentRole = session.role || "guest";
+  const currentUserId =
+    session.user?.tourist_id ||
+    session.user?.passport ||
+    session.user?.license_number ||
+    session.user?.contract_number ||
+    session.user?.id ||
+    "";
+
+  try {
+    const url = `${API_BASE}/notifications/unread_count?role=${encodeURIComponent(currentRole)}&user_id=${encodeURIComponent(currentUserId)}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const json = await res.json();
+      if (typeof json.count === "number") return json.count;
+    }
+  } catch {}
+
+  // Fallback to local unread count
+  return getUserNotifications().filter((n) => !n.read).length;
+}
+
+/**
+ * Dispatch and save a new notification
+ */
 export function addNotification(notif: {
   type: NotificationItem["type"];
   title: string;
@@ -98,6 +185,7 @@ export function addNotification(notif: {
   recipientRole?: NotificationItem["recipientRole"];
   recipientId?: string;
   link?: string;
+  dedupeKey?: string;
 }): NotificationItem {
   const all = getAllNotifications();
   const newItem: NotificationItem = {
@@ -105,19 +193,21 @@ export function addNotification(notif: {
     type: notif.type,
     title: notif.title,
     body: notif.body,
-    time: new Date().toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" }),
+    time: "منذ لحظات",
     read: false,
     recipientRole: notif.recipientRole || "all",
     recipientId: notif.recipientId,
     link: notif.link,
+    dedupeKey: notif.dedupeKey,
+    createdAt: new Date().toISOString(),
   };
 
-  const updated = [newItem, ...all.slice(0, 49)]; // keep latest 50
+  const updated = [newItem, ...all.slice(0, 59)]; // keep latest 60
   saveAllNotifications(updated);
 
   // Sync to DelniDB SQL Server Bridge
   if (typeof window !== "undefined") {
-    fetch("http://127.0.0.1:5001/api/db/notifications", {
+    fetch(`${API_BASE}/notifications`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -128,21 +218,25 @@ export function addNotification(notif: {
         recipient_role: newItem.recipientRole,
         recipient_id: newItem.recipientId,
         link: newItem.link,
+        dedupe_key: newItem.dedupeKey,
       }),
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(3000),
     }).catch(() => {});
   }
 
   return newItem;
 }
 
+/**
+ * Mark a single notification as read
+ */
 export function markNotificationRead(id: string): void {
   const all = getAllNotifications();
   const updated = all.map((n) => (n.id === id ? { ...n, read: true } : n));
   saveAllNotifications(updated);
 
   if (typeof window !== "undefined") {
-    fetch("http://127.0.0.1:5001/api/db/notifications/read", {
+    fetch(`${API_BASE}/notifications/read`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
@@ -151,10 +245,18 @@ export function markNotificationRead(id: string): void {
   }
 }
 
+/**
+ * Mark all notifications for the active user as read
+ */
 export function markAllNotificationsRead(): void {
   const session = getStoredSession();
   const currentRole = session.role || "guest";
-  const currentUserId = session.user?.tourist_id || session.user?.passport || session.user?.id;
+  const currentUserId =
+    session.user?.tourist_id ||
+    session.user?.passport ||
+    session.user?.license_number ||
+    session.user?.contract_number ||
+    session.user?.id;
 
   const all = getAllNotifications();
   const updated = all.map((n) => {
@@ -162,7 +264,7 @@ export function markAllNotificationsRead(): void {
       !n.recipientRole ||
       n.recipientRole === "all" ||
       n.recipientRole === currentRole ||
-      (n.recipientId && n.recipientId === currentUserId)
+      (n.recipientId && currentUserId && String(n.recipientId) === String(currentUserId))
     ) {
       return { ...n, read: true };
     }
@@ -171,7 +273,7 @@ export function markAllNotificationsRead(): void {
   saveAllNotifications(updated);
 
   if (typeof window !== "undefined") {
-    fetch("http://127.0.0.1:5001/api/db/notifications/read", {
+    fetch(`${API_BASE}/notifications/read`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ all: true, role: currentRole, user_id: currentUserId }),
@@ -188,6 +290,7 @@ export function notifyChatbotUserMessage(userName: string, userRole: string, tex
     body: `أرسل ${userName || "مستخدم"} (${userRole || "سائح"}): "${text.slice(0, 50)}${text.length > 50 ? "..." : ""}"`,
     recipientRole: "admin",
     link: "/dashboard/admin",
+    dedupeKey: `chat-${Date.now()}`,
   });
 }
 
@@ -203,7 +306,6 @@ export function notifyAdminChatReply(userName: string, replyText: string, recipi
 }
 
 export function notifyTripAssigned(tripTitle: string, guideName?: string, driverName?: string) {
-  // Notify Admin & Companies
   addNotification({
     type: "trip",
     title: "🧭 تعيين رحلة سياحية جديدة",
@@ -212,7 +314,6 @@ export function notifyTripAssigned(tripTitle: string, guideName?: string, driver
     link: "/dashboard/admin",
   });
 
-  // Notify Tourists / Subscribers
   addNotification({
     type: "trip",
     title: "🎉 رحلة جديدة متاحة للحجز!",
@@ -222,7 +323,13 @@ export function notifyTripAssigned(tripTitle: string, guideName?: string, driver
   });
 }
 
-export function notifyTicketVerified(ticketCode: string, tripTitle: string, touristName: string, seats: number, touristId?: string) {
+export function notifyTicketVerified(
+  ticketCode: string,
+  tripTitle: string,
+  touristName: string,
+  seats: number,
+  touristId?: string
+) {
   addNotification({
     type: "booking",
     title: "✅ تم مسح التذكرة وتأكيد الحجز بنجاح!",

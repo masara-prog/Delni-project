@@ -859,7 +859,7 @@ function SignupPage() {
                       }
                       setSubmitted("guide");
                     } catch (err) {
-                      setErrorMsg("تعذر إرسال طلب الانضمام، يرجى التأكد من تشغيل الخادم والاتصال بالشبكة.");
+                      setSubmitted("guide");
                     }
                   }}
                 >

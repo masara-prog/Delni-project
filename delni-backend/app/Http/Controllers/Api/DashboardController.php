@@ -201,10 +201,23 @@ class DashboardController extends Controller
             'guide_license_number' => $validated['assigned_guide_license'] ?? $trip->guide_license_number,
         ]);
 
+        if (!empty($validated['assigned_vehicle_plate'])) {
+            \App\Models\PrivateTripVehicle::updateOrCreate(
+                ['private_trip_id' => $trip->private_trip_id],
+                [
+                    'private_alloc_id' => 'PA-' . rand(1000, 9999),
+                    'plate_number' => $validated['assigned_vehicle_plate'],
+                    'start_date' => $trip->preferred_start_date ?? now(),
+                    'end_date' => $trip->preferred_start_date ? \Carbon\Carbon::parse($trip->preferred_start_date)->addDays($trip->duration_days) : now()->addDays(1),
+                    'allocation_status' => 'معينة',
+                ]
+            );
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'تم تحديث واعتماد طلب الرحلة الخاصة بنجاح',
-            'trip' => $trip,
+            'trip' => $trip->load(['guide', 'vehicles']),
         ]);
     }
 
