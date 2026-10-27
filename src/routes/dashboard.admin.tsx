@@ -795,6 +795,10 @@ function AdminDashboard() {
           price_per_seat: Number(data.price_per_seat) || 100,
           departure_city: data.departure_city || "طرابلس",
           destination_city: data.destination || data.destination_city || "المعلم الأثري",
+          destination: data.destination || data.destination_city || "",
+          destinations: data.destinations || [],
+          place_ids: data.place_ids || [],
+          places: data.places || [],
           max_capacity: Number(data.max_capacity) || 25,
           recurring_days: data.recurring_days || "السبت,الثلاثاء",
           guide_license_number: cleanGuideLic,
@@ -5619,10 +5623,15 @@ function CreateTripModal({
 
   const handleMultiDestToggle = (attractionName: string) => {
     setMultiDestinations(prev => {
-      if (prev.includes(attractionName)) {
-        return prev.filter(c => c !== attractionName);
+      const next = prev.includes(attractionName)
+        ? prev.filter(c => c !== attractionName)
+        : [...prev, attractionName];
+      if (next.length > 0) {
+        setDestination(next[0]);
+      } else {
+        setDestination("");
       }
-      return [...prev, attractionName];
+      return next;
     });
   };
 
@@ -5753,22 +5762,17 @@ function CreateTripModal({
       return;
     }
 
-    if (isDaily && !destination) {
-      alert("تنبيه: يرجى اختيار أحد المعالم السياحية المسجلة في المنصة!");
-      return;
-    }
-
-    if (isDaily && (recurringDays.length < 1 || recurringDays.length > 2)) {
-      alert("تنبيه: يجب اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية!");
-      return;
-    }
-
     const effectiveDestinations = multiDestinations.length > 0
       ? multiDestinations
       : (destination ? [destination] : []);
 
     if (effectiveDestinations.length === 0) {
       alert("تنبيه: يجب اختيار معلم سياحي واحد على الأقل للرحلة من المعالم المسجلة بالمنصة!");
+      return;
+    }
+
+    if (isDaily && (recurringDays.length < 1 || recurringDays.length > 2)) {
+      alert("تنبيه: يجب اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية!");
       return;
     }
 
