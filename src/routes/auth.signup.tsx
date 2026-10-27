@@ -76,10 +76,31 @@ function SignupPage() {
   const currentSlide = LANDMARK_SLIDES[slideIdx];
 
   // Tourist fields
-  const [tourist, setTourist] = useState({ fullName: "", phone: "", passport: "", email: "", password: "" });
+  const initialTouristState = { fullName: "", phone: "", passport: "", email: "", password: "" };
+  const [tourist, setTourist] = useState(initialTouristState);
+
+  const [attractionsList, setAttractionsList] = useState<any[]>([
+    { place_id: "A-01", place_name: "لبدة الكبرى والمسرح الروماني", city: "الخمس" },
+    { place_id: "A-02", place_name: "بحيرات ورمال أوباري (قبرعون)", city: "أوباري" },
+    { place_id: "att-tripoli-castle", place_name: "قلعة طرابلس والسراي الحمراء", city: "طرابلس" },
+    { place_id: "att-villa-silin", place_name: "فيلا سيلين الأثرية", city: "الخمس" },
+    { place_id: "att-nalut-ksar", place_name: "قصر نالوت الأثري", city: "نالوت" },
+    { place_id: "att-gharyan-caves", place_name: "بيوت الحفر التقليدية ومتحف الفخار", city: "غريان" },
+  ]);
+
+  useEffect(() => {
+    fetch("/api/db/attractions")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setAttractionsList(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Guide fields (with photo upload & daily rate cost)
-  const [guide, setGuide] = useState({
+  const initialGuideState = {
     licenseNumber: "",
     fullName: "",
     title: "",
@@ -91,6 +112,7 @@ function SignupPage() {
     email: "",
     password: "",
     bio: "",
+    placeIds: ["A-01", "att-tripoli-castle"] as string[],
     operatingRegions: ["tripoli", "leptis"] as string[],
     workingDays: ["sat", "sun", "mon", "tue", "wed", "thu"] as string[],
     speaksEnglish: true,
@@ -99,7 +121,18 @@ function SignupPage() {
     certs: [] as string[],
     certDataUrls: [] as string[],
     approvalStatus: "بانتظار الاعتماد والتوثيق من الإدارة",
-  });
+  };
+  const [guide, setGuide] = useState(initialGuideState);
+
+  const togglePlaceId = (pid: string) => {
+    setGuide((g) => {
+      const exists = g.placeIds.includes(pid);
+      return {
+        ...g,
+        placeIds: exists ? g.placeIds.filter((p) => p !== pid) : [...g.placeIds, pid],
+      };
+    });
+  };
 
   const toggleRegion = (regId: string) => {
     setGuide((g) => {
@@ -216,8 +249,8 @@ function SignupPage() {
       return false;
     }
     const exp = Number(guide.years);
-    if (isNaN(exp) || exp < 1) {
-      setErrorMsg("سنوات الخبرة السياحية يجب أن تكون سنة واحدة على الأقل.");
+    if (isNaN(exp) || exp < 2) {
+      setErrorMsg("سنوات الخبرة السياحية للمرشد يجب أن تكون سنتين على الأقل (2 سنوات فأكثر).");
       return false;
     }
     if (!guide.bio.trim() || guide.bio.trim().length < 15) {
@@ -228,8 +261,8 @@ function SignupPage() {
   };
 
   const validateGuideStep2 = () => {
-    if (guide.operatingRegions.length === 0) {
-      setErrorMsg("يرجى تحديد وجهة أو منطقة إرشاد واحدة على الأقل.");
+    if (!guide.placeIds || guide.placeIds.length === 0) {
+      setErrorMsg("يرجى اختيار معلم سياحي واحد على الأقل تمتلك به خبرة إرشادية معتمدة من المعالم المسجلة بالمنصة.");
       return false;
     }
     if (guide.workingDays.length === 0) {
@@ -445,48 +478,124 @@ function SignupPage() {
               </div>
             </div>
 
-            {/* Account Role Selector - Modernized with Orange Hover & Active Accent */}
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              {roles.map((r) => {
-                const isSelected = role === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setRole(r.id)}
-                    className={`p-3.5 rounded-2xl text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-2.5 ${
-                      isSelected
-                        ? "bg-white border-2 border-[#D96B27] shadow-md ring-4 ring-[#D96B27]/15"
-                        : "bg-white/80 border border-[#E2E8F0] shadow-2xs hover:border-[#D96B27]/50 hover:bg-white"
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`font-black text-xs sm:text-sm ${isSelected ? "text-[#D96B27]" : "text-[#0F172A]"}`}>
-                          {r.label}
-                        </span>
-                        {isSelected && (
-                          <span className="w-2 h-2 rounded-full bg-[#D96B27]" />
-                        )}
+            {/* Account Role Selector */}
+            {!submitted && (
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {roles.map((r) => {
+                  const isSelected = role === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setRole(r.id)}
+                      className={`p-3.5 rounded-2xl text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-2.5 ${
+                        isSelected
+                          ? "bg-white border-2 border-[#D96B27] shadow-md ring-4 ring-[#D96B27]/15"
+                          : "bg-white/80 border border-[#E2E8F0] shadow-2xs hover:border-[#D96B27]/50 hover:bg-white"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-black text-xs sm:text-sm ${isSelected ? "text-[#D96B27]" : "text-[#0F172A]"}`}>
+                            {r.label}
+                          </span>
+                          {isSelected && (
+                            <span className="w-2 h-2 rounded-full bg-[#D96B27]" />
+                          )}
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-[#64748B] font-medium truncate mt-0.5">
+                          {r.desc}
+                        </div>
                       </div>
-                      <div className="text-[10px] sm:text-xs text-[#64748B] font-medium truncate mt-0.5">
-                        {r.desc}
-                      </div>
-                    </div>
-                    <span className="text-2xl shrink-0 p-1 rounded-xl bg-[#FAF7F2] border border-[#E2E8F0]">{r.emoji}</span>
-                  </button>
-                );
-              })}
-            </div>
+                      <span className="text-2xl shrink-0 p-1 rounded-xl bg-[#FAF7F2] border border-[#E2E8F0]">{r.emoji}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-            {errorMsg && (
+            {!submitted && errorMsg && (
               <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700 flex items-center gap-2 shadow-xs">
                 <span>⚠️</span>
                 <span>{errorMsg}</span>
               </div>
             )}
 
-          {role === "tourist" ? (
+            {submitted ? (
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#E2E8F0] shadow-xl text-center space-y-5 animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl shadow-inner font-black">
+                  ✓
+                </div>
+                {submitted === "guide" ? (
+                  <div className="space-y-4 text-center">
+                    <div className="inline-block px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-black">
+                      طلب معلّق بانتظار تدقيق واعتماد الإدارة
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-[#0F172A]">
+                      تم إرسال طلب انضمام المرشد السياحي بنجاح!
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#64748B] font-semibold leading-relaxed max-w-md mx-auto">
+                      تم تفريغ الحقول وحفظ وثائقك وبياناتك بنجاح في قاعدة البيانات. بمجرد مراجعة واعتماد حسابك من قبل إدارة منصة دَلّني، سيتم تفعيل حسابك فوراً بالبريد الإلكتروني ورقم الهاتف المسجل لتتمكن من تسجيل الدخول إلى لوحة تحكم المرشد الخاصة بك، وسيتم إضافة ملفك تلقائياً إلى واجهة المرشدين السياحيين.
+                    </p>
+                    <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-right space-y-2.5 text-xs font-bold text-[#0F172A]">
+                      <div className="flex items-center justify-between border-b border-[#E8E2D6] pb-2">
+                        <span className="text-[#64748B]">حالة الطلب:</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-black">قيد المراجعة والتدقيق</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-[#E8E2D6] pb-2">
+                        <span className="text-[#64748B]">تفعيل الحساب ولوحة التحكم:</span>
+                        <span className="text-emerald-700 font-black">تلقائي بالبريد ورقم الهاتف فور اعتماد الأدمن</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B]">الظهور في دليل المرشدين:</span>
+                        <span className="text-[#1B5A78] font-black">يظهر تلقائياً في صفحة المرشدين بعد التوثيق</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <Link
+                        to="/auth/login"
+                        className="py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#1B5A78] to-[#13445C] hover:from-[#13445C] hover:to-[#0F172A] text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2"
+                      >
+                        <span>الانتقال لصفحة تسجيل الدخول</span>
+                        <span>←</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSubmitted(null);
+                          setGuide(initialGuideState);
+                          setGuideStep(1);
+                        }}
+                        className="py-3.5 px-4 rounded-2xl border border-[#CBD5E0] bg-white hover:bg-slate-50 text-[#0F172A] font-black text-xs sm:text-sm shadow-2xs transition cursor-pointer"
+                      >
+                        تقديم طلب مرشد جديد
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-center">
+                    <div className="inline-block px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black">
+                      تم إنشاء الحساب بنجاح
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-[#0F172A]">
+                      أهلاً بك في منصة دَلّني!
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#64748B] font-semibold leading-relaxed max-w-md mx-auto">
+                      تم إنشاء وتفعيل حسابك السياحي بنجاح. يمكنك الآن تسجيل الدخول واستكشاف الرحلات السياحية، حجز الفنادق، واختيار المرشدين المعتمدين.
+                    </p>
+                    <div className="pt-2">
+                      <Link
+                        to="/auth/login"
+                        className="inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black text-xs sm:text-sm shadow-md transition"
+                      >
+                        <span>تسجيل الدخول إلى حسابك الآن</span>
+                        <span>←</span>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : role === "tourist" ? (
             <form className="space-y-3.5 text-right" onSubmit={async (e) => {
               e.preventDefault();
               setErrorMsg("");
@@ -501,6 +610,7 @@ function SignupPage() {
                   password: tourist.password,
                 });
                 if (res && (res.status === "success" || res.token)) {
+                  setTourist(initialTouristState);
                   setSubmitted("tourist");
                 } else {
                   setErrorMsg(res?.message || "حدث خطأ أثناء التسجيل. يرجى التأكد من صحة البيانات وأن البريد ورقم الهاتف غير مسجلين مسبقاً.");
@@ -751,12 +861,13 @@ function SignupPage() {
                       icon={DollarSign}
                     />
                     <Field
-                      label="سنوات الخبرة السياحية"
+                      label="سنوات الخبرة السياحية (سنتان كحد أدنى)"
                       type="number"
                       value={guide.years}
                       onChange={(v) => setGuide({ ...guide, years: v })}
                       onKeyDown={handleEnterKeyNext}
-                      placeholder="5"
+                      placeholder="2"
+                      min={2}
                       required
                       suffix="سنوات"
                       icon={Award}
@@ -844,6 +955,7 @@ function SignupPage() {
                         gender: guide.gender,
                         price_per_day: Number(guide.pricePerDay) || 150,
                         bio: guide.bio,
+                        place_ids: guide.placeIds,
                         operating_regions: JSON.stringify(guide.operatingRegions),
                         working_days: JSON.stringify(guide.workingDays),
                         speaks_english: guide.speaksEnglish,
@@ -857,36 +969,36 @@ function SignupPage() {
                         setErrorMsg(res.message || "حدث خطأ أثناء حفظ بيانات المرشد");
                         return;
                       }
+                      setGuide(initialGuideState);
+                      setGuideStep(1);
                       setSubmitted("guide");
-                    } catch (err) {
-                      setSubmitted("guide");
+                    } catch (err: any) {
+                      setErrorMsg(err.message || "فشل الاتصال بالخادم لحفظ بيانات المرشد السياحي.");
                     }
                   }}
                 >
-                  {/* Operating Regions */}
+                  {/* Registered Tourist Landmarks of Expertise */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
-                        <span>مناطق ووجهات الإرشاد السياحي:</span>
+                        <span>المعالم السياحية والآثار المعتمدة لخبرتك (اختر معلماً أو أكثر من المعالم المسجلة):</span>
                         <span className="text-red-500 font-black">*</span>
                       </label>
-                      <button
-                        type="button"
-                        onClick={toggleAllRegions}
-                        className="text-[11px] font-bold text-[#D96B27] hover:underline cursor-pointer"
-                      >
-                        {guide.operatingRegions.length === REGIONS_LIST.length ? "إلغاء الكل" : "تحديد كافة المناطق"}
-                      </button>
+                      <span className="text-[11px] font-black text-[#D96B27]">
+                        {guide.placeIds.length} معالم مختارة
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 p-2.5 bg-white rounded-2xl border border-[#E2E8F0] max-h-40 overflow-y-auto shadow-2xs">
-                      {REGIONS_LIST.map((reg) => {
-                        const isChecked = guide.operatingRegions.includes(reg.id);
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-white rounded-2xl border border-[#E2E8F0] max-h-44 overflow-y-auto shadow-2xs">
+                      {attractionsList.map((attr) => {
+                        const pid = attr.place_id || attr.id;
+                        const pname = attr.place_name || attr.name;
+                        const isChecked = guide.placeIds.includes(pid);
                         return (
                           <div
-                            key={reg.id}
-                            onClick={() => toggleRegion(reg.id)}
+                            key={pid}
+                            onClick={() => togglePlaceId(pid)}
                             className={`flex items-center gap-2 p-2 rounded-xl border text-right transition-all cursor-pointer select-none text-[11px] font-bold ${
                               isChecked
                                 ? "border-[#D96B27] bg-[#D96B27]/10 text-[#D96B27] shadow-xs"
@@ -896,7 +1008,7 @@ function SignupPage() {
                             <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 text-[10px] font-black ${isChecked ? "bg-[#D96B27] border-[#D96B27] text-white" : "border-[#CBD5E0]"}`}>
                               {isChecked && "✓"}
                             </div>
-                            <span className="truncate flex-1">{reg.nameAr}</span>
+                            <span className="truncate flex-1">🏛️ {pname} {attr.city ? `(${attr.city})` : ""}</span>
                           </div>
                         );
                       })}
@@ -1002,20 +1114,23 @@ function SignupPage() {
                           accept="image/*,application/pdf"
                           className="hidden"
                           onClick={(e) => (e.currentTarget.value = '')}
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const filesArr = Array.from(e.target.files ?? []);
                             if (filesArr.length > 0) {
-                              setGuide((g) => ({ ...g, certs: filesArr.map(f => f.name), certDataUrls: [] }));
-                              filesArr.forEach((file) => {
-                                const reader = new FileReader();
-                                reader.onload = (loadEv) => {
-                                  const url = loadEv.target?.result as string;
-                                  if (url) {
-                                    setGuide((g) => ({ ...g, certDataUrls: [...g.certDataUrls, url] }));
-                                  }
-                                };
-                                reader.readAsDataURL(file);
+                              const readPromises = filesArr.map(file => {
+                                return new Promise<string>((resolve) => {
+                                  const reader = new FileReader();
+                                  reader.onload = (loadEv) => resolve((loadEv.target?.result as string) || "");
+                                  reader.onerror = () => resolve("");
+                                  reader.readAsDataURL(file);
+                                });
                               });
+                              const urls = await Promise.all(readPromises);
+                              setGuide((g) => ({
+                                ...g,
+                                certs: filesArr.map(f => f.name),
+                                certDataUrls: urls.filter(Boolean),
+                              }));
                             }
                           }}
                         />
@@ -1083,20 +1198,23 @@ function SignupPage() {
                               accept="image/*,application/pdf"
                               className="hidden"
                               onClick={(e) => (e.currentTarget.value = '')}
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 const filesArr = Array.from(e.target.files ?? []);
                                 if (filesArr.length > 0) {
-                                  setGuide((g) => ({ ...g, certs: [...g.certs, ...filesArr.map(f => f.name)] }));
-                                  filesArr.forEach((file) => {
-                                    const reader = new FileReader();
-                                    reader.onload = (loadEv) => {
-                                      const url = loadEv.target?.result as string;
-                                      if (url) {
-                                        setGuide((g) => ({ ...g, certDataUrls: [...g.certDataUrls, url] }));
-                                      }
-                                    };
-                                    reader.readAsDataURL(file);
+                                  const readPromises = filesArr.map(file => {
+                                    return new Promise<string>((resolve) => {
+                                      const reader = new FileReader();
+                                      reader.onload = (loadEv) => resolve((loadEv.target?.result as string) || "");
+                                      reader.onerror = () => resolve("");
+                                      reader.readAsDataURL(file);
+                                    });
                                   });
+                                  const urls = await Promise.all(readPromises);
+                                  setGuide((g) => ({
+                                    ...g,
+                                    certs: [...g.certs, ...filesArr.map(f => f.name)],
+                                    certDataUrls: [...g.certDataUrls, ...urls.filter(Boolean)],
+                                  }));
                                 }
                               }}
                             />
@@ -1178,6 +1296,7 @@ function Field({
   onKeyDown,
   required,
   suffix,
+  min,
   icon: Icon,
 }: {
   label: string;
@@ -1188,6 +1307,7 @@ function Field({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   required?: boolean;
   suffix?: string;
+  min?: number | string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   const isNumber = type === "number";
@@ -1195,7 +1315,8 @@ function Field({
   const handleStep = (delta: number) => {
     const current = parseFloat(value) || 0;
     const stepSize = label.includes("التكلفة") ? 10 : 1;
-    const nextVal = Math.max(0, current + delta * stepSize);
+    const minVal = min !== undefined ? Number(min) : 0;
+    const nextVal = Math.max(minVal, current + delta * stepSize);
     onChange(String(nextVal));
   };
 
@@ -1245,6 +1366,7 @@ function Field({
           type={type}
           value={value}
           required={required}
+          min={min}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}

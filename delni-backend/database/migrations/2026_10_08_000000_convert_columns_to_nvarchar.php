@@ -47,13 +47,11 @@ return new class extends Migration
             "ALTER TABLE weekly_trips ALTER COLUMN itinerary_summary NVARCHAR(MAX) NULL",
             "ALTER TABLE weekly_trips ALTER COLUMN status NVARCHAR(50) NULL",
 
-            "ALTER TABLE places ALTER COLUMN name NVARCHAR(150) NOT NULL",
-            "ALTER TABLE places ALTER COLUMN city NVARCHAR(100) NULL",
-            "ALTER TABLE places ALTER COLUMN region NVARCHAR(100) NULL",
-            "ALTER TABLE places ALTER COLUMN category NVARCHAR(50) NULL",
-            "ALTER TABLE places ALTER COLUMN description NVARCHAR(MAX) NULL",
-            "ALTER TABLE places ALTER COLUMN historical_period NVARCHAR(100) NULL",
-            "ALTER TABLE places ALTER COLUMN best_time_to_visit NVARCHAR(100) NULL",
+            "ALTER TABLE places_tourist ALTER COLUMN place_name NVARCHAR(150) NOT NULL",
+            "ALTER TABLE places_tourist ALTER COLUMN city NVARCHAR(100) NULL",
+            "ALTER TABLE places_tourist ALTER COLUMN region NVARCHAR(100) NULL",
+            "ALTER TABLE places_tourist ALTER COLUMN category NVARCHAR(100) NULL",
+            "ALTER TABLE places_tourist ALTER COLUMN description NVARCHAR(MAX) NULL",
 
             "ALTER TABLE hotels ALTER COLUMN hotel_name NVARCHAR(150) NOT NULL",
             "ALTER TABLE hotels ALTER COLUMN city NVARCHAR(100) NULL",

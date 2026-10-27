@@ -2429,23 +2429,23 @@ function TripsPage() {
         const allCombinedTrips = [...mappedDaily, ...mappedWeekly];
         const allCombinedOffers = [...mappedDailyOffers, ...mappedWeeklyOffers];
 
-        if (allCombinedTrips.length > 0) {
-          setLiveDbTrips(allCombinedTrips);
-          try {
-            if (typeof window !== "undefined") {
+        // Strict DB Synchronization: Show only real admin-created trips from DelniDB
+        setLiveDbTrips(allCombinedTrips);
+        setDbOffers(allCombinedOffers);
+        try {
+          if (typeof window !== "undefined") {
+            if (allCombinedTrips.length > 0) {
               localStorage.setItem("dallani_cached_trips", JSON.stringify(allCombinedTrips));
+            } else {
+              localStorage.removeItem("dallani_cached_trips");
             }
-          } catch {}
-        }
-
-        if (allCombinedOffers.length > 0) {
-          setDbOffers(allCombinedOffers);
-          try {
-            if (typeof window !== "undefined") {
+            if (allCombinedOffers.length > 0) {
               localStorage.setItem("dallani_cached_offers", JSON.stringify(allCombinedOffers));
+            } else {
+              localStorage.removeItem("dallani_cached_offers");
             }
-          } catch {}
-        }
+          }
+        } catch {}
       } catch (err) {
         console.error("Failed to load live database trips:", err);
       } finally {
@@ -2994,7 +2994,28 @@ function TripsPage() {
           </div>
         )}
 
-        {!isLoading && filtered.length === 0 && (
+        {!isLoading && allTrips.length === 0 && (
+          <div className="bg-white rounded-3xl p-12 text-center border border-[#E8E2D6] shadow-sm my-8">
+            <div className="text-4xl mb-3">🧭</div>
+            <h3 className="text-lg font-black text-[#003580] mb-1">
+              {isAr ? "لا توجد رحلات سياحية مجدولة حالياً" : "No Scheduled Tours Available Yet"}
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto mb-4">
+              {isAr
+                ? "سيتم إدراج الرحلات اليومية والأسبوعية هنا فور قيام إدارة المنصة بإنشائها ونشرها. يمكنك أيضاً طلب رحلة خاصة مخصصة بالكامل."
+                : "Trips created by the administration will appear here live. You can also design your own custom private tour."}
+            </p>
+            <button
+              type="button"
+              onClick={() => setPrivateOpen(true)}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-xs font-black shadow-md cursor-pointer hover:brightness-105 transition"
+            >
+              {isAr ? "تصميم رحلة خاصة مخصصة ✨" : "Design Custom Private Tour ✨"}
+            </button>
+          </div>
+        )}
+
+        {!isLoading && allTrips.length > 0 && filtered.length === 0 && (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#E8E2D6] shadow-sm my-8">
             <div className="text-4xl mb-3">🔍</div>
             <h3 className="text-lg font-black text-[#003580] mb-1">

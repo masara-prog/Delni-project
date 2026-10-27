@@ -169,7 +169,7 @@ function AttractionsPage() {
   // Dynamic touristic cities from DelniDB
   const dynamicCities: CityDestinationItem[] = useMemo(() => {
     if (!dbPlaces || dbPlaces.length === 0) {
-      return LIBYAN_CITIES;
+      return [];
     }
     return dbPlaces.map((p, idx) => {
       let hl: string[] = [];

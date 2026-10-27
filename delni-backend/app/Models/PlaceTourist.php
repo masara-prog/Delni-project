@@ -22,16 +22,11 @@ class PlaceTourist extends Model
         'latitude',
         'category',
         'place_image',
-        'is_unesco',
-        'unesco_year',
         'google_maps_url',
-        'history_snippet',
         'highlights',
     ];
 
     protected $casts = [
-        'is_unesco' => 'boolean',
-        'unesco_year' => 'integer',
         'longitude' => 'decimal:6',
         'latitude' => 'decimal:6',
     ];

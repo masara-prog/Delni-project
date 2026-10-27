@@ -269,16 +269,12 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                     tourist_id: touristId,
                     weekly_trip_id: item.id || "WT-201",
                     number_of_seats: nSeats,
-                    passengers_names: accountName || "سائح",
-                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
                   });
                 } else {
                   res = await apiBookDailyTrip({
                     tourist_id: touristId,
                     daily_trip_id: item.id || "DT-101",
                     number_of_seats: nSeats,
-                    passengers_names: accountName || "سائح",
-                    booking_notes: `تاريخ الرحلة المطلوب: ${date} - الهاتف: ${phone}`,
                   });
                 }
 
@@ -1268,7 +1264,7 @@ export function TripScheduleModal({
           const localWeekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
           const allUserBookings = [...localDaily, ...localWeekly].filter(
             (b: any) =>
-              (b.tourist_id === touristId || b.passengers_names === session.user?.full_name) &&
+              (b.tourist_id === touristId) &&
               (b.daily_trip_id === targetTripId ||
                 b.weekly_trip_id === targetTripId ||
                 b.trip_title === targetTitle)
@@ -1592,8 +1588,6 @@ export function TripScheduleModal({
                     trip_title: targetTitle,
                     seat_per_price: selectedTrip.price,
                     number_of_seats: n,
-                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
-                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
                   });
                 } else {
                   await apiBookDailyTrip({
@@ -1602,8 +1596,6 @@ export function TripScheduleModal({
                     trip_title: targetTitle,
                     price_per_seat: selectedTrip.price,
                     number_of_seats: n,
-                    passengers_names: session.user?.full_name || session.user?.name || "سائح",
-                    booking_notes: `موعد الرحلة: ${selectedTrip.date} ${selectedTrip.time} - المرشد: ${selectedTrip.guide}`,
                   });
                 }
               } catch (err) {
@@ -1853,20 +1845,18 @@ export function PrivateTripModal({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch genuine landmarks from database (strictly excluding UNESCO sites)
+  // Fetch genuine landmarks from database
   const loadLandmarks = () => {
     setLoadingPlaces(true);
     setPlacesError(null);
-    fetch("http://127.0.0.1:5001/api/db/places?exclude_unesco=true")
+    fetch("http://127.0.0.1:5001/api/db/places")
       .then((r) => {
         if (!r.ok) throw new Error("تعذر جلب المعالم من خادم المنصة");
         return r.json();
       })
       .then((res) => {
         if (res?.success && Array.isArray(res.data)) {
-          // Strictly exclude UNESCO sites per platform policy
-          const nonUnesco = res.data.filter((p: any) => !p.is_unesco);
-          setDbPlaces(nonUnesco);
+          setDbPlaces(res.data);
         } else {
           throw new Error("لم يتم العثور على معالم مسجلة بقاعدة البيانات");
         }
@@ -1897,7 +1887,6 @@ export function PrivateTripModal({
         region: p.region || p.city || "ليبيا",
         category: p.category || "معلم سياحي",
         image: p.place_image || p.photo || resolveTripImage(p.place_name),
-        isUnesco: Boolean(p.is_unesco),
       };
     });
   }, [dbPlaces]);

@@ -19,13 +19,19 @@ class DailyTrip extends Model
         'price_per_seat',
         'is_active',
         'photo',
+        'photo_1',
+        'photo_2',
+        'photo_3',
+        'photo_4',
+        'photo_5',
         'max_capacity',
         'available_seats',
         'guide_license_number',
         'departure_city',
         'destination_city',
-        'recurring_days',
-        'activities',
+        'google_maps_url',
+        'vehicle_plate',
+        'restaurant_id',
     ];
 
     protected $casts = [
@@ -40,19 +46,24 @@ class DailyTrip extends Model
         return $this->belongsTo(TourGuide::class, 'guide_license_number', 'license_number');
     }
 
-    public function bookings()
+    public function vehicle()
     {
-        return $this->hasMany(BookingDaily::class, 'daily_trip_id', 'daily_trip_id');
-    }
-
-    public function vehicleAllocations()
-    {
-        return $this->hasMany(DailyTripVehicle::class, 'daily_trip_id', 'daily_trip_id');
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
     }
 
     public function vehicles()
     {
-        return $this->belongsToMany(Vehicle::class, 'daily_trip_vehicles', 'daily_trip_id', 'plate_number');
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
+    }
+
+    public function restaurant()
+    {
+        return $this->belongsTo(RestaurantCafe::class, 'restaurant_id', 'facility_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(BookingDaily::class, 'daily_trip_id', 'daily_trip_id');
     }
 
     public function offers()

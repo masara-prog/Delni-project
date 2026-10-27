@@ -29,11 +29,6 @@ class TripController extends Controller
     public function places(Request $request)
     {
         $query = PlaceTourist::query();
-        if ($request->boolean('exclude_unesco') || $request->input('is_unesco') === '0' || $request->input('is_unesco') === 'false') {
-            $query->where(function($q) {
-                $q->where('is_unesco', false)->orWhereNull('is_unesco')->orWhere('is_unesco', 0);
-            });
-        }
         if ($request->filled('city') && $request->input('city') !== 'all') {
             $query->where('city', $request->input('city'));
         }
@@ -503,9 +498,6 @@ class TripController extends Controller
             $query->where('category', $request->query('category'));
         }
 
-        if ($request->boolean('exclude_unesco')) {
-            $query->where('is_unesco', false);
-        }
 
         $places = $query->orderBy('place_name', 'asc')->get();
         return response()->json([

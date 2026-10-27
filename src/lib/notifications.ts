@@ -1,3 +1,4 @@
+
 // @ts-check
 /**
  * Real-time Unified Notifications System for Delni Platform
@@ -73,7 +74,7 @@ export function saveAllNotifications(items: NotificationItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(NOTIF_EVENT, { detail: items }));
-  } catch {}
+  } catch { }
 }
 
 /**
@@ -169,7 +170,7 @@ export async function fetchUnreadCount(): Promise<number> {
       const json = await res.json();
       if (typeof json.count === "number") return json.count;
     }
-  } catch {}
+  } catch { }
 
   // Fallback to local unread count
   return getUserNotifications().filter((n) => !n.read).length;
@@ -221,7 +222,7 @@ export function addNotification(notif: {
         dedupe_key: newItem.dedupeKey,
       }),
       signal: AbortSignal.timeout(3000),
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   return newItem;
@@ -241,7 +242,7 @@ export function markNotificationRead(id: string): void {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
       signal: AbortSignal.timeout(2000),
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -278,7 +279,7 @@ export function markAllNotificationsRead(): void {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ all: true, role: currentRole, user_id: currentUserId }),
       signal: AbortSignal.timeout(2000),
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 

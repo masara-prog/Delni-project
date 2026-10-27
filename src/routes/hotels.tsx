@@ -1216,7 +1216,7 @@ function HotelsPage() {
     const fetchHotels = async () => {
       try {
         const liveHotels = await apiGetHotels();
-        if (Array.isArray(liveHotels) && liveHotels.length > 0) {
+        if (Array.isArray(liveHotels)) {
           const mapped: HotelData[] = liveHotels.map((item: any) => {
             const rawType = item.property_type || item.propertyType || "hotel";
             const cleanType =

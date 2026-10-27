@@ -47,7 +47,7 @@ function GuidesPage() {
   useEffect(() => {
     async function fetchLiveGuides() {
       const data = await apiGetGuidesCatalog();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         const mapped: TourGuide[] = data.map((g: any, idx: number) => {
           let opRegions: string[] = [];
           try {
@@ -100,9 +100,10 @@ function GuidesPage() {
             phone: g.phone_number || "",
             verified: g.verification_status === "موثق",
             totalToursCompleted: Number(g.total_tours_completed) || 0,
-            specialties: g.specialties
-              ? (typeof g.specialties === 'string' ? g.specialties.split("، ") : g.specialties)
-              : ["جولات تاريخية", "إرشاد سياحي"],
+            specialties: Array.isArray(g.places) && g.places.length > 0
+              ? g.places.map((p: any) => p.place_name)
+              : (Array.isArray(g.specialties) ? g.specialties : []),
+            places: g.places || [],
             workingDays: wDays.length > 0 ? wDays : ["طوال أيام الأسبوع"],
           };
         });
@@ -113,7 +114,7 @@ function GuidesPage() {
   }, []);
 
   const guidesSource = useMemo(() => {
-    return dbGuides;
+    return dbGuides.filter((g) => g.verified);
   }, [dbGuides]);
 
   // Filters State
@@ -511,11 +512,18 @@ function GuidesPage() {
                         {guide.title}
                       </p>
 
-                      {/* Location / Work Place (مكان العمل ونطاق الإرشاد) */}
-                      <div className="flex items-center gap-1.5 text-xs font-black text-[#EA580C] mt-1.5" title={formatOperatingRegions(guide.operatingRegions)}>
-                        <MapPin className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
-                        <span className="truncate">{formatOperatingRegions(guide.operatingRegions)}</span>
-                      </div>
+                      {/* Approved Landmarks of Expertise */}
+                      {guide.specialties && guide.specialties.length > 0 ? (
+                        <div className="flex items-center gap-1.5 text-xs font-black text-[#EA580C] mt-1.5" title={guide.specialties.join("، ")}>
+                          <span className="shrink-0">🏛️</span>
+                          <span className="truncate">{guide.specialties.join("، ")}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs font-black text-[#EA580C] mt-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
+                          <span className="truncate">{formatOperatingRegions(guide.operatingRegions)}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Explicit Working Days Highlight Badge */}
@@ -533,7 +541,7 @@ function GuidesPage() {
                         </span>
                         <span className="text-stone-300">•</span>
                         <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          ✓ مرخص ومعتمد
+                          {guide.pricePerDay || 150} د.ل/اليوم
                         </span>
                       </div>
 

@@ -45,7 +45,6 @@ type TouristManifestItem = {
   trip_name: string;
   payment_status: "paid" | "unpaid" | "cash_at_office";
   attended: boolean;
-  passengers_names?: string;
 };
 
 const REGIONS_LIST = [
@@ -235,7 +234,6 @@ function GuideDashboard() {
                   trip_name: d.trip_title || d.title,
                   payment_status: b.payment_status || (b.is_paid ? "paid" : "cash_at_office"),
                   attended: Boolean(b.attended ?? b.attendance_status),
-                  passengers_names: b.passengers_names || b.notes || "",
                 });
               });
             }
@@ -255,7 +253,6 @@ function GuideDashboard() {
                   trip_name: w.trip_title || w.title,
                   payment_status: b.payment_status || (b.is_paid ? "paid" : "cash_at_office"),
                   attended: Boolean(b.attended ?? b.attendance_status),
-                  passengers_names: b.passengers_names || b.notes || "",
                 });
               });
             }
@@ -647,7 +644,6 @@ function GuideDashboard() {
                         <th className="p-2.5">اسم السائح</th>
                         <th className="p-2.5">رقم الهاتف</th>
                         <th className="p-2.5">عدد المقاعد</th>
-                        <th className="p-2.5">أسماء المرافقين</th>
                         <th className="p-2.5">حالة الدفع</th>
                         <th className="p-2.5">إجراء الحضور</th>
                       </tr>
@@ -659,7 +655,6 @@ function GuideDashboard() {
                           <td className="p-2.5 font-bold text-stone-900">{tr.tourist_name}</td>
                           <td className="p-2.5 font-mono text-stone-600 text-[11px]" dir="ltr">{tr.phone_number}</td>
                           <td className="p-2.5 font-bold text-[#1B5A78]">{tr.seats_count} مقاعد</td>
-                          <td className="p-2.5 text-stone-500 text-[11px]">{tr.passengers_names || "-"}</td>
                           <td className="p-2.5">
                             <span
                               className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${

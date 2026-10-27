@@ -175,13 +175,11 @@ class DatabaseSeeder extends Seeder
             [
                 'place_name' => 'لبدة الكبرى (Leptis Magna)',
                 'city' => 'الخمس',
-                'category' => 'آثار رومانية - يونسكو',
+                'category' => 'آثار رومانية',
                 'description' => 'واحدة من أبرز وأجمل المدن الأثرية الرومانية في حوض المتوسط، تضم مسرحاً مهيباً وقوس سبتيموس وحمامات هادريان.',
                 'place_image' => '/assets/dest-leptis.jpg',
                 'latitude' => 32.6358,
                 'longitude' => 14.2975,
-                'is_unesco' => true,
-                'unesco_year' => 1982,
             ]
         );
 
@@ -190,13 +188,11 @@ class DatabaseSeeder extends Seeder
             [
                 'place_name' => 'مسرح صبراتة الأثري',
                 'city' => 'صبراتة',
-                'category' => 'آثار رومانية وفينيقية - يونسكو',
+                'category' => 'آثار رومانية وفينيقية',
                 'description' => 'مسرح روماني ساحلي بديع بهيكل معماري متفرد ذي ثلاثة طوابق من الأعمدة الرخامية البديعة المطلة على البحر.',
                 'place_image' => '/assets/dest-sabratah.png',
                 'latitude' => 32.7933,
                 'longitude' => 12.4842,
-                'is_unesco' => true,
-                'unesco_year' => 1982,
             ]
         );
 
@@ -210,7 +206,6 @@ class DatabaseSeeder extends Seeder
                 'place_image' => '/assets/dest-ubari.jpg',
                 'latitude' => 26.5833,
                 'longitude' => 12.7667,
-                'is_unesco' => false,
             ]
         );
     }

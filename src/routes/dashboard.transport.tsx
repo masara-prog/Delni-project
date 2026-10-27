@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import destUbari from "@/assets/dest-ubari.jpg";
 import destAcacus from "@/assets/dest-acacus.jpg";
@@ -1097,14 +1097,31 @@ function VehicleModal({
   const { language } = useLanguage();
   const isAr = language === 'ar';
 
+  // Empty fields by default when adding a new vehicle (only fill if editing existing vehicle)
   const [plate, setPlate] = useState(vehicle?.plate_number || "");
-  const [type, setType] = useState(vehicle?.vehicle_type || "تويوتا كوستر 2025");
-  const [seats, setSeats] = useState(vehicle?.seating_capacity ? String(vehicle.seating_capacity) : "20");
-  const [dailyRate, setDailyRate] = useState(vehicle?.daily_rate ? String(vehicle.daily_rate) : "450");
-  const [category, setCategory] = useState(vehicle?.category || "حافلة سياحية");
+  const [type, setType] = useState(vehicle?.vehicle_type || "");
+  const [seats, setSeats] = useState(vehicle?.seating_capacity ? String(vehicle.seating_capacity) : "15");
+  const [dailyRate, setDailyRate] = useState(vehicle?.daily_rate ? String(vehicle.daily_rate) : "");
+  const [category, setCategory] = useState(vehicle?.category || (isAr ? "حافلة سياحية" : "Tourist Bus"));
   const [status, setStatus] = useState<Vehicle["vehicle_status"]>(vehicle?.vehicle_status || "جاهزة");
   const [insuranceImg, setInsuranceImg] = useState(vehicle?.insurance_image || "");
-  const [vehicleImg, setVehicleImg] = useState(vehicle?.vehicle_image || officeBusImg);
+  const [vehicleImg, setVehicleImg] = useState(vehicle?.vehicle_image || (vehicle ? officeBusImg : ""));
+
+  // Refs for seamless Enter-key navigation between inputs
+  const plateRef = useRef<HTMLInputElement>(null);
+  const seatsRef = useRef<HTMLSelectElement>(null);
+  const typeRef = useRef<HTMLInputElement>(null);
+  const categoryRef = useRef<HTMLSelectElement>(null);
+  const rateRef = useRef<HTMLInputElement>(null);
+  const driverRef = useRef<HTMLSelectElement>(null);
+  const statusRef = useRef<HTMLSelectElement>(null);
+
+  const handleKeyDownNext = (nextRef: React.RefObject<HTMLInputElement | HTMLSelectElement | null>) => (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      nextRef.current?.focus();
+    }
+  };
 
   // Driver Assignment: Check which drivers are unassigned or assigned to this vehicle
   const isDriverAvailable = (d: Driver) => {
@@ -1130,33 +1147,38 @@ function VehicleModal({
     const cleanPlate = plate.trim();
     if (!cleanPlate) {
       setErrorMsg(isAr ? "يرجى إدخال رقم اللوحة المعدنية للمركبة." : "Please enter plate number.");
+      plateRef.current?.focus();
       return;
     }
 
     // Plate number must be numbers only
     if (!/^\d+$/.test(cleanPlate)) {
       setErrorMsg(isAr ? "رقم اللوحة المعدنية للمركبة يجب أن يتكون من أرقام فقط." : "Plate number must contain digits only.");
+      plateRef.current?.focus();
       return;
     }
 
     // Check duplicate plate
     if (!vehicle && vehicles.some(v => v.plate_number === cleanPlate)) {
       setErrorMsg(isAr ? "رقم اللوحة المعدنية مسجل مسبقاً لمركبة أخرى في الأسطول." : "This plate number already exists.");
+      plateRef.current?.focus();
       return;
     }
 
     if (!type.trim()) {
-      setErrorMsg(isAr ? "يرجى تحديد نوع وموديل المركبة." : "Please enter vehicle make and model.");
+      setErrorMsg(isAr ? "يرجى إدخال نوع وموديل المركبة." : "Please enter vehicle make and model.");
+      typeRef.current?.focus();
       return;
     }
-    const seatsNum = Number(seats);
-    if (isNaN(seatsNum) || seatsNum <= 0) {
-      setErrorMsg(isAr ? "عدد المقاعد يجب أن يكون رقماً صحيحاً أكبر من 0." : "Seats must be greater than 0.");
+    const seatsNum = Number(seats) || 15;
+    if (seatsNum !== 15 && seatsNum !== 25 && seatsNum !== 50) {
+      setErrorMsg(isAr ? "سعة الركاب يجب أن تكون 15 أو 25 أو 50 راكب فقط." : "Capacity must be either 15, 25, or 50 passengers.");
       return;
     }
     const rateNum = Number(dailyRate);
     if (isNaN(rateNum) || rateNum <= 0) {
       setErrorMsg(isAr ? "سعر التأجير اليومي يجب أن يكون رقماً أكبر من 0." : "Daily rate must be greater than 0.");
+      rateRef.current?.focus();
       return;
     }
 
@@ -1170,7 +1192,7 @@ function VehicleModal({
       vehicle_status: status,
       insurance_details: "مرفق صورة الوثيقة",
       insurance_image: insuranceImg,
-      vehicle_image: vehicleImg,
+      vehicle_image: vehicleImg || officeBusImg,
     }, { licenseNumber: selectedDriverLic });
   };
 
@@ -1190,23 +1212,56 @@ function VehicleModal({
               {isAr ? "رقم اللوحة المعدنية (أرقام فقط) *" : "Plate Number (Digits only) *"}
             </label>
             <input
+              ref={plateRef}
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               value={plate}
               onChange={(e) => setPlate(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={handleKeyDownNext(seatsRef)}
               placeholder="مثال: 58214"
               required
               className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
             />
           </div>
-          <Field label={isAr ? "عدد المقاعد *" : "Seating Capacity *"} type="number" value={seats} onChange={setSeats} required />
+
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">
+              {isAr ? "عدد ركاب المركبة (سعة محددة) *" : "Passenger Capacity *"}
+            </label>
+            <select
+              ref={seatsRef}
+              value={seats}
+              onChange={(e) => setSeats(e.target.value)}
+              onKeyDown={handleKeyDownNext(typeRef)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="15">👥 15 راكب (فان / ميني باص صغير)</option>
+              <option value="25">👥 25 راكب (ميني باص سياحي متوسط)</option>
+              <option value="50">👥 50 راكب (حافلة سياحية كبرى)</option>
+            </select>
+          </div>
         </div>
+
         <div className="grid grid-cols-2 gap-2">
-          <Field label={isAr ? "نوع وموديل السيارة *" : "Vehicle Make & Model *"} value={type} onChange={setType} placeholder={isAr ? "مثال: تويوتا كوستر 2025" : "e.g., Toyota Coaster 2025"} required />
+          <Field
+            inputRef={typeRef}
+            label={isAr ? "نوع وموديل السيارة *" : "Vehicle Make & Model *"}
+            value={type}
+            onChange={setType}
+            onKeyDown={handleKeyDownNext(categoryRef)}
+            placeholder={isAr ? "مثال: تويوتا كوستر 2025" : "e.g., Toyota Coaster 2025"}
+            required
+          />
           <div>
             <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "فئة المركبة *" : "Vehicle Category *"}</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right">
+            <select
+              ref={categoryRef}
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              onKeyDown={handleKeyDownNext(rateRef)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary cursor-pointer"
+            >
               <option value="حافلة سياحية">{isAr ? "حافلة سياحية" : "Tourist Bus"}</option>
               <option value="ميني باص">{isAr ? "ميني باص" : "Mini Bus"}</option>
               <option value="فان">{isAr ? "فان" : "Van"}</option>
@@ -1215,8 +1270,18 @@ function VehicleModal({
             </select>
           </div>
         </div>
+
         <div>
-          <Field label={isAr ? "سعر اليوم الواحد (د.ل) *" : "Daily Rate (LYD) *"} type="number" value={dailyRate} onChange={setDailyRate} placeholder="450" required />
+          <Field
+            inputRef={rateRef}
+            label={isAr ? "سعر اليوم الواحد (د.ل) *" : "Daily Rate (LYD) *"}
+            type="number"
+            value={dailyRate}
+            onChange={setDailyRate}
+            onKeyDown={handleKeyDownNext(driverRef)}
+            placeholder="مثال: 450"
+            required
+          />
         </div>
         
         {/* DRIVER ASSIGNMENT SECTION */}
@@ -1233,8 +1298,10 @@ function VehicleModal({
           {selectableDrivers.length > 0 ? (
             <div>
               <select
+                ref={driverRef}
                 value={selectedDriverLic}
                 onChange={(e) => setSelectedDriverLic(e.target.value)}
+                onKeyDown={handleKeyDownNext(statusRef)}
                 className="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-right outline-none focus:border-[#1B5A78]"
               >
                 <option value="">{isAr ? "-- بدون تعيين سائق حالياً --" : "-- No Driver Assigned --"}</option>
@@ -1262,7 +1329,12 @@ function VehicleModal({
 
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "حالة السيارة *" : "Vehicle Status *"}</label>
-          <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right">
+          <select
+            ref={statusRef}
+            value={status}
+            onChange={e => setStatus(e.target.value as any)}
+            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary cursor-pointer"
+          >
             <option value="جاهزة">{isAr ? "جاهزة للرحلات" : "Ready for Trips"}</option>
             <option value="في رحلة">{isAr ? "في رحلة حالية" : "On a Trip"}</option>
             <option value="صيانة">{isAr ? "قيد الصيانة" : "Under Maintenance"}</option>
@@ -1387,7 +1459,7 @@ function ModalShell({ title, children, onClose }: { title: string; children: Rea
   );
 }
 
-function LibyanPhoneField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function LibyanPhoneField({ label, value, onChange, onKeyDown, inputRef }: { label: string; value: string; onChange: (v: string) => void; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void; inputRef?: React.Ref<HTMLInputElement> }) {
   const [error, setError] = useState("");
   const handleChange = (val: string) => {
     onChange(val);
@@ -1396,20 +1468,30 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
-      <input type="tel" value={value} onChange={e => handleChange(e.target.value)} placeholder="09..." className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
+      <input
+        ref={inputRef}
+        type="tel"
+        value={value}
+        onChange={e => handleChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder="09..."
+        className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`}
+      />
       {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder, required }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean }) {
+function Field({ label, type = "text", value, onChange, placeholder, required, onKeyDown, inputRef }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void; inputRef?: React.Ref<HTMLInputElement> }) {
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
       <input
+        ref={inputRef}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"

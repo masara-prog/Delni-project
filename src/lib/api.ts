@@ -1,3 +1,33 @@
+// Automatic one-time cleanup to ensure fresh start with 0 data across the entire platform
+if (typeof window !== "undefined") {
+  const resetDone = localStorage.getItem("dalni_full_wipe_clean_v4");
+  if (!resetDone) {
+    try {
+      const keysToClear = [
+        "dalni_hotels",
+        "dalni_restaurants",
+        "dalni_bookings_daily",
+        "dalni_bookings_weekly",
+        "dalni_tourists",
+        "dalni_guides",
+        "dalni_companies",
+        "dalni_vehicles",
+        "dalni_drivers",
+        "dalni_notifications",
+        "dalni_places",
+        "dalni_offers_daily",
+        "dalni_offers_weekly",
+        "dalni_favorites",
+        "dalni_chat_sessions"
+      ];
+      keysToClear.forEach(k => {
+        localStorage.removeItem(k);
+        localStorage.setItem(k, "[]");
+      });
+      localStorage.setItem("dalni_full_wipe_clean_v4", "true");
+    } catch { }
+  }
+}
 /**
  * Delni Platform - Universal Client & Data Management Layer
  * Implements complete local persistence for:
@@ -592,7 +622,22 @@ export function getAllGuides(): GuideRecord[] {
 }
 
 export function saveAllGuides(guides: GuideRecord[]) {
-  localStorage.setItem(STORAGE_KEYS.GUIDES, JSON.stringify(guides));
+  try {
+    // Sanitize heavy Base64 files to avoid exceeding browser LocalStorage 5MB quota
+    const sanitized = guides.map((g) => {
+      const copy = { ...g };
+      if (copy.digital_certificate_file && copy.digital_certificate_file.length > 300) {
+        copy.digital_certificate_file = "[db_stored]";
+      }
+      if (copy.avatar && copy.avatar.length > 2000) {
+        copy.avatar = "";
+      }
+      return copy;
+    });
+    localStorage.setItem(STORAGE_KEYS.GUIDES, JSON.stringify(sanitized));
+  } catch (err) {
+    console.warn("Could not save guides to localStorage (quota or storage unavailable):", err);
+  }
 }
 
 export function updateGuideVerification(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة"): boolean {
@@ -940,8 +985,6 @@ export async function apiBookDailyTrip(params: {
   number_of_seats: number;
   trip_title?: string;
   price_per_seat?: number;
-  passengers_names?: string;
-  booking_notes?: string;
   total_price?: number;
 }): Promise<ApiResponse> {
   try {
@@ -971,8 +1014,6 @@ export async function apiBookWeeklyTrip(params: {
   number_of_seats: number;
   trip_title?: string;
   seat_per_price?: number;
-  passengers_names?: string;
-  booking_notes?: string;
   total_price?: number;
 }): Promise<ApiResponse> {
   try {
@@ -1016,6 +1057,7 @@ export async function apiRegisterGuide(params: {
   price_per_day?: number;
   title?: string;
   avatar?: string;
+  place_ids?: string[];
 }): Promise<ApiResponse> {
   const newGuide: GuideRecord = {
     license_number: params.license_number,
@@ -1041,18 +1083,9 @@ export async function apiRegisterGuide(params: {
     registered_at: new Date().toISOString(),
   };
 
-  const guides = getAllGuides();
-  const existingIdx = guides.findIndex((g) => g.license_number === newGuide.license_number);
-  if (existingIdx !== -1) {
-    guides[existingIdx] = { ...guides[existingIdx], ...newGuide };
-  } else {
-    guides.push(newGuide);
-  }
-  saveAllGuides(guides);
-
-  // Directly persist to Laravel API (Microsoft SQL Server DelniDB)
+  // Directly persist to Microsoft SQL Server DelniDB
   try {
-    const laravelRes = await fetch(`http://127.0.0.1:8000/api/auth/register/guide`, {
+    const bridgeRes = await fetch(`${BACKEND_API_URL}/guides`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1078,34 +1111,37 @@ export async function apiRegisterGuide(params: {
         speaks_english: Boolean(params.speaks_english),
         speaks_french: Boolean(params.speaks_french),
         speaks_italian: Boolean(params.speaks_italian),
+        place_ids: params.place_ids,
+        verification_status: "بانتظار التوثيق",
       }),
     });
-    const resData = await laravelRes.json();
-    if (!laravelRes.ok && resData.message) {
-      console.warn("Laravel guide register warning:", resData);
+    const resData = await bridgeRes.json().catch(() => ({}));
+    if (!bridgeRes.ok) {
       return {
         status: "error",
-        message: resData.message || (resData.errors ? Object.values(resData.errors).flat().join(" - ") : "فشل التسجيل في قاعدة البيانات"),
+        message: resData.error || resData.message || "فشل حفظ بيانات المرشد في قاعدة البيانات",
       };
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error("Failed to connect to backend for guide registration:", e);
+    return {
+      status: "error",
+      message: "تعذر الاتصال بقاعدة البيانات. يرجى التأكد من تشغيل خادم المنصة والمحاولة مجدداً.",
+    };
   }
 
-  // Also notify background bridge if present
-  sendToSecureBackend("guides", {
-    license_number: params.license_number,
-    full_name: params.full_name,
-    phone_number: params.phone_number,
-    email: params.email,
-    password: params.password,
-    years_of_experience: params.years_of_experience,
-    price_per_day: params.price_per_day,
-    bio: params.bio,
-    avatar: params.avatar,
-    digital_certificate_file: params.digital_certificate_file,
-    verification_status: "بانتظار التوثيق",
-  });
+  try {
+    const guides = getAllGuides();
+    const existingIdx = guides.findIndex((g) => g.license_number === newGuide.license_number);
+    if (existingIdx !== -1) {
+      guides[existingIdx] = { ...guides[existingIdx], ...newGuide };
+    } else {
+      guides.push(newGuide);
+    }
+    saveAllGuides(guides);
+  } catch (localErr) {
+    console.warn("apiRegisterGuide local storage warning:", localErr);
+  }
 
   return {
     status: "success",
@@ -1157,7 +1193,7 @@ export async function apiGetTouristBookings(touristId: string) {
 
 export async function apiGetAdminDashboard(): Promise<any> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`, { signal: AbortSignal.timeout(12000) });
     if (res.ok) {
       const json = await res.json();
       if (json && json.success) {
@@ -1228,7 +1264,7 @@ export async function apiDeleteGuide(licenseNumber: string) {
  */
 export async function apiGetDailyTrips(): Promise<any[]> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, { signal: AbortSignal.timeout(2500) });
+    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const json = await res.json();
       return json.data || [];
@@ -1238,7 +1274,7 @@ export async function apiGetDailyTrips(): Promise<any[]> {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(1000),
+      signal: AbortSignal.timeout(2000),
     });
     if (res.ok) {
       const json = await res.json();
@@ -1328,7 +1364,7 @@ export async function apiDeleteDailyTrip(id: string) {
 
 export async function apiGetWeeklyTrips(): Promise<any[]> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, { signal: AbortSignal.timeout(2500) });
+    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const json = await res.json();
       return json.data || [];
@@ -1338,7 +1374,7 @@ export async function apiGetWeeklyTrips(): Promise<any[]> {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(1000),
+      signal: AbortSignal.timeout(2000),
     });
     if (res.ok) {
       const json = await res.json();
@@ -1397,7 +1433,7 @@ export async function apiDeleteWeeklyTrip(id: string) {
  */
 export async function apiGetDailyOffers(): Promise<any[]> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_offers`, { signal: AbortSignal.timeout(2500) });
+    const res = await fetch(`${BACKEND_API_URL}/daily_offers`, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const json = await res.json();
       return json.data || [];
@@ -1428,7 +1464,7 @@ export async function apiDeleteDailyOffer(id: string): Promise<boolean> {
 
 export async function apiGetWeeklyOffers(): Promise<any[]> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_offers`, { signal: AbortSignal.timeout(2500) });
+    const res = await fetch(`${BACKEND_API_URL}/weekly_offers`, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const json = await res.json();
       return json.data || [];
@@ -1564,7 +1600,8 @@ export async function apiGetGuidesCatalog(): Promise<GuideRecord[]> {
     if (res.ok) {
       const json = await res.json();
       if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
-        return json.data;
+        // Return only approved and verified guides for tourists and the public catalog
+        return json.data.filter((g: any) => g.verification_status === "موثق");
       }
     }
   } catch { }
@@ -1578,7 +1615,7 @@ export async function apiGetGuidesCatalog(): Promise<GuideRecord[]> {
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data.guides || data.data || []);
       if (list.length > 0) {
-        return list;
+        return list.filter((g: any) => g.verification_status === "موثق");
       }
     }
   } catch { }

@@ -15,18 +15,20 @@ class WeeklyTrip extends Model
     protected $fillable = [
         'weekly_trip_id',
         'trip_title',
+        'departure_city',
+        'seat_per_price',
+        'available_seats',
+        'is_active',
         'start_date',
         'end_date',
         'max_capacity',
-        'available_seats',
-        'seat_per_price',
-        'trip_description',
+        'vehicle_plate',
         'guide_license_number',
-        'is_active',
-        'departure_city',
-        'destination_region',
-        'photo',
-        'gallery',
+        'photo_1',
+        'photo_2',
+        'photo_3',
+        'photo_4',
+        'photo_5',
     ];
 
     protected $casts = [
@@ -43,19 +45,24 @@ class WeeklyTrip extends Model
         return $this->belongsTo(TourGuide::class, 'guide_license_number', 'license_number');
     }
 
-    public function bookings()
+    public function vehicle()
     {
-        return $this->hasMany(BookingWeekly::class, 'weekly_trip_id', 'weekly_trip_id');
-    }
-
-    public function vehicleAllocations()
-    {
-        return $this->hasMany(WeeklyTripVehicle::class, 'weekly_trip_id', 'weekly_trip_id');
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
     }
 
     public function vehicles()
     {
-        return $this->belongsToMany(Vehicle::class, 'weekly_trip_vehicles', 'weekly_trip_id', 'plate_number');
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
+    }
+
+    public function restaurant()
+    {
+        return $this->belongsTo(RestaurantCafe::class, 'restaurant_id', 'facility_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(BookingWeekly::class, 'weekly_trip_id', 'weekly_trip_id');
     }
 
     public function hotels()

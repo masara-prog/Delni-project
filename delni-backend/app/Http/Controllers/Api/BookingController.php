@@ -25,8 +25,6 @@ class BookingController extends Controller
             'daily_trip_id' => 'required|string',
             'number_of_seats' => 'required|integer|min:1',
             'trip_title' => 'nullable|string',
-            'passengers_names' => 'nullable|string',
-            'booking_notes' => 'nullable|string',
             'price_per_seat' => 'nullable|numeric|min:0',
         ]);
 
@@ -36,7 +34,7 @@ class BookingController extends Controller
             $tourist = \App\Models\Tourist::firstOrCreate(
                 ['tourist_id' => $validated['tourist_id']],
                 [
-                    'full_name' => $validated['passengers_names'] ?? 'سائح منصة دلني',
+                    'full_name' => 'سائح منصة دلني',
                     'email' => $validated['tourist_id'] . '@dalni.ly',
                     'phone_number' => '091' . rand(1000000, 9999999),
                     'password' => bcrypt('123456'),
@@ -124,8 +122,6 @@ class BookingController extends Controller
             'weekly_trip_id' => 'required|string',
             'number_of_seats' => 'required|integer|min:1',
             'trip_title' => 'nullable|string',
-            'passengers_names' => 'nullable|string',
-            'booking_notes' => 'nullable|string',
             'seat_per_price' => 'nullable|numeric|min:0',
         ]);
 

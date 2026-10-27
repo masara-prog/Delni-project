@@ -16,14 +16,8 @@ return new class extends Migration
             if (!Schema::hasColumn('places_tourist', 'region')) {
                 $table->string('region', 100)->nullable()->after('city');
             }
-            if (!Schema::hasColumn('places_tourist', 'history_snippet')) {
-                $table->text('history_snippet')->nullable()->after('google_maps_url');
-            }
-            if (!Schema::hasColumn('places_tourist', 'best_season')) {
-                $table->string('best_season', 100)->nullable()->after('history_snippet');
-            }
             if (!Schema::hasColumn('places_tourist', 'highlights')) {
-                $table->text('highlights')->nullable()->after('best_season');
+                $table->text('highlights')->nullable()->after('region');
             }
         });
 
@@ -58,12 +52,6 @@ return new class extends Migration
         Schema::table('places_tourist', function (Blueprint $table) {
             if (Schema::hasColumn('places_tourist', 'region')) {
                 $table->dropColumn('region');
-            }
-            if (Schema::hasColumn('places_tourist', 'history_snippet')) {
-                $table->dropColumn('history_snippet');
-            }
-            if (Schema::hasColumn('places_tourist', 'best_season')) {
-                $table->dropColumn('best_season');
             }
             if (Schema::hasColumn('places_tourist', 'highlights')) {
                 $table->dropColumn('highlights');

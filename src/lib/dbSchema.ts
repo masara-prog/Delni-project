@@ -103,16 +103,14 @@ export interface Driver {
 export interface PlaceTourist {
   place_id: string; // VARCHAR(50) PRIMARY KEY
   place_name: string; // VARCHAR(100)
-  description: string; // TEXT
-  city: string; // VARCHAR(50)
-  longitude: number; // DECIMAL(9,6)
-  latitude: number; // DECIMAL(9,6)
-  category: string; // VARCHAR(50)
-  place_image?: string | null; // VARCHAR(255)
-  is_unesco: boolean; // BIT DEFAULT 0
-  unesco_year?: number | null; // INT
-  gallery?: string | null; // NVARCHAR(MAX)
-  entry_fee?: string | null; // VARCHAR(50)
+  description: string; // NVARCHAR(MAX)
+  city: string; // VARCHAR(100)
+  region?: string | null; // NVARCHAR(100)
+  longitude: number; // DECIMAL(10,6)
+  latitude: number; // DECIMAL(10,6)
+  category: string; // VARCHAR(100)
+  highlights?: string | null; // NVARCHAR(MAX)
+  place_image?: string | null; // NVARCHAR(MAX)
   google_maps_url?: string | null; // VARCHAR(500)
   visitors_count?: number; // Virtual tracking counter
 }
@@ -311,8 +309,6 @@ export interface BookingDaily {
   number_of_seats: number; // INT (CHECK > 0)
   booking_status: "مؤكدة" | "بانتظار التأكيد" | "ملغية"; // VARCHAR(20)
   total_price: number; // DECIMAL(10,2) (CHECK >= 0)
-  booking_notes?: string | null; // TEXT NULL
-  passengers_names?: string | null; // NVARCHAR(MAX) NULL
   payment_status: "paid" | "unpaid" | "cash_at_office"; // VARCHAR(20) DEFAULT 'unpaid'
   attended: boolean; // BIT DEFAULT 0
 }
@@ -325,8 +321,6 @@ export interface BookingWeekly {
   number_of_seats: number; // INT (CHECK > 0)
   total_price: number; // DECIMAL(10,2) (CHECK >= 0)
   booking_status: "مؤكدة" | "بانتظار التأكيد" | "ملغية"; // VARCHAR(20)
-  booking_notes?: string | null; // TEXT NULL
-  passengers_names?: string | null; // NVARCHAR(MAX) NULL
   payment_status: "paid" | "unpaid" | "cash_at_office"; // VARCHAR(20) DEFAULT 'unpaid'
   attended: boolean; // BIT DEFAULT 0
 }

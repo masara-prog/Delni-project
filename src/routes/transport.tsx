@@ -151,7 +151,7 @@ function TransportPage() {
 
     return rawCompanies.filter((c) => {
       const st = String(c.verification_status || c.status || "").trim();
-      const isActive = st === "موثق" || st === "معتمد" || st === "نشط";
+      const isActive = st === "موثق" || st === "معتمد" || st === "نشط" || st === "نشطة";
       if (!isActive) return false;
 
       // Contract Expiration Check:
@@ -180,12 +180,19 @@ function TransportPage() {
   // Clean formatted vehicle list (No confidential dates/contracts, no static dummy text)
   const vehicles = useMemo(() => {
     const verifiedRawVehicles = rawVehicles.filter((v) => {
-      const contractMatch = v.contract_number && verifiedContractNumbers.has(String(v.contract_number).trim());
-      const nameMatch = v.company_name && verifiedCompanyNames.has(String(v.company_name).trim().toLowerCase());
-      return contractMatch || nameMatch;
+      // If company list is loaded, filter by active verified companies
+      if (verifiedContractNumbers.size > 0 || verifiedCompanyNames.size > 0) {
+        const contractMatch = v.contract_number && verifiedContractNumbers.has(String(v.contract_number).trim());
+        const nameMatch = v.company_name && verifiedCompanyNames.has(String(v.company_name).trim().toLowerCase());
+        return contractMatch || nameMatch;
+      }
+      return true;
     });
 
-    return verifiedRawVehicles.map((v, idx) => {
+    // Fallback to all vehicles if verified filter matched nothing (e.g. during initial state loading)
+    const finalRaw = verifiedRawVehicles.length > 0 ? verifiedRawVehicles : rawVehicles;
+
+    return finalRaw.map((v, idx) => {
       // 5 Exact Standard Categories matching Dashboard Transport:
       // 1. حافلة سياحية  2. ميني باص  3. فان  4. سيارة دفع رباعي (4x4)  5. سيدان
       let cat = "ميني باص";

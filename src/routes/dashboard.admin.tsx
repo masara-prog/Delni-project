@@ -157,6 +157,9 @@ type DailyTrip = {
   bus_capacity?: 15 | 25 | 50; 
   destination?: string; 
   destination_city?: string;
+  destinations?: string[];
+  place_ids?: string[];
+  places?: any[];
   departure_city?: string; 
   gallery?: string;
   images?: string[];
@@ -236,13 +239,7 @@ type Attraction = {
   latitude?: number; 
   longitude?: number; 
   google_maps_url?: string; 
-  is_unesco?: boolean;
-  unesco_year?: number | string;
-  entry_fee?: string;
-  best_season?: string;
-  history_snippet?: string;
   highlights?: string | string[];
-  gallery?: string | string[];
 };
 type ItemReview = { id: string; target_type: "رحلة يومية" | "رحلة أسبوعية" | "فندق" | "مطعم/مقهى" | "مرشد سياحي" | "شركة نقل"; target_name: string; tourist_name: string; stars_rating: number; comment_text: string; created_at: string };
 type SupportTicket = { id: string; user_name: string; user_role: "سائح" | "مرشد" | "سائق" | "شركة نقل"; subject: string; message: string; status: "جديد" | "تم الرد" | "مغلق"; reply?: string; created_at: string };
@@ -392,7 +389,21 @@ function AdminDashboard() {
     updateGuideVerification(lic, status);
     const targetGuide = guides.find(g => g.license_number === lic);
     
-    // Live update to Laravel backend database
+    // Live update to DelniDB backend database via dedicated verification endpoint (preserves email, phone, and password)
+    try {
+      await fetch("http://127.0.0.1:5001/api/db/guides/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license_number: lic,
+          verification_status: status,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to verify guide in SQL bridge:", err);
+    }
+
+    // Live update to Laravel backend database if running
     try {
       await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(lic)}/verify`, {
         method: "PUT",
@@ -413,13 +424,6 @@ function AdminDashboard() {
     } catch (err) {
       console.error("Failed to verify guide in Laravel API:", err);
     }
-
-    sendToSecureBackend("guides", {
-      license_number: lic,
-      full_name: targetGuide?.full_name || "مرشد سياحي",
-      phone_number: targetGuide?.phone_number || "0910000000",
-      verification_status: status,
-    });
   };
 
   const handleDeleteGuide = async (lic: string) => {
@@ -495,7 +499,39 @@ function AdminDashboard() {
           working_days: g.working_days || "الأحد,الأربعاء",
           total_tours_completed: Number(g.total_tours_completed) || 0,
         }));
-        setGuides(dbGuides);
+
+        // Merge SQL Server DelniDB guides with any locally saved guides (fallback resilience)
+        const localGuides = getAllGuides();
+        const dbLicenses = new Set(dbGuides.map(g => g.license_number));
+        const mergedGuides: Guide[] = [...dbGuides];
+        for (const lg of localGuides) {
+          if (!dbLicenses.has(lg.license_number)) {
+            mergedGuides.push({
+              license_number: lg.license_number,
+              full_name: lg.full_name,
+              title: lg.title || "",
+              avatar: lg.avatar || "",
+              phone_number: lg.phone_number,
+              years_of_experience: Number(lg.years_of_experience) || 2,
+              certificate: lg.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
+              certificate_name: lg.certificate_name,
+              digital_certificate_file: lg.digital_certificate_file,
+              bio: lg.bio || "",
+              speaks_english: Boolean(lg.speaks_english),
+              speaks_french: Boolean(lg.speaks_french),
+              speaks_italian: Boolean(lg.speaks_italian),
+              verification_status: lg.verification_status || "بانتظار التوثيق",
+              email: lg.email,
+              daily_rate: Number(lg.price_per_day) || 150,
+              price_per_day: Number(lg.price_per_day) || 150,
+              primaryRegion: lg.operating_regions?.includes("tripoli") ? "tripoli" : (lg.primaryRegion || "tripoli"),
+              operating_regions: lg.operating_regions || "",
+              working_days: lg.working_days || "الأحد,الأربعاء",
+              total_tours_completed: Number(lg.total_tours_completed) || 0,
+            });
+          }
+        }
+        setGuides(mergedGuides);
       }
 
       if (res.daily_trips) {
@@ -507,8 +543,11 @@ function AdminDashboard() {
           description: d.description || "",
           price_per_seat: Number(d.price_per_seat) || 0,
           departure_city: d.departure_city || "طرابلس",
-          destination: d.destination_city || "",
-          destination_city: d.destination_city || "",
+          destination: d.destination || d.destination_city || "",
+          destination_city: d.destination_city || d.destination || "",
+          destinations: d.destinations || (d.destination ? d.destination.split(' + ') : []),
+          place_ids: d.place_ids || [],
+          places: d.places || [],
           max_capacity: d.max_capacity || 25,
           available_seats: d.available_seats || d.max_capacity || 25,
           bus_capacity: d.max_capacity || 25,
@@ -548,8 +587,11 @@ function AdminDashboard() {
           trip_description: w.trip_description || "",
           seat_per_price: Number(w.seat_per_price) || 0,
           departure_city: w.departure_city || "طرابلس",
-          destination: w.destination_region || "",
-          destination_region: w.destination_region || "",
+          destination: w.destination || w.destination_region || "",
+          destination_region: w.destination_region || w.destination || "",
+          destinations: w.destinations || (w.destination ? w.destination.split(' + ') : []),
+          place_ids: w.place_ids || [],
+          places: w.places || [],
           max_capacity: w.max_capacity || 25,
           available_seats: w.available_seats || w.max_capacity || 25,
           bus_capacity: w.max_capacity || 25,
@@ -696,13 +738,7 @@ function AdminDashboard() {
           latitude: p.latitude,
           longitude: p.longitude,
           google_maps_url: p.google_maps_url || "",
-          is_unesco: p.is_unesco,
-          unesco_year: p.unesco_year,
-          entry_fee: p.entry_fee || "مجاني للجميع",
-          best_season: p.best_season || "طوال العام",
-          history_snippet: p.history_snippet || "",
           highlights: p.highlights || "",
-          gallery: p.gallery || "",
         })));
       }
 
@@ -818,6 +854,9 @@ function AdminDashboard() {
           vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : null),
           restaurant_id: data.restaurant_id || null,
           itinerary_steps: data.itinerary_steps ? (typeof data.itinerary_steps === 'string' ? data.itinerary_steps : JSON.stringify(data.itinerary_steps)) : null,
+          place_ids: data.place_ids || [],
+          destinations: data.destinations || [],
+          is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
         };
         const res = await apiCreateWeeklyTrip(payload);
         if (!res || res.status === "error" || res.errors || !res.trip) {
@@ -926,6 +965,9 @@ function AdminDashboard() {
         vehicle_plate: (updated as any).vehicle_plate || (Array.isArray((updated as any).vehicle_plates) ? (updated as any).vehicle_plates[0] : null),
         restaurant_id: (updated as any).restaurant_id || null,
         itinerary_steps: (updated as any).itinerary_steps ? (typeof (updated as any).itinerary_steps === 'string' ? (updated as any).itinerary_steps : JSON.stringify((updated as any).itinerary_steps)) : null,
+        place_ids: (updated as any).place_ids || [],
+        destinations: (updated as any).destinations || [],
+        is_active: (updated as any).is_active !== undefined ? Boolean((updated as any).is_active) : true,
       };
       const res = await apiUpdateWeeklyTrip(tripId, payload);
       if (res && res.status === "success") {
@@ -1090,6 +1132,7 @@ function AdminDashboard() {
       star_rating: newHotelObj.stars,
       partnership_status: newHotelObj.partnership_status || "نشط",
       property_type: newHotelObj.property_type || "hotel",
+      amenities: Array.isArray(newHotelObj.amenities) ? newHotelObj.amenities.join("، ") : (newHotelObj.amenities || ""),
       discount_percentage: newHotelObj.discount_percentage || 15,
       working_hours: newHotelObj.working_hours,
       description: newHotelObj.description,
@@ -1123,6 +1166,7 @@ function AdminDashboard() {
       star_rating: h.stars,
       partnership_status: h.partnership_status || "نشط",
       property_type: h.property_type || "hotel",
+      amenities: Array.isArray(h.amenities) ? h.amenities.join("، ") : ((h as any).amenities || ""),
       discount_percentage: h.discount_percentage || 15,
       working_hours: h.working_hours,
       description: h.description,
@@ -1306,13 +1350,7 @@ function AdminDashboard() {
         category: newPlace.category,
         place_image: newPlace.place_image,
         google_maps_url: newPlace.google_maps_url,
-        history_snippet: newPlace.history_snippet,
         highlights: newPlace.highlights,
-        entry_fee: (newPlace as any).entry_fee,
-        best_season: (newPlace as any).best_season,
-        is_unesco: (newPlace as any).is_unesco,
-        unesco_year: (newPlace as any).unesco_year,
-        gallery: (newPlace as any).gallery,
         is_new: true,
         mode: "create",
       });
@@ -1339,13 +1377,7 @@ function AdminDashboard() {
         category: a.category,
         place_image: a.place_image,
         google_maps_url: a.google_maps_url,
-        history_snippet: (a as any).history_snippet,
         highlights: (a as any).highlights,
-        entry_fee: (a as any).entry_fee,
-        best_season: (a as any).best_season,
-        is_unesco: (a as any).is_unesco,
-        unesco_year: (a as any).unesco_year,
-        gallery: (a as any).gallery,
         mode: "update",
       });
       alert(`✅ تم حفظ وتحديث بيانات المعلم السياحي (${a.place_name || a.name}) بنجاح في قاعدة البيانات.`);
@@ -1460,14 +1492,12 @@ function AdminDashboard() {
     // Match in dailyBookings or weeklyBookings
     const dailyFound = dailyBookings.find(b =>
       b.booking_daily_id?.toLowerCase() === raw.toLowerCase() ||
-      raw.toLowerCase().includes(b.booking_daily_id?.toLowerCase() || "") ||
-      (b.booking_notes && b.booking_notes.includes(raw))
+      raw.toLowerCase().includes(b.booking_daily_id?.toLowerCase() || "")
     );
 
     const weeklyFound = weeklyBookings.find(b =>
       b.booking_weekly_id?.toLowerCase() === raw.toLowerCase() ||
-      raw.toLowerCase().includes(b.booking_weekly_id?.toLowerCase() || "") ||
-      (b.booking_notes && b.booking_notes.includes(raw))
+      raw.toLowerCase().includes(b.booking_weekly_id?.toLowerCase() || "")
     );
 
     // Also match in local storage
@@ -1492,7 +1522,7 @@ function AdminDashboard() {
       const parsedTicket = {
         code: matched.booking_daily_id || matched.booking_weekly_id || raw,
         isDaily,
-        touristName: matched.passengers_names || matched.tourist_id || "سائح",
+        touristName: matched.tourist_name || matched.tourist_id || "سائح",
         touristId: matched.tourist_id || "",
         tripTitle: tripObj?.title || tripObj?.trip_title || matched.trip_title || (isDaily ? "رحلة يومية" : "رحلة أسبوعية"),
         seats: Number(matched.number_of_seats) || 1,
@@ -1500,7 +1530,7 @@ function AdminDashboard() {
         paymentStatus: matched.payment_status || "unpaid",
         attended: !!matched.attended,
         bookingStatus: matched.booking_status || "بانتظار التأكيد",
-        date: matched.booking_notes || "اليوم 08:30 ص",
+        date: matched.booking_date ? new Date(matched.booking_date).toLocaleDateString('ar-LY') : "اليوم 08:30 ص",
         guideName: (tripObj as any)?.guide?.name || (tripObj as any)?.guide_license || "مرشد سياحي معتمد",
         rawBooking: matched,
       };
@@ -1623,19 +1653,44 @@ function AdminDashboard() {
       {active === "overview" && (
         <div className="grid lg:grid-cols-3 gap-6 text-right">
           <div className="lg:col-span-2 space-y-6">
-            <SectionCard title="أحدث طلبات توثيق المرشدين السياحيين الواردة" action={<button onClick={() => setActive("guides")} className="text-primary text-sm font-black hover:underline">عرض الكل</button>}>
-              <div className="space-y-3">
-                {guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).map((g) => (
-                  <div key={g.license_number} className="p-4 rounded-xl border border-border bg-white flex flex-wrap justify-between items-center gap-3">
-                    <div>
-                      <div className="font-black text-foreground text-sm">{g.full_name} ({g.license_number})</div>
-                      {g.email && <div className="text-xs text-primary font-bold mt-0.5">✉️ {g.email}</div>}
-                      <div className="text-xs text-muted-foreground mt-0.5">📜 {g.certificate}</div>
+            <SectionCard title="أحدث طلبات توثيق المرشدين السياحيين الواردة" action={<button onClick={() => setActive("guides")} className="text-primary text-sm font-black hover:underline cursor-pointer">عرض الكل ({guides.length})</button>}>
+              {guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة") || g.verification_status === "معلق").length === 0 ? (
+                <div className="p-6 text-center text-xs font-bold text-muted-foreground bg-slate-50 rounded-xl border border-slate-200">
+                  لا توجد طلبات توثيق مرشدين معلقة حالياً. {guides.length > 0 && <button onClick={() => setActive("guides")} className="text-primary underline mr-1 cursor-pointer">عرض سجل المرشدين المعتمدين ({guides.length})</button>}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة") || g.verification_status === "معلق").map((g) => (
+                    <div key={g.license_number} className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-wrap justify-between items-center gap-3">
+                      <div className="flex items-center gap-3">
+                        {g.avatar ? (
+                          <img src={g.avatar} alt={g.full_name} className="w-11 h-11 rounded-full object-cover border border-amber-300" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-amber-100 text-amber-800 grid place-items-center text-lg font-black">
+                            🗺️
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-black text-foreground text-sm flex items-center gap-2">
+                            <span>{g.full_name}</span>
+                            <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200 font-bold">{g.license_number}</span>
+                          </div>
+                          {g.email && <div className="text-xs text-primary font-bold mt-0.5">✉️ {g.email} • 📞 {g.phone_number}</div>}
+                          <div className="text-xs text-muted-foreground mt-0.5">📜 {g.certificate_name || g.certificate || "ترخيص سياحي رسمي"}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setViewingGuide(g)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-xs hover:opacity-95 transition cursor-pointer">
+                          معاينة الوثائق والاعتماد 📄
+                        </button>
+                        <button onClick={() => handleVerifyGuide(g.license_number, "موثق")} className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition cursor-pointer">
+                          قبول فوري ✓
+                        </button>
+                      </div>
                     </div>
-                    <button onClick={() => setViewingGuide(g)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black cursor-pointer">معاينة الوثائق والاعتماد 📄</button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </SectionCard>
             <SectionCard title="أحدث التقييمات الواردة من السياح">
               <div className="space-y-3">
@@ -1736,7 +1791,7 @@ function AdminDashboard() {
                       }}
                       className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs font-bold transition border border-slate-200 cursor-pointer"
                     >
-                      {c} ({b.passengers_names || b.tourist_id || "سائح"})
+                      {c} ({b.tourist_name || b.tourist_id || "سائح"})
                     </button>
                   );
                 })}
@@ -2464,7 +2519,7 @@ function AdminDashboard() {
                 <thead>
                   <tr className="text-right text-xs text-muted-foreground border-b border-border">
                     <th className="pb-3 font-bold">رقم الحجز</th>
-                    <th className="pb-3 font-bold">السائح / المرافقون</th>
+                    <th className="pb-3 font-bold">السائح</th>
                     <th className="pb-3 font-bold">الرحلة اليومية</th>
                     <th className="pb-3 font-bold">المقاعد</th>
                     <th className="pb-3 font-bold">المبلغ الإجمالي</th>
@@ -2480,8 +2535,7 @@ function AdminDashboard() {
                       <tr key={b.booking_daily_id}>
                         <td className="py-3 font-mono text-xs font-bold text-primary">{b.booking_daily_id}</td>
                         <td className="py-3 font-bold text-foreground">
-                          <div>{b.tourist_id}</div>
-                          {b.passengers_names && <div className="text-[11px] text-muted-foreground font-normal">{b.passengers_names}</div>}
+                          <div>{b.tourist_name || b.tourist_id}</div>
                         </td>
                         <td className="py-3 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.daily_trip_id}</td>
                         <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
@@ -2537,7 +2591,7 @@ function AdminDashboard() {
                 <thead>
                   <tr className="text-right text-xs text-muted-foreground border-b border-border">
                     <th className="pb-3 font-bold">رقم الحجز</th>
-                    <th className="pb-3 font-bold">السائح / المرافقون</th>
+                    <th className="pb-3 font-bold">السائح</th>
                     <th className="pb-3 font-bold">الرحلة الأسبوعية</th>
                     <th className="pb-3 font-bold">المقاعد</th>
                     <th className="pb-3 font-bold">المبلغ الإجمالي</th>
@@ -2553,8 +2607,7 @@ function AdminDashboard() {
                       <tr key={b.booking_weekly_id}>
                         <td className="py-3 font-mono text-xs font-bold text-primary">{b.booking_weekly_id}</td>
                         <td className="py-3 font-bold text-foreground">
-                          <div>{b.tourist_id}</div>
-                          {b.passengers_names && <div className="text-[11px] text-muted-foreground font-normal">{b.passengers_names}</div>}
+                          <div>{b.tourist_name || b.tourist_id}</div>
                         </td>
                         <td className="py-3 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.weekly_trip_id}</td>
                         <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
@@ -4198,27 +4251,42 @@ available_cars: totalV,
             </div>
           )}
 
-          {/* 1. البيانات الأساسية */}
+          {/* 1. البيانات الأساسية والعقد */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
               <span>🏢</span>
-              <span>بيانات الشركة والتعاقد الرسمي</span>
+              <span>البيانات الرسمية والتعاقد</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <Field label="رقم العقد الورقي (المعرف) *" value={contractNo} onChange={setContractNo} required />
               <Field label="اسم شركة النقل السياحي *" value={name} onChange={setName} required />
-              <LibyanPhoneField label="رقم هاتف الشركة *" value={phone} onChange={setPhone} />
-              <Field label="البريد الإلكتروني للشركة" type="email" value={email} onChange={setEmail} placeholder="company@dalni.ly" />
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
+                  <span>رقم العقد الورقي (المعرف) 🔒</span>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">رقم ثابت</span>
+                </label>
+                <input
+                  type="text"
+                  value={contractNo}
+                  disabled
+                  readOnly
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-xs text-right cursor-not-allowed shadow-xs"
+                />
+              </div>
             </div>
           </div>
 
-          {/* 2. المقر والمدينة */}
+          {/* 2. بيانات التواصل والمدينة */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
-              <span>📍</span>
-              <span>المقر والمدينة المعتمدة</span>
+              <span>📞</span>
+              <span>بيانات التواصل والمقر الجغرافي</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <LibyanPhoneField label="رقم هاتف الشركة *" value={phone} onChange={setPhone} />
+              <Field label="البريد الإلكتروني للشركة" type="email" value={email} onChange={setEmail} placeholder="company@dalni.ly" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
               <div>
                 <label className="text-xs font-bold text-slate-800 block mb-1.5">المدينة المعتمدة *</label>
                 <select
@@ -4266,31 +4334,46 @@ available_cars: totalV,
             </div>
           </div>
 
-          {/* 3. الأسطول والتعاقد */}
+          {/* 3. سعة الأسطول وفترة التعاقد والحالة */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
               <span>📊</span>
-              <span>سعة الأسطول وحالة التوثيق والتشغيل</span>
-            </div>
-            <div>
-              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+              <span>سعة الأسطول وسريان التعاقد والتشغيل</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <Field label="تاريخ بدء التعاقد" type="date" value={contractStartDate} onChange={setContractStartDate} />
-              <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
+              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+              <div>
+                <label className="text-xs font-bold text-slate-800 mb-1.5 block">حالة التوثيق والتشغيل *</label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as any)}
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
+                >
+                  <option value="نشطة">نشطة (مفعلة وتعمل بالمنصة)</option>
+                  <option value="موقوفة">موقوفة (معطلة مؤقتاً)</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-800 mb-1.5 block">حالة التوثيق والتشغيل *</label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as any)}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
-              >
-                <option value="نشطة">نشطة (مفعلة وتعمل بالمنصة)</option>
-                <option value="موقوفة">موقوفة (معطلة مؤقتاً)</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
+                  <span>تاريخ بداية التعاقد (تاريخ الإنشاء) 🔒</span>
+                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">غير قابل للتعديل</span>
+                </label>
+                <input
+                  type="date"
+                  value={contractStartDate ? String(contractStartDate).split("T")[0] : ""}
+                  disabled
+                  readOnly
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed shadow-xs"
+                />
+              </div>
+
+              <div>
+                <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate ? String(contractEndDate).split("T")[0] : ""} onChange={setContractEndDate} required />
+              </div>
             </div>
           </div>
 
@@ -5539,10 +5622,6 @@ function CreateTripModal({
       if (prev.includes(attractionName)) {
         return prev.filter(c => c !== attractionName);
       }
-      if (prev.length >= 4) {
-        alert("الحد الأقصى المسموح به في الرحلة الأسبوعية هو 4 معالم سياحية فقط.");
-        return prev;
-      }
       return [...prev, attractionName];
     });
   };
@@ -5562,6 +5641,27 @@ function CreateTripModal({
     }
   };
 
+  const [showAllGuides, setShowAllGuides] = useState(false);
+
+  const arabicToCodeMap: Record<string, string> = {
+    "السبت": "sat",
+    "الأحد": "sun",
+    "الإثنين": "mon",
+    "الثلاثاء": "tue",
+    "الأربعاء": "wed",
+    "الخميس": "thu",
+    "الجمعة": "fri",
+  };
+  const codeToArabicMap: Record<string, string> = {
+    "sat": "السبت",
+    "sun": "الأحد",
+    "mon": "الإثنين",
+    "tue": "الثلاثاء",
+    "wed": "الأربعاء",
+    "thu": "الخميس",
+    "fri": "الجمعة",
+  };
+
   const filteredGuidesList = useMemo(() => {
     return guides.filter((g) => {
       if (g.verification_status === "مرفوض") return false;
@@ -5571,6 +5671,27 @@ function CreateTripModal({
         const destCities = isDaily ? [destination, departureCity] : [departureCity, ...multiDestinations];
         const match = destCities.some((c) => c && (g.city!.includes(c) || c.includes(g.city!)));
         if (!match && g.city !== departureCity) return false;
+      }
+
+      // Daily trips schedule filter: match guide's working_days with trip recurringDays
+      if (isDaily && !showAllGuides && recurringDays.length > 0 && g.working_days) {
+        let gDays: string[] = [];
+        try {
+          gDays = typeof g.working_days === "string" ? JSON.parse(g.working_days) : g.working_days;
+        } catch {
+          gDays = String(g.working_days).split(",").map(s => s.trim().toLowerCase());
+        }
+        if (Array.isArray(gDays) && gDays.length > 0) {
+          const gDaysLower = gDays.map(d => String(d).toLowerCase().trim());
+          if (!gDaysLower.includes("all") && !gDaysLower.includes("جميع الأيام")) {
+            // Check if guide works on all selected trip days
+            const availableOnAllDays = recurringDays.every(day => {
+              const code = arabicToCodeMap[day] || "";
+              return gDaysLower.includes(code) || gDaysLower.includes(day);
+            });
+            if (!availableOnAllDays) return false;
+          }
+        }
       }
 
       // Weekly trips schedule filter: ensure guide is not already booked during this trip's dates
@@ -5593,8 +5714,15 @@ function CreateTripModal({
       }
 
       return true;
+    }).sort((a, b) => {
+      if (multiDestinations.length > 0) {
+        const aMatches = (a.places || []).filter((p: any) => multiDestinations.includes(p.place_name || p.name)).length;
+        const bMatches = (b.places || []).filter((p: any) => multiDestinations.includes(p.place_name || p.name)).length;
+        if (aMatches !== bMatches) return bMatches - aMatches;
+      }
+      return 0;
     });
-  }, [guides, isDaily, destination, departureCity, multiDestinations, startDate, endDate, weeklyTrips]);
+  }, [guides, isDaily, destination, departureCity, multiDestinations, recurringDays, showAllGuides, startDate, endDate, weeklyTrips]);
 
   const selectedPrimaryRestaurant = useMemo(() => {
     return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
@@ -5635,8 +5763,12 @@ function CreateTripModal({
       return;
     }
 
-    if (!isDaily && multiDestinations.length === 0) {
-      alert("تنبيه: يجب اختيار معلم سياحي واحد على الأقل (بحد أقصى 4 معالم) للرحلة الأسبوعية!");
+    const effectiveDestinations = multiDestinations.length > 0
+      ? multiDestinations
+      : (destination ? [destination] : []);
+
+    if (effectiveDestinations.length === 0) {
+      alert("تنبيه: يجب اختيار معلم سياحي واحد على الأقل للرحلة من المعالم المسجلة بالمنصة!");
       return;
     }
 
@@ -5650,17 +5782,18 @@ function CreateTripModal({
       return;
     }
 
-    const selectedAttractionObjects = (attractions || []).filter(a => multiDestinations.includes(a.name || a.place_name || ""));
+    const selectedAttractionObjects = (attractions || []).filter(a => effectiveDestinations.includes(a.name || a.place_name || ""));
     const placeIds = selectedAttractionObjects.map(a => a.place_id || a.id);
 
     const payload: any = {
       trip_title: title.trim(),
       title: title.trim(),
       description: title.trim(),
-      destination: isDaily ? destination : multiDestinations.join(" + "),
-      destination_city: isDaily ? destination : (multiDestinations[0] || "ليبيا"),
-      destinations: !isDaily ? multiDestinations : [destination],
+      destination: effectiveDestinations.join(" + "),
+      destination_city: selectedAttractionObjects[0]?.city || effectiveDestinations[0] || departureCity,
+      destinations: effectiveDestinations,
       place_ids: placeIds,
+      places: selectedAttractionObjects,
       departure_city: departureCity,
       price_per_seat: +price,
       seat_per_price: +price,
@@ -5733,92 +5866,62 @@ function CreateTripModal({
               </select>
             </div>
             <div>
-              {isDaily ? (
-                <div>
-                  <label className="text-xs font-bold mb-1 block">
-                    المكان / الوجهة السياحية (من المعالم المسجلة في المنصة) *
-                  </label>
-                  <select
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    required
-                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white"
-                  >
-                    <option value="">— اختر أحد المعالم السياحية المسجلة في المنصة —</option>
-                    {(attractions || []).map((a) => (
-                      <option key={a.id || a.place_id} value={a.name || a.place_name}>
-                        🏛️ {a.name || a.place_name} ({a.city}) {a.category ? `— ${a.category}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {destination && (
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-slate-500">المعلم المختار:</span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-black">
-                        📍 {destination}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-800">
-                      معالم الرحلة الأسبوعية (اختر حتى 4 معالم كحد أقصى) *
-                    </label>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                      multiDestinations.length >= 4 ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-blue-100 text-blue-900"
-                    }`}>
-                      {multiDestinations.length} / 4 معالم
-                    </span>
-                  </div>
-                  <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white flex flex-wrap gap-1.5 items-center">
-                    {multiDestinations.length === 0 && (
-                      <span className="text-slate-400 font-normal">اضغط على المعالم المسجلة بالأسفل لاختيارها (1 إلى 4 معالم)...</span>
-                    )}
-                    {multiDestinations.map(d => (
-                      <span key={d} className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-blue-200 shadow-2xs">
-                        <span>🏛️ {d}</span>
-                        <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-600 font-black cursor-pointer">×</button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-800">
+                  {isDaily
+                    ? "معالم ووجهات الرحلة اليومية (يمكنك اختيار معلَم أو أكثر) *"
+                    : "معالم ووجهات الرحلة الأسبوعية (يمكنك اختيار معلَم أو أكثر) *"}
+                </label>
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                  {multiDestinations.length} {multiDestinations.length === 1 ? "معلم مختار" : "معالم مختارة"}
+                </span>
+              </div>
+              <div className="w-full min-h-11 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white flex flex-wrap gap-1.5 items-center">
+                {multiDestinations.length === 0 && (
+                  <span className="text-slate-400 font-normal">اضغط على المعالم المسجلة بالأسفل لاختيارها (يمكنك اختيار معلَم واحد أو عدة معالم)...</span>
+                )}
+                {multiDestinations.map(d => (
+                  <span key={d} className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-blue-200 shadow-2xs">
+                    <span>🏛️ {d}</span>
+                    <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-600 font-black cursor-pointer">×</button>
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
-          {!isDaily && (
-            <div className="space-y-1.5">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
               <label className="text-[11px] font-bold text-slate-600 block">
-                اضغط لاختيار أو إلغاء المعالم السياحية من المنصة (حد أقصى 4):
+                اضغط لاختيار أو إلغاء المعالم السياحية المسجلة في المنصة:
               </label>
-              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-white rounded-xl border border-slate-200">
-                {(attractions || []).length === 0 ? (
-                  <span className="text-xs text-slate-400 font-bold">لا توجد معالم مسجلة بعد. يمكنك إضافتها من قسم المعالم السياحية.</span>
-                ) : (
-                  (attractions || []).map((a) => {
-                    const aName = a.name || a.place_name || "";
-                    const isSelected = multiDestinations.includes(aName);
-                    return (
-                      <button
-                        key={a.id || a.place_id || aName}
-                        type="button"
-                        onClick={() => handleMultiDestToggle(aName)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
-                          isSelected ? "bg-[#003580] text-white border-[#003580] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
-                        }`}
-                      >
-                        <span>📍 {aName}</span>
-                        {a.city && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
-                        {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              <span className="text-[10px] text-slate-400">يمكن تحديد أكثر من معلَم سياحي</span>
             </div>
-          )}
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-white rounded-xl border border-slate-200">
+              {(attractions || []).length === 0 ? (
+                <span className="text-xs text-slate-400 font-bold">لا توجد معالم مسجلة بعد. يمكنك إضافتها من قسم المعالم السياحية.</span>
+              ) : (
+                (attractions || []).map((a) => {
+                  const aName = a.name || a.place_name || "";
+                  const isSelected = multiDestinations.includes(aName);
+                  return (
+                    <button
+                      key={a.id || a.place_id || aName}
+                      type="button"
+                      onClick={() => handleMultiDestToggle(aName)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                        isSelected ? "bg-[#003580] text-white border-[#003580] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
+                      }`}
+                    >
+                      <span>📍 {aName}</span>
+                      {a.city && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                      {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <Field
@@ -5953,13 +6056,13 @@ function CreateTripModal({
           existingTrips={{ dailyTrips, weeklyTrips }}
         />
 
-        {/* 4. Multi-Select Restaurants & Cafes Filtered by Destination City */}
+        {/* 4. Multi-Select Restaurants & Cafes Filtered by Landmark / Destination */}
         <TripRestaurantSelector
           restaurants={restaurants}
           selectedIds={selectedRestaurantIds}
           onToggleSelect={handleToggleRestaurant}
-          targetCity={isDaily ? destination : undefined}
-          targetCities={!isDaily ? multiDestinations : [destination]}
+          targetCity={multiDestinations[0] || destination || undefined}
+          targetCities={multiDestinations.length > 0 ? multiDestinations : (destination ? [destination] : [])}
           attractions={attractions}
         />
 
@@ -5982,19 +6085,51 @@ function CreateTripModal({
           mode={isDaily ? "time" : "days"}
         />
 
-        {/* 7. Tour Guide Selector */}
+        {/* 7. Tour Guide Selector Filtered by Working Days */}
         <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-          <label className="text-xs font-bold text-slate-800 block">
-            👨‍🏫 المرشد السياحي المعين للرحلة (مرخص وموثق بالمنصة):
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
+            <label className="text-xs font-bold text-slate-800 block">
+              👨‍🏫 المرشد السياحي المعين للرحلة {isDaily && !showAllGuides && (
+                <span className="text-blue-700 font-black">
+                  (مفلتر تلقائياً وفقاً لأيام عمل المرشد لتناسب أيام الرحلة: {recurringDays.join(" و ")})
+                </span>
+              )}:
+            </label>
+            {isDaily && (
+              <button
+                type="button"
+                onClick={() => setShowAllGuides(!showAllGuides)}
+                className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 cursor-pointer transition"
+              >
+                {showAllGuides ? "🔍 إعادة تفعيل فلترة أيام العمل فقط" : "👁️ عرض كافة المرشدين"}
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
-              <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
-                لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
+              <div className="col-span-full text-center text-xs text-amber-800 py-3 font-bold bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+                <div>لا يوجد مرشدين متاحين يطابق جدول عملهم الأيام المختارة ({recurringDays.join(" و ")}).</div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllGuides(true)}
+                  className="text-xs text-blue-700 font-black hover:underline cursor-pointer"
+                >
+                  اضغط هنا لعرض كافة المرشدين وتجاوز الفلترة
+                </button>
               </div>
             )}
             {filteredGuidesList.map((g) => {
               const isSelected = guideLic === g.license_number;
+              let gDaysArr: string[] = [];
+              try {
+                gDaysArr = typeof g.working_days === "string" ? JSON.parse(g.working_days) : (g.working_days || []);
+              } catch {
+                gDaysArr = String(g.working_days || "").split(",").map(s => s.trim());
+              }
+              const arabicDays = gDaysArr.map(d => codeToArabicMap[d.toLowerCase()] || d);
+              const daysLabel = arabicDays.length > 0 && !arabicDays.includes("all") ? arabicDays.join("، ") : "طوال أيام الأسبوع";
+
               return (
                 <div
                   key={g.license_number}
@@ -6017,9 +6152,25 @@ function CreateTripModal({
                     <div className="text-[9px] text-slate-500 font-bold">
                       رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
                     </div>
-                    <div className="text-[9px] text-emerald-700 font-black">
+                    <div className="text-[9px] text-slate-600 font-bold mt-0.5 flex items-center gap-1">
+                      <span>📅 أيام العمل:</span>
+                      <span className="text-slate-800 font-black">{daysLabel}</span>
+                    </div>
+                    <div className="text-[9px] text-emerald-700 font-black mt-0.5">
                       {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
                     </div>
+                    {g.places && g.places.length > 0 && (
+                      <div className="text-[9px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                        <span>🏛️ المعالم المعتمدة: </span>
+                        <span>{g.places.map((p: any) => p.place_name || p.name).join("، ")}</span>
+                      </div>
+                    )}
+                    {multiDestinations.length > 0 && (g.places || []).some((p: any) => multiDestinations.includes(p.place_name || p.name)) && (
+                      <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-black">
+                        <span>🌟</span>
+                        <span>خبير بمعالم هذه الرحلة</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -6076,7 +6227,20 @@ function DailyTripEditModal({
   onSave: (t: DailyTrip) => void;
 }) {
   const [title, setTitle] = useState(trip.trip_title || trip.title || "");
-  const [destination, setDestination] = useState(trip.destination || "");
+  const [multiDestinations, setMultiDestinations] = useState<string[]>(() => {
+    if (Array.isArray(trip.destinations) && trip.destinations.length > 0) return trip.destinations;
+    if (Array.isArray((trip as any).places) && (trip as any).places.length > 0) {
+      return (trip as any).places.map((p: any) => p.place_name || p.name).filter(Boolean);
+    }
+    if (trip.destination) return trip.destination.split(" + ").map(s => s.trim()).filter(Boolean);
+    return [];
+  });
+  const handleMultiDestToggle = (name: string) => {
+    setMultiDestinations(prev => {
+      if (prev.includes(name)) return prev.filter(c => c !== name);
+      return [...prev, name];
+    });
+  };
   const [departureCity, setDepartureCity] = useState(trip.departure_city || "طرابلس");
   const [price, setPrice] = useState(String(trip.price_per_seat));
   const [busCapacity, setBusCapacity] = useState<15 | 25 | 50>(
@@ -6130,9 +6294,32 @@ function DailyTripEditModal({
     return [p, "/assets/dest-leptis-arch.jpg", "/assets/dest-leptis-forum.jpg", "/assets/dest-leptis-coast.jpg", "/assets/hero-leptis.jpg"];
   });
 
+  const [showAllGuides, setShowAllGuides] = useState(false);
+
   const filteredGuidesList = useMemo(() => {
-    return guides.filter(g => g.verification_status !== "مرفوض");
-  }, [guides]);
+    return guides.filter(g => {
+      if (g.verification_status === "مرفوض") return false;
+      if (!showAllGuides && recurringDays.length > 0 && g.working_days) {
+        let gDays: string[] = [];
+        try {
+          gDays = typeof g.working_days === "string" ? JSON.parse(g.working_days) : (g.working_days || []);
+        } catch {
+          gDays = String(g.working_days || "").split(",").map(s => s.trim().toLowerCase());
+        }
+        if (Array.isArray(gDays) && gDays.length > 0) {
+          const gDaysLower = gDays.map(d => String(d).toLowerCase().trim());
+          if (!gDaysLower.includes("all") && !gDaysLower.includes("جميع الأيام")) {
+            const availableOnAllDays = recurringDays.every(day => {
+              const code = arabicToCodeMap[day] || "";
+              return gDaysLower.includes(code) || gDaysLower.includes(day);
+            });
+            if (!availableOnAllDays) return false;
+          }
+        }
+      }
+      return true;
+    });
+  }, [guides, showAllGuides, recurringDays]);
 
   const selectedPrimaryRestaurant = useMemo(() => {
     return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
@@ -6163,17 +6350,22 @@ function DailyTripEditModal({
             alert("يرجى اختيار يوم واحد أو يومين أسبوعياً للرحلة اليومية.");
             return;
           }
-          if (!destination) {
-            alert("يرجى اختيار أحد المعالم السياحية المسجلة في المنصة.");
+          if (multiDestinations.length === 0) {
+            alert("يرجى اختيار معلَم سياحي واحد على الأقل للرحلة اليومية من المعالم المسجلة بالمنصة.");
             return;
           }
+          const selectedAttractionObjects = (attractions || []).filter(a => multiDestinations.includes(a.name || a.place_name || ""));
+          const selectedPlaceIds = selectedAttractionObjects.map(a => a.id || a.place_id);
           onSave({
             ...trip,
             trip_title: title,
             title,
             description: title,
-            destination,
-            destination_city: destination,
+            destination: multiDestinations.join(" + "),
+            destination_city: selectedAttractionObjects[0]?.city || multiDestinations[0] || departureCity,
+            destinations: multiDestinations,
+            place_ids: selectedPlaceIds,
+            places: selectedAttractionObjects,
             departure_city: departureCity,
             price_per_seat: +price,
             bus_capacity: busCapacity,
@@ -6208,29 +6400,58 @@ function DailyTripEditModal({
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">
-              المكان / الوجهة السياحية (من المعالم المسجلة في المنصة) *
-            </label>
-            <select
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              required
-              className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-right bg-white"
-            >
-              <option value="">— اختر أحد المعالم السياحية المسجلة في المنصة —</option>
-              {(attractions || []).map((a) => (
-                <option key={a.id || a.place_id} value={a.name || a.place_name}>
-                  🏛️ {a.name || a.place_name} ({a.city}) {a.category ? `— ${a.category}` : ""}
-                </option>
-              ))}
-            </select>
-            {destination && (
-              <div className="mt-1 flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-slate-500">المعلم المختار:</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-black">
-                  📍 {destination}
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-800">
+                المعالم والوجهات السياحية للرحلة اليومية (يمكنك اختيار معلَم أو أكثر) *
+              </label>
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                {multiDestinations.length} {multiDestinations.length === 1 ? "معلم مختار" : "معالم مختارة"}
+              </span>
+            </div>
+            <div className="w-full min-h-11 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-right mb-2 bg-white flex flex-wrap gap-1.5 items-center">
+              {multiDestinations.length === 0 && (
+                <span className="text-slate-400 font-normal">اضغط على المعالم بالأسفل لاختيارها (يمكنك اختيار معلَم واحد أو عدة معالم)...</span>
+              )}
+              {multiDestinations.map(d => (
+                <span key={d} className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-blue-200 shadow-2xs">
+                  <span>🏛️ {d}</span>
+                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-600 font-black cursor-pointer">×</button>
                 </span>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Click Landmark Selector for Daily Trips */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-slate-600 block">
+              اضغط لاختيار أو إلغاء المعالم السياحية المسجلة في المنصة للرحلة اليومية:
+            </label>
+            <span className="text-[10px] text-slate-400">يمكن تحديد أكثر من معلَم سياحي</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-white rounded-xl border border-slate-200">
+            {(attractions || []).length === 0 ? (
+              <span className="text-xs text-slate-400 font-bold">لا توجد معالم مسجلة بعد. يمكنك إضافتها من قسم المعالم السياحية.</span>
+            ) : (
+              (attractions || []).map((a) => {
+                const aName = a.name || a.place_name || "";
+                const isSelected = multiDestinations.includes(aName);
+                return (
+                  <button
+                    key={a.id || a.place_id || aName}
+                    type="button"
+                    onClick={() => handleMultiDestToggle(aName)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                      isSelected ? "bg-[#003580] text-white border-[#003580] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
+                    }`}
+                  >
+                    <span>📍 {aName}</span>
+                    {a.city && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                    {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -6271,12 +6492,13 @@ function DailyTripEditModal({
           currentTripId={trip.daily_trip_id || trip.id}
         />
 
-        {/* Multi-Select Restaurants & Cafes Filtered by Destination City */}
+        {/* Multi-Select Restaurants & Cafes Filtered by Landmark / Destination */}
         <TripRestaurantSelector
           restaurants={restaurants}
           selectedIds={selectedRestaurantIds}
           onToggleSelect={handleToggleRestaurant}
-          targetCity={destination}
+          targetCity={multiDestinations[0] || destination || undefined}
+          targetCities={multiDestinations.length > 0 ? multiDestinations : (destination ? [destination] : [])}
           attractions={attractions}
         />
 
@@ -6287,42 +6509,80 @@ function DailyTripEditModal({
           selectedRestaurant={selectedPrimaryRestaurant}
         />
 
-        <div>
-          <label className="text-xs font-bold mb-2 block">المرشد السياحي المعين</label>
+        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
+            <label className="text-xs font-bold text-slate-800 block">
+              👨‍🏫 المرشد السياحي المعين للرحلة {!showAllGuides && (
+                <span className="text-blue-700 font-black">
+                  (مفلتر تلقائياً وفقاً لأيام عمل المرشد: {recurringDays.join(" و ")})
+                </span>
+              )}:
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowAllGuides(!showAllGuides)}
+              className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 cursor-pointer transition"
+            >
+              {showAllGuides ? "🔍 إعادة تفعيل فلترة أيام العمل فقط" : "👁️ عرض كافة المرشدين"}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
-              <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
-                لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
+              <div className="col-span-full text-center text-xs text-amber-800 py-3 font-bold bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+                <div>لا يوجد مرشدين متاحين يطابق جدول عملهم الأيام المختارة ({recurringDays.join(" و ")}).</div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllGuides(true)}
+                  className="text-xs text-blue-700 font-black hover:underline cursor-pointer"
+                >
+                  اضغط هنا لعرض كافة المرشدين وتجاوز الفلترة
+                </button>
               </div>
             )}
-            {filteredGuidesList.map((g) => (
-              <div
-                key={g.license_number}
-                onClick={() => setGuide(g.license_number)}
-                className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
-                  guide === g.license_number
-                    ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
-                    : "bg-white border-slate-200 hover:border-amber-300"
-                }`}
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
-                  {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
+            {filteredGuidesList.map((g) => {
+              let gDaysArr: string[] = [];
+              try {
+                gDaysArr = typeof g.working_days === "string" ? JSON.parse(g.working_days) : (g.working_days || []);
+              } catch {
+                gDaysArr = String(g.working_days || "").split(",").map(s => s.trim());
+              }
+              const arabicDays = gDaysArr.map(d => codeToArabicMap[d.toLowerCase()] || d);
+              const daysLabel = arabicDays.length > 0 && !arabicDays.includes("all") ? arabicDays.join("، ") : "طوال أيام الأسبوع";
+
+              return (
+                <div
+                  key={g.license_number}
+                  onClick={() => setGuide(g.license_number)}
+                  className={`p-2.5 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                    guide === g.license_number
+                      ? "bg-amber-50/50 border-amber-500 ring-1 ring-amber-500"
+                      : "bg-white border-slate-200 hover:border-amber-300"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg overflow-hidden shrink-0 border">
+                    {g.avatar ? <img src={g.avatar} alt={g.full_name} className="w-full h-full object-cover" /> : "👤"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-0.5">
+                      <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
+                      {guide === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
+                    </div>
+                    {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
+                    <div className="text-[9px] text-slate-500 font-bold">
+                      رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
+                    </div>
+                    <div className="text-[9px] text-slate-600 font-bold mt-0.5 flex items-center gap-1">
+                      <span>📅 أيام العمل:</span>
+                      <span className="text-slate-800 font-black">{daysLabel}</span>
+                    </div>
+                    <div className="text-[9px] text-emerald-700 font-black mt-0.5">
+                      {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-0.5">
-                    <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
-                    {guide === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
-                  </div>
-                  {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
-                  <div className="text-[9px] text-slate-500 font-bold">
-                    رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
-                  </div>
-                  <div className="text-[9px] text-emerald-700 font-black">
-                    {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -6376,10 +6636,6 @@ function WeeklyTripEditModal({
   const handleMultiDestToggle = (name: string) => {
     setMultiDestinations(prev => {
       if (prev.includes(name)) return prev.filter(c => c !== name);
-      if (prev.length >= 4) {
-        alert("تنبيه: الحد الأقصى للمعالم في الرحلة الأسبوعية هو 4 معالم فقط!");
-        return prev;
-      }
       return [...prev, name];
     });
   };
@@ -6453,8 +6709,40 @@ function WeeklyTripEditModal({
   });
 
   const filteredGuidesList = useMemo(() => {
-    return guides.filter(g => g.verification_status !== "مرفوض");
-  }, [guides]);
+    return guides.filter((g) => {
+      if (g.verification_status === "مرفوض") return false;
+
+      // Check conflict with other weekly trips during this trip's dates
+      if (startDate) {
+        const targetStart = new Date(startDate);
+        const targetEnd = endDate ? new Date(endDate) : targetStart;
+        if (!isNaN(targetStart.getTime())) {
+          const s = targetStart.getTime();
+          const e = targetEnd.getTime();
+          const currentId = trip.weekly_trip_id || trip.id;
+          const conflict = weeklyTrips.find((wt: any) => {
+            if ((wt.weekly_trip_id || wt.id) === currentId) return false;
+            const assigned = wt.guide_license_number === g.license_number || wt.guide_license === g.license_number;
+            if (!assigned || !wt.start_date) return false;
+            const wtStart = new Date(wt.start_date);
+            const wtEnd = wt.end_date ? new Date(wt.end_date) : wtStart;
+            if (isNaN(wtStart.getTime()) || isNaN(wtEnd.getTime())) return false;
+            return !(wtEnd.getTime() < s || wtStart.getTime() > e);
+          });
+          if (conflict) return false;
+        }
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (multiDestinations.length > 0) {
+        const aMatches = (a.places || []).filter((p: any) => multiDestinations.includes(p.place_name || p.name)).length;
+        const bMatches = (b.places || []).filter((p: any) => multiDestinations.includes(p.place_name || p.name)).length;
+        if (aMatches !== bMatches) return bMatches - aMatches;
+      }
+      return 0;
+    });
+  }, [guides, startDate, endDate, weeklyTrips, trip, multiDestinations]);
 
   const selectedPrimaryRestaurant = useMemo(() => {
     return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
@@ -6521,11 +6809,16 @@ function WeeklyTripEditModal({
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">
-              الوجهات السياحية (المعالم المسجلة بالمنصة — حتى 4 معالم كحد أقصى)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-800">
+                الوجهات والمعالم السياحية للرحلة الأسبوعية (يمكنك اختيار معلَم أو أكثر)
+              </label>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                {multiDestinations.length} {multiDestinations.length === 1 ? "معلم مختار" : "معالم مختارة"}
+              </span>
+            </div>
             <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-200 bg-white flex flex-wrap gap-1">
-              {multiDestinations.length === 0 && <span className="text-slate-400 text-[10px]">اختر حتى 4 معالم من المعالم المسجلة أدناه...</span>}
+              {multiDestinations.length === 0 && <span className="text-slate-400 text-[10px]">اختر معلماً أو أكثر من المعالم المسجلة أدناه...</span>}
               {multiDestinations.map(d => (
                 <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
                   🏛️ {d}
@@ -6537,7 +6830,7 @@ function WeeklyTripEditModal({
         </div>
         <div className="space-y-1">
           <div className="text-[10px] text-slate-500 font-bold">
-            اختر المعالم السياحية من منصة دلني (تم اختيار {multiDestinations.length} من 4 كحد أقصى):
+            اختر المعالم السياحية من منصة دلني (تم اختيار {multiDestinations.length} معالم):
           </div>
           <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50">
             {(!attractions || attractions.length === 0) ? (
@@ -6650,6 +6943,18 @@ function WeeklyTripEditModal({
                   <div className="text-[9px] text-emerald-700 font-black">
                     {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
                   </div>
+                  {g.places && g.places.length > 0 && (
+                    <div className="text-[9px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                      <span>🏛️ المعالم المعتمدة: </span>
+                      <span>{g.places.map((p: any) => p.place_name || p.name).join("، ")}</span>
+                    </div>
+                  )}
+                  {multiDestinations.length > 0 && (g.places || []).some((p: any) => multiDestinations.includes(p.place_name || p.name)) && (
+                    <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-black">
+                      <span>🌟</span>
+                      <span>خبير بمعالم هذه الرحلة</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -7963,24 +8268,14 @@ function AttractionModal({
       ? attraction.highlights.join("، ")
       : attraction?.highlights || ""
   );
-  const [entryFee, setEntryFee] = useState(attraction?.entry_fee || "مجاني للجميع");
-  const [bestSeason, setBestSeason] = useState(attraction?.best_season || "طوال العام");
-  const [isUnesco, setIsUnesco] = useState(Boolean(attraction?.is_unesco));
-  const [unescoYear, setUnescoYear] = useState(attraction?.unesco_year ? String(attraction.unesco_year) : "1982");
-
   // Coordinates & Google Maps
   const [lat, setLat] = useState(attraction?.latitude ? String(attraction.latitude) : "");
   const [lng, setLng] = useState(attraction?.longitude ? String(attraction.longitude) : "");
   const [mapsUrl, setMapsUrl] = useState(attraction?.google_maps_url || "");
 
-  // Main photo and gallery
+  // Main photo
   const [imgMain, setImgMain] = useState(
     attraction?.place_image || (attraction as any)?.photo || "/assets/dest-leptis-theater.jpg"
-  );
-  const [gallery, setGallery] = useState(
-    Array.isArray(attraction?.gallery)
-      ? attraction.gallery.join(", ")
-      : attraction?.gallery || ""
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -8014,12 +8309,7 @@ function AttractionModal({
       category: category.trim(),
       description: desc.trim() || `معلم ${placeName.trim()} السياحي الواقع في مدينة ${cityName.trim()}، وأبرز محطاته الأثرية والتاريخية.`,
       highlights: highlights.trim(),
-      entry_fee: entryFee.trim() || "مجاني للجميع",
-      best_season: bestSeason.trim() || "طوال العام",
-      is_unesco: isUnesco,
-      unesco_year: isUnesco && unescoYear ? parseInt(unescoYear, 10) : null,
       place_image: imgMain,
-      gallery: gallery.trim(),
       latitude: lat ? parseFloat(lat) : undefined,
       longitude: lng ? parseFloat(lng) : undefined,
       google_maps_url: (lat && lng) ? `https://maps.google.com/?q=${lat},${lng}` : (mapsUrl || undefined),
@@ -8115,49 +8405,6 @@ function AttractionModal({
             </div>
           </div>
 
-          {/* Pricing, Season, and UNESCO World Heritage */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl bg-amber-50/50 border border-amber-200">
-            <div>
-              <Field
-                label="🎟️ رسوم وتذاكر الدخول"
-                value={entryFee}
-                onChange={setEntryFee}
-                placeholder="مثال: مجاني للجميع أو 10 د.ل"
-              />
-            </div>
-            <div>
-              <Field
-                label="🌤️ أفضل موسم للزيارة"
-                value={bestSeason}
-                onChange={setBestSeason}
-                placeholder="مثال: الربيع والخريف، طوال العام"
-              />
-            </div>
-            <div className="flex flex-col justify-end space-y-1.5">
-              <label className="text-xs font-bold text-foreground block">🏛️ التراث العالمي (اليونسكو)</label>
-              <div className="flex items-center gap-2 h-10">
-                <input
-                  type="checkbox"
-                  id="unescoCheck"
-                  checked={isUnesco}
-                  onChange={(e) => setIsUnesco(e.target.checked)}
-                  className="w-5 h-5 accent-primary rounded cursor-pointer"
-                />
-                <label htmlFor="unescoCheck" className="text-xs font-bold text-slate-800 cursor-pointer">
-                  موقع مسجل باليونسكو
-                </label>
-                {isUnesco && (
-                  <input
-                    type="number"
-                    value={unescoYear}
-                    onChange={(e) => setUnescoYear(e.target.value)}
-                    placeholder="سنة الإدراج"
-                    className="w-20 h-9 px-2 rounded-lg border border-amber-300 text-xs font-bold text-center outline-none"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
 
           <div>
             <label className="text-xs font-bold mb-1 block text-foreground">
@@ -8219,23 +8466,11 @@ function AttractionModal({
           </p>
         </div>
 
-        {/* 4. Photos & Gallery */}
+        {/* 4. Photo */}
         <div className="pt-3 border-t border-border space-y-3">
-          <label className="text-xs font-black text-foreground block">📸 صور المعلم السياحي</label>
+          <label className="text-xs font-black text-foreground block">📸 صورة المعلم السياحي</label>
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
             <ImageFilePicker label="🌟 الصورة الرئيسية للمعلم السياحي" value={imgMain} onChange={setImgMain} />
-          </div>
-          <div>
-            <label className="text-xs font-bold mb-1 block text-foreground">
-              معرض الصور الإضافية (روابط مفصولة بفواصل)
-            </label>
-            <input
-              type="text"
-              value={gallery}
-              onChange={(e) => setGallery(e.target.value)}
-              placeholder="مثال: /assets/dest-leptis-arch.jpg, /assets/dest-leptis-baths.jpg"
-              className="w-full h-10 px-3 rounded-xl border border-border text-xs font-semibold text-right outline-none focus:border-primary"
-            />
           </div>
         </div>
 
@@ -8387,7 +8622,6 @@ function TouristDetailsModal({
                           <th className="p-2.5 text-center">المقاعد</th>
                           <th className="p-2.5 text-center">المبلغ</th>
                           <th className="p-2.5 text-center">حالة السداد</th>
-                          <th className="p-2.5">ملاحظات</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -8409,7 +8643,6 @@ function TouristDetailsModal({
                                 {b.payment_status === "paid" ? "تم السداد" : (b.payment_status || "بانتظار السداد")}
                               </span>
                             </td>
-                            <td className="p-2.5 text-slate-500 text-[11px] max-w-xs truncate">{b.booking_notes || "-"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -8432,7 +8665,6 @@ function TouristDetailsModal({
                           <th className="p-2.5 text-center">المقاعد</th>
                           <th className="p-2.5 text-center">المبلغ</th>
                           <th className="p-2.5 text-center">حالة السداد</th>
-                          <th className="p-2.5">ملاحظات</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -8454,7 +8686,6 @@ function TouristDetailsModal({
                                 {b.payment_status === "paid" ? "تم السداد" : (b.payment_status || "بانتظار السداد")}
                               </span>
                             </td>
-                            <td className="p-2.5 text-slate-500 text-[11px] max-w-xs truncate">{b.booking_notes || "-"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -8968,9 +9199,36 @@ function TripImagesFiveManager({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target?.result) {
-        updateSlot(idx, e.target.result as string);
-      }
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.82);
+          updateSlot(idx, compressed);
+          return;
+        }
+        updateSlot(idx, dataUrl);
+      };
+      img.onerror = () => updateSlot(idx, dataUrl);
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -9043,11 +9301,11 @@ function TripImagesFiveManager({
   };
 
   const slotLabels = [
-    "صورة 1 (الغلاف الرئيسي للكرت)",
-    "صورة 2 (المعالم الرئيسية)",
+    "صورة 1 (⭐ صورة الغلاف الرئيسية البارزة)",
+    "صورة 2 (المعالم الرئيسية للرحلة)",
     "صورة 3 (الطبيعة والاستكشاف)",
-    "صورة 4 (الإقامة / الضيافة)",
-    "صورة 5 (التفاصيل والأنشطة)",
+    "صورة 4 (الضيافة والاستراحة)",
+    "صورة 5 (التفاصيل والأنشطة التراثية)",
   ];
 
   return (

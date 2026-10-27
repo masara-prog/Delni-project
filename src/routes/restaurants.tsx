@@ -1312,7 +1312,7 @@ function RestaurantsPage() {
     const loadCustom = async () => {
       try {
         const live = await apiGetRestaurants();
-        if (Array.isArray(live) && live.length > 0) {
+        if (Array.isArray(live)) {
           const mapped = live.map((r: any) => mapAdminRestaurantToPublic(r, isAr));
           setCustomRestaurants(mapped);
           return;

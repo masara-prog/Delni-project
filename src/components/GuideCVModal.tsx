@@ -163,11 +163,11 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
           {/* Specialties */}
           {guide.specialties && guide.specialties.length > 0 && (
             <div>
-              <div className="text-xs font-bold text-[#718096] mb-2">التخصصات والمهارات المميزة:</div>
+              <div className="text-xs font-bold text-[#718096] mb-2">المعالم السياحية والآثار المعتمدة لخبرة المرشد:</div>
               <div className="flex flex-wrap gap-2">
                 {guide.specialties.map((s, idx) => (
                   <span key={idx} className="px-4 py-1.5 rounded-full bg-amber-50/90 border border-amber-200/90 text-amber-950 font-bold text-xs shadow-2xs">
-                    ✨ {s}
+                    🏛️ {s}
                   </span>
                 ))}
               </div>
