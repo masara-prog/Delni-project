@@ -341,393 +341,7 @@ export type NearbyPlace = {
   perk: string;
 };
 
-const nearbyPlaces: NearbyPlace[] = [
-  // طرابلس
-  {
-    id: "np-t1",
-    name: "فندق باب البحر وكورنثيا طرابلس",
-    category: "hotel",
-    city: "طرابلس",
-    area: "طريق الشط - قرب الميناء والمدينة القديمة",
-    img: "/assets/ai_city.jpg",
-    rating: 4.9,
-    phone: "0213352999",
-    priceNote: "ابتداءً من 480 د.ل / الليلة",
-    perk: "خصم 20% خاص برواد رحلات دلّني",
-  },
-  {
-    id: "np-t2",
-    name: "أجنحة النوفليين الفندقية المجهزة",
-    category: "apartment",
-    city: "طرابلس",
-    area: "النوفليين - بجوار نقطة انطلاق الرحلات مباشرة",
-    img: "/assets/ai_city.jpg",
-    rating: 4.8,
-    phone: "0914445522",
-    priceNote: "شقق فندقية عائلية 320 د.ل",
-    perk: "موقع استراتيجي عند نقطة التجمع والانطلاق",
-  },
-  {
-    id: "np-t3",
-    name: "منتجع راديسون المهاري والواجهة البحرية",
-    category: "resort",
-    city: "طرابلس",
-    area: "الواجهة البحرية - طريق الشط",
-    img: "/assets/ai_city.jpg",
-    rating: 4.85,
-    phone: "0213407878",
-    priceNote: "غرف وأجنحة مطلة 450 د.ل",
-    perk: "إفطار بوفيه مجاني مع حجز الرحلة",
-  },
-  {
-    id: "np-t4",
-    name: "نزل السراي العتيق بالمدينة القديمة",
-    category: "heritage",
-    city: "طرابلس",
-    area: "زنقة الفرنسيس - المدينة القديمة",
-    img: "/assets/ai_city.jpg",
-    rating: 4.92,
-    phone: "0925556611",
-    priceNote: "نُزل تراثي معماري 240 د.ل",
-    perk: "أصالة تاريخية وجولات مشي مجانية",
-  },
-  {
-    id: "np-t5",
-    name: "مطعم الحوش للتراث والمأكولات الشعبية",
-    category: "restaurant",
-    city: "طرابلس",
-    area: "المدينة القديمة - قرب قوس ماركوس",
-    img: "/assets/ai_city.jpg",
-    rating: 4.95,
-    phone: "0914445566",
-    priceNote: "وجبات شعبية وبازين وكسكسي",
-    perk: "وجبة غداء مشمولة في الرحلة اليومية",
-  },
-  {
-    id: "np-t6",
-    name: "مقهى زنقة الفندق التاريخي للشاي باللوز",
-    category: "cafe",
-    city: "طرابلس",
-    area: "المدينة القديمة - زنقة الفندق",
-    img: "/assets/ai_city.jpg",
-    rating: 4.9,
-    phone: "0927778899",
-    priceNote: "شاي باللوز برغوته وحلويات مقروض",
-    perk: "استراحة شاي مجانية لرواد الرحلة",
-  },
-
-  // بنغازي
-  {
-    id: "np-b1",
-    name: "فندق تيبستي العريق بنغازي",
-    category: "hotel",
-    city: "بنغازي",
-    area: "ميدان الشجرة - وسط بنغازي",
-    img: "/assets/ai_city.jpg",
-    rating: 4.75,
-    phone: "0619092211",
-    priceNote: "ابتداءً من 350 د.ل / الليلة",
-    perk: "خصم 20% لحاملي تذاكر رحلات دلّني",
-  },
-  {
-    id: "np-b2",
-    name: "أجنحة فينيسيا الفندقية الحديثة",
-    category: "apartment",
-    city: "بنغازي",
-    area: "شارع فينيسيا - بجوار مقر انطلاق الرحلات مباشرة",
-    img: "/assets/ai_city.jpg",
-    rating: 4.88,
-    phone: "0923334411",
-    priceNote: "شقق فندقية مجهزة 290 د.ل",
-    perk: "موقع ملاصق لمكتب الانطلاق بشارع فينيسيا",
-  },
-  {
-    id: "np-b3",
-    name: "منتجع شاطئ النخيل السياحي",
-    category: "resort",
-    city: "بنغازي",
-    area: "الساحل الشمالي - الصابري",
-    img: "/assets/ai_city.jpg",
-    rating: 4.8,
-    phone: "0918889900",
-    priceNote: "شاليهات عائلية 380 د.ل",
-    perk: "أجواء بحرية ومسابح عائلية",
-  },
-  {
-    id: "np-b4",
-    name: "مطعم ومشاوي عروس الجبل",
-    category: "restaurant",
-    city: "بنغازي",
-    area: "شارع فينيسيا",
-    img: "/assets/ai_city.jpg",
-    rating: 4.9,
-    phone: "0912227788",
-    priceNote: "مشويات لحم وطني وأطباق شرقية",
-    perk: "غداء مشمول برحلات المنطقة الشرقية",
-  },
-  {
-    id: "np-b5",
-    name: "مقهى ريتاج الفاخر والجلسات الهادئة",
-    category: "cafe",
-    city: "بنغازي",
-    area: "شارع فينيسيا - قرب الدائري",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.85,
-    phone: "0926661122",
-    priceNote: "قهوة مختصة وشاي منعنع وحلويات",
-    perk: "خصم 15% لرواد المنصة",
-  },
-
-  // الخمس / لبدة
-  {
-    id: "np-k1",
-    name: "فندق ومنتجع لبدة السياحي المطل",
-    category: "hotel",
-    city: "الخمس",
-    area: "الخمس - على مقربة من آثار لبدة الكبرى",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.8,
-    phone: "0536224411",
-    priceNote: "غرف سياحية 260 د.ل",
-    perk: "خصم 20% لعملاء رحلة لبدة",
-  },
-  {
-    id: "np-k2",
-    name: "شقق كورنيش الخمس البحرية",
-    category: "apartment",
-    city: "الخمس",
-    area: "كورنيش الخمس الساحلي",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.7,
-    phone: "0913337722",
-    priceNote: "أجنحة وشقق 220 د.ل",
-    perk: "إطلالة مباشرة على البحر",
-  },
-  {
-    id: "np-k3",
-    name: "مطعم القلعة للمأكولات البحرية الطازجة",
-    category: "restaurant",
-    city: "الخمس",
-    area: "شاطئ الخمس - قرب مسرح لبدة",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.92,
-    phone: "0925558833",
-    priceNote: "أسماك طازجة من صيد اليوم",
-    perk: "وجبة غداء مشمولة في رحلة لبدة الكبرى",
-  },
-  {
-    id: "np-k4",
-    name: "كافيه واحة لبدة الأثرية",
-    category: "cafe",
-    city: "الخمس",
-    area: "مدخل مدينة لبدة الرومانية",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.75,
-    phone: "0917774433",
-    priceNote: "عصائر طبيعية وشاي باللوز",
-    perk: "جلسات مريحة قبل انطلاق الجولة الميدانية",
-  },
-
-  // شحات / الجبل الأخضر
-  {
-    id: "np-s1",
-    name: "منتجع قورينا الجبلي الفاخر",
-    category: "resort",
-    city: "شحات",
-    area: "قمم شحات المطلة على البحر المتوسط",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.95,
-    phone: "0684623344",
-    priceNote: "أجنحة جبلية فاخرة 420 د.ل",
-    perk: "إطلالة ساحرة على معبد أبولو والبحر",
-  },
-  {
-    id: "np-s2",
-    name: "نزل صنوبر الجبل التراثي",
-    category: "heritage",
-    city: "شحات",
-    area: "غابات المنصورة - الجبل الأخضر",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.88,
-    phone: "0914449911",
-    priceNote: "أكواخ صنوبر دافئة 280 د.ل",
-    perk: "خصم 20% وإفطار جبلي بلدي",
-  },
-  {
-    id: "np-s3",
-    name: "مطعم ومشاوي نبع الحمام الوطني",
-    category: "restaurant",
-    city: "شحات",
-    area: "شحات - قرب عين قورينا التاريخية",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.9,
-    phone: "0928883355",
-    priceNote: "لحم وطني مشوي ومأكولات جبلية",
-    perk: "غداء مشمول بالرحلة مع جلسات غابات",
-  },
-  {
-    id: "np-s4",
-    name: "كافيه مطل قورينا البانورامي",
-    category: "cafe",
-    city: "شحات",
-    area: "شرفات الجبل الأخضر المطلة على أبولونيا",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.85,
-    phone: "0915556622",
-    priceNote: "جلسات قهوة وغروب ساحرة ومميزة",
-    perk: "خصم 15% لعملاء رحلة قورينا",
-  },
-
-  // غدامس
-  {
-    id: "np-g1",
-    name: "فندق ونزل عين الفرس السياحي",
-    category: "hotel",
-    city: "غدامس",
-    area: "مدخل الواحة وعين الفرس الأسطورية",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.85,
-    phone: "0484622200",
-    priceNote: "غرف تراثية مكيفة 250 د.ل",
-    perk: "إقامة مشمولة بالرحلة الأسبوعية",
-  },
-  {
-    id: "np-g2",
-    name: "نزل دار تيلفين الطيني التراثي",
-    category: "heritage",
-    city: "غدامس",
-    area: "قلب المدينة القديمة المسقوفة",
-    img: "/assets/ai_ghadames.jpg",
-    rating: 4.95,
-    phone: "0918883344",
-    priceNote: "بيوت طينية تقليدية عريقة 220 د.ل",
-    perk: "معايشة تراثية حقيقية لليونسكو",
-  },
-  {
-    id: "np-g3",
-    name: "مطعم ومضافة الواحة التراثية",
-    category: "restaurant",
-    city: "غدامس",
-    area: "شارع النخيل - غدامس",
-    img: "/assets/ai_ghadames.jpg",
-    rating: 4.9,
-    phone: "0924441177",
-    priceNote: "وجبات غدامسية (فتات، بازين، كسكسي)",
-    perk: "وجبات يومية مشمولة بالبرنامج",
-  },
-  {
-    id: "np-g4",
-    name: "مقهى ساحة الظل التقليدي",
-    category: "cafe",
-    city: "غدامس",
-    area: "أزقة غدامس المسقوفة",
-    img: "/assets/ai_ghadames.jpg",
-    rating: 4.8,
-    phone: "0912226688",
-    priceNote: "شاي الواحة بالحبق والتمور الغدامسية",
-    perk: "جلسات واحات أصيلة ومجانية للوفد",
-  },
-
-  // أوباري / فزان
-  {
-    id: "np-u1",
-    name: "مخيم تدرارت أكاكوس الصحراوي الملكي",
-    category: "resort",
-    city: "أوباري",
-    area: "بين الكثبان الذهبية وجبال أكاكوس",
-    img: destAcacusArch,
-    rating: 4.98,
-    phone: "0916664422",
-    priceNote: "خيام ملكية مجهزة بالكامل 380 د.ل",
-    perk: "شامل وجبات الشواء وسهرات الفلكلور",
-  },
-  {
-    id: "np-u2",
-    name: "نزل بحيرة قبر عون الصحراوي",
-    category: "heritage",
-    city: "أوباري",
-    area: "شاطئ بحيرة قبر عون المحاطة بالنخيل",
-    img: destUbariGaberoun,
-    rating: 4.9,
-    phone: "0927773311",
-    priceNote: "جلسات وأكواخ صحراوية 200 د.ل",
-    perk: "سباحة في البحيرة المالحة وتزلج رملي",
-  },
-  {
-    id: "np-u3",
-    name: "مطعم المائدة الصحراوية والمندي الفزاني",
-    category: "restaurant",
-    city: "أوباري",
-    area: "أوباري المركز - طريق سبها",
-    img: destUbariUmmAlMaa,
-    rating: 4.88,
-    phone: "0919992255",
-    priceNote: "مندي ولحم حنيد وشواء مدفون",
-    perk: "وجبات مشمولة ببرنامج سفاري الصحراء",
-  },
-  {
-    id: "np-u4",
-    name: "خيمة الشاي الطوارقي تحت النجوم",
-    category: "cafe",
-    city: "أوباري",
-    area: "كثبان أوباري العالية",
-    img: destSaharaDunes,
-    rating: 4.95,
-    phone: "0921118844",
-    priceNote: "شاي أخضر طوارقي على الجمر برغوة ثلاثية",
-    perk: "سهرات نار وموسيقى تيناريوين مجاناً",
-  },
-
-  // صبراتة
-  {
-    id: "np-sb1",
-    name: "فندق صبراتة السياحي المطل على البحر",
-    category: "hotel",
-    city: "صبراتة",
-    area: "كورنيش صبراتة - بجوار الآثار الفينيقية",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.8,
-    phone: "0246221199",
-    priceNote: "غرف بحرية مريحة 240 د.ل",
-    perk: "خصم 20% لحاملي تذاكر الرحلة",
-  },
-  {
-    id: "np-sb2",
-    name: "شقق ومنتجع شاطئ تليل العائلي",
-    category: "apartment",
-    city: "صبراتة",
-    area: "شاطئ تليل السياحي",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.75,
-    phone: "0913332266",
-    priceNote: "شقق وشاليهات بحرية 290 د.ل",
-    perk: "جلسات عائلية وشاطئ رملي نظيف",
-  },
-  {
-    id: "np-sb3",
-    name: "مطعم مرسى الصيادين للأسماك الطازجة",
-    category: "restaurant",
-    city: "صبراتة",
-    area: "ميناء وممشى صبراتة القديم",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.92,
-    phone: "0924449933",
-    priceNote: "أطباق سمك دنديس ووقار مشوي",
-    perk: "وجبة غداء بحرية مشمولة في رحلة صبراتة",
-  },
-  {
-    id: "np-sb4",
-    name: "مقهى واجهة المسرح الروماني",
-    category: "cafe",
-    city: "صبراتة",
-    area: "بوابة المسرح الروماني المطلة على البحر",
-    img: "/assets/ai_ruins.jpg",
-    rating: 4.82,
-    phone: "0918884477",
-    priceNote: "شاي وقهوة ومثلجات",
-    perk: "إطلالة مباشرة على أعمدة المسرح والغروب",
-  },
-];
+const nearbyPlaces: NearbyPlace[] = [];
 
 // Live trips loaded dynamically from DelniDB SQL Server (static mock trips removed)
 const dailyTrips: DailyTrip[] = [];
@@ -766,70 +380,7 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
   const restaurantData = (t as any).restaurant || null;
   const restaurantName = restaurantData?.name || null;
 
-  const itinerary = customSteps || (t.type === "daily" ? [
-    {
-      time: "09:00 ص",
-      title: isAr ? "نقطة التجمع والانطلاق من موقعنا" : "Assembly & Departure",
-      desc: isAr ? `التجمع في ${departurePoint} والصعود للمركبة السياحية المجهزة والانطلاق في تمام 09:00 صباحاً.` : `Gather at ${departurePoint} and depart sharply at 09:00 AM.`
-    },
-    {
-      time: "10:30 ص",
-      title: isAr ? "الجولة الميدانية الأولى واستكشاف المعالم الأثرية" : "Morning Historical Walking Tour",
-      desc: isAr ? "استكشاف المعالم الرئيسية رفقة المرشد السياحي المعتمد مع شرح تاريخي موثق." : "Guided exploration of primary landmarks with deep historical insights."
-    },
-    {
-      time: "01:30 م",
-      title: isAr ? "استراحة وتناول وجبة الغداء التراثية المشمولة" : "Authentic Lunch Gathering",
-      desc: isAr
-        ? (restaurantName
-            ? `تناول وجبة غداء ليبية تقليدية كاملة في ${restaurantName} (${restaurantData?.city || departurePoint}) مشمولة بالكامل بالرحلة.`
-            : "تناول وجبة غداء ليبية تقليدية كاملة (أطباق رئيسية، سلطات طازجة، عصائر، ومياه معدنية) في مطعم تراثي معتمد مشمول بالرحلة.")
-        : "Complete traditional Libyan meal with fresh salads and beverages included in the tour."
-    },
-    {
-      time: "04:30 م",
-      title: isAr ? "جولة المعالم الترفيهية والطبيعية / حديقة الحيوان" : "Scenic & Zoo Visit",
-      desc: isAr ? "زيارة حديقة الحيوان أو المعالم الطبيعية والساحلية، وأخذ صور تذكارية في أجواء مريحة وممتعة." : "Visit scenic local parks, zoo, or coastal promenades."
-    },
-    {
-      time: "07:00 م",
-      title: isAr ? "استراحة ضيافة وتذوق ووقت حر للتسوق" : "Local Hospitality & Souk Shopping",
-      desc: isAr ? "استراحة ضيافة وتذوق حلويات تقليدية، مع وقت مخصص لشراء التذكارات والصناعات اليدوية." : "Traditional hospitality break and free time for artisanal shopping."
-    },
-    {
-      time: "09:00 م",
-      title: isAr ? "العودة وختام الرحلة في نقطة الانطلاق" : "Return & Tour Conclusion",
-      desc: isAr ? `العودة بسلامة الله بالمركبة السياحية إلى ${departurePoint} في تمام الساعة 09:00 مساءً.` : `Safe return back to ${departurePoint} sharply at 09:00 PM.`
-    }
-  ] : [
-    {
-      time: "08:30 ص",
-      title: isAr ? "نقطة التجمع والانطلاق من موقعنا" : "Assembly & Departure",
-      desc: isAr ? `التجمع عند: ${departurePoint} والصعود للمركبة السياحية المجهزة.` : `Meet at ${departurePoint} and board the VIP transport.`
-    },
-    {
-      time: "10:00 ص",
-      title: isAr ? "انطلاق المسار الاستكشافي والمعالم الأولى" : "Expedition Path",
-      desc: isAr ? "بدء البرنامج الاستكشافي المجدول رفقة المرشد السياحي وسيارات الدفع الرباعي أو الحافلة." : "Expedition kickoff with guides."
-    },
-    {
-      time: "02:00 م",
-      title: isAr ? "وجبة الغداء والاستراحة" : "Lunch & Rest",
-      desc: isAr
-        ? (restaurantName ? `تناول وجبة غداء تراثية شهية مشمولة في ${restaurantName}.` : "تناول وجبة غداء تراثية شهية مشمولة في البرنامج.")
-        : "Traditional meal included in program."
-    },
-    {
-      time: "05:00 م",
-      title: isAr ? "المسار المسائي / التخييم أو الإقامة" : "Evening Program",
-      desc: isAr ? "الوصول لمكان الإقامة المعتمد أو المخيم الصحراوي الفاخر والاستمتاع بأجواء الغروب." : "Arrival at lodge or luxury camp."
-    },
-    {
-      time: "08:30 م",
-      title: isAr ? "العشاء وجلسة السمر الفلكلورية" : "Dinner & Campfire",
-      desc: isAr ? "وجبة عشاء مشويات مع شاي طوارقي وجلسة فلكلورية تحت النجوم." : "Dinner and folklore tea under the stars."
-    }
-  ]);
+  const itinerary = customSteps || [];
 
   const vehicle = "vehicle" in t && t.vehicle ? {
     model: t.vehicle.model,
@@ -838,20 +389,9 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
     plateNumber: t.vehicle.plateNumber,
     driverPhone: t.vehicle.driverPhone,
     capacity: t.vehicle.capacity || totalSeats,
-  } : {
-    model: "مرسيدس سبرينتر سياحي VIP مكيف ومجهز",
-    company: "شركة السهم الذهبي للنقل السياحي",
-    driver: "الكابتن علي الرجباني",
-    plateNumber: "طرابلس 4222",
-    driverPhone: "0915647786",
-    capacity: 25,
-  };
+  } : null;
 
-  const guide = "guide" in t && t.guide ? t.guide : {
-    name: "أ. محمد الفيتوري",
-    title: "مرشد سياحي معتمد من هيئة السياحة",
-    phone: "+218 91 333 4455"
-  };
+  const guide = "guide" in t && t.guide ? t.guide : null;
 
   const priceFormatted = t.type === "daily" ? `${t.price} د.ل` : t.type === "weekly" ? `${t.seatPrice} د.ل` : t.sampleDays;
 
@@ -1371,27 +911,39 @@ function TripDetailsView({
                 </div>
               </div>
 
-              <div className="space-y-4 relative before:absolute before:inset-0 before:left-auto before:right-3.5 before:w-0.5 before:bg-[#E8E2D6] pt-2">
-                {info.itinerary.map((step, idx) => (
-                  <div key={idx} className="relative flex items-start gap-4 pr-9">
-                    <div className="absolute right-1 top-1 w-5 h-5 rounded-full bg-[#003580] text-white flex items-center justify-center text-[10px] font-black shadow-xs ring-4 ring-white">
-                      {idx + 1}
-                    </div>
-
-                    <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-[#E8E2D6] flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                        <h4 className="font-black text-sm text-[#0F172A]">{step.title}</h4>
-                        <span className="text-xs font-black text-[#003580] bg-white px-2.5 py-0.5 rounded-lg border border-blue-100">
-                          {step.time}
-                        </span>
+              {info.itinerary.length === 0 ? (
+                <div className="py-8 px-4 text-center bg-[#FAF7F2] border border-dashed border-[#E8E2D6] rounded-2xl space-y-2">
+                  <span className="text-3xl block">📍</span>
+                  <h4 className="text-xs sm:text-sm font-black text-[#003580]">
+                    {isAr ? "لم يتم تسجيل محطات تفصيلية لهذا المسار بعد." : "No detailed itinerary stations registered for this tour yet."}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {isAr ? "سيتم تزويد المشتركين بجدول المحطات المعتمد قبل موعد الانطلاق." : "A detailed schedule will be shared with verified attendees."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 relative before:absolute before:inset-0 before:left-auto before:right-3.5 before:w-0.5 before:bg-[#E8E2D6] pt-2">
+                  {info.itinerary.map((step, idx) => (
+                    <div key={idx} className="relative flex items-start gap-4 pr-9">
+                      <div className="absolute right-1 top-1 w-5 h-5 rounded-full bg-[#003580] text-white flex items-center justify-center text-[10px] font-black shadow-xs ring-4 ring-white">
+                        {idx + 1}
                       </div>
-                      <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                        {step.desc}
-                      </p>
+
+                      <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-[#E8E2D6] flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                          <h4 className="font-black text-sm text-[#0F172A]">{step.title}</h4>
+                          <span className="text-xs font-black text-[#003580] bg-white px-2.5 py-0.5 rounded-lg border border-blue-100">
+                            {step.time}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                          {step.desc}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
 
@@ -1780,32 +1332,40 @@ function TripDetailsView({
                 <span>{isAr ? "المرشد السياحي المرافق:" : "Assigned Tour Guide:"}</span>
               </span>
 
-              <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] flex items-center justify-between gap-3 text-xs">
-                <div>
-                  <div className="font-black text-[#0F172A] text-sm">{info.guide.name}</div>
-                  <div className="text-[11px] text-slate-500 font-medium">{info.guide.title}</div>
-                  <div className="text-xs text-[#003580] font-bold mt-1">📞 {info.guide.phone}</div>
-                </div>
-              </div>
+              {info.guide ? (
+                <>
+                  <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="font-black text-[#0F172A] text-sm">{info.guide.name}</div>
+                      <div className="text-[11px] text-slate-500 font-medium">{info.guide.title || (isAr ? "مرشد سياحي معتمد" : "Certified Guide")}</div>
+                      {info.guide.phone && <div className="text-xs text-[#003580] font-bold mt-1">📞 {info.guide.phone}</div>}
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => onOpenGuideCV?.((info.guide as any).cv || {
-                  name: info.guide.name,
-                  title: info.guide.title,
-                  phone: info.guide.phone,
-                  bio: `مرشد سياحي معتمد ومخصص لرحلة ${trip.title}.`,
-                  licenseNumber: "G-8821",
-                  experienceYears: 10,
-                  rating: 4.9,
-                  pricePerDay: 180,
-                  specialties: ["إرشاد الرحلات", "التاريخ والآثار"],
-                })}
-                className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <span>👨‍✈️</span>
-                <span>{isAr ? "عرض السيرة الذاتية ورخصة الإرشاد" : "View Certified CV"}</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => onOpenGuideCV?.((info.guide as any).cv || {
+                      name: info.guide!.name,
+                      title: info.guide!.title || "مرشد سياحي معتمد",
+                      phone: info.guide!.phone || "",
+                      bio: `مرشد سياحي معتمد ومخصص لرحلة ${trip.title}.`,
+                      licenseNumber: (info.guide as any).licenseNumber || "",
+                      experienceYears: 2,
+                      rating: Number((info.guide as any).rating_avg) || 0,
+                      pricePerDay: 180,
+                      specialties: ["إرشاد الرحلات", "التاريخ والآثار"],
+                    })}
+                    className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>👨‍✈️</span>
+                    <span>{isAr ? "عرض السيرة الذاتية ورخصة الإرشاد" : "View Certified CV"}</span>
+                  </button>
+                </>
+              ) : (
+                <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] text-xs text-slate-600 font-bold">
+                  {isAr ? "سيتم تعيين مرشد سياحي معتمد لهذه الرحلة قريباً من قبل إدارة المنصة." : "A certified tour guide will be assigned shortly."}
+                </div>
+              )}
             </div>
 
             {/* Vehicle & Driver Card (Directly below Tour Guide for all trips) */}
@@ -1820,59 +1380,67 @@ function TripDetailsView({
                 </span>
               </div>
 
-              <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-black text-[#0F172A] text-sm flex items-center gap-1.5">
-                    <span>{info.vehicle.model.includes("50") ? "🚍" : info.vehicle.model.includes("15") ? "🚐" : "🚌"}</span>
-                    <span>{info.vehicle.model}</span>
-                  </div>
-                  <span className="text-[11px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded-lg border border-[#E8E2D6]">
-                    {isAr ? `${info.vehicle.capacity} راكب` : `${info.vehicle.capacity} seats`}
-                  </span>
-                </div>
-
-                <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1">
-                  <span>🏢</span>
-                  <span className="text-[#003580]">{info.vehicle.company}</span>
-                  <span className="text-slate-400">·</span>
-                  <span className="font-mono text-slate-700">{(info.vehicle.plateNumber || "").replace(/\?+/g, "").trim() || (isAr ? "لوحة معتمدة" : "Verified")}</span>
-                </div>
-
-                <div className="pt-1.5 border-t border-[#E8E2D6]/60 flex items-center justify-between text-xs">
-                  <div className="font-bold text-slate-700 flex items-center gap-1">
-                    <span>👨‍✈️</span>
-                    <span>{info.vehicle.driver}</span>
-                  </div>
-                  {info.vehicle.driverPhone && (
-                    <div className="text-[#003580] font-mono font-bold text-[11px]">
-                      📞 {info.vehicle.driverPhone}
+              {info.vehicle ? (
+                <>
+                  <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-black text-[#0F172A] text-sm flex items-center gap-1.5">
+                        <span>{info.vehicle.model.includes("50") ? "🚍" : info.vehicle.model.includes("15") ? "🚐" : "🚌"}</span>
+                        <span>{info.vehicle.model}</span>
+                      </div>
+                      <span className="text-[11px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded-lg border border-[#E8E2D6]">
+                        {isAr ? `${info.vehicle.capacity} راكب` : `${info.vehicle.capacity} seats`}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => onOpenVehicleDetails?.({
-                  model: info.vehicle.model,
-                  company: info.vehicle.company,
-                  driver: info.vehicle.driver,
-                  licensePlate: (info.vehicle.plateNumber || "").replace(/\?+/g, "").trim() || "ليبيا - 5-99214",
-                  seats: info.vehicle.capacity,
-                  phone: info.vehicle.driverPhone || "091-2345678",
-                  features: [
-                    "تكييف هوائي مركزي متطور",
-                    "مقاعد مريحة مخصصة للجولات السياحية",
-                    "حقيبة إسعافات أولية وطفاية حريق",
-                    "شاشات عرض ونظام صوتي متكامل",
-                    "سائق ذو خبرة ورخصة قيادة عمومية معتمدة"
-                  ],
-                })}
-                className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <span>🔍</span>
-                <span>{isAr ? "معاينة تفاصيل المركبة والسائق" : "Inspect Vehicle & Driver"}</span>
-              </button>
+                    <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1">
+                      <span>🏢</span>
+                      <span className="text-[#003580]">{info.vehicle.company}</span>
+                      <span className="text-slate-400">·</span>
+                      <span className="font-mono text-slate-700">{(info.vehicle.plateNumber || "").replace(/\?+/g, "").trim() || (isAr ? "لوحة معتمدة" : "Verified")}</span>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-[#E8E2D6]/60 flex items-center justify-between text-xs">
+                      <div className="font-bold text-slate-700 flex items-center gap-1">
+                        <span>👨‍✈️</span>
+                        <span>{info.vehicle.driver}</span>
+                      </div>
+                      {info.vehicle.driverPhone && (
+                        <div className="text-[#003580] font-mono font-bold text-[11px]">
+                          📞 {info.vehicle.driverPhone}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenVehicleDetails?.({
+                      model: info.vehicle!.model,
+                      company: info.vehicle!.company,
+                      driver: info.vehicle!.driver,
+                      licensePlate: (info.vehicle!.plateNumber || "").replace(/\?+/g, "").trim() || "ليبيا - 5-99214",
+                      seats: info.vehicle!.capacity,
+                      phone: info.vehicle!.driverPhone || "091-2345678",
+                      features: [
+                        "تكييف هوائي مركزي متطور",
+                        "مقاعد مريحة مخصصة للجولات السياحية",
+                        "حقيبة إسعافات أولية وطفاية حريق",
+                        "شاشات عرض ونظام صوتي متكامل",
+                        "سائق ذو خبرة ورخصة قيادة عمومية معتمدة"
+                      ],
+                    })}
+                    className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>🚍</span>
+                    <span>{isAr ? "عرض بيانات المركبة والسائق والتأمين" : "View Details"}</span>
+                  </button>
+                </>
+              ) : (
+                <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] text-xs text-slate-600 font-bold">
+                  {isAr ? "حافلة سياحية معتمدة ومكيفة سيتم تحديد بياناتها وسائقها قبل موعد الانطلاق." : "Certified AC vehicle will be assigned before departure."}
+                </div>
+              )}
             </div>
 
           </div>
@@ -2245,30 +1813,30 @@ function TripsPage() {
             daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "السبت,الثلاثاء",
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
-            guide: {
-              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
-              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
-              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
+            guide: t.guide_name ? {
+              name: t.guide_name,
+              title: t.guide_title || "مرشد سياحي معتمد",
+              phone: t.guide_phone || "",
               cv: {
-                name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
-                title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
-                licenseNumber: t.guide_license_number || t.guide?.license_number || "G-1001",
-                experienceYears: t.guide?.years_of_experience || 6,
-                rating: 5.0,
+                name: t.guide_name,
+                title: t.guide_title || "مرشد سياحي معتمد",
+                licenseNumber: t.guide_license_number || "",
+                experienceYears: Number(t.guide?.years_of_experience) || 2,
+                rating: Number(t.rating_avg) || 0,
                 pricePerDay: Number(t.guide?.price_per_day) || 180,
-                phone: t.guide_phone || t.guide?.phone_number || "0912233445",
-                bio: t.guide?.bio || "مرشد سياحي معتمد ومختص بآثار لبدة الكبرى وصبراتة والمدن التاريخية.",
+                phone: t.guide_phone || "",
+                bio: t.guide?.bio || `مرشد سياحي معتمد ومخصص لرحلة ${t.trip_title}.`,
                 specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
               }
-            },
-            vehicle: {
+            } : undefined,
+            vehicle: (t.vehicle_model || t.vehicle_plate) ? {
               model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة ميني باص سياحي 25 راكب"),
               company: t.transport_company_name || "شركة النقل السياحي المعتمدة",
               driver: t.driver_name || "سائق مرخص ومحترف",
               plateNumber: t.vehicle_plate || undefined,
               driverPhone: t.driver_phone || undefined,
               capacity: t.vehicle_capacity || t.max_capacity || 25,
-            },
+            } : undefined,
             restaurant: t.restaurant_name ? {
               id: t.restaurant_id,
               name: t.restaurant_name,
@@ -2281,8 +1849,8 @@ function TripsPage() {
             itinerary_steps: t.itinerary_steps,
             accommodation: "رحلة يومية — عودة مساءً",
             price: Number(t.price_per_seat) || 120,
-            rating: 5.0,
-            reviews: 1,
+            rating: Number(t.rating_avg) || 0,
+            reviews: Number(t.reviews_count) || 0,
           };
         });
 
@@ -2323,22 +1891,22 @@ function TripsPage() {
                 ],
             hotels: (t.hotels && Array.isArray(t.hotels) && t.hotels.length > 0)
               ? t.hotels.map((h: any) => h.hotel_name || h.name)
-              : ["فندق مبيت معتمد"],
+              : [],
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
-            guide: {
-              name: t.guide_name || t.guide?.full_name || "أحمد الطاهر الفرجاني",
-              title: t.guide_title || t.guide?.title || "خبير الآثار والتراث الليبي",
-              phone: t.guide_phone || t.guide?.phone_number || "0912233445",
-            },
-            vehicle: {
+            guide: t.guide_name ? {
+              name: t.guide_name,
+              title: t.guide_title || "مرشد سياحي معتمد",
+              phone: t.guide_phone || "",
+            } : undefined,
+            vehicle: (t.vehicle_model || t.vehicle_plate) ? {
               model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة سياحية مجهزة للمسافات الطويلة"),
               company: t.transport_company_name || "شركة النقل السياحي الدولية",
               driver: t.driver_name || "سائق خبير بالمسارات السياحية",
               plateNumber: t.vehicle_plate || undefined,
               driverPhone: t.driver_phone || undefined,
               capacity: t.vehicle_capacity || t.max_capacity || 20,
-            },
+            } : undefined,
             restaurant: t.restaurant_name ? {
               id: t.restaurant_id,
               name: t.restaurant_name,
@@ -2349,8 +1917,8 @@ function TripsPage() {
               image: t.restaurant_image || "/assets/dest-tripoli-old-city.jpg",
             } : undefined,
             itinerary_steps: t.itinerary_steps,
-            rating: 5.0,
-            reviews: 1,
+            rating: Number(t.rating_avg) || 0,
+            reviews: Number(t.reviews_count) || 0,
           };
         });
 

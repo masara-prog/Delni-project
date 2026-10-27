@@ -216,7 +216,11 @@ export function RestaurantDetailsModal({
                 <div className="flex items-center gap-2 text-xs text-slate-300">
                   <span>📍 {restaurant.address || restaurant.city}</span>
                   <span>·</span>
-                  <span className="text-amber-400 font-bold">★ {restaurant.rating || 5.0}</span>
+                  {restaurant.rating && restaurant.rating > 0 ? (
+                    <span className="text-amber-400 font-bold">★ {restaurant.rating.toFixed(1)}</span>
+                  ) : (
+                    <span className="text-slate-300 font-medium">جديد</span>
+                  )}
                   <span>·</span>
                   <span className="text-emerald-400 font-bold">{restaurant.type}</span>
                 </div>

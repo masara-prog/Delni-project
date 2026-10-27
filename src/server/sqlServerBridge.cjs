@@ -1317,9 +1317,29 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 9. Guides: GET (Includes normalized landmarks of expertise from guide_places)
+    // 9. Guides: GET (Includes normalized landmarks of expertise from guide_places and live ratings)
     if (pathname === '/api/db/guides' && req.method === 'GET') {
-      const result = await db.request().query('SELECT * FROM tour_guides ORDER BY full_name ASC');
+      const result = await db.request().query(`
+        SELECT tg.*,
+               (
+                 SELECT COALESCE(ROUND(AVG(CAST(stars_rating AS FLOAT)), 1), 0)
+                 FROM (
+                   SELECT r.stars_rating FROM reviews_daily_trips r JOIN daily_trips dt ON r.daily_trip_id = dt.daily_trip_id WHERE dt.guide_license_number = tg.license_number
+                   UNION ALL
+                   SELECT r.stars_rating FROM reviews_weekly_trips r JOIN weekly_trips wt ON r.weekly_trip_id = wt.weekly_trip_id WHERE wt.guide_license_number = tg.license_number
+                 ) as all_revs
+               ) as rating_avg,
+               (
+                 SELECT COUNT(*)
+                 FROM (
+                   SELECT r.stars_rating FROM reviews_daily_trips r JOIN daily_trips dt ON r.daily_trip_id = dt.daily_trip_id WHERE dt.guide_license_number = tg.license_number
+                   UNION ALL
+                   SELECT r.stars_rating FROM reviews_weekly_trips r JOIN weekly_trips wt ON r.weekly_trip_id = wt.weekly_trip_id WHERE wt.guide_license_number = tg.license_number
+                 ) as all_revs_count
+               ) as reviews_count
+        FROM tour_guides tg
+        ORDER BY tg.full_name ASC
+      `);
       let guidePlacesRes = { recordset: [] };
       try {
         guidePlacesRes = await db.request().query(`
@@ -1566,9 +1586,15 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف المرشد بنجاح من DelniDB' });
     }
 
-    // 10. Hotels: GET
+    // 10. Hotels: GET (Includes live rating and review counts from reviews_hotels)
     if (pathname === '/api/db/hotels' && req.method === 'GET') {
-      const result = await db.request().query('SELECT * FROM hotels ORDER BY hotel_name ASC');
+      const result = await db.request().query(`
+        SELECT h.*,
+               (SELECT COALESCE(ROUND(AVG(CAST(stars_rating AS FLOAT)), 1), 0) FROM reviews_hotels WHERE hotel_id = h.hotel_id) as rating_avg,
+               (SELECT COUNT(*) FROM reviews_hotels WHERE hotel_id = h.hotel_id) as reviews_count
+        FROM hotels h
+        ORDER BY h.hotel_name ASC
+      `);
       return sendJson(res, 200, { success: true, data: result.recordset });
     }
 
@@ -1681,9 +1707,15 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف الفندق من DelniDB بنجاح' });
     }
 
-    // 11. Restaurants: GET
+    // 11. Restaurants: GET (Includes live rating and review counts from reviews_facilities)
     if (pathname === '/api/db/restaurants' && req.method === 'GET') {
-      const result = await db.request().query('SELECT * FROM restaurants_cafes ORDER BY facility_name ASC');
+      const result = await db.request().query(`
+        SELECT r.*,
+               (SELECT COALESCE(ROUND(AVG(CAST(stars_rating AS FLOAT)), 1), 0) FROM reviews_facilities WHERE facility_id = r.facility_id) as rating_avg,
+               (SELECT COUNT(*) FROM reviews_facilities WHERE facility_id = r.facility_id) as reviews_count
+        FROM restaurants_cafes r
+        ORDER BY r.facility_name ASC
+      `);
       return sendJson(res, 200, { success: true, data: result.recordset });
     }
 
@@ -1926,7 +1958,9 @@ const server = http.createServer(async (req, res) => {
                r.city as restaurant_city,
                r.address_details as restaurant_address,
                r.phone_number as restaurant_phone,
-               r.facility_image_1 as restaurant_image
+               r.facility_image_1 as restaurant_image,
+               (SELECT COALESCE(ROUND(AVG(CAST(stars_rating AS FLOAT)), 1), 0) FROM reviews_daily_trips WHERE daily_trip_id = dt.daily_trip_id) as rating_avg,
+               (SELECT COUNT(*) FROM reviews_daily_trips WHERE daily_trip_id = dt.daily_trip_id) as reviews_count
         FROM daily_trips dt
         LEFT JOIN tour_guides g ON dt.guide_license_number = g.license_number
         LEFT JOIN vehicles v ON dt.vehicle_plate = v.plate_number
@@ -2587,7 +2621,9 @@ const server = http.createServer(async (req, res) => {
                tc.company_name as transport_company_name,
                d.full_name as driver_name,
                d.phone_number as driver_phone,
-               d.driver_license_number
+               d.driver_license_number,
+               (SELECT COALESCE(ROUND(AVG(CAST(stars_rating AS FLOAT)), 1), 0) FROM reviews_weekly_trips WHERE weekly_trip_id = wt.weekly_trip_id) as rating_avg,
+               (SELECT COUNT(*) FROM reviews_weekly_trips WHERE weekly_trip_id = wt.weekly_trip_id) as reviews_count
         FROM weekly_trips wt
         LEFT JOIN tour_guides g ON wt.guide_license_number = g.license_number
         LEFT JOIN vehicles v ON wt.vehicle_plate = v.plate_number

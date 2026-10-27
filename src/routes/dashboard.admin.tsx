@@ -4643,38 +4643,7 @@ interface ItineraryStepItem {
   desc: string;
 }
 
-const DEFAULT_DAILY_ITINERARY_STEPS: ItineraryStepItem[] = [
-  {
-    time: "09:00 ص",
-    title: "نقطة التجمع والانطلاق من موقعنا",
-    desc: "التجمع في موقعنا في طرابلس - النوفليين والصعود للمركبة السياحية المجهزة والانطلاق في تمام 09:00 صباحاً.",
-  },
-  {
-    time: "10:30 ص",
-    title: "الجولة الميدانية الأولى واستكشاف المعالم الأثرية",
-    desc: "استكشاف المعالم الرئيسية رفقة المرشد السياحي المعتمد مع شرح تاريخي موثق.",
-  },
-  {
-    time: "01:30 م",
-    title: "استراحة وتناول وجبة الغداء التراثية المشمولة",
-    desc: "تناول وجبة غداء ليبية تقليدية كاملة (أطباق رئيسية، سلطات طازجة، عصائر، ومياه معدنية) في مطعم تراثي معتمد مشمول بالرحلة.",
-  },
-  {
-    time: "04:30 م",
-    title: "جولة المعالم الترفيهية والطبيعية / حديقة الحيوان",
-    desc: "زيارة حديقة الحيوان أو المعالم الطبيعية والساحلية، وأخذ صور تذكارية في أجواء مريحة وممتعة.",
-  },
-  {
-    time: "07:00 م",
-    title: "استراحة ضيافة وتذوق ووقت حر للتسوق",
-    desc: "استراحة ضيافة وتذوق حلويات تقليدية، مع وقت مخصص لشراء التذكارات والصناعات اليدوية.",
-  },
-  {
-    time: "09:00 م",
-    title: "العودة وختام الرحلة في نقطة الانطلاق",
-    desc: "العودة بسلامة الله بالمركبة السياحية إلى موقعنا في طرابلس - النوفليين في تمام الساعة 09:00 مساءً.",
-  },
-];
+const DEFAULT_DAILY_ITINERARY_STEPS: ItineraryStepItem[] = [];
 
 function TripItineraryTimelineEditor({
   steps,
@@ -4699,7 +4668,7 @@ function TripItineraryTimelineEditor({
     const nextNum = steps.length + 1;
     const newStep: ItineraryStepItem = {
       title: mode === "days" ? `محطة اليوم ${nextNum} - وجهة استكشاف جديدة` : `المحطة ${nextNum} - وجهة استكشاف جديدة`,
-      time: mode === "days" ? `اليوم ${nextNum}` : "02:00 م",
+      time: mode === "days" ? `اليوم ${nextNum}` : "09:00 ص",
       desc: mode === "days" ? `تفاصيل ومسار اليوم ${nextNum}...` : "تفاصيل وبرنامج الزيارة لهذه المحطة السياحية...",
     };
     onChange([...steps, newStep]);
@@ -4707,16 +4676,8 @@ function TripItineraryTimelineEditor({
   };
 
   const handleDeleteStep = (index: number) => {
-    if (steps.length <= 1) {
-      alert("يجب الإبقاء على محطة واحدة على الأقل في خط سير الرحلة.");
-      return;
-    }
     const next = steps.filter((_, idx) => idx !== index);
     onChange(next);
-  };
-
-  const handleResetDefaults = () => {
-    onChange(DEFAULT_DAILY_ITINERARY_STEPS);
   };
 
   return (
@@ -4742,15 +4703,6 @@ function TripItineraryTimelineEditor({
             <span>➕</span>
             <span>{mode === "days" ? "إضافة محطة يوم" : "إضافة محطة"}</span>
           </button>
-          {isEditing && mode !== "days" && (
-            <button
-              type="button"
-              onClick={handleResetDefaults}
-              className="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
-            >
-              استعادة الافتراضي
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setIsEditing(!isEditing)}
@@ -4764,6 +4716,17 @@ function TripItineraryTimelineEditor({
       </div>
 
       {/* Steps List */}
+      {steps.length === 0 ? (
+        <div className="text-center py-7 px-4 bg-amber-50/70 border-2 border-dashed border-amber-300 rounded-2xl space-y-2">
+          <span className="text-3xl block">📍</span>
+          <p className="text-sm font-black text-amber-900">
+            النموذج فارغ: لم تتم إضافة أي محطات لخط سير الرحلة بعد
+          </p>
+          <p className="text-xs text-amber-700 font-bold">
+            يرجى النقر على زر &quot;{mode === "days" ? "➕ إضافة محطة يوم" : "➕ إضافة محطة"}&quot; أعلاه لإدخال محطات المسار وتفاصيلها.
+          </p>
+        </div>
+      ) : (
       <div className="space-y-3.5 relative before:absolute before:inset-0 before:left-auto before:right-3.5 before:w-0.5 before:bg-[#E8E2D6] pt-1">
         {steps.map((step, idx) => {
           const isLunchStep = idx === 2;
@@ -4862,6 +4825,7 @@ function TripItineraryTimelineEditor({
           );
         })}
       </div>
+      )}
     </div>
   );
 }
@@ -5786,6 +5750,17 @@ function CreateTripModal({
       return;
     }
 
+    if (!itinerarySteps || itinerarySteps.length === 0) {
+      alert("تنبيه: يرجى إضافة محطة واحدة على الأقل لجدول مسار الرحلة وتعبئة بياناتها!");
+      return;
+    }
+
+    const hasIncompleteStep = itinerarySteps.some(s => !s.title || !s.title.trim());
+    if (hasIncompleteStep) {
+      alert("تنبيه: يرجى إدخال عنوان واضح ومحدد لكافة محطات خط سير الرحلة!");
+      return;
+    }
+
     const selectedAttractionObjects = (attractions || []).filter(a => effectiveDestinations.includes(a.name || a.place_name || ""));
     const placeIds = selectedAttractionObjects.map(a => a.place_id || a.id);
 
@@ -6273,7 +6248,7 @@ function DailyTripEditModal({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {}
     }
-    return DEFAULT_DAILY_ITINERARY_STEPS;
+    return [];
   });
 
   const [guide, setGuide] = useState(trip.guide_license_number || trip.guide_license || "");
@@ -6356,6 +6331,15 @@ function DailyTripEditModal({
           }
           if (multiDestinations.length === 0) {
             alert("يرجى اختيار معلَم سياحي واحد على الأقل للرحلة اليومية من المعالم المسجلة بالمنصة.");
+            return;
+          }
+          if (!itinerarySteps || itinerarySteps.length === 0) {
+            alert("تنبيه: يرجى إضافة محطة واحدة على الأقل لجدول مسار الرحلة وتعبئة بياناتها!");
+            return;
+          }
+          const hasIncompleteEditDailyStep = itinerarySteps.some(s => !s.title || !s.title.trim());
+          if (hasIncompleteEditDailyStep) {
+            alert("تنبيه: يرجى كتابة عنوان واضح لكافة محطات خط سير الرحلة!");
             return;
           }
           const selectedAttractionObjects = (attractions || []).filter(a => multiDestinations.includes(a.name || a.place_name || ""));
@@ -6695,7 +6679,7 @@ function WeeklyTripEditModal({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {}
     }
-    return DEFAULT_DAILY_ITINERARY_STEPS;
+    return [];
   });
 
   const [images, setImages] = useState<string[]>(() => {
@@ -6760,6 +6744,15 @@ function WeeklyTripEditModal({
           e.preventDefault();
           if (multiDestinations.length === 0) {
             alert("تنبيه: يجب اختيار وجهة سياحية واحدة على الأقل!");
+            return;
+          }
+          if (!itinerarySteps || itinerarySteps.length === 0) {
+            alert("تنبيه: يرجى إضافة محطة واحدة على الأقل لجدول مسار الرحلة وتعبئة بياناتها!");
+            return;
+          }
+          const hasIncompleteEditWeeklyStep = itinerarySteps.some(s => !s.title || !s.title.trim());
+          if (hasIncompleteEditWeeklyStep) {
+            alert("تنبيه: يرجى كتابة عنوان واضح لكافة محطات خط سير الرحلة!");
             return;
           }
           const selectedPlaceIds = (attractions || [])
@@ -8725,7 +8718,7 @@ function TouristDetailsModal({
                     <p className="text-slate-700 mt-1">{r.comment_text || "لا يوجد تعليق"}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-amber-500 font-bold">{"★".repeat(r.stars_rating || 5)}</span>
+                    <span className="text-amber-500 font-bold">{"★".repeat(Math.max(1, Math.min(5, Number(r.stars_rating) || 1)))}</span>
                     <span className="text-[10px] text-slate-400">{r.created_at || ""}</span>
                   </div>
                 </div>

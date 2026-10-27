@@ -132,7 +132,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
                 <span>التقييم</span>
               </div>
               <div className="text-xs sm:text-sm font-black text-amber-600 mt-1">
-                ★ {guide.rating || 4.9}
+                {guide.rating && guide.rating > 0 ? `★ ${guide.rating.toFixed(1)}` : "جديد"}
               </div>
             </div>
 

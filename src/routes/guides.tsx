@@ -90,8 +90,8 @@ function GuidesPage() {
             avatar: g.avatar || "",
             title: g.title || (g.gender === "female" ? "مرشدة سياحية معتمدة" : "مرشد سياحي معتمد"),
             experienceYears: Number(g.years_of_experience) || 0,
-            rating: 5.0,
-            reviewsCount: 12 + (Number(g.total_tours_completed) || 0) * 2,
+            rating: Number(g.rating_avg) || 0,
+            reviewsCount: Number(g.reviews_count) || 0,
             pricePerDay: Number(g.price_per_day) || 150,
             primaryRegion: g.primaryRegion || (opRegions[0] || "tripoli"),
             operatingRegions: opRegions.length > 0 ? opRegions : ["tripoli"],
@@ -494,7 +494,7 @@ function GuidesPage() {
                     {/* Rating & Verified Badge */}
                     <div className="absolute top-3 left-3 flex items-center gap-1 z-10">
                       <span className="px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-white font-black text-[11px] border border-white/20 flex items-center gap-1 shadow-xs">
-                        ★ {guide.rating} ({guide.reviewsCount})
+                        {guide.reviewsCount > 0 ? `★ ${guide.rating.toFixed(1)} (${guide.reviewsCount})` : "مرشد معتمد جديد"}
                       </span>
                     </div>
                   </div>

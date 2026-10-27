@@ -1971,9 +1971,9 @@ export function PrivateTripModal({
           gender: g.gender === "female" ? "female" : "male",
           avatar: g.avatar || "/assets/guide-mohammed.jpg",
           title: g.title || "مرشد سياحي معتمد",
-          experienceYears: g.years_of_experience || 5,
-          rating: 4.9,
-          reviewsCount: 35,
+          experienceYears: g.years_of_experience || 2,
+          rating: Number(g.rating_avg) || Number(g.rating) || 0,
+          reviewsCount: Number(g.reviews_count) || Number(g.reviewsCount) || 0,
           pricePerDay: g.price_per_day || 180,
           primaryRegion: g.primaryRegion || "tripoli",
           operatingRegions: Array.isArray(g.operating_regions) ? g.operating_regions : ["tripoli"],
@@ -2793,7 +2793,7 @@ export function PrivateTripModal({
                           </div>
 
                           <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
-                            <span>★ {g.rating} ({g.reviewsCount || 100})</span>
+                            <span>{g.reviewsCount > 0 ? `★ ${g.rating.toFixed(1)} (${g.reviewsCount})` : (isAr ? "مرشد معتمد جديد" : "New Certified Guide")}</span>
                             <span>•</span>
                             <span>{g.title}</span>
                             <span>•</span>

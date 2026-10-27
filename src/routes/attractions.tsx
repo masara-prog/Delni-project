@@ -198,10 +198,10 @@ function AttractionsPage() {
         img: image,
         description: p.description || `استكشف مدينة ${cityName} وأبرز معالمها ومحطاتها السياحية في ليبيا.`,
         descriptionEn: p.description || `Explore the historical highlights and landmarks of ${cityName}.`,
-        rating: 4.9,
-        ratingLabel: "استثنائي",
-        ratingLabelEn: "Exceptional",
-        reviewsCount: 120 + idx * 8,
+        rating: Number(p.rating_avg) || 0,
+        ratingLabel: (Number(p.rating_avg) || 0) > 0 ? "تقييم معتمد" : "معلم معتمد",
+        ratingLabelEn: (Number(p.rating_avg) || 0) > 0 ? "Verified" : "Verified Landmark",
+        reviewsCount: Number(p.reviews_count) || 0,
         landmarksCount: hl.length,
         categoryTag: p.category || "مدينة سياحية",
         categoryTagEn: p.category || "Touristic City",
@@ -352,7 +352,7 @@ function AttractionsPage() {
         { label: isAr ? "المنطقة والإقليم" : "Region", value: city.region },
         { label: isAr ? "نظام الرحلات المتوفرة" : "Available Trip System", value: tripSystemSummary },
         { label: isAr ? "عدد المعالم السياحية" : "Documented Landmarks", value: isAr ? `${city.landmarksCount} معالم موثقة بالكامل` : `${city.landmarksCount} Documented Sites` },
-        { label: isAr ? "تقييم السياح والزوار" : "Guest Rating", value: `⭐ ${city.rating} / 5 (${city.reviewsCount} تقييم)` },
+        { label: isAr ? "تقييم السياح والزوار" : "Guest Rating", value: city.reviewsCount > 0 ? `⭐ ${city.rating} / 5 (${city.reviewsCount} تقييم)` : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet") },
       ],
       features: city.highlights,
     });
@@ -776,11 +776,18 @@ function AttractionsPage() {
 
                   {/* Top Overlay: Rating Badge & Wishlist Favorite Button */}
                   <div className="absolute top-5 right-5 left-5 flex items-center justify-between text-white z-10 pointer-events-none">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
-                      <span className="text-amber-400 text-sm">★</span>
-                      <span>{city.rating || "4.9"}</span>
-                      <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount || 120} {isAr ? "تقييم" : "reviews"})</span>
-                    </div>
+                    {city.reviewsCount > 0 ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
+                        <span className="text-amber-400 text-sm">★</span>
+                        <span>{city.rating.toFixed(1)}</span>
+                        <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount} {isAr ? "تقييم" : "reviews"})</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-bold text-xs shadow-md">
+                        <span className="text-emerald-400 text-xs">🏛️</span>
+                        <span>{isAr ? "معلم معتمد" : "Landmark"}</span>
+                      </div>
+                    )}
 
                     <div className="pointer-events-auto">
                       <FavoriteButton
@@ -836,11 +843,18 @@ function AttractionsPage() {
 
                   {/* Top Overlay: Rating Badge & Wishlist Favorite Button */}
                   <div className="absolute top-5 right-5 left-5 flex items-center justify-between text-white z-10 pointer-events-none">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
-                      <span className="text-amber-400 text-sm">★</span>
-                      <span>{city.rating || "4.9"}</span>
-                      <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount || 120} {isAr ? "تقييم" : "reviews"})</span>
-                    </div>
+                    {city.reviewsCount > 0 ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
+                        <span className="text-amber-400 text-sm">★</span>
+                        <span>{city.rating.toFixed(1)}</span>
+                        <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount} {isAr ? "تقييم" : "reviews"})</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-bold text-xs shadow-md">
+                        <span className="text-emerald-400 text-xs">🏛️</span>
+                        <span>{isAr ? "معلم معتمد" : "Landmark"}</span>
+                      </div>
+                    )}
 
                     <div className="pointer-events-auto">
                       <FavoriteButton
@@ -944,35 +958,6 @@ interface LandmarkReviewItem {
   isVerified: boolean;
 }
 
-const DEFAULT_LANDMARK_REVIEWS: Record<string, LandmarkReviewItem[]> = {
-  default: [
-    {
-      id: "rev-1",
-      authorName: "م. سالم الترهوني",
-      rating: 5,
-      date: "2026-10-12",
-      comment: "معلم أثري مهيب وغاية في الإبهار والجمال، التنظيم والنظافة ممتازة جداً. تجربة لا غنى عنها لكل زائر.",
-      isVerified: true,
-    },
-    {
-      id: "rev-2",
-      authorName: "فاطمة الورفلي",
-      rating: 5,
-      date: "2026-09-28",
-      comment: "تفاصيل النقوش والمعمار القديم تأسر القلوب، وجود المرشد السياحي أضاف قيمة تاريخية عظيمة لمعرفة تفاصيل المكان.",
-      isVerified: true,
-    },
-    {
-      id: "rev-3",
-      authorName: "د. عبد السلام المبروك",
-      rating: 5,
-      date: "2026-08-15",
-      comment: "فخر السياحة والتاريخ الليبي، معلم يستحق التصنيف العالمي بامتياز. أنصح بزيارته في الصباح الباكر للاستمتاع بالإطلالة.",
-      isVerified: true,
-    },
-  ],
-};
-
 function LandmarkDetailsModal({
   city,
   onClose,
@@ -1024,7 +1009,7 @@ function LandmarkDetailsModal({
         }
       }
     } catch {}
-    setReviewsList(DEFAULT_LANDMARK_REVIEWS[city.id] || DEFAULT_LANDMARK_REVIEWS.default);
+    setReviewsList([]);
   }, [city?.id]);
 
   const handleAddReview = (e: React.FormEvent) => {
@@ -1059,7 +1044,7 @@ function LandmarkDetailsModal({
   const photo = city.img || heroImg;
   const avgRating = reviewsList.length > 0
     ? (reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length).toFixed(1)
-    : (city.rating || 4.9).toFixed(1);
+    : (city.rating && city.rating > 0 ? city.rating.toFixed(1) : "0.0");
 
   const modalTabs = [
     { id: "history", label: isAr ? "📖 نبذة وتاريخ المعلم" : "History & Heritage", icon: "🏛️" },
@@ -1288,39 +1273,51 @@ function LandmarkDetailsModal({
 
               {/* Reviews List */}
               <div className="space-y-3">
-                {reviewsList.map((rev) => (
-                  <div key={rev.id} className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center font-black text-xs shadow-xs">
-                          {(rev.authorName || "س").slice(0, 1)}
+                {reviewsList.length > 0 ? (
+                  reviewsList.map((rev) => (
+                    <div key={rev.id} className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2.5">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                            {(rev.authorName || "س").slice(0, 1)}
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-[#0F172A] flex items-center gap-1.5">
+                              <span>{rev.authorName}</span>
+                              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
+                                {isAr ? "زائر موثق ✓" : "Verified ✓"}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              {rev.date}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-xs font-black text-[#0F172A] flex items-center gap-1.5">
-                            <span>{rev.authorName}</span>
-                            <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
-                              {isAr ? "زائر موثق ✓" : "Verified ✓"}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-medium">
-                            {rev.date}
-                          </div>
+
+                        <div className="text-amber-500 text-sm font-black">
+                          {"★".repeat(Math.max(1, Math.min(5, rev.rating)))}
+                          <span className="text-slate-300 text-xs mr-1">
+                            {"☆".repeat(Math.max(0, 5 - rev.rating))}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="text-amber-500 text-sm font-black">
-                        {"★".repeat(Math.max(1, Math.min(5, rev.rating)))}
-                        <span className="text-slate-300 text-xs mr-1">
-                          {"☆".repeat(Math.max(0, 5 - rev.rating))}
-                        </span>
-                      </div>
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed pr-10">
+                        «{rev.comment}»
+                      </p>
                     </div>
-
-                    <p className="text-xs text-slate-700 font-medium leading-relaxed pr-10">
-                      «{rev.comment}»
-                    </p>
+                  ))
+                ) : (
+                  <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-2">
+                    <div className="text-3xl">⭐</div>
+                    <div className="text-sm font-bold text-slate-700">
+                      {isAr ? "لا توجد تقييمات مسجلة بعد لهذا المعلم" : "No reviews recorded yet for this landmark"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {isAr ? "كن أول من يشارك تجربته بعد زيارة هذا المعلم السياحي!" : "Be the first to share your experience after visiting this attraction!"}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
 
               {/* Tourist Review Submission Form */}
