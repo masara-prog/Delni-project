@@ -1796,8 +1796,8 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف المطعم من DelniDB بنجاح' });
     }
 
-    // 12. Places / Attractions: GET
-    if (pathname === '/api/db/places' && req.method === 'GET') {
+    // 12. Places / Attractions: GET (Supports both /places and /attractions)
+    if ((pathname === '/api/db/places' || pathname === '/api/db/attractions') && req.method === 'GET') {
       const city = url.searchParams.get('city');
       const reqPlaces = db.request();
       let query = 'SELECT * FROM places_tourist';
@@ -1906,8 +1906,8 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف المعلم السياحي بنجاح من DelniDB' });
     }
 
-    // 13. Daily Trips: GET (Includes normalized images, days, stations, and landmark junctions)
-    if (pathname === '/api/db/daily_trips' && req.method === 'GET') {
+    // 13. Daily Trips: GET (Supports both /daily_trips and /trips_daily)
+    if ((pathname === '/api/db/daily_trips' || pathname === '/api/db/trips_daily') && req.method === 'GET') {
       const result = await db.request().query(`
         SELECT dt.*, 
                g.full_name as guide_name, 
@@ -2573,8 +2573,8 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف عرض الرحلة اليومية بنجاح من DelniDB' });
     }
 
-    // 14. Weekly Trips: GET (Includes normalized stations and landmark/hotel junctions)
-    if (pathname === '/api/db/weekly_trips' && req.method === 'GET') {
+    // 14. Weekly Trips: GET (Supports both /weekly_trips and /trips_weekly)
+    if ((pathname === '/api/db/weekly_trips' || pathname === '/api/db/trips_weekly') && req.method === 'GET') {
       const result = await db.request().query(`
         SELECT wt.*, 
                g.full_name as guide_name, 

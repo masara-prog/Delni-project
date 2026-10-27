@@ -89,7 +89,8 @@ function SignupPage() {
   ]);
 
   useEffect(() => {
-    fetch("/api/db/attractions")
+    fetch("http://127.0.0.1:5001/api/db/attractions")
+      .catch(() => fetch("/api/db/attractions"))
       .then((r) => r.json())
       .then((res) => {
         if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
