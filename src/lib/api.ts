@@ -268,8 +268,8 @@ export function addTransportCompany(company: Partial<TransportCompanyRecord>): T
     email: company.email || `company${list.length + 1}@dalni.ly`,
     password: company.password || "password123",
     total_vehicles: Number(company.total_vehicles) || 5,
-    contract_start_date: company.contract_start_date || "2026-01-01",
-    contract_end_date: company.contract_end_date || "2028-01-01",
+    contract_start_date: company.contract_start_date || null,
+    contract_end_date: company.contract_end_date || null,
     verification_status: company.verification_status || company.status || "موثق",
     status: company.verification_status || company.status || "موثق",
     google_maps_url: company.google_maps_url || (company.address && (company.address.startsWith("http") || company.address.includes("maps")) ? company.address : "") || "",
@@ -680,7 +680,40 @@ export async function apiLogin(params: {
     return { status: "error", message: "يرجى كتابة البريد الإلكتروني وكلمة المرور" };
   }
 
-  // 1. Try Live Microsoft SQL Server Bridge Authentication (DelniDB)
+  // 1. Try Live Official Laravel API (DelniDB on Port 8000)
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ role, login: cleanLogin, password: rawPassword }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.status === "success" && data.token) {
+      const userObj = { ...data.user, role: data.role || role };
+      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
+      localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
+      localStorage.setItem("dalni_user", JSON.stringify(userObj));
+      window.dispatchEvent(new Event("storage"));
+      return {
+        status: "success",
+        message: data.message || "تم تسجيل الدخول بنجاح",
+        user: userObj,
+        role: userObj.role,
+        token: data.token,
+      };
+    } else if (data?.message) {
+      return {
+        status: "error",
+        message: data.message,
+      };
+    }
+  } catch (laravelErr) {
+    console.warn("Laravel login unreachable, attempting fallback...", laravelErr);
+  }
+
+  // 2. Fallback to SQL Server Bridge if Laravel API is offline
   try {
     const dbRes = await fetch("http://127.0.0.1:5001/api/db/login", {
       method: "POST",
@@ -702,6 +735,7 @@ export async function apiLogin(params: {
         localStorage.setItem(STORAGE_KEYS.TOKEN, `token-${Date.now()}`);
         localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
         localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
+        localStorage.setItem("dalni_user", JSON.stringify(userObj));
         window.dispatchEvent(new Event("storage"));
         return {
           status: "success",
@@ -710,47 +744,7 @@ export async function apiLogin(params: {
           role: userObj.role,
           token: "db_token",
         };
-      } else {
-        return {
-          status: "error",
-          message: dbData.error || "الحساب غير متوفر في المنصة",
-        };
       }
-    } else {
-      const errData = await dbRes.json().catch(() => null);
-      if (errData?.error) {
-        return { status: "error", message: errData.error };
-      }
-    }
-  } catch { }
-
-  // 2. Try Live Laravel API (if available)
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ role, login: cleanLogin, password: rawPassword }),
-      signal: AbortSignal.timeout(600),
-    });
-    const data = await res.json().catch(() => null);
-    if (res.ok && data?.status === "success" && data.token) {
-      const userObj = { ...data.user, role: data.role || role };
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
-      window.dispatchEvent(new Event("storage"));
-      return {
-        status: "success",
-        message: data.message || "تم تسجيل الدخول بنجاح",
-        user: userObj,
-        role: userObj.role,
-        token: data.token,
-      };
-    } else if (data?.message) {
-      return {
-        status: "error",
-        message: data.message,
-      };
     }
   } catch { }
 
@@ -886,57 +880,99 @@ export async function apiRegisterTourist(params: {
   phone_number: string;
   password?: string;
 }): Promise<ApiResponse> {
-  // Use passport/national ID as tourist_id if available, otherwise generated ID
-  const tourist_id = params.tourist_id || params.passport || `T-${Math.floor(100000 + Math.random() * 900000)}`;
-  const user = {
+  const tourist_id = (params.tourist_id || params.passport || "").trim();
+  if (!tourist_id) {
+    return {
+      status: "error",
+      message: "رقم جواز السفر / الرقم الوطني مطلوب للتسجيل.",
+    };
+  }
+
+  const payload = {
     tourist_id,
-    passport: params.passport || tourist_id,
-    full_name: params.full_name,
-    email: params.email,
-    phone_number: params.phone_number,
-    role: "tourist",
-    created_at: new Date().toISOString(),
+    full_name: params.full_name.trim(),
+    email: params.email.trim().toLowerCase(),
+    phone_number: params.phone_number.trim(),
+    password: params.password,
   };
 
   try {
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]");
-    users.push(user);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-  } catch { }
-
-  localStorage.setItem(STORAGE_KEYS.TOKEN, `tourist-token-${Date.now()}`);
-  localStorage.setItem(STORAGE_KEYS.ROLE, "tourist");
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-  localStorage.setItem("dalni_user", JSON.stringify(user));
-
-  // Sync with Laravel API if running
-  try {
-    fetch(`${LARAVEL_API_URL}/auth/register/tourist`, {
+    const res = await fetch(`${LARAVEL_API_URL}/auth/register/tourist`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        tourist_id,
-        full_name: params.full_name,
-        email: params.email,
-        phone_number: params.phone_number,
-        password: params.password,
-      }),
-    }).catch(() => { });
-  } catch { }
+      body: JSON.stringify(payload),
+    });
 
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  sendToSecureBackend("tourists", {
-    tourist_id,
-    full_name: params.full_name,
-    email: params.email,
-    phone_number: params.phone_number,
-    password: params.password,
-  });
+    const resData = await res.json().catch(() => null);
 
-  return { status: "success", message: "تم إنشاء حساب السائح بنجاح", user, token: "tourist_token" };
+    if (!res.ok) {
+      let errorMsg = "تعذر تسجيل السائح في قاعدة البيانات";
+      if (resData?.errors) {
+        const errorList = Object.values(resData.errors).flat() as string[];
+        if (errorList.length > 0) {
+          errorMsg = errorList.join(" | ");
+        }
+      } else if (resData?.message) {
+        errorMsg = resData.message;
+      }
+      return {
+        status: "error",
+        message: errorMsg,
+      };
+    }
+
+    // Successfully created in SQL Server!
+    const savedUser = resData?.user || {
+      tourist_id,
+      full_name: payload.full_name,
+      email: payload.email,
+      phone_number: payload.phone_number,
+      role: "tourist",
+    };
+    const token = resData?.token || `tourist-token-${Date.now()}`;
+
+    // Safely update local session
+    try {
+      const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]");
+      const existingIdx = users.findIndex((u: any) => u.tourist_id === tourist_id || u.email === payload.email);
+      if (existingIdx !== -1) {
+        users[existingIdx] = { ...users[existingIdx], ...savedUser, role: "tourist" };
+      } else {
+        users.push({ ...savedUser, role: "tourist" });
+      }
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    } catch { }
+
+    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.ROLE, "tourist");
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(savedUser));
+    localStorage.setItem("dalni_user", JSON.stringify(savedUser));
+    window.dispatchEvent(new Event("storage"));
+
+    // Async sync to backup bridge if running (without password to prevent hash corruption)
+    sendToSecureBackend("tourists", {
+      tourist_id,
+      full_name: payload.full_name,
+      email: payload.email,
+      phone_number: payload.phone_number,
+    }).catch(() => {});
+
+    return {
+      status: "success",
+      message: resData?.message || "تم إنشاء حساب السائح وتخزينه في قاعدة البيانات بنجاح",
+      user: savedUser,
+      token,
+    };
+  } catch (err: any) {
+    console.error("apiRegisterTourist error:", err);
+    return {
+      status: "error",
+      message: "تعذر الاتصال بخادم قاعدة البيانات (Laravel / SQL Server). يرجى التأكد من تشغيل الخادم.",
+    };
+  }
 }
 
 /**
