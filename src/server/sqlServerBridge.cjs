@@ -241,7 +241,12 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
-      -- Tourists table schema conforms directly to DelniDB standard (tourist_id, full_name, email, phone_number, password)
+      -- Tourists table schema conforms directly to DelniDB standard
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tourists') AND name = 'account_status')
+      BEGIN
+        ALTER TABLE tourists ADD account_status NVARCHAR(50) DEFAULT N'نشط';
+        UPDATE tourists SET account_status = N'نشط' WHERE account_status IS NULL;
+      END;
 
       -- Real-time Notifications Table
       IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'notifications')
