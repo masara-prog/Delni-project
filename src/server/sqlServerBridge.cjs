@@ -337,6 +337,62 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
+      -- Reviews for Daily Trips
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'reviews_daily_trips')
+      BEGIN
+        CREATE TABLE reviews_daily_trips (
+          review_id VARCHAR(50) NOT NULL PRIMARY KEY,
+          tourist_id VARCHAR(50) NOT NULL,
+          daily_trip_id VARCHAR(50) NOT NULL,
+          stars_rating INT NOT NULL,
+          comment_text NVARCHAR(MAX) NULL,
+          created_at DATETIME DEFAULT GETDATE(),
+          CONSTRAINT UQ_reviews_daily_tourist UNIQUE (tourist_id, daily_trip_id)
+        );
+      END;
+
+      -- Reviews for Weekly Trips
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'reviews_weekly_trips')
+      BEGIN
+        CREATE TABLE reviews_weekly_trips (
+          review_id VARCHAR(50) NOT NULL PRIMARY KEY,
+          tourist_id VARCHAR(50) NOT NULL,
+          weekly_trip_id VARCHAR(50) NOT NULL,
+          stars_rating INT NOT NULL,
+          comment_text NVARCHAR(MAX) NULL,
+          created_at DATETIME DEFAULT GETDATE(),
+          CONSTRAINT UQ_reviews_weekly_tourist UNIQUE (tourist_id, weekly_trip_id)
+        );
+      END;
+
+      -- Reviews for Hotels
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'reviews_hotels')
+      BEGIN
+        CREATE TABLE reviews_hotels (
+          review_id VARCHAR(50) NOT NULL PRIMARY KEY,
+          tourist_id VARCHAR(50) NOT NULL,
+          hotel_id VARCHAR(50) NOT NULL,
+          stars_rating INT NOT NULL,
+          comment_text NVARCHAR(MAX) NULL,
+          created_at DATETIME DEFAULT GETDATE(),
+          CONSTRAINT UQ_reviews_hotel_tourist UNIQUE (tourist_id, hotel_id)
+        );
+      END;
+
+      -- Reviews for Facilities / Restaurants
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'reviews_facilities')
+      BEGIN
+        CREATE TABLE reviews_facilities (
+          review_id VARCHAR(50) NOT NULL PRIMARY KEY,
+          tourist_id VARCHAR(50) NOT NULL,
+          facility_id VARCHAR(50) NOT NULL,
+          stars_rating INT NOT NULL,
+          comment_text NVARCHAR(MAX) NULL,
+          created_at DATETIME DEFAULT GETDATE(),
+          CONSTRAINT UQ_reviews_facility_tourist UNIQUE (tourist_id, facility_id)
+        );
+      END;
+
       -- Seed / Sync canonical landmarks into places_tourist table in DelniDB
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-tripoli-castle')
         INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
