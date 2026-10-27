@@ -20,6 +20,11 @@ class BookingDaily extends Model
         'number_of_seats',
         'booking_status',
         'total_price',
+        'trip_date',
+        'booking_notes',
+        'passengers_names',
+        'payment_status',
+        'attended',
     ];
 
     protected $casts = [

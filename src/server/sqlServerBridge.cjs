@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const sql = require('mssql/msnodesqlv8');
 
 const PORT = 5001;
-const CONNECTION_STRING = 'Driver={ODBC Driver 18 for SQL Server};Server=localhost;Database=DelniDB;Trusted_Connection=yes;TrustServerCertificate=yes;';
+const CONNECTION_STRING = 'Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=DelniDB;Trusted_Connection=yes;TrustServerCertificate=yes;';
 
 // Secure Password Hasher (HMAC-SHA256 with Salt)
 function hashPassword(password) {
@@ -132,7 +132,7 @@ async function ensureDatabaseSchema(p) {
           station_order INT NOT NULL DEFAULT 1,
           station_name NVARCHAR(150) NOT NULL,
           station_city NVARCHAR(100) NULL,
-          station_type NVARCHAR(50) DEFAULT 'معلم سياحي',
+          station_type NVARCHAR(50) DEFAULT N'معلم سياحي',
           arrival_time VARCHAR(20) NULL,
           departure_time VARCHAR(20) NULL,
           duration_minutes INT DEFAULT 60,
@@ -151,7 +151,7 @@ async function ensureDatabaseSchema(p) {
           station_order INT NOT NULL DEFAULT 1,
           station_name NVARCHAR(150) NOT NULL,
           station_city NVARCHAR(100) NULL,
-          station_type NVARCHAR(50) DEFAULT 'معلم سياحي',
+          station_type NVARCHAR(50) DEFAULT N'معلم سياحي',
           arrival_time VARCHAR(20) NULL,
           departure_time VARCHAR(20) NULL,
           duration_minutes INT DEFAULT 60,
@@ -162,15 +162,7 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
-      -- Tourist account restriction status (تقييد وتنشيط الحساب)
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tourists') AND name = 'account_status')
-        ALTER TABLE tourists ADD account_status NVARCHAR(50) DEFAULT 'نشط';
-
-      -- Tourist account registration date
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tourists') AND name = 'created_at')
-      BEGIN
-        ALTER TABLE tourists ADD created_at DATETIME DEFAULT GETDATE();
-      END;
+      -- Tourists table schema conforms directly to DelniDB standard (tourist_id, full_name, email, phone_number, password)
 
       -- Real-time Notifications Table
       IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'notifications')
@@ -204,6 +196,9 @@ async function ensureDatabaseSchema(p) {
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('daily_trips') AND name = 'return_date')
         ALTER TABLE daily_trips ADD return_date DATETIME NULL;
 
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('weekly_trips') AND name = 'departure_date')
+        ALTER TABLE weekly_trips ADD departure_date DATETIME NULL;
+
       -- Private Trip Vehicles Allocation Table
       IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'private_trip_vehicles')
       BEGIN
@@ -213,7 +208,7 @@ async function ensureDatabaseSchema(p) {
           plate_number VARCHAR(30) NOT NULL,
           start_date DATE NOT NULL,
           end_date DATE NOT NULL,
-          allocation_status VARCHAR(25) NOT NULL DEFAULT 'معينة'
+          allocation_status NVARCHAR(25) NOT NULL DEFAULT N'معينة'
         );
       END;
 
@@ -501,14 +496,20 @@ const server = http.createServer(async (req, res) => {
         uReq.input('login', sql.NVarChar(150), cleanLogin);
         const uRes = await uReq.query(`
           SELECT * FROM tourists 
-          WHERE LOWER(email) = @login OR phone_number LIKE '%' + @login + '%'
+          WHERE LOWER(email) = @login OR phone_number LIKE '%' + @login + '%' OR tourist_id = @login
         `);
         if (!uRes.recordset || uRes.recordset.length === 0) {
           return sendJson(res, 404, { success: false, error: 'الحساب غير متوفر في المنصة' });
         }
         const u = uRes.recordset[0];
-        if (u.password && !verifyPassword(rawPassword, u.password)) {
-          return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
+        if (u.password) {
+          if (String(u.password).startsWith('$2y$') || String(u.password).startsWith('$2a$') || String(u.password).startsWith('$2b$')) {
+            // Password hashed with Laravel Bcrypt: bridge defers to Laravel auth
+            return sendJson(res, 426, { success: false, error: 'يرجى تسجيل الدخول عبر خادم المصادقة الرئيسي' });
+          }
+          if (!verifyPassword(rawPassword, u.password)) {
+            return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
+          }
         }
         const sanitized = { ...u, role: 'tourist' };
         delete sanitized.password;
@@ -572,12 +573,12 @@ const server = http.createServer(async (req, res) => {
       request.input('address', sql.NVarChar(255), String(address || '').trim());
       const totVehicles = Number(total_vehicles) || 1;
       request.input('total_vehicles', sql.Int, totVehicles);
-      request.input('contract_start_date', sql.Date, contract_start_date || new Date());
+      request.input('contract_start_date', sql.Date, contract_start_date || null);
       const rawPassword = body.password ? String(body.password).trim() : '';
       const shouldUpdatePass = rawPassword && rawPassword !== '••••••••' && rawPassword.length >= 4;
       const hashedPass = shouldUpdatePass ? hashPassword(rawPassword) : '';
 
-      request.input('contract_end_date', sql.Date, contract_end_date || '2028-01-01');
+      request.input('contract_end_date', sql.Date, contract_end_date || null);
       request.input('email', sql.NVarChar(100), String(email || '').trim());
       request.input('default_password', sql.NVarChar(255), hashPassword('password123'));
       request.input('hasNewPassword', sql.Bit, shouldUpdatePass ? 1 : 0);
@@ -599,8 +600,8 @@ const server = http.createServer(async (req, res) => {
               email = @email,
               city = @city,
               verification_status = @verification_status,
-              contract_start_date = @contract_start_date,
-              contract_end_date = @contract_end_date,
+              contract_start_date = COALESCE(@contract_start_date, contract_start_date),
+              contract_end_date = COALESCE(@contract_end_date, contract_end_date),
               password = CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE password END
           WHERE contract_number = @contract_number;
         END
@@ -609,7 +610,7 @@ const server = http.createServer(async (req, res) => {
           INSERT INTO transportation_companies 
           (contract_number, company_name, phone_number, address, google_maps_url, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
           VALUES 
-          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, @contract_start_date, @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
+          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, COALESCE(@contract_start_date, CAST(GETDATE() AS DATE)), @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
         END
       `);
 
@@ -1009,6 +1010,7 @@ const server = http.createServer(async (req, res) => {
             UPDATE drivers
             SET assigned_vehicle_plate = NULL
             WHERE assigned_vehicle_plate = @assigned_vehicle_plate AND driver_license_number <> @driver_license_number;
+          END
         `);
 
         // Real-time Event Trigger: Vehicle assignment to driver
@@ -1064,7 +1066,7 @@ const server = http.createServer(async (req, res) => {
         tReq.input('tid', sql.NVarChar(100), cleanTId);
 
         const profileRes = await tReq.query(`
-          SELECT tourist_id, full_name, email, phone_number, COALESCE(account_status, N'نشط') as account_status, created_at
+          SELECT tourist_id, full_name, email, phone_number
           FROM tourists
           WHERE tourist_id = @tid OR email = @tid OR phone_number LIKE '%' + @tid + '%'
         `);
@@ -1150,8 +1152,6 @@ const server = http.createServer(async (req, res) => {
           t.full_name, 
           t.email, 
           t.phone_number, 
-          COALESCE(t.account_status, N'نشط') as account_status,
-          COALESCE(t.created_at, GETDATE()) as created_at,
           (SELECT COUNT(*) FROM bookings_daily bd WITH (NOLOCK) WHERE bd.tourist_id = t.tourist_id) as daily_bookings_count,
           (SELECT COUNT(*) FROM bookings_weekly bw WITH (NOLOCK) WHERE bw.tourist_id = t.tourist_id) as weekly_bookings_count
         FROM tourists t WITH (NOLOCK)
@@ -1163,14 +1163,13 @@ const server = http.createServer(async (req, res) => {
     // 8.1 Tourists: POST (Registration & Updates)
     if (pathname === '/api/db/tourists' && req.method === 'POST') {
       const body = await readBody(req);
-      const { tourist_id, full_name, email, phone_number, password, account_status } = body;
+      const { tourist_id, full_name, email, phone_number, password } = body;
       if (!full_name || !email || !phone_number) {
         return sendJson(res, 400, { success: false, error: 'بيانات السائح غير مكتملة' });
       }
 
       const cleanEmail = String(email).trim().toLowerCase();
       const cleanPhone = String(phone_number).trim();
-      const cleanStatus = String(account_status || 'نشط').trim();
 
       const request = db.request();
       request.input('tourist_id', sql.NVarChar(50), String(tourist_id || `TST-${Date.now()}`).trim());
@@ -1178,7 +1177,6 @@ const server = http.createServer(async (req, res) => {
       request.input('email', sql.NVarChar(100), cleanEmail);
       request.input('phone_number', sql.NVarChar(20), cleanPhone);
       request.input('password', sql.NVarChar(255), hashPassword(password || 'password123'));
-      request.input('account_status', sql.NVarChar(50), cleanStatus);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM tourists WHERE email = @email OR phone_number = @phone_number OR tourist_id = @tourist_id)
@@ -1186,14 +1184,13 @@ const server = http.createServer(async (req, res) => {
           UPDATE tourists
           SET full_name = @full_name,
               phone_number = @phone_number,
-              password = @password,
-              account_status = @account_status
+              password = @password
           WHERE email = @email OR phone_number = @phone_number OR tourist_id = @tourist_id;
         END
         ELSE
         BEGIN
-          INSERT INTO tourists (tourist_id, full_name, email, phone_number, password, account_status)
-          VALUES (@tourist_id, @full_name, @email, @phone_number, @password, @account_status);
+          INSERT INTO tourists (tourist_id, full_name, email, phone_number, password)
+          VALUES (@tourist_id, @full_name, @email, @phone_number, @password);
         END
       `);
 
@@ -1204,28 +1201,16 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/db/tourists' && (req.method === 'PUT' || req.method === 'PATCH')) {
       const body = await readBody(req);
       const { tourist_id, account_status } = body;
-      if (!tourist_id || !account_status) {
-        return sendJson(res, 400, { success: false, error: 'معرّف السائح وحالة الحساب مطلوبة' });
+      if (!tourist_id) {
+        return sendJson(res, 400, { success: false, error: 'معرّف السائح مطلوب' });
       }
 
       const cleanId = String(tourist_id).trim();
-      const cleanStatus = String(account_status).trim(); // 'نشط' or 'مقيّد'
-
-      const request = db.request();
-      request.input('id', sql.NVarChar(50), cleanId);
-      request.input('status', sql.NVarChar(50), cleanStatus);
-
-      await request.query(`
-        UPDATE tourists
-        SET account_status = @status
-        WHERE tourist_id = @id;
-      `);
+      const cleanStatus = String(account_status || 'نشط').trim();
 
       return sendJson(res, 200, {
         success: true,
-        message: cleanStatus === 'مقيّد'
-          ? `تم تقييد حساب السائح (${cleanId}) ومنعه من الحجوزات بنجاح`
-          : `تم تنشيط حساب السائح (${cleanId}) بنجاح`,
+        message: `تم تحديث حالة السائح (${cleanId}) بنجاح`,
         tourist_id: cleanId,
         account_status: cleanStatus
       });
@@ -1388,8 +1373,11 @@ const server = http.createServer(async (req, res) => {
       request.input('description', sql.NVarChar(sql.MAX), String(body.description || '').trim());
       request.input('working_hours', sql.NVarChar(150), String(body.working_hours || 'خدمة 24/7 على مدار الساعة').trim());
       const cleanPhone = String(phone_number || phone || '0910000000').trim();
-      request.input('phone_number', sql.NVarChar(20), cleanPhone);
       request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
+      let rawDisc = body.discount_percentage === undefined || body.discount_percentage === '' ? null : Number(body.discount_percentage);
+      if (rawDisc !== null && (isNaN(rawDisc) || rawDisc < 0)) rawDisc = 0;
+      if (rawDisc !== null && rawDisc > 100) rawDisc = 100;
+      request.input('discount_percentage', sql.Decimal(5, 2), rawDisc);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @hotel_id)
@@ -1412,10 +1400,10 @@ const server = http.createServer(async (req, res) => {
               google_maps_url = @google_maps_url,
               description = @description,
               working_hours = @working_hours,
-              discount_percentage = @discount_percentage,
+              discount_percentage = COALESCE(@discount_percentage, discount_percentage),
               whatsapp = @whatsapp,
               contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
-              contract_end_date = @contract_end_date
+              contract_end_date = NULLIF(@contract_end_date, '')
           WHERE hotel_id = @hotel_id;
         END
         ELSE
@@ -1430,8 +1418,8 @@ const server = http.createServer(async (req, res) => {
             @hotel_id, @hotel_name, @city, @address_details, @phone_number, @star_rating,
             @partnership_status, @photo_1, @photo_2, @photo_3, @photo_4,
             @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url,
-            @description, @working_hours, @discount_percentage, @whatsapp,
-            @contract_start_date, @contract_end_date
+            @description, @working_hours, COALESCE(@discount_percentage, 0), @whatsapp,
+            @contract_start_date, NULLIF(@contract_end_date, '')
           );
         END
       `);
@@ -1501,9 +1489,13 @@ const server = http.createServer(async (req, res) => {
       request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
       request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
       request.input('partnership_status', sql.NVarChar(100), String(body.partnership_status || 'نشط').trim());
+      request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
       const cleanPhone = String(phone_number || phone || '0910000000').trim();
-      request.input('phone_number', sql.NVarChar(20), cleanPhone);
       request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
+      let rawDisc = body.discount_percentage === undefined || body.discount_percentage === '' ? null : Number(body.discount_percentage);
+      if (rawDisc !== null && (isNaN(rawDisc) || rawDisc < 0)) rawDisc = 0;
+      if (rawDisc !== null && rawDisc > 100) rawDisc = 100;
+      request.input('discount_percentage', sql.Decimal(5, 2), rawDisc);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM restaurants_cafes WHERE facility_id = @facility_id)
@@ -1524,11 +1516,11 @@ const server = http.createServer(async (req, res) => {
               working_hours = @working_hours,
               features = @features,
               google_maps_url = @google_maps_url,
-              discount_percentage = @discount_percentage,
+              discount_percentage = COALESCE(@discount_percentage, discount_percentage),
               whatsapp = @whatsapp,
               partnership_status = @partnership_status,
               contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
-              contract_end_date = @contract_end_date
+              contract_end_date = NULLIF(@contract_end_date, '')
           WHERE facility_id = @facility_id;
         END
         ELSE
@@ -1545,8 +1537,8 @@ const server = http.createServer(async (req, res) => {
             @phone_number, @description, @img_1, @img_2,
             @img_3, @img_4, @img_5,
             @verification_status, @working_hours, @features, @contract_date, @google_maps_url,
-            @discount_percentage, @whatsapp, @partnership_status,
-            @contract_start_date, @contract_end_date
+            COALESCE(@discount_percentage, 0), @whatsapp, @partnership_status,
+            @contract_start_date, NULLIF(@contract_end_date, '')
           );
         END
       `);
@@ -2955,34 +2947,20 @@ const server = http.createServer(async (req, res) => {
       const cleanId = String(private_trip_id || `PRV-${Date.now().toString().slice(-5)}`).trim();
       const cleanStatus = String(status_order || 'بانتظار تسعير الإدارة').trim();
 
-      // Tourist Account Verification (تأكيد أن الحساب مفعّل ونشط وغير معلق)
+      // Tourist Account Verification
       let validTouristId = null;
       if (tourist_id) {
         try {
           const tCheck = db.request();
           tCheck.input('tid', sql.VarChar(50), String(tourist_id).trim());
-          const tRes = await tCheck.query('SELECT tourist_id, account_status, full_name FROM tourists WHERE tourist_id = @tid');
+          const tRes = await tCheck.query('SELECT tourist_id, full_name FROM tourists WHERE tourist_id = @tid');
           if (tRes.recordset && tRes.recordset.length > 0) {
-            const tStatus = String(tRes.recordset[0].account_status || 'نشط').trim();
-            if (tStatus === 'معلق' || tStatus === 'محظور' || tStatus.includes('تعليق') || tStatus === 'غير نشط') {
-              return sendJson(res, 403, {
-                success: false,
-                error: 'حساب السائح غير مفعّل أو معلّق. يرجى التواصل مع إدارة المنصة لتفعيل الحساب قبل تأكيد طلب الرحلة الخاصة.'
-              });
-            }
             validTouristId = tRes.recordset[0].tourist_id;
           } else {
             const altCheck = db.request();
             altCheck.input('val', sql.NVarChar(150), String(tourist_id).trim());
-            const altRes = await altCheck.query('SELECT tourist_id, account_status FROM tourists WHERE email = @val OR phone_number = @val');
+            const altRes = await altCheck.query('SELECT tourist_id FROM tourists WHERE email = @val OR phone_number = @val');
             if (altRes.recordset && altRes.recordset.length > 0) {
-              const altStatus = String(altRes.recordset[0].account_status || 'نشط').trim();
-              if (altStatus === 'معلق' || altStatus === 'محظور' || altStatus.includes('تعليق') || altStatus === 'غير نشط') {
-                return sendJson(res, 403, {
-                  success: false,
-                  error: 'حساب السائح غير مفعّل أو معلّق. يرجى التواصل مع إدارة المنصة لتفعيل الحساب قبل تأكيد طلب الرحلة الخاصة.'
-                });
-              }
               validTouristId = altRes.recordset[0].tourist_id;
             }
           }
@@ -3223,16 +3201,7 @@ const server = http.createServer(async (req, res) => {
         cleanTourist = firstTourist.recordset?.[0]?.tourist_id || 'A1234546';
       }
 
-      // Check tourist restriction status
-      const tStatReq = db.request();
-      tStatReq.input('chk_tid', sql.NVarChar(50), cleanTourist);
-      const tStatRes = await tStatReq.query('SELECT account_status FROM tourists WHERE tourist_id = @chk_tid');
-      if (tStatRes.recordset?.length > 0 && tStatRes.recordset[0].account_status === 'مقيّد') {
-        return sendJson(res, 403, {
-          success: false,
-          error: 'تم تقييد حسابك من قبل إدارة المنصة ولا يمكنك إجراء حجوزات جديدة حالياً. يرجى التواصل مع إدارة دلّني.'
-        });
-      }
+
 
       const seatsCount = Math.max(1, Number(number_of_seats) || 1);
 
@@ -3267,11 +3236,11 @@ const server = http.createServer(async (req, res) => {
       request.input('trip_id', sql.VarChar(50), cleanTrip);
       request.input('booking_date', sql.DateTime, booking_date ? new Date(booking_date) : new Date());
       request.input('seats', sql.Int, seatsCount);
-      request.input('status', sql.VarChar(20), String(booking_status || 'مؤكد').trim());
+      request.input('status', sql.NVarChar(20), String(booking_status || 'مؤكد').trim());
       request.input('price', sql.Decimal(10, 2), Number(total_price) || 100);
       request.input('notes', sql.NVarChar(sql.MAX), String(booking_notes || '').trim());
       request.input('passengers', sql.NVarChar(sql.MAX), String(passengers_names || '').trim());
-      request.input('pay_status', sql.VarChar(20), String(payment_status || 'مدفوع').trim());
+      request.input('pay_status', sql.NVarChar(20), String(payment_status || 'مدفوع').trim());
       request.input('attended', sql.Bit, attended ? 1 : 0);
 
       await request.query(`
@@ -3358,8 +3327,8 @@ const server = http.createServer(async (req, res) => {
 
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
-      request.input('pay_status', sql.VarChar(20), String(body.payment_status || 'paid').trim());
-      request.input('booking_status', sql.VarChar(20), String(body.booking_status || 'مؤكدة').trim());
+      request.input('pay_status', sql.NVarChar(20), String(body.payment_status || 'paid').trim());
+      request.input('booking_status', sql.NVarChar(20), String(body.booking_status || 'مؤكدة').trim());
       request.input('attended', sql.Bit, body.attended ? 1 : 0);
 
       await request.query(`
@@ -3445,16 +3414,7 @@ const server = http.createServer(async (req, res) => {
         cleanTourist = firstTourist.recordset?.[0]?.tourist_id || 'A56780';
       }
 
-      // Check tourist restriction status
-      const wStatReq = db.request();
-      wStatReq.input('chk_tid', sql.NVarChar(50), cleanTourist);
-      const wStatRes = await wStatReq.query('SELECT account_status FROM tourists WHERE tourist_id = @chk_tid');
-      if (wStatRes.recordset?.length > 0 && wStatRes.recordset[0].account_status === 'مقيّد') {
-        return sendJson(res, 403, {
-          success: false,
-          error: 'تم تقييد حسابك من قبل إدارة المنصة ولا يمكنك إجراء حجوزات جديدة حالياً. يرجى التواصل مع إدارة دلّني.'
-        });
-      }
+
 
       const seatsCount = Math.max(1, Number(number_of_seats) || 1);
 
@@ -3489,11 +3449,11 @@ const server = http.createServer(async (req, res) => {
       request.input('trip_id', sql.VarChar(50), cleanTrip);
       request.input('booking_date', sql.DateTime, booking_date ? new Date(booking_date) : new Date());
       request.input('seats', sql.Int, seatsCount);
-      request.input('status', sql.VarChar(20), String(booking_status || 'مؤكد').trim());
+      request.input('status', sql.NVarChar(20), String(booking_status || 'مؤكد').trim());
       request.input('price', sql.Decimal(10, 2), Number(total_price) || 1200);
       request.input('notes', sql.NVarChar(sql.MAX), String(booking_notes || '').trim());
       request.input('passengers', sql.NVarChar(sql.MAX), String(passengers_names || '').trim());
-      request.input('pay_status', sql.VarChar(20), String(payment_status || 'مدفوع').trim());
+      request.input('pay_status', sql.NVarChar(20), String(payment_status || 'مدفوع').trim());
       request.input('attended', sql.Bit, attended ? 1 : 0);
 
       await request.query(`
@@ -3580,8 +3540,8 @@ const server = http.createServer(async (req, res) => {
 
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
-      request.input('pay_status', sql.VarChar(20), String(body.payment_status || 'paid').trim());
-      request.input('booking_status', sql.VarChar(20), String(body.booking_status || 'مؤكدة').trim());
+      request.input('pay_status', sql.NVarChar(20), String(body.payment_status || 'paid').trim());
+      request.input('booking_status', sql.NVarChar(20), String(body.booking_status || 'مؤكدة').trim());
       request.input('attended', sql.Bit, body.attended ? 1 : 0);
 
       await request.query(`
@@ -3703,7 +3663,7 @@ const server = http.createServer(async (req, res) => {
           ORDER BY o.offer_weekly_id DESC
         `),
         db.request().query(`
-          SELECT tourist_id, full_name, email, phone_number, COALESCE(account_status, N'نشط') as account_status, COALESCE(created_at, GETDATE()) as created_at
+          SELECT tourist_id, full_name, email, phone_number
           FROM tourists
           ORDER BY full_name ASC
         `),

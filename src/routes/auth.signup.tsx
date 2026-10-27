@@ -500,7 +500,7 @@ function SignupPage() {
                   email: tourist.email,
                   password: tourist.password,
                 });
-                if (res && (res.status === "success" || res.token)) {
+                if (res && res.status === "success") {
                   setSubmitted("tourist");
                 } else {
                   setErrorMsg(res?.message || "حدث خطأ أثناء التسجيل. يرجى التأكد من صحة البيانات وأن البريد ورقم الهاتف غير مسجلين مسبقاً.");

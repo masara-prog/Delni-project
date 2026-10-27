@@ -2134,32 +2134,20 @@ function AdminDashboard() {
 
             <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-2xs flex items-center justify-between">
               <div>
-                <div className="text-xs text-emerald-800 font-bold">حسابات نشطة ومصرح لها</div>
+                <div className="text-xs text-emerald-800 font-bold">إجمالي حجوزات السياح المسجلة</div>
                 <div className="text-2xl font-black text-emerald-700 mt-1">
-                  {tourists.filter(t => t.account_status !== "مقيّد").length} حساب
+                  {tourists.reduce((acc, t) => acc + (Number(t.daily_bookings_count) || 0) + (Number(t.weekly_bookings_count) || 0), 0)} حجز
                 </div>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-black">
-                🟢
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl border border-red-200 bg-red-50/40 shadow-2xs flex items-center justify-between">
-              <div>
-                <div className="text-xs text-red-800 font-bold">حسابات مقيدة ومحظورة</div>
-                <div className="text-2xl font-black text-red-700 mt-1">
-                  {tourists.filter(t => t.account_status === "مقيّد").length} حساب
-                </div>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center text-xl font-black">
-                🚫
+                🎟️
               </div>
             </div>
           </div>
 
-          {/* Search & Filter Bar */}
+          {/* Search Bar */}
           <SectionCard
-            title="قائمة حسابات السياح وتفاصيل الحجوزات والرقابة"
+            title="قائمة حسابات السياح وتفاصيل الحجوزات والملفات"
             action={
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
@@ -2179,33 +2167,17 @@ function AdminDashboard() {
                     </button>
                   )}
                 </div>
-
-                <select
-                  value={touristStatusFilter}
-                  onChange={(e) => setTouristStatusFilter(e.target.value as any)}
-                  className="h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right outline-none focus:border-primary shadow-2xs"
-                >
-                  <option value="all">جميع الحالات ({tourists.length})</option>
-                  <option value="active">🟢 الحسابات النشطة فقط ({tourists.filter(t => t.account_status !== "مقيّد").length})</option>
-                  <option value="restricted">🔴 الحسابات المقيدة فقط ({tourists.filter(t => t.account_status === "مقيّد").length})</option>
-                </select>
               </div>
             }
           >
             {/* Filtered Tourists Table */}
             {tourists.filter(t => {
               const q = touristSearch.trim().toLowerCase();
-              const matchQ = !q ||
+              return !q ||
                 (t.full_name && t.full_name.toLowerCase().includes(q)) ||
                 (t.tourist_id && t.tourist_id.toLowerCase().includes(q)) ||
                 (t.email && t.email.toLowerCase().includes(q)) ||
                 (t.phone_number && t.phone_number.includes(q));
-
-              const matchStatus = touristStatusFilter === "all" ||
-                (touristStatusFilter === "active" && t.account_status !== "مقيّد") ||
-                (touristStatusFilter === "restricted" && t.account_status === "مقيّد");
-
-              return matchQ && matchStatus;
             }).length === 0 ? (
               <div className="p-12 text-center text-muted-foreground space-y-2">
                 <div className="text-4xl">🔍</div>
@@ -2222,7 +2194,6 @@ function AdminDashboard() {
                       <th className="p-3">البريد الإلكتروني</th>
                       <th className="p-3">رقم الهاتف</th>
                       <th className="p-3 text-center">إجمالي الحجوزات</th>
-                      <th className="p-3 text-center">حالة الحساب</th>
                       <th className="p-3 text-center">الإجراءات والتحكم</th>
                     </tr>
                   </thead>
@@ -2230,20 +2201,13 @@ function AdminDashboard() {
                     {tourists
                       .filter(t => {
                         const q = touristSearch.trim().toLowerCase();
-                        const matchQ = !q ||
+                        return !q ||
                           (t.full_name && t.full_name.toLowerCase().includes(q)) ||
                           (t.tourist_id && t.tourist_id.toLowerCase().includes(q)) ||
                           (t.email && t.email.toLowerCase().includes(q)) ||
                           (t.phone_number && t.phone_number.includes(q));
-
-                        const matchStatus = touristStatusFilter === "all" ||
-                          (touristStatusFilter === "active" && t.account_status !== "مقيّد") ||
-                          (touristStatusFilter === "restricted" && t.account_status === "مقيّد");
-
-                        return matchQ && matchStatus;
                       })
                       .map((t) => {
-                        const isRestricted = t.account_status === "مقيّد";
                         const totalBookings = (Number(t.daily_bookings_count) || 0) + (Number(t.weekly_bookings_count) || 0);
                         return (
                           <tr key={t.tourist_id} className="hover:bg-slate-50/80 transition-colors">
@@ -2252,12 +2216,7 @@ function AdminDashboard() {
                                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center text-xs">
                                   {t.full_name ? t.full_name[0] : "س"}
                                 </div>
-                                <div>
-                                  <div className="font-black text-slate-900">{t.full_name}</div>
-                                  <div className="text-[10px] text-muted-foreground">
-                                    تاريخ التسجيل: {t.created_at ? new Date(t.created_at).toLocaleDateString('ar-LY') : "مسبقاً"}
-                                  </div>
-                                </div>
+                                <div className="font-black text-slate-900">{t.full_name}</div>
                               </div>
                             </td>
                             <td className="p-3">
@@ -2273,39 +2232,13 @@ function AdminDashboard() {
                               </span>
                             </td>
                             <td className="p-3 text-center">
-                              {isRestricted ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100 text-red-800 text-[11px] font-black border border-red-200">
-                                  <span>🔴</span>
-                                  <span>حساب مقيّد (محظور)</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black border border-emerald-200">
-                                  <span>🟢</span>
-                                  <span>نشط ومصرح له</span>
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-3">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  onClick={() => handleViewTourist(t)}
-                                  className="px-3 py-1.5 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                                >
-                                  <span>👁️</span>
-                                  <span>عرض الحجوزات والملف</span>
-                                </button>
-                                <button
-                                  onClick={() => handleToggleTouristStatus(t.tourist_id, t.account_status || "نشط")}
-                                  className={`px-3 py-1.5 rounded-xl font-black text-xs transition cursor-pointer flex items-center gap-1 border shadow-2xs ${
-                                    isRestricted
-                                      ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300"
-                                      : "bg-red-50 hover:bg-red-100 text-red-700 border-red-300"
-                                  }`}
-                                >
-                                  <span>{isRestricted ? "✅" : "🚫"}</span>
-                                  <span>{isRestricted ? "تنشيط الحساب" : "تقييد الحساب"}</span>
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => handleViewTourist(t)}
+                                className="px-3 py-1.5 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              >
+                                <span>👁️</span>
+                                <span>عرض الحجوزات والملف</span>
+                              </button>
                             </td>
                           </tr>
                         );
@@ -3872,7 +3805,6 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(5);
-  const [contractEndDate, setContractEndDate] = useState("");
   const [companyStatus, setCompanyStatus] = useState("نشطة");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -3930,10 +3862,6 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
       return;
     }
-    if (!contractEndDate.trim()) {
-      setErrorMsg("يرجى تحديد تاريخ انتهاء التعاقد المعتمد.");
-      return;
-    }
 
     onAdd({
       contract_number: cleanContract,
@@ -3949,8 +3877,6 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       password: pass.trim(),
       total_vehicles: totalV,
       available_cars: totalV,
-contract_start_date: new Date().toISOString().split("T")[0],
-      contract_end_date: contractEndDate.trim(),
       status: companyStatus,
       verification_status: companyStatus,
     });
@@ -4058,11 +3984,11 @@ contract_start_date: new Date().toISOString().split("T")[0],
             </div>
           </div>
 
-          {/* 3. سعة الأسطول والتعاقد */}
+          {/* 3. سعة الأسطول وحالة التشغيل */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
               <span>📊</span>
-              <span>سعة الأسطول وصلاحية التعاقد</span>
+              <span>سعة الأسطول وحالة التشغيل</span>
             </div>
 
             <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/90 text-right space-y-1">
@@ -4072,9 +3998,8 @@ contract_start_date: new Date().toISOString().split("T")[0],
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div>
               <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-              <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
             </div>
 
             <div>
@@ -4129,8 +4054,6 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
   const [address, setAddress] = useState(company.google_maps_url || company.address || "");
   const [email, setEmail] = useState(company.email || "");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(company.total_vehicles ?? 5);
-  const [contractStartDate, setContractStartDate] = useState(company.contract_start_date || "2026-01-01");
-  const [contractEndDate, setContractEndDate] = useState(company.contract_end_date || "2028-01-01");
   const [status, setStatus] = useState(company.status === "موقوفة" || company.verification_status === "موقوفة" || company.status === "مرفوض" ? "موقوفة" : "نشطة");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -4180,8 +4103,6 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       email: email.trim(),
       total_vehicles: totalV,
 available_cars: totalV,
-      contract_start_date: contractStartDate,
-      contract_end_date: contractEndDate,
       verification_status: status,
       status: status,
     });
@@ -4274,11 +4195,6 @@ available_cars: totalV,
             </div>
             <div>
               <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <Field label="تاريخ بدء التعاقد" type="date" value={contractStartDate} onChange={setContractStartDate} />
-              <Field label="تاريخ انتهاء التعاقد" type="date" value={contractEndDate} onChange={setContractEndDate} />
             </div>
 
             <div>
@@ -8282,38 +8198,6 @@ function TouristDetailsModal({
   return (
     <ModalShell title={`ملف السائح: ${tourist.full_name || tourist.tourist_id}`} onClose={onClose} maxWidth="max-w-4xl">
       <div className="space-y-5 text-right max-h-[82vh] overflow-y-auto px-2">
-        {/* Status Alert if Restricted */}
-        {isRestricted ? (
-          <div className="p-4 rounded-2xl bg-red-50 border-2 border-red-300 text-red-900 text-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">🚫</span>
-              <div>
-                <strong className="block text-sm font-black text-red-950">حساب السائح مقيّد حالياً:</strong>
-                تم حظر هذا الحساب من إتمام أي حجوزات جديدة على المنصة بناءً على قرار الإدارة والرقابة.
-              </div>
-            </div>
-            <button
-              onClick={() => onToggleStatus(tourist.tourist_id, tourist.account_status)}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-xs flex-shrink-0 cursor-pointer"
-            >
-              ✅ تنشيط الحساب الآن
-            </button>
-          </div>
-        ) : (
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🟢</span>
-              <span className="font-bold">حساب نشط ومصرح له بحجز كافة الرحلات اليومية والأسبوعية في منصة دلّني.</span>
-            </div>
-            <button
-              onClick={() => onToggleStatus(tourist.tourist_id, tourist.account_status || "نشط")}
-              className="px-3.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs transition flex-shrink-0 cursor-pointer"
-            >
-              🚫 تقييد الحساب
-            </button>
-          </div>
-        )}
-
         {/* Tourist Profile Card (Zero Passwords Exposed) */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
@@ -8333,7 +8217,7 @@ function TouristDetailsModal({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-2.5 rounded-xl bg-white border border-slate-200">
               <span className="text-slate-400 block text-[10px] font-bold">البريد الإلكتروني</span>
               <span className="font-bold text-slate-800">{tourist.email || "غير مسجل"}</span>
@@ -8341,12 +8225,6 @@ function TouristDetailsModal({
             <div className="p-2.5 rounded-xl bg-white border border-slate-200">
               <span className="text-slate-400 block text-[10px] font-bold">رقم الهاتف</span>
               <span className="font-mono font-bold text-slate-800" dir="ltr">{tourist.phone_number || "غير مسجل"}</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-              <span className="text-slate-400 block text-[10px] font-bold">تاريخ الانضمام</span>
-              <span className="font-bold text-slate-800">
-                {tourist.created_at ? new Date(tourist.created_at).toLocaleDateString('ar-LY') : "مسبقاً"}
-              </span>
             </div>
           </div>
         </div>
