@@ -309,40 +309,33 @@ export function RestaurantDetailsModal({
               </div>
             </div>
 
-            {/* Concise Bio ("نبذة تعريفية سريعة ومختصرة") */}
-            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
-              <div className="text-xs font-black text-[#D96B27] dark:text-amber-400 flex items-center gap-1.5">
-                <span>🍽️</span>
-                <span>{isAr ? "نبذة تعريفية سريعة:" : "Quick Overview:"}</span>
+            {/* Bio / Description */}
+            {restaurant.description && (
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
+                <div className="text-xs font-black text-[#D96B27] dark:text-amber-400 flex items-center gap-1.5">
+                  <span>🍽️</span>
+                  <span>{isAr ? "نبذة تعريفية:" : "Overview:"}</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                  {restaurant.description}
+                </p>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-                {restaurant.description
-                  ? restaurant.description.slice(0, 160) + (restaurant.description.length > 160 ? "..." : "")
-                  : isAr
-                  ? `أحد أرقى المطاعم والمقاهي في ${restaurant.city}، يقدم تشكيلة من أشهى الأطباق التراثية والمأكولات الطازجة مع ضيافة مجانية وخصم 15% لرواد منصة دلّني.`
-                  : `Premier dining and cafe venue in ${restaurant.city} offering authentic Libyan cuisine and fresh beverages.`}
-              </p>
-            </div>
+            )}
 
-            {/* Quick Amenities / Dining Perks Pills */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { label: isAr ? "شاي باللوز مجاناً" : "Free Almond Tea", icon: "☕" },
-                { label: isAr ? "جلسات عائلية مريحة" : "Family Seating", icon: "👨‍👩‍👧‍👦" },
-                { label: isAr ? "واي فاي سريع مجاني" : "Free WiFi", icon: "📶" },
-                { label: isAr ? "تكييف هادئ" : "Climate Control", icon: "❄️" },
-                { label: isAr ? "موقف سيارات" : "Parking", icon: "🅿️" },
-                { label: isAr ? "دفع إلكتروني (سداد/تداول)" : "Digital Pay", icon: "💳" },
-              ].map((am, idx) => (
-                <span
-                  key={idx}
-                  className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold flex items-center gap-1 shadow-xs"
-                >
-                  <span>{am.icon}</span>
-                  <span>{am.label}</span>
-                </span>
-              ))}
-            </div>
+            {/* Real Dining Features / Perks from Database (1NF) */}
+            {Array.isArray(restaurant.features) && restaurant.features.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {restaurant.features.map((feat, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold flex items-center gap-1 shadow-xs"
+                  >
+                    <span>✨</span>
+                    <span>{feat}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── 3. BOTTOM ACTION BAR (Direct Dining Contact - Links Icon Removed) ── */}

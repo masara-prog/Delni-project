@@ -1025,6 +1025,7 @@ function HotelsPage() {
               discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
               contract_start_date: item.contract_start_date || "",
               contract_end_date: item.contract_end_date || "",
+              amenities: Array.isArray(item.amenities) ? item.amenities : [],
               rating: Number(item.rating_avg) || 0,
               reviewsCount: Number(item.reviews_count) || 0,
               photos: [
@@ -1067,6 +1068,7 @@ function HotelsPage() {
                 discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
                 contract_start_date: item.contract_start_date || "",
                 contract_end_date: item.contract_end_date || "",
+                amenities: Array.isArray(item.amenities) ? item.amenities : [],
                 rating: Number(item.rating_avg) || 0,
                 reviewsCount: Number(item.reviews_count) || 0,
                 photos: [

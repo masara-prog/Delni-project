@@ -2153,12 +2153,19 @@ export function PrivateTripModal({
       return;
     }
 
-    // 2. Validate Libyan Phone Number
-    if (!phone.match(/^09\d{8}$/)) {
+    // 2. Strict 10-day Start Date Validation (يجب أن يكون موعد الانطلاق بعد 10 أيام على الأقل)
+    const minDateAllowed = new Date();
+    minDateAllowed.setHours(0, 0, 0, 0);
+    minDateAllowed.setDate(minDateAllowed.getDate() + 10);
+
+    const chosenDate = startDate ? new Date(startDate) : new Date();
+    chosenDate.setHours(0, 0, 0, 0);
+
+    if (chosenDate < minDateAllowed) {
       setFormError(
         isAr
-          ? "الرجاء إدخال رقم هاتف ليبي صحيح يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)"
-          : "Please enter a valid 10-digit Libyan phone number (e.g. 0912345678)"
+          ? "تنبيه: يجب أن يكون تاريخ بدء الرحلة الخاصة بعد 10 أيام على الأقل من اليوم لإعطاء الإدارة والمرشدين الوقت الكافي لدراسة المسار واعتماده وتجهيز المركبات."
+          : "Start date must be at least 10 days from today to allow adequate planning and logistics."
       );
       return;
     }
@@ -2226,21 +2233,17 @@ export function PrivateTripModal({
 
     const requirements = `المعالم السياحية المستهدفة: ${placesWithCities}. ${guideRequirement}${notes ? `ملاحظات ومتطلبات السائح: ${notes}` : ""}`.trim();
 
-    // Payload matching SQL Server DelniDB private_trips and places_trip_private schema
+    // Payload matching SQL Server DelniDB clean normalized private_trips and places_trip_private schema
     const payload = {
       private_trip_id: tripId,
-      status_order: "بانتظار تسعير الإدارة",
-      customer_description: placesNames || "رحلة سياحية خاصة متعددة المعالم",
-      preferred_start_date: startDate || new Date().toISOString().split("T")[0],
+      status_order: "قيد الدراسة",
+      preferred_start_date: startDate,
       duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
       number_of_companions: Math.max(1, parseInt(companions, 10) || 1),
       guide_license_number: selectedGuideLicense || null,
       tourist_id: touristId,
-      customer_name: (customerName || session?.user?.full_name || session?.user?.name || "سائح دلّني").trim(),
-      customer_phone: phone.trim(),
       customer_requirements: requirements,
       quoted_price: null,
-      admin_itinerary_plan: null,
       place_ids: selectedLandmarkIds,
     };
 
@@ -2505,13 +2508,14 @@ export function PrivateTripModal({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Preferred Start Date */}
                 <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
-                    📅 {isAr ? "تاريخ الانطلاق المفضل" : "Preferred Start Date"}
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
+                    <span>📅 {isAr ? "تاريخ الانطلاق المفضل" : "Preferred Start Date"}</span>
+                    <span className="text-[10px] text-[#B85D36] font-bold">({isAr ? "بعد 10 أيام كحد أدنى" : "Min 10 days ahead"})</span>
                   </label>
                   <input
                     type="date"
                     required
-                    min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                    min={new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
@@ -2855,36 +2859,26 @@ export function PrivateTripModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Tourist Name */}
+                {/* Tourist Name (Auto-fetched from account) */}
                 <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
-                    👤 {isAr ? "اسم السائح أو الجهة الطالبة" : "Tourist Name"}
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
+                    <span>👤 {isAr ? "اسم السائح صاحب الحساب" : "Tourist Account Holder"}</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "موثق من الحساب" : "Verified"}</span>
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder={isAr ? "الاسم الكامل" : "Full Name"}
-                    className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
-                    maxLength={60}
-                  />
+                  <div className="font-black text-xs text-slate-800 dark:text-slate-100 py-1">
+                    {customerName || sessionData?.user?.full_name || sessionData?.user?.name || (isAr ? "سائح دلّني المعتمد" : "Verified Tourist")}
+                  </div>
                 </div>
 
-                {/* Phone / WhatsApp */}
+                {/* Phone (Auto-fetched from account) */}
                 <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
-                    📞 {isAr ? "رقم الهاتف / واتساب (09XXXXXXXX)" : "Phone (09XXXXXXXX)"}
+                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
+                    <span>📞 {isAr ? "رقم الهاتف المعتمد بالحساب" : "Registered Phone"}</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "من ملفك الشخصي" : "Profile"}</span>
                   </label>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0912345678"
-                    className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none font-mono"
-                    maxLength={15}
-                  />
+                  <div className="font-black text-xs text-slate-800 dark:text-slate-100 py-1 font-mono">
+                    {phone || sessionData?.user?.phone_number || (isAr ? "مسجل في حسابك" : "On file")}
+                  </div>
                 </div>
               </div>
 

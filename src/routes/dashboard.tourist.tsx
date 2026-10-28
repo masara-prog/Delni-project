@@ -6,10 +6,36 @@ import { useLanguage } from "@/lib/i18n";
 import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Printer, X, Award } from "lucide-react";
 import QRCode from "qrcode";
 import type { PrivateTrip } from "@/lib/dbSchema";
+import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
 import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile } from "@/lib/api";
 import { submitTripReview } from "@/lib/reviews";
 import { useFavorites } from "@/lib/favorites";
 import { Star, Heart } from "lucide-react";
+
+function formatTripDate(val: any): string {
+  if (!val) return "غير محدد";
+  try {
+    const s = String(val).replace(/T.*$/, "").trim();
+    const parts = s.split("-");
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parseInt(parts[1], 10);
+      const day = parseInt(parts[2], 10);
+      const arabicMonths = [
+        "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+        "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+      ];
+      if (month >= 1 && month <= 12 && !isNaN(day)) {
+        return `${day} ${arabicMonths[month - 1]} ${year}`;
+      }
+    }
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("ar-LY", { year: "numeric", month: "long", day: "numeric" });
+    }
+  } catch {}
+  return String(val);
+}
 
 export const Route = createFileRoute("/dashboard/tourist")({
   head: () => ({
@@ -92,6 +118,7 @@ function TouristDashboard() {
   // Real Private Trips from DelniDB
   const [privateTrips, setPrivateTrips] = useState<PrivateTrip[]>([]);
   const [privateModalOpen, setPrivateModalOpen] = useState(false);
+  const [selectedVehicleForModal, setSelectedVehicleForModal] = useState<VehicleDetailsData | null>(null);
 
   // Real Favorites from DelniDB / Laravel
   const { favorites, isFavorite, toggle: toggleFav } = useFavorites();
@@ -616,7 +643,13 @@ function TouristDashboard() {
             <div className="space-y-3.5 text-right">
               {privateTrips.map((p) => {
                 let parsedSteps: Array<{ time: string; title: string; desc: string }> | null = null;
-                if (p.admin_itinerary_plan) {
+                if (p.stations && Array.isArray(p.stations) && p.stations.length > 0) {
+                  parsedSteps = p.stations.map((st: any) => ({
+                    time: st.station_time || (st.day_number ? `اليوم ${st.day_number}` : "09:00 ص"),
+                    title: st.station_title,
+                    desc: st.station_desc || "",
+                  }));
+                } else if (p.admin_itinerary_plan) {
                   try {
                     const parsed = JSON.parse(p.admin_itinerary_plan);
                     if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
@@ -632,17 +665,52 @@ function TouristDashboard() {
                 return (
                   <div key={p.private_trip_id} className="p-4 sm:p-5 rounded-2xl border border-border bg-white space-y-3.5 shadow-2xs">
                     <div className="flex justify-between items-start gap-2 flex-wrap">
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1.5 flex-1 min-w-[240px]">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-mono font-bold text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-md">
                             #{p.private_trip_id}
                           </span>
-                          <h3 className="font-black text-foreground text-sm sm:text-base">{p.customer_description}</h3>
+                          {p.places && p.places.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                              <span className="text-xs font-bold text-slate-700">🏛️ الوجهة والمعالم:</span>
+                              {p.places.map((pl: any, idx: number) => (
+                                <span key={idx} className="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-900 font-bold text-xs border border-amber-200">
+                                  {pl.place_name || pl.name || pl}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <h3 className="font-black text-foreground text-sm sm:text-base">{p.customer_description}</h3>
+                          )}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-3 font-medium">
-                          <span>🧭 المرشد: <b>{p.guide_name || p.guide_license_number || "بمعرفة الإدارة"}</b></span>
+
+                        {p.customer_requirements && (
+                          <div className="text-xs text-amber-950 bg-amber-50/70 p-2 rounded-lg border border-amber-200 leading-relaxed">
+                            <span className="font-bold text-amber-900 ml-1">📝 متطلبات وملاحظات الرحلة:</span>
+                            <span>{p.customer_requirements}</span>
+                          </div>
+                        )}
+
+                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-3 font-medium items-center">
+                          <span>🧭 المرشد السياحي: <b>{p.guide_name || p.guide_license_number || "بمعرفة الإدارة"}</b></span>
                           {p.assigned_vehicle && (
-                            <span className="text-emerald-800 font-bold">🚍 مركبة النقل: {p.assigned_vehicle}</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedVehicleForModal({
+                                plate_number: p.assigned_vehicle,
+                                vehicle_type: p.vehicle_model,
+                                seating_capacity: p.vehicle_capacity,
+                                company_name: p.transport_company_name,
+                                company_phone: p.transport_company_phone,
+                                vehicle_image: p.vehicle_image,
+                                daily_rate: p.vehicle_daily_rate,
+                                vehicle_status: p.vehicle_status || "معتمدة",
+                              })}
+                              className="inline-flex items-center gap-1.5 text-emerald-800 font-bold hover:text-emerald-950 hover:underline cursor-pointer bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 transition"
+                            >
+                              <span>🚍 مركبة النقل: <b>{p.assigned_vehicle}</b> {p.vehicle_model ? `(${p.vehicle_model})` : ""}</span>
+                              <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-black">تفاصيل 👁️</span>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -652,7 +720,7 @@ function TouristDashboard() {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs bg-stone-50 p-3 rounded-xl font-medium text-stone-700 border border-stone-200/60">
-                      <div>📅 <b>تاريخ الانطلاق:</b> {p.preferred_start_date}</div>
+                      <div>📅 <b>تاريخ الانطلاق:</b> <span className="font-bold text-slate-900">{formatTripDate(p.preferred_start_date)}</span></div>
                       <div>⏳ <b>المدة:</b> {p.duration_days} {p.duration_days > 1 ? "أيام" : "يوم واحد"}</div>
                       <div className="col-span-2 sm:col-span-1">👥 <b>المرافقون:</b> {p.number_of_companions} أفراد</div>
                     </div>
@@ -665,13 +733,54 @@ function TouristDashboard() {
                             <span className="text-slate-600 font-bold block text-[11px]">التسعيرة الرسمية المقترحة من الإدارة:</span>
                             <span className="text-base sm:text-lg font-black text-emerald-800">{p.quoted_price} د.ل</span>
                             <span className="text-[10px] text-emerald-700 mr-2">(شاملة المرشد السياحي وسيارة النقل والخدمات)</span>
+                            {p.additional_expenses ? (
+                              <span className="inline-block text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded mr-2 font-bold border border-amber-300">
+                                منها {p.additional_expenses} د.ل مصروفات لوجستية وخدمات
+                              </span>
+                            ) : null}
                           </div>
                           {p.assigned_vehicle && (
-                            <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-bold text-[11px]">
-                              🚍 تم تخصيص المركبة: {p.assigned_vehicle}
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-bold text-[11px]">
+                                🚍 المركبة المخصصة: {p.assigned_vehicle} {p.vehicle_model ? `(${p.vehicle_model})` : ""}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedVehicleForModal({
+                                  plate_number: p.assigned_vehicle,
+                                  vehicle_type: p.vehicle_model,
+                                  seating_capacity: p.vehicle_capacity,
+                                  company_name: p.transport_company_name,
+                                  company_phone: p.transport_company_phone,
+                                  vehicle_image: p.vehicle_image,
+                                  daily_rate: p.vehicle_daily_rate,
+                                  vehicle_status: p.vehicle_status || "معتمدة",
+                                })}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] shadow-2xs transition cursor-pointer"
+                              >
+                                <span>👁️</span>
+                                <span>معاينة تفاصيل المركبة</span>
+                              </button>
+                            </div>
                           )}
                         </div>
+
+                        {/* Assigned Hotels List (From hotels_trip_private) */}
+                        {p.hotels && p.hotels.length > 0 && (
+                          <div className="p-2.5 rounded-lg bg-blue-50/80 border border-blue-200 text-blue-950 space-y-1">
+                            <span className="font-black text-xs flex items-center gap-1.5 text-blue-900">
+                              <span>🏨</span>
+                              <span>الفنادق وأماكن الإقامة المعتمدة للرحلة:</span>
+                            </span>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {p.hotels.map((h: any, hidx: number) => (
+                                <span key={hidx} className="px-2.5 py-1 rounded-md bg-white border border-blue-200 text-[11px] font-bold text-slate-800 shadow-2xs">
+                                  {h.hotel_name || h.name} ({h.city || "ليبيا"}) {"★".repeat(h.star_rating || h.stars || 4)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Step-by-Step Stations Itinerary Display */}
                         {parsedSteps && parsedSteps.length > 0 ? (
@@ -1236,6 +1345,13 @@ function TouristDashboard() {
             </form>
           </div>
         </Modal>
+      )}
+
+      {selectedVehicleForModal && (
+        <VehicleDetailsModal
+          vehicle={selectedVehicleForModal}
+          onClose={() => setSelectedVehicleForModal(null)}
+        />
       )}
     </DashboardShell>
   );

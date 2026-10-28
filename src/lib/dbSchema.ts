@@ -19,28 +19,39 @@ export interface Tourist {
    ========================================================= */
 export interface TourGuide {
   license_number: string; // VARCHAR(50) PRIMARY KEY
-  full_name: string; // VARCHAR(100)
+  full_name: string; // VARCHAR(150)
   phone_number: string; // VARCHAR(20) UNIQUE
   years_of_experience: number; // INT (CHECK >= 2)
-  certificate: string; // VARCHAR(255)
-  bio?: string | null; // TEXT NULL
+  bio?: string | null; // NVARCHAR(MAX) NULL
   speaks_english: boolean; // BIT DEFAULT 0
   speaks_french: boolean; // BIT DEFAULT 0
   speaks_italian: boolean; // BIT DEFAULT 0
-  verification_status: "موثق" | "بانتظار التوثيق" | "مرفوض"; // VARCHAR(20)
+  verification_status: "موثق" | "بانتظار التوثيق" | "قيد المراجعة" | "مرفوض"; // NVARCHAR(50)
   password?: string; // VARCHAR(255)
   email: string; // VARCHAR(100) UNIQUE
   gender?: "male" | "female" | string | null; // VARCHAR(10)
-  working_days?: string | null; // NVARCHAR(MAX) (JSON or comma-separated)
-  operating_regions?: string | null; // NVARCHAR(MAX) (JSON or comma-separated)
-  primaryRegion?: string | null; // VARCHAR(50)
   price_per_day?: number | null; // DECIMAL(10,2)
-  avatar?: string | null; // VARCHAR(255)
-  title?: string | null; // VARCHAR(100)
-  specialties?: string | null; // NVARCHAR(MAX)
-  total_tours_completed: number; // INT DEFAULT 0
-  digital_certificate_file?: string; // Supporting document attachment
+  avatar?: string | null; // NVARCHAR(MAX)
+  digital_certificate_file?: string | null; // NVARCHAR(MAX)
+  total_tours_completed?: number; // INT DEFAULT 0
+  // Deprecated/Virtual helpers:
+  title?: string | null;
+  certificate?: string;
   certificate_name?: string | null;
+  primaryRegion?: string | null;
+  specialties?: string | null;
+  operating_regions?: string | null | string[];
+  working_days?: string | null | string[];
+}
+
+export interface GuideOperatingRegion {
+  license_number: string; // VARCHAR(50) PK, FK -> TourGuides
+  region: string; // NVARCHAR(100) PK
+}
+
+export interface GuideWorkingDay {
+  license_number: string; // VARCHAR(50) PK, FK -> TourGuides
+  day_of_week: string; // NVARCHAR(50) PK
 }
 
 /* =========================================================
@@ -67,15 +78,16 @@ export interface Vehicle {
   plate_number: string; // VARCHAR(30) PRIMARY KEY
   vehicle_type: string; // VARCHAR(50)
   seating_capacity: number; // INT (CHECK > 0)
-  vehicle_image?: string | null; // VARCHAR(255)
   vehicle_status: "جاهزة" | "في رحلة" | "صيانة" | "خارج الخدمة"; // VARCHAR(20)
-  insurance_details?: string | null; // TEXT
   contract_number: string; // VARCHAR(50) FK -> TransportationCompanies
   daily_rate?: number | null; // DECIMAL(10,2)
   category?: string | null; // VARCHAR(50)
-  insurance_image?: string | null; // VARCHAR(255)
+  insurance_image?: string | null; // VARCHAR(255) - وثيقة التأمين للمراجعة والفحص
   company_name?: string; // Virtual join field for convenience
   status?: string | null;
+  // Deprecated/virtual fallback fields
+  vehicle_image?: string | null;
+  insurance_details?: string | null;
 }
 
 /* =========================================================
@@ -120,23 +132,40 @@ export interface PlaceTourist {
    ========================================================= */
 export interface Hotel {
   hotel_id: string; // VARCHAR(50) PRIMARY KEY
-  hotel_name: string; // VARCHAR(100)
-  city: string; // VARCHAR(50)
-  address_details: string; // VARCHAR(255)
+  hotel_name: string; // VARCHAR(200)
+  city: string; // VARCHAR(100)
+  address_details: string; // VARCHAR(500)
   phone_number: string; // VARCHAR(20)
   star_rating: number; // INT (CHECK BETWEEN 1 AND 5)
-  partnership_status: "نشط" | "معلق" | "موقوف"; // VARCHAR(20)
-  hotel_photo_1?: string | null; // VARCHAR(255)
-  hotel_photo_2?: string | null; // VARCHAR(255)
-  hotel_photo_3?: string | null; // VARCHAR(255)
-  hotel_photo_4?: string | null; // VARCHAR(255)
-  hotel_photo_5?: string | null; // VARCHAR(255)
-  contract_date?: string | null; // DATE
-  verification_status?: string | null; // VARCHAR(20)
-  property_type?: string | null; // VARCHAR(50)
-  amenities?: string | null; // NVARCHAR(MAX)
-  bookings_count?: number; // Virtual stat
-  rating_avg?: number; // Virtual stat
+  partnership_status: "نشط" | "معلق" | "موقوف" | string; // VARCHAR(100)
+  hotel_photo_1?: string | null; // NVARCHAR(MAX)
+  hotel_photo_2?: string | null; // NVARCHAR(MAX)
+  hotel_photo_3?: string | null; // NVARCHAR(MAX)
+  hotel_photo_4?: string | null; // NVARCHAR(MAX)
+  hotel_photo_5?: string | null; // NVARCHAR(MAX)
+  property_type?: string | null; // VARCHAR(100)
+  google_maps_url?: string | null; // VARCHAR(500)
+  description?: string | null; // NVARCHAR(MAX)
+  working_hours?: string | null; // VARCHAR(150)
+  discount_percentage?: number | null; // INT
+  contract_start_date?: string | null; // VARCHAR(50)
+  contract_end_date?: string | null; // VARCHAR(50)
+  // Virtual / helper fields
+  id?: string;
+  name?: string;
+  address?: string;
+  phone?: string;
+  stars?: number;
+  bookings_count?: number;
+  rating_avg?: number;
+  reviews_count?: number;
+  amenities?: string[] | string | null;
+  whatsapp?: string | null;
+}
+
+export interface HotelAmenity {
+  hotel_id: string; // VARCHAR(50) PK, FK -> Hotels
+  amenity: string; // NVARCHAR(100) PK
 }
 
 /* =========================================================
@@ -144,22 +173,35 @@ export interface Hotel {
    ========================================================= */
 export interface RestaurantCafe {
   facility_id: string; // VARCHAR(50) PRIMARY KEY
-  facility_name: string; // VARCHAR(100)
-  facility_type: string; // VARCHAR(50)
-  city: string; // VARCHAR(50)
-  address_details: string; // VARCHAR(255)
+  facility_name: string; // VARCHAR(200)
+  facility_type: string; // VARCHAR(100)
+  city: string; // VARCHAR(100)
+  address_details: string; // VARCHAR(500)
   phone_number?: string | null; // VARCHAR(20)
-  description?: string | null; // TEXT
-  facility_image_1?: string | null; // VARCHAR(255)
-  facility_image_2?: string | null; // VARCHAR(255)
-  facility_image_3?: string | null; // VARCHAR(255)
-  facility_image_4?: string | null; // VARCHAR(255)
-  facility_image_5?: string | null; // VARCHAR(255)
-  contract_date?: string | null; // DATE
-  verification_status?: string | null; // VARCHAR(20)
+  description?: string | null; // NVARCHAR(MAX)
+  facility_image_1?: string | null; // NVARCHAR(MAX)
+  facility_image_2?: string | null; // NVARCHAR(MAX)
+  facility_image_3?: string | null; // NVARCHAR(MAX)
+  facility_image_4?: string | null; // NVARCHAR(MAX)
+  facility_image_5?: string | null; // NVARCHAR(MAX)
   working_hours?: string | null; // VARCHAR(100)
-  features?: string | null; // NVARCHAR(MAX)
+  google_maps_url?: string | null; // VARCHAR(500)
+  discount_percentage?: number | null; // INT
+  contract_start_date?: string | null; // VARCHAR(50)
+  contract_end_date?: string | null; // VARCHAR(50)
+  partnership_status?: "نشط" | "معلق" | "موقوف" | string; // VARCHAR(50) DEFAULT 'نشط'
+  // Normalized features and virtual / helper fields
+  features?: string[] | string | null;
+  whatsapp?: string | null; // Deprecated fallback
+  contract_date?: string | null; // Deprecated fallback
+  verification_status?: string | null; // Deprecated fallback
   rating_avg?: number; // Virtual stat
+  reviews_count?: number; // Virtual stat
+}
+
+export interface RestaurantFeature {
+  facility_id: string; // VARCHAR(50) PK, FK -> RestaurantsCafes
+  feature: string; // NVARCHAR(100) PK
 }
 
 /* =========================================================
@@ -171,14 +213,19 @@ export interface DailyTrip {
   description: string; // TEXT
   price_per_seat: number; // DECIMAL(10,2) (CHECK > 0)
   is_active: boolean; // BIT DEFAULT 1
-  photo?: string | null; // VARCHAR(255)
+  photo_1?: string | null;
+  photo_2?: string | null;
+  photo_3?: string | null;
+  photo_4?: string | null;
+  photo_5?: string | null;
   max_capacity: number; // INT (CHECK > 0)
   available_seats: number; // INT (CHECK >= 0 AND <= max_capacity)
   guide_license_number: string; // VARCHAR(50) FK -> TourGuides
   departure_city?: string | null; // VARCHAR(50)
-  destination_city?: string | null; // VARCHAR(50)
-  recurring_days?: string | null; // NVARCHAR(MAX)
-  activities?: string | null; // NVARCHAR(MAX)
+  vehicle_plate?: string | null; // VARCHAR(30) FK -> Vehicles
+  restaurant_id?: string | null; // VARCHAR(50) FK -> RestaurantsCafes
+  recurring_days?: string | null;
+  activities?: string | null;
   // Virtual / helper fields
   bookings_count?: number;
   rating_avg?: number;
@@ -215,25 +262,66 @@ export interface WeeklyTrip {
 /* =========================================================
    13. الرحلات الخاصة (Private Trips)
    ========================================================= */
+export interface PrivateTripStation {
+  station_id: string; // VARCHAR(50) PRIMARY KEY
+  private_trip_id: string; // VARCHAR(50) FK -> PrivateTrips
+  day_number: number; // INT (DEFAULT 1)
+  station_order: number; // INT (DEFAULT 1)
+  station_title: string; // NVARCHAR(200)
+  station_time?: string | null; // VARCHAR(30)
+  station_desc?: string | null; // NVARCHAR(MAX)
+}
+
 export interface PrivateTrip {
   private_trip_id: string; // VARCHAR(50) PRIMARY KEY
-  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | "ملغاة من السائح" | string; // VARCHAR(25)
-  customer_description: string; // VARCHAR(100)
-  preferred_start_date: string; // DATE
+  status_order: "قيد الدراسة" | "بانتظار موافقة السائح" | "مؤكدة" | "مرفوضة من الأدمن" | "مرفوضة من السائح" | "ملغية" | string;
+  preferred_start_date: string; // DATE (at least 10 days in future)
   duration_days: number; // INT (CHECK > 0)
   number_of_companions: number; // INT (CHECK >= 0)
   quoted_price?: number | null; // DECIMAL(10,2) NULL
-  admin_itinerary_plan?: string | null; // TEXT NULL
   guide_license_number?: string | null; // VARCHAR(50) NULL FK -> TourGuides
-  tourist_id?: string | null; // VARCHAR(50) NULL FK -> Tourists
-  customer_name?: string | null; // VARCHAR(100)
-  customer_phone?: string | null; // VARCHAR(20)
-  customer_requirements?: string | null; // TEXT
-  assigned_guide_license?: string | null; // VARCHAR(50) NULL FK -> TourGuides
-  assigned_vehicle_plate?: string | null; // VARCHAR(30) NULL FK -> Vehicles
-  assigned_vehicle?: string | null;
-  assigned_guide?: string | null;
+  tourist_id: string; // VARCHAR(50) FK -> Tourists (Mandatory)
+  customer_requirements?: string | null; // NVARCHAR(MAX)
+  vehicle_plate?: string | null; // VARCHAR(30) NULL FK -> Vehicles
+  created_at?: string; // DATETIME
+  // Joined / Virtual Fields from Tourists
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  customer_description?: string; // Backwards-compatible alias for customer_requirements
+  assigned_vehicle?: string | null; // Alias for vehicle_plate
+  assigned_vehicle_plate?: string | null;
   guide_name?: string | null;
+  guide_phone?: string | null;
+  // Relational Child Collections
+  places?: Array<{
+    place_id: string;
+    place_name: string;
+    city?: string;
+    region?: string;
+    category?: string;
+    place_image?: string;
+    visit_order?: number;
+  }>;
+  place_ids?: string[];
+  hotels?: Array<{
+    hotel_id: string;
+    hotel_name: string;
+    city?: string;
+    star_rating?: number;
+    price_per_night?: number;
+    photo_url?: string;
+  }>;
+  additional_expenses?: number | null;
+  admin_itinerary_plan?: string | null;
+  vehicle_model?: string | null;
+  vehicle_capacity?: number | null;
+  vehicle_daily_rate?: number | null;
+  vehicle_image?: string | null;
+  vehicle_status?: string | null;
+  transport_company_name?: string | null;
+  transport_company_phone?: string | null;
+  stations?: PrivateTripStation[];
 }
 
 /* =========================================================

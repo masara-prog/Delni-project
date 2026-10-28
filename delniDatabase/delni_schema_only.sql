@@ -1,7 +1,7 @@
 /* ==============================================================================
    DELNI PLATFORM - COMPLETE DATABASE SCHEMA (DelniDB)
    Platform: Microsoft SQL Server 2019 / 2022+ / Azure SQL
-   Generated: 2026-10-27T03:07:13.107Z
+   Generated: 2026-10-27T11:09:22.919Z
    Status: 100% Up-To-Date with all relational tables, constraints & new fields
    ============================================================================== */
 
@@ -25,7 +25,7 @@ BEGIN
         [email] VARCHAR(100) NOT NULL,
         [phone_number] VARCHAR(20) NOT NULL,
         [password] VARCHAR(255) NOT NULL,
-        [account_status] NVARCHAR(50) NULL DEFAULT (N'نشط'),
+        [account_status] NVARCHAR(50) NULL DEFAULT ('???'),
         [created_at] DATETIME NULL DEFAULT (getdate()),
         CONSTRAINT [PK_tourists] PRIMARY KEY CLUSTERED ([tourist_id]),
         CONSTRAINT [UQ_tourists_phone_number] UNIQUE ([phone_number]),
@@ -44,22 +44,17 @@ BEGIN
         [full_name] NVARCHAR(150) NOT NULL,
         [phone_number] VARCHAR(20) NOT NULL,
         [years_of_experience] INT NOT NULL,
-        [certificate] NVARCHAR(MAX) NULL,
         [bio] NVARCHAR(MAX) NULL,
         [speaks_english] BIT NOT NULL DEFAULT ((0)),
         [speaks_french] BIT NOT NULL DEFAULT ((0)),
         [speaks_italian] BIT NOT NULL DEFAULT ((0)),
-        [verification_status] NVARCHAR(50) NULL,
+        [verification_status] NVARCHAR(50) NULL DEFAULT (N'قيد المراجعة'),
         [password] VARCHAR(255) NOT NULL,
         [email] VARCHAR(100) NOT NULL,
         [gender] VARCHAR(10) NULL,
-        [working_days] NVARCHAR(MAX) NULL,
         [price_per_day] DECIMAL(10, 2) NULL,
         [avatar] NVARCHAR(MAX) NULL,
-        [title] NVARCHAR(150) NULL,
         [digital_certificate_file] NVARCHAR(MAX) NULL,
-        [certificate_name] VARCHAR(255) NULL,
-        [operating_regions] NVARCHAR(MAX) NULL,
         CONSTRAINT [PK_tour_guides] PRIMARY KEY CLUSTERED ([license_number]),
         CONSTRAINT [UQ_tour_guides_phone_number] UNIQUE ([phone_number]),
         CONSTRAINT [UQ_tour_guides_email] UNIQUE ([email]),
@@ -77,7 +72,6 @@ BEGIN
         [contract_number] VARCHAR(50) NOT NULL,
         [company_name] NVARCHAR(150) NOT NULL,
         [phone_number] VARCHAR(20) NOT NULL,
-        [address] NVARCHAR(255) NULL,
         [total_vehicles] INT NOT NULL,
         [verification_status] NVARCHAR(50) NULL,
         [email] VARCHAR(100) NULL,
@@ -124,14 +118,12 @@ BEGIN
         [plate_number] VARCHAR(30) NOT NULL,
         [vehicle_type] NVARCHAR(100) NULL,
         [seating_capacity] INT NOT NULL,
-        [vehicle_image] NVARCHAR(MAX) NULL,
         [vehicle_status] NVARCHAR(50) NULL,
-        [insurance_details] NVARCHAR(MAX) NULL,
         [contract_number] VARCHAR(50) NOT NULL,
         [daily_rate] DECIMAL(10, 2) NULL,
         [category] NVARCHAR(100) NULL,
-        [photos] NVARCHAR(MAX) NULL,
         [insurance_image] NVARCHAR(MAX) NULL,
+        [vehicle_image] NVARCHAR(MAX) NULL,
         CONSTRAINT [PK_vehicles] PRIMARY KEY CLUSTERED ([plate_number]),
         CONSTRAINT [chk_seating] CHECK ([seating_capacity]>(0))
     );
@@ -174,17 +166,12 @@ BEGIN
         [description] NVARCHAR(MAX) NOT NULL,
         [price_per_seat] DECIMAL(10, 2) NOT NULL,
         [is_active] BIT NOT NULL DEFAULT ((1)),
-        [photo] NVARCHAR(MAX) NULL,
         [max_capacity] INT NOT NULL,
         [available_seats] INT NOT NULL,
         [guide_license_number] VARCHAR(50) NOT NULL,
         [departure_city] NVARCHAR(100) NULL,
-        [destination_city] NVARCHAR(100) NULL,
-        [google_maps_url] NVARCHAR(500) NULL,
-        [vehicle_plate] NVARCHAR(50) NULL,
+        [vehicle_plate] VARCHAR(30) NULL,
         [restaurant_id] NVARCHAR(50) NULL,
-        [departure_date] DATETIME NULL,
-        [return_date] DATETIME NULL,
         [photo_1] NVARCHAR(500) NULL,
         [photo_2] NVARCHAR(500) NULL,
         [photo_3] NVARCHAR(500) NULL,
@@ -215,7 +202,7 @@ BEGIN
         [guide_license_number] VARCHAR(50) NOT NULL,
         [is_active] BIT NOT NULL DEFAULT ((1)),
         [departure_city] NVARCHAR(100) NULL,
-        [vehicle_plate] NVARCHAR(50) NULL,
+        [vehicle_plate] VARCHAR(30) NULL,
         [photo_1] NVARCHAR(500) NULL,
         [photo_2] NVARCHAR(500) NULL,
         [photo_3] NVARCHAR(500) NULL,
@@ -237,19 +224,16 @@ IF OBJECT_ID(N'dbo.[private_trips]', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[private_trips] (
         [private_trip_id] VARCHAR(50) NOT NULL,
-        [status_order] NVARCHAR(50) NULL,
-        [customer_description] VARCHAR(100) NOT NULL,
+        [status_order] NVARCHAR(50) NOT NULL DEFAULT (N'قيد الدراسة'),
         [preferred_start_date] DATE NOT NULL,
         [duration_days] INT NOT NULL,
         [number_of_companions] INT NOT NULL,
         [quoted_price] DECIMAL(10, 2) NULL,
-        [admin_itinerary_plan] TEXT NULL,
         [guide_license_number] VARCHAR(50) NULL,
-        [tourist_id] VARCHAR(50) NULL,
-        [customer_name] VARCHAR(100) NULL,
-        [customer_phone] VARCHAR(20) NULL,
-        [customer_requirements] TEXT NULL,
-        [assigned_vehicle] NVARCHAR(50) NULL,
+        [tourist_id] VARCHAR(50) NOT NULL,
+        [customer_requirements] NVARCHAR(MAX) NULL,
+        [vehicle_plate] VARCHAR(30) NULL,
+        [created_at] DATETIME NOT NULL DEFAULT (getdate()),
         CONSTRAINT [PK_private_trips] PRIMARY KEY CLUSTERED ([private_trip_id]),
         CONSTRAINT [chk_private_companions] CHECK ([number_of_companions]>=(0)),
         CONSTRAINT [chk_private_days] CHECK ([duration_days]>(0)),
@@ -276,19 +260,28 @@ BEGIN
         [hotel_photo_3] NVARCHAR(MAX) NULL,
         [hotel_photo_4] NVARCHAR(MAX) NULL,
         [hotel_photo_5] NVARCHAR(MAX) NULL,
-        [contract_date] DATE NULL,
-        [verification_status] NVARCHAR(50) NULL,
         [property_type] NVARCHAR(100) NULL,
-        [amenities] NVARCHAR(MAX) NULL,
         [google_maps_url] NVARCHAR(500) NULL,
         [description] NVARCHAR(MAX) NULL,
         [working_hours] NVARCHAR(150) NULL,
         [discount_percentage] INT NULL,
-        [whatsapp] NVARCHAR(50) NULL,
         [contract_start_date] NVARCHAR(50) NULL,
         [contract_end_date] NVARCHAR(50) NULL,
         CONSTRAINT [PK_hotels] PRIMARY KEY CLUSTERED ([hotel_id]),
         CONSTRAINT [chk_stars] CHECK ([star_rating]>=(1) AND [star_rating]<=(5))
+    );
+END;
+GO
+
+/* ------------------------------------------------------------
+   Table: [hotel_amenities]
+   ------------------------------------------------------------ */
+IF OBJECT_ID(N'dbo.[hotel_amenities]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[hotel_amenities] (
+        [hotel_id] VARCHAR(50) NOT NULL,
+        [amenity] NVARCHAR(100) NOT NULL,
+        CONSTRAINT [PK_hotel_amenities] PRIMARY KEY CLUSTERED ([hotel_id], [amenity])
     );
 END;
 GO
@@ -311,17 +304,26 @@ BEGIN
         [facility_image_3] NVARCHAR(MAX) NULL,
         [facility_image_4] NVARCHAR(MAX) NULL,
         [facility_image_5] NVARCHAR(MAX) NULL,
-        [contract_date] DATE NULL,
-        [verification_status] NVARCHAR(50) NULL,
         [working_hours] NVARCHAR(100) NULL,
-        [features] NVARCHAR(MAX) NULL,
         [google_maps_url] NVARCHAR(500) NULL,
         [discount_percentage] INT NULL,
-        [whatsapp] NVARCHAR(50) NULL,
         [contract_start_date] NVARCHAR(50) NULL,
         [contract_end_date] NVARCHAR(50) NULL,
         [partnership_status] NVARCHAR(50) NULL DEFAULT (N'نشط'),
         CONSTRAINT [PK_restaurants_cafes] PRIMARY KEY CLUSTERED ([facility_id])
+    );
+END;
+GO
+
+/* ------------------------------------------------------------
+   Table: [restaurant_features]
+   ------------------------------------------------------------ */
+IF OBJECT_ID(N'dbo.[restaurant_features]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[restaurant_features] (
+        [facility_id] VARCHAR(50) NOT NULL,
+        [feature] NVARCHAR(100) NOT NULL,
+        CONSTRAINT [PK_restaurant_features] PRIMARY KEY CLUSTERED ([facility_id], [feature])
     );
 END;
 GO
@@ -392,7 +394,6 @@ BEGIN
         [station_title] NVARCHAR(150) NOT NULL,
         [station_time] VARCHAR(30) NOT NULL,
         [station_desc] NVARCHAR(MAX) NULL,
-        [created_at] DATETIME NULL DEFAULT (getdate()),
         CONSTRAINT [PK_daily_trip_stations] PRIMARY KEY CLUSTERED ([station_id])
     );
 END;
@@ -406,7 +407,6 @@ BEGIN
     CREATE TABLE [dbo].[daily_trip_days] (
         [daily_trip_id] VARCHAR(50) NOT NULL,
         [day_of_week] NVARCHAR(50) NOT NULL,
-        [created_at] DATETIME NULL DEFAULT (getdate()),
         CONSTRAINT [PK_daily_trip_days] PRIMARY KEY CLUSTERED ([daily_trip_id], [day_of_week])
     );
 END;
@@ -424,7 +424,6 @@ BEGIN
         [day_number] INT NOT NULL DEFAULT ((1)),
         [station_title] NVARCHAR(200) NOT NULL,
         [station_desc] NVARCHAR(MAX) NULL,
-        [created_at] DATETIME NULL DEFAULT (getdate()),
         CONSTRAINT [PK_weekly_trip_stations] PRIMARY KEY CLUSTERED ([station_id])
     );
 END;
@@ -465,25 +464,38 @@ BEGIN
         [private_trip_id] VARCHAR(50) NOT NULL,
         [place_id] VARCHAR(50) NOT NULL,
         [visit_order] INT NULL DEFAULT ((1)),
-        [created_at] DATETIME NULL DEFAULT (getdate()),
         CONSTRAINT [PK_places_trip_private] PRIMARY KEY CLUSTERED ([private_trip_id], [place_id])
     );
 END;
 GO
 
 /* ------------------------------------------------------------
-   Table: [private_trip_vehicles]
+   Table: [hotels_trip_private]
    ------------------------------------------------------------ */
-IF OBJECT_ID(N'dbo.[private_trip_vehicles]', N'U') IS NULL
+IF OBJECT_ID(N'dbo.[hotels_trip_private]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[private_trip_vehicles] (
-        [private_alloc_id] VARCHAR(50) NOT NULL,
+    CREATE TABLE [dbo].[hotels_trip_private] (
         [private_trip_id] VARCHAR(50) NOT NULL,
-        [plate_number] VARCHAR(30) NOT NULL,
-        [start_date] DATE NOT NULL,
-        [end_date] DATE NOT NULL,
-        [allocation_status] NVARCHAR(50) NOT NULL DEFAULT (N'معينة'),
-        CONSTRAINT [PK_private_trip_vehicles] PRIMARY KEY CLUSTERED ([private_alloc_id])
+        [hotel_id] VARCHAR(50) NOT NULL,
+        CONSTRAINT [PK_hotels_trip_private] PRIMARY KEY CLUSTERED ([private_trip_id], [hotel_id])
+    );
+END;
+GO
+
+/* ------------------------------------------------------------
+   Table: [private_trip_stations]
+   ------------------------------------------------------------ */
+IF OBJECT_ID(N'dbo.[private_trip_stations]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[private_trip_stations] (
+        [station_id] VARCHAR(50) NOT NULL,
+        [private_trip_id] VARCHAR(50) NOT NULL,
+        [day_number] INT NOT NULL DEFAULT ((1)),
+        [station_order] INT NOT NULL DEFAULT ((1)),
+        [station_title] NVARCHAR(200) NOT NULL,
+        [station_time] VARCHAR(30) NULL,
+        [station_desc] NVARCHAR(MAX) NULL,
+        CONSTRAINT [PK_private_trip_stations] PRIMARY KEY CLUSTERED ([station_id])
     );
 END;
 GO
@@ -718,6 +730,48 @@ BEGIN
 END;
 GO
 
+/* ------------------------------------------------------------
+   Table: [guide_working_days]
+   ------------------------------------------------------------ */
+IF OBJECT_ID(N'dbo.[guide_working_days]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[guide_working_days] (
+        [license_number] VARCHAR(50) NOT NULL,
+        [day_of_week] NVARCHAR(50) NOT NULL,
+        CONSTRAINT [PK_guide_working_days] PRIMARY KEY CLUSTERED ([license_number], [day_of_week])
+    );
+END;
+GO
+
+/* ------------------------------------------------------------
+   Table: [guide_operating_regions]
+   ------------------------------------------------------------ */
+IF OBJECT_ID(N'dbo.[guide_operating_regions]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[guide_operating_regions] (
+        [license_number] VARCHAR(50) NOT NULL,
+        [region] NVARCHAR(100) NOT NULL,
+        CONSTRAINT [PK_guide_operating_regions] PRIMARY KEY CLUSTERED ([license_number], [region])
+    );
+END;
+GO
+
+/* ------------------------------------------------------------
+   Table: [places_tourist_highlights]
+   ------------------------------------------------------------ */
+IF OBJECT_ID(N'dbo.[places_tourist_highlights]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[places_tourist_highlights] (
+        [highlight_id] VARCHAR(50) NOT NULL,
+        [place_id] VARCHAR(50) NOT NULL,
+        [highlight_name] NVARCHAR(250) NOT NULL,
+        [display_order] INT NOT NULL DEFAULT ((1)),
+        [created_at] DATETIME NULL DEFAULT (getdate()),
+        CONSTRAINT [PK_places_tourist_highlights] PRIMARY KEY CLUSTERED ([highlight_id])
+    );
+END;
+GO
+
 /* ==============================================================================
    FOREIGN KEY RELATIONSHIPS
    ============================================================================== */
@@ -798,9 +852,30 @@ BEGIN
 END;
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_guide_working_days_guide' AND parent_object_id = OBJECT_ID(N'dbo.[guide_working_days]'))
+BEGIN
+    ALTER TABLE [dbo].[guide_working_days] WITH CHECK ADD CONSTRAINT [FK_guide_working_days_guide] FOREIGN KEY ([license_number])
+    REFERENCES [dbo].[tour_guides] ([license_number]) ON DELETE CASCADE;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_guide_operating_regions_guide' AND parent_object_id = OBJECT_ID(N'dbo.[guide_operating_regions]'))
+BEGIN
+    ALTER TABLE [dbo].[guide_operating_regions] WITH CHECK ADD CONSTRAINT [FK_guide_operating_regions_guide] FOREIGN KEY ([license_number])
+    REFERENCES [dbo].[tour_guides] ([license_number]) ON DELETE CASCADE;
+END;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK__hotels_tr__hotel__1BC821DD' AND parent_object_id = OBJECT_ID(N'dbo.[hotels_trip_weekly]'))
 BEGIN
     ALTER TABLE [dbo].[hotels_trip_weekly] WITH CHECK ADD CONSTRAINT [FK__hotels_tr__hotel__1BC821DD] FOREIGN KEY ([hotel_id])
+    REFERENCES [dbo].[hotels] ([hotel_id]) ON DELETE CASCADE;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_hotel_amenities_hotel' AND parent_object_id = OBJECT_ID(N'dbo.[hotel_amenities]'))
+BEGIN
+    ALTER TABLE [dbo].[hotel_amenities] WITH CHECK ADD CONSTRAINT [FK_hotel_amenities_hotel] FOREIGN KEY ([hotel_id])
     REFERENCES [dbo].[hotels] ([hotel_id]) ON DELETE CASCADE;
 END;
 GO
@@ -826,6 +901,13 @@ BEGIN
 END;
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_restaurant_features_facility' AND parent_object_id = OBJECT_ID(N'dbo.[restaurant_features]'))
+BEGIN
+    ALTER TABLE [dbo].[restaurant_features] WITH CHECK ADD CONSTRAINT [FK_restaurant_features_facility] FOREIGN KEY ([facility_id])
+    REFERENCES [dbo].[restaurants_cafes] ([facility_id]) ON DELETE CASCADE;
+END;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK__offers_ho__hotel__1F98B2C1' AND parent_object_id = OBJECT_ID(N'dbo.[offers_hotels]'))
 BEGIN
     ALTER TABLE [dbo].[offers_hotels] WITH CHECK ADD CONSTRAINT [FK__offers_ho__hotel__1F98B2C1] FOREIGN KEY ([hotel_id])
@@ -837,6 +919,13 @@ IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK__offers_we__week
 BEGIN
     ALTER TABLE [dbo].[offers_weekly_trips] WITH CHECK ADD CONSTRAINT [FK__offers_we__weekl__208CD6FA] FOREIGN KEY ([weekly_trip_id])
     REFERENCES [dbo].[weekly_trips] ([weekly_trip_id]) ON DELETE CASCADE;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_places_highlights_place' AND parent_object_id = OBJECT_ID(N'dbo.[places_tourist_highlights]'))
+BEGIN
+    ALTER TABLE [dbo].[places_tourist_highlights] WITH CHECK ADD CONSTRAINT [FK_places_highlights_place] FOREIGN KEY ([place_id])
+    REFERENCES [dbo].[places_tourist] ([place_id]) ON DELETE CASCADE;
 END;
 GO
 
@@ -958,4 +1047,49 @@ BEGIN
     REFERENCES [dbo].[tour_guides] ([license_number]);
 END;
 GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_daily_trips_vehicle' AND parent_object_id = OBJECT_ID(N'dbo.[daily_trips]'))
+BEGIN
+    ALTER TABLE [dbo].[daily_trips] WITH CHECK ADD CONSTRAINT [FK_daily_trips_vehicle] FOREIGN KEY ([vehicle_plate])
+    REFERENCES [dbo].[vehicles] ([plate_number]);
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_weekly_trips_vehicle' AND parent_object_id = OBJECT_ID(N'dbo.[weekly_trips]'))
+BEGIN
+    ALTER TABLE [dbo].[weekly_trips] WITH CHECK ADD CONSTRAINT [FK_weekly_trips_vehicle] FOREIGN KEY ([vehicle_plate])
+    REFERENCES [dbo].[vehicles] ([plate_number]);
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_private_trips_vehicle' AND parent_object_id = OBJECT_ID(N'dbo.[private_trips]'))
+BEGIN
+    ALTER TABLE [dbo].[private_trips] WITH CHECK ADD CONSTRAINT [FK_private_trips_vehicle] FOREIGN KEY ([vehicle_plate])
+    REFERENCES [dbo].[vehicles] ([plate_number]) ON DELETE SET NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_hotels_trip_private_trip' AND parent_object_id = OBJECT_ID(N'dbo.[hotels_trip_private]'))
+BEGIN
+    ALTER TABLE [dbo].[hotels_trip_private] WITH CHECK ADD CONSTRAINT [FK_hotels_trip_private_trip] FOREIGN KEY ([private_trip_id])
+    REFERENCES [dbo].[private_trips] ([private_trip_id]) ON DELETE CASCADE;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_hotels_trip_private_hotel' AND parent_object_id = OBJECT_ID(N'dbo.[hotels_trip_private]'))
+BEGIN
+    ALTER TABLE [dbo].[hotels_trip_private] WITH CHECK ADD CONSTRAINT [FK_hotels_trip_private_hotel] FOREIGN KEY ([hotel_id])
+    REFERENCES [dbo].[hotels] ([hotel_id]) ON DELETE CASCADE;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_private_trip_stations_trip' AND parent_object_id = OBJECT_ID(N'dbo.[private_trip_stations]'))
+BEGIN
+    ALTER TABLE [dbo].[private_trip_stations] WITH CHECK ADD CONSTRAINT [FK_private_trip_stations_trip] FOREIGN KEY ([private_trip_id])
+    REFERENCES [dbo].[private_trips] ([private_trip_id]) ON DELETE CASCADE;
+END;
+GO
+
+
+
 

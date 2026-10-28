@@ -1,0 +1,196 @@
+erDiagram
+    tourists ||--o{ bookings_daily : "يقوم بحجز"
+    tourists ||--o{ bookings_weekly : "يقوم بحجز"
+    tourists ||--o{ private_trips : "يطلب رحلة خاصة"
+    tourists ||--o{ reviews_daily_trips : "يكتب تقييم"
+    tourists ||--o{ reviews_weekly_trips : "يكتب تقييم"
+    tourists ||--o{ reviews_facilities : "يكتب تقييم"
+    tourists ||--o{ tourist_favorites : "يحفظ في المفضلة"
+    tourists ||--o{ notifications : "يتلقى إشعارات"
+
+    transportation_companies ||--o{ vehicles : "تملك أسطول"
+    transportation_companies ||--o{ drivers : "توظف سائقين"
+
+    vehicles ||--o| drivers : "تسند إلى سائق معتمد"
+    vehicles ||--o{ daily_trips : "تخدم رحلة يومية"
+    vehicles ||--o{ weekly_trips : "تخدم رحلة أسبوعية"
+    vehicles ||--o{ private_trips : "تخدم رحلة خاصة VIP"
+
+    tour_guides ||--o{ daily_trips : "يقود رحلة يومية"
+    tour_guides ||--o{ weekly_trips : "يقود رحلة أسبوعية"
+    tour_guides ||--o{ private_trips : "يقود رحلة خاصة"
+    tour_guides ||--o{ guide_places : "متخصص في معالم"
+    tour_guides ||--o{ guide_operating_regions : "ينشط في مناطق"
+    tour_guides ||--o{ guide_working_days : "أيام العمل المتاحة"
+
+    places_tourist ||--o{ places_tourist_highlights : "تضم مميزات ومعالم فرعية"
+    places_tourist ||--o{ places_trip_daily : "محطات المعالم اليومية"
+    places_tourist ||--o{ places_trip_weekly : "محطات المعالم الأسبوعية"
+    places_tourist ||--o{ places_trip_private : "المعالم المختارة للرحلة الخاصة"
+    places_tourist ||--o{ guide_places : "مرشدون متخصصون"
+
+    daily_trips ||--o{ daily_trip_stations : "محطات المسار اليومي"
+    daily_trips ||--o{ daily_trip_days : "أيام انطلاق الرحلة"
+    daily_trips ||--o{ places_trip_daily : "ربط المعالم السياحية"
+    daily_trips ||--o{ bookings_daily : "سجلات حجوزات السياح"
+    daily_trips ||--o{ reviews_daily_trips : "تقييمات الرحلة"
+    daily_trips ||--o{ offers_daily_trips : "عروض وتخفيضات"
+
+    weekly_trips ||--o{ weekly_trip_stations : "محطات وبرنامج الأيام"
+    weekly_trips ||--o{ places_trip_weekly : "ربط المعالم السياحية"
+    weekly_trips ||--o{ hotels_trip_weekly : "فنادق الإقامة الأسبوعية"
+    weekly_trips ||--o{ restaurants_trip_weekly : "مطاعم واستراحات الرحلة"
+    weekly_trips ||--o{ bookings_weekly : "سجلات حجوزات السياح"
+    weekly_trips ||--o{ reviews_weekly_trips : "تقييمات الرحلة"
+    weekly_trips ||--o{ offers_weekly_trips : "عروض وتخفيضات"
+
+    private_trips ||--o{ private_trip_stations : "جدول محطات وبرنامج الرحلة 1:N"
+    private_trips ||--o{ places_trip_private : "معالم الزيارة المختارة M:N"
+    private_trips ||--o{ hotels_trip_private : "فنادق الإقامة المعتمدة M:N"
+
+    hotels ||--o{ hotel_amenities : "خدمات ومرافق الفندق"
+    hotels ||--o{ hotels_trip_weekly : "فنادق معتمدة للرحلات الأسبوعية"
+    hotels ||--o{ hotels_trip_private : "فنادق معتمدة للرحلات الخاصة"
+    hotels ||--o{ offers_hotels : "عروض وتخفيضات"
+
+    restaurants_cafes ||--o{ restaurant_features : "مزايا وتصنيفات المطعم"
+    restaurants_cafes ||--o{ restaurants_trip_weekly : "مطاعم الرحلات الأسبوعية"
+    restaurants_cafes ||--o{ reviews_facilities : "تقييمات المطاعم والمقاهي"
+    restaurants_cafes ||--o{ offers_facilities : "عروض وتخفيضات"
+
+    tourists {
+        varchar tourist_id PK
+        nvarchar full_name
+        nvarchar email
+        nvarchar phone_number
+        nvarchar password
+        nvarchar account_status
+        datetime created_at
+    }
+
+    private_trips {
+        varchar private_trip_id PK
+        varchar tourist_id FK
+        nvarchar status_order
+        date preferred_start_date
+        int duration_days
+        int number_of_companions
+        decimal quoted_price
+        varchar vehicle_plate FK
+        nvarchar guide_license_number FK
+        nvarchar customer_requirements
+        datetime created_at
+    }
+
+    private_trip_stations {
+        varchar station_id PK
+        varchar private_trip_id FK
+        int day_number
+        int station_order
+        nvarchar station_title
+        varchar station_time
+        nvarchar station_desc
+    }
+
+    hotels_trip_private {
+        varchar private_trip_id PK,FK
+        varchar hotel_id PK,FK
+    }
+
+    places_trip_private {
+        varchar private_trip_id PK,FK
+        varchar place_id PK,FK
+        int visit_order
+    }
+
+    vehicles {
+        varchar plate_number PK
+        varchar company_contract_number FK
+        nvarchar vehicle_type
+        int passenger_capacity
+        nvarchar vehicle_condition
+        nvarchar operational_status
+        varchar inspection_date
+    }
+
+    drivers {
+        varchar driver_license_number PK
+        varchar company_contract_number FK
+        varchar assigned_vehicle_plate FK
+        nvarchar full_name
+        nvarchar phone_number
+        nvarchar driver_status
+    }
+
+    tour_guides {
+        nvarchar license_number PK
+        nvarchar full_name
+        nvarchar phone_number
+        nvarchar guide_status
+        nvarchar bio
+    }
+
+    daily_trips {
+        varchar daily_trip_id PK
+        nvarchar trip_title
+        nvarchar departure_city
+        decimal price_per_person
+        int max_capacity
+        varchar vehicle_plate FK
+        nvarchar guide_license_number FK
+        varchar trip_status
+    }
+
+    weekly_trips {
+        varchar weekly_trip_id PK
+        nvarchar trip_title
+        nvarchar departure_city
+        date start_date
+        date departure_date
+        decimal price_per_person
+        int max_capacity
+        varchar vehicle_plate FK
+        nvarchar guide_license_number FK
+        varchar trip_status
+    }
+
+    places_tourist {
+        varchar place_id PK
+        nvarchar place_name
+        nvarchar description
+        nvarchar city
+        nvarchar region
+        nvarchar category
+        float latitude
+        float longitude
+    }
+
+    hotels {
+        varchar hotel_id PK
+        nvarchar hotel_name
+        nvarchar city
+        nvarchar phone_number
+        int star_rating
+        nvarchar partnership_status
+    }
+
+    restaurants_cafes {
+        varchar facility_id PK
+        nvarchar facility_name
+        nvarchar facility_type
+        nvarchar city
+        nvarchar phone_number
+        nvarchar partnership_status
+    }
+
+    notifications {
+        varchar id PK
+        nvarchar type
+        nvarchar title
+        nvarchar body
+        nvarchar recipient_role
+        nvarchar recipient_id
+        bit is_read
+        varchar dedupe_key
+        datetime created_at
+    }

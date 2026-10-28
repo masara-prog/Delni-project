@@ -897,15 +897,8 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     contract_start_date: r.contract_start_date || "",
     contract_end_date: r.contract_end_date || "",
     photos: photos,
-    signatureDishes: [
-      isAr ? "الأطباق الرئيسية والوجبة الخاصة" : "Main House Specialties",
-      isAr ? "المقبلات والمشروبات الطازجة" : "Fresh Appetizers & Beverages",
-    ],
-    features: [
-      isAr ? "جلسات عائلية خاصة ومريحة" : "Private Family Seating",
-      isAr ? "خدمة واستقبال ممتاز" : "Excellent Hospitality",
-      isAr ? `خصم ${r.discount_percentage || 20}% لرواد دلّني` : `${r.discount_percentage || 20}% Dallani Perk`,
-    ],
+    signatureDishes: [],
+    features: Array.isArray(r.features) ? r.features : [],
   };
 }
 

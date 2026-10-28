@@ -25,6 +25,7 @@ export type HotelData = {
   contract_start_date?: string;
   contract_end_date?: string;
   whatsapp?: string;
+  amenities?: string[];
 };
 
 export function HotelDetailsModal({
@@ -309,38 +310,33 @@ export function HotelDetailsModal({
               </div>
             </div>
 
-            {/* Concise Bio */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5">
-              <div className="text-xs font-black text-[#1B5A78] dark:text-sky-300 flex items-center gap-2">
-                <span>🏨</span>
-                <span>{isAr ? "نبذة تعريفية عن مكان الإقامة:" : "About the Accommodation:"}</span>
+            {/* Bio / Description */}
+            {hotel.description && (
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="text-xs font-black text-[#1B5A78] dark:text-sky-300 flex items-center gap-2">
+                  <span>🏨</span>
+                  <span>{isAr ? "نبذة تعريفية:" : "Overview:"}</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                  {hotel.description}
+                </p>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-                {hotel.description
-                  ? hotel.description
-                  : isAr
-                  ? `أحد أبرز مرافق الإقامة والضيافة في ${hotel.city}، يقدم غرفاً مجهزة ومرافق متكاملة تضمن إقامة مريحة للزوار مع عروض خاصة وحصرية عبر منصة دلّني السياحية.`
-                  : `Premier hospitality venue in ${hotel.city} offering modern rooms and verified contacts.`}
-              </p>
-            </div>
+            )}
 
-            {/* Amenities Pills */}
-            <div className="flex flex-wrap items-center gap-2">
-              {[
-                { label: isAr ? "استقبال على مدار 24 ساعة" : "24/7 Front Desk", icon: "🛎️" },
-                { label: isAr ? "إنترنت واي فاي فائق السرعة" : "High-speed WiFi", icon: "📶" },
-                { label: isAr ? "موقف سيارات محروس ومجاني" : "Secure Parking", icon: "🅿️" },
-                { label: isAr ? "خدمة الغرف والنظافة اليومية" : "Daily Housekeeping", icon: "✨" },
-              ].map((am, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 shadow-xs"
-                >
-                  <span>{am.icon}</span>
-                  <span>{am.label}</span>
-                </span>
-              ))}
-            </div>
+            {/* Real Hotel Amenities Pills from Database (1NF) */}
+            {Array.isArray(hotel.amenities) && hotel.amenities.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {hotel.amenities.map((am, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span>✨</span>
+                    <span>{am}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── 3. BOTTOM CONTACT & ACTION BAR ── */}

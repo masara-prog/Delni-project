@@ -1190,9 +1190,7 @@ function VehicleModal({
       daily_rate: rateNum,
       category,
       vehicle_status: status,
-      insurance_details: "مرفق صورة الوثيقة",
       insurance_image: insuranceImg,
-      vehicle_image: vehicleImg || officeBusImg,
     }, { licenseNumber: selectedDriverLic });
   };
 
