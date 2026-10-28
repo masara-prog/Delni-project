@@ -146,16 +146,18 @@ const DEFAULT_DRIVERS: DriverRecord[] = [];
 
 // Automatic one-time cleanup to ensure fresh start with 0 companies/vehicles/drivers
 if (typeof window !== "undefined") {
-  const resetDone = localStorage.getItem("dalni_companies_wiped_clean_v1");
+  const resetDone = localStorage.getItem("dalni_companies_wiped_clean_v2");
   if (!resetDone) {
     try {
       localStorage.removeItem(STORAGE_KEYS.COMPANIES);
       localStorage.removeItem(STORAGE_KEYS.VEHICLES);
       localStorage.removeItem(STORAGE_KEYS.DRIVERS);
+      localStorage.removeItem("dalni_companies");
+      localStorage.removeItem("dalni_all_companies");
       localStorage.setItem(STORAGE_KEYS.COMPANIES, "[]");
       localStorage.setItem(STORAGE_KEYS.VEHICLES, "[]");
       localStorage.setItem(STORAGE_KEYS.DRIVERS, "[]");
-      localStorage.setItem("dalni_companies_wiped_clean_v1", "true");
+      localStorage.setItem("dalni_companies_wiped_clean_v2", "true");
     } catch { }
   }
 }
@@ -1616,6 +1618,16 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
 }
 
 export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
+  // Sync directly to backend SQL Server DelniDB
+  try {
+    await sendToSecureBackend("guides", {
+      ...data,
+      license_number: licenseNumber,
+    });
+  } catch (err) {
+    console.warn("[apiUpdateGuideProfile] failed to sync to backend:", err);
+  }
+
   const guides = getAllGuides();
   const idx = guides.findIndex((g) => g.license_number === licenseNumber);
   if (idx !== -1) {

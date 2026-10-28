@@ -50,6 +50,29 @@ import type {
   BookingDaily,
   BookingWeekly,
 } from "@/lib/dbSchema";
+import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
+
+export const formatTripDate = (rawDate?: string | null): string => {
+  if (!rawDate) return "غير محدد";
+  try {
+    const cleanStr = String(rawDate).split("T")[0];
+    const parts = cleanStr.split("-");
+    if (parts.length === 3) {
+      const [y, m, d] = parts.map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      if (!isNaN(dateObj.getTime())) {
+        return dateObj.toLocaleDateString("ar-LY", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+    }
+    return cleanStr;
+  } catch {
+    return String(rawDate);
+  }
+};
 
 export const Route = createFileRoute("/dashboard/admin")({
   head: () => ({
@@ -118,6 +141,8 @@ type Guide = {
   primaryRegion?: string;
   operating_regions?: string | string[];
   working_days?: string | string[];
+  places?: any[];
+  place_ids?: string[];
   total_tours_completed?: number;
   city?: string | null;
 };
@@ -205,21 +230,40 @@ type WeeklyTrip = {
 
 type PrivateTripRequest = { 
   private_trip_id: string; 
-  customer_name: string; 
-  customer_phone: string; 
-  customer_description: string; 
+  customer_name?: string; 
+  customer_phone?: string; 
+  customer_email?: string;
+  customer_description?: string; 
   preferred_start_date: string; 
   duration_days: number; 
   number_of_companions: number; 
   quoted_price?: number; 
+  additional_expenses?: number;
   admin_itinerary_plan?: string; 
   assigned_guide?: string; 
   assigned_guide_license?: string;
   guide_license_number?: string;
+  guide_name?: string;
+  guide_phone?: string;
+  guide_daily_rate?: number;
   assigned_vehicle?: string; 
   assigned_vehicle_plate?: string;
+  vehicle_plate?: string;
+  vehicle_model?: string;
+  vehicle_capacity?: number;
+  vehicle_daily_rate?: number;
+  vehicle_image?: string;
+  vehicle_status?: string;
+  transport_company_name?: string;
+  transport_company_phone?: string;
   customer_requirements?: string;
-  status_order: "قيد الدراسة" | "مؤكدة" | "مرفوضة من الأدمن" | "ملغية" | string; 
+  status_order: "قيد الدراسة" | "بانتظار تأكيد السائح" | "مؤكدة" | "مرفوضة من الأدمن" | "مرفوضة من السائح" | "ملغية" | "ملغاة من السائح" | string; 
+  tourist_id?: string;
+  places?: any[];
+  place_ids?: string[];
+  hotels?: any[];
+  hotel_ids?: string[];
+  stations?: any[];
 };
 
 type Hotel = { id: string; hotel_id?: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
@@ -349,6 +393,7 @@ function AdminDashboard() {
   const [editingDailyTrip, setEditingDailyTrip] = useState<DailyTrip | null>(null);
   const [editingWeeklyTrip, setEditingWeeklyTrip] = useState<WeeklyTrip | null>(null);
   const [evaluatingPrivateTrip, setEvaluatingPrivateTrip] = useState<PrivateTripRequest | null>(null);
+  const [selectedVehicleForModal, setSelectedVehicleForModal] = useState<VehicleDetailsData | null>(null);
   const [showAddHotel, setShowAddHotel] = useState(false);
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
   const [showAddRestaurant, setShowAddRestaurant] = useState(false);
@@ -391,7 +436,7 @@ function AdminDashboard() {
     
     // Live update to DelniDB backend database via dedicated verification endpoint (preserves email, phone, and password)
     try {
-      await fetch("http://127.0.0.1:5001/api/db/guides/verify", {
+      const resp = await fetch("http://127.0.0.1:5001/api/db/guides/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -399,6 +444,14 @@ function AdminDashboard() {
           verification_status: status,
         }),
       });
+      const data = await resp.json().catch(() => null);
+      if (resp.ok && data?.success) {
+        if (status === "موثق") {
+          alert(`✅ تم اعتماد وتفعيل حساب المرشد (${targetGuide?.full_name || lic}) بنجاح!\n\nأصبح حسابه مفعلاً الآن، ويمكنه تسجيل الدخول فوراً عبر حسابه ورقم هاتفه/بريده، ودخول لوحة تحكم المرشد السياحي (/dashboard/guide).`);
+        } else {
+          alert(`❌ تم رفض طلب المرشد (${targetGuide?.full_name || lic}) وتحديث حالته بنجاح.`);
+        }
+      }
     } catch (err) {
       console.error("Failed to verify guide in SQL bridge:", err);
     }
@@ -467,7 +520,9 @@ function AdminDashboard() {
             price_per_day: Number(g.price_per_day) || 150,
             primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : (g.primaryRegion || "tripoli"),
             operating_regions: g.operating_regions || "tripoli",
-            working_days: g.working_days || "الأحد,الأربعاء",
+            working_days: g.working_days || "طوال أيام الأسبوع",
+            places: g.places || [],
+            place_ids: g.place_ids || [],
             total_tours_completed: Number(g.total_tours_completed) || 0,
           }));
           setGuides(prev => [...mapped, ...prev.filter(x => !customLicenses.has(x.license_number))]);
@@ -496,7 +551,9 @@ function AdminDashboard() {
           price_per_day: Number(g.price_per_day) || 150,
           primaryRegion: g.primaryRegion || (typeof g.operating_regions === 'string' ? g.operating_regions : (g.operating_regions?.[0] || "tripoli")),
           operating_regions: g.operating_regions || "",
-          working_days: g.working_days || "الأحد,الأربعاء",
+          working_days: g.working_days || "طوال أيام الأسبوع",
+          places: g.places || [],
+          place_ids: g.place_ids || [],
           total_tours_completed: Number(g.total_tours_completed) || 0,
         }));
 
@@ -996,17 +1053,31 @@ function AdminDashboard() {
       console.error(err);
     }
   };
-  const handleSavePrivate = async (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => {
+  const handleSavePrivate = async (
+    id: string,
+    status: string,
+    price?: number,
+    plan?: string,
+    guide?: string,
+    vehicle?: string,
+    selectedHotelIds?: string[],
+    structuredStations?: any[],
+    additionalExpenses?: number
+  ) => {
     const existing = privateTrips.find(p => p.private_trip_id === id);
     const updatedTrip = {
       ...(existing || {}),
       private_trip_id: id,
       status_order: status,
       quoted_price: price !== undefined ? price : existing?.quoted_price,
+      additional_expenses: additionalExpenses !== undefined ? additionalExpenses : (existing?.additional_expenses || 0),
       admin_itinerary_plan: plan !== undefined ? plan : existing?.admin_itinerary_plan,
       guide_license_number: guide || existing?.guide_license_number,
       assigned_guide: guide || existing?.assigned_guide,
       assigned_vehicle: vehicle || existing?.assigned_vehicle,
+      vehicle_plate: vehicle || existing?.vehicle_plate || existing?.assigned_vehicle,
+      hotel_ids: selectedHotelIds || existing?.hotel_ids || [],
+      stations: structuredStations || existing?.stations || [],
     };
 
     setPrivateTrips((prev: any) => prev.map((p: any) => p.private_trip_id === id ? updatedTrip : p));
@@ -2041,7 +2112,7 @@ function AdminDashboard() {
                   <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/60">
                     <th className="py-3 px-3 font-bold">المرشد السياحي</th>
                     <th className="py-3 px-3 font-bold">رقم الرخصة</th>
-                    <th className="py-3 px-3 font-bold">نطاق العمل والمدن</th>
+                    <th className="py-3 px-3 font-bold">المعالم المعتمدة والأيام</th>
                     <th className="py-3 px-3 font-bold">الهاتف والبريد</th>
                     <th className="py-3 px-3 font-bold">الخبرة والأجر</th>
                     <th className="py-3 px-3 font-bold">وثيقة الترخيص المرفقة</th>
@@ -2076,11 +2147,24 @@ function AdminDashboard() {
                         </span>
                       </td>
 
-                      {/* Operating Regions */}
+                      {/* Normalized Landmarks & Days */}
                       <td className="py-3 px-3 max-w-[220px]">
-                        <span className="text-xs font-bold text-[#EA580C] bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200/60 block truncate" title={formatOperatingRegions(g.operating_regions)}>
-                          📍 {formatOperatingRegions(g.operating_regions)}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          {g.places && g.places.length > 0 ? (
+                            <span className="text-xs font-bold text-[#EA580C] bg-orange-50/80 px-2.5 py-0.5 rounded-lg border border-orange-200/60 block truncate" title={g.places.map((p: any) => p.place_name).join('، ')}>
+                              🏛️ {g.places.length} معالم: {g.places.map((p: any) => p.place_name).slice(0, 2).join('، ')}{g.places.length > 2 ? '...' : ''}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200 block truncate">
+                              🏛️ غير محدد
+                            </span>
+                          )}
+                          {Array.isArray(g.working_days) && g.working_days.length > 0 ? (
+                            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 block truncate">
+                              📅 {g.working_days.slice(0, 3).join('، ')}{g.working_days.length > 3 ? '...' : ''}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
 
                       {/* Contact Info */}
@@ -2138,6 +2222,34 @@ function AdminDashboard() {
                               title="اعتماد فوري"
                             >
                               قبول ✓
+                            </button>
+                          )}
+                          {g.verification_status === "موثق" && (
+                            <button
+                              onClick={() => {
+                                // Admin preview / direct access to guide dashboard
+                                const guideUser = {
+                                  license_number: g.license_number,
+                                  full_name: g.full_name,
+                                  phone_number: g.phone_number,
+                                  email: g.email || `${g.license_number.toLowerCase()}@dalni.ly`,
+                                  verification_status: "موثق",
+                                  role: "guide",
+                                  years_of_experience: g.years_of_experience,
+                                  price_per_day: g.price_per_day,
+                                  avatar: g.avatar,
+                                };
+                                localStorage.setItem("dalni_user", JSON.stringify(guideUser));
+                                localStorage.setItem("dalni_role", "guide");
+                                localStorage.setItem("dalni_token", `token-guide-${Date.now()}`);
+                                window.dispatchEvent(new Event("storage"));
+                                window.open("/dashboard/guide", "_blank");
+                              }}
+                              className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1"
+                              title="فتح لوحة تحكم المرشد في نافذة جديدة"
+                            >
+                              <span>الداش بورد</span>
+                              <span>🧭</span>
                             </button>
                           )}
                           <button
@@ -2727,23 +2839,24 @@ function AdminDashboard() {
                   <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3.5 shadow-xs">
                     <div className="flex justify-between items-start flex-wrap gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-black text-foreground text-base">{pt.customer_name}</h3>
-                          <span className="font-mono text-xs font-bold text-slate-500">({pt.customer_phone})</span>
-                          <span className="px-2 py-0.5 rounded-md bg-slate-100 font-mono text-[11px] font-black text-slate-700">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-black text-foreground text-base">{pt.customer_name || "سائح دلّني"}</h3>
+                          {pt.customer_phone && (
+                            <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                              📞 {pt.customer_phone}
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 font-mono text-[11px] font-black text-amber-900">
                             #{pt.private_trip_id}
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-3 font-bold">
                           <span>
-                            👨‍✈️ المرشد المطلوب:{" "}
-                            <span className="text-primary font-black">{pt.guide_license_number || "غير محدد (بمعرفة الإدارة)"}</span>
-                          </span>
-                          {pt.assigned_vehicle && (
-                            <span className="text-emerald-800">
-                              🚍 سيارة النقل المخصصة: <span className="font-black font-mono">{pt.assigned_vehicle}</span>
+                            👨‍✈️ المرشد السياحي المطلوب:{" "}
+                            <span className="text-primary font-black">
+                              {pt.guide_name ? `${pt.guide_name} (${pt.guide_license_number || ""})` : (pt.guide_license_number || "غير محدد (بمعرفة الإدارة)")}
                             </span>
-                          )}
+                          </span>
                         </div>
                       </div>
                       <Badge
@@ -2761,23 +2874,101 @@ function AdminDashboard() {
                       </Badge>
                     </div>
 
-                    <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl font-medium border border-slate-100">
-                      📍 <b>الوجهة / المعلم المستهدف:</b> {pt.customer_description}
-                    </p>
+                    {/* Clean Destination Landmarks Tags */}
+                    <div className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl font-medium border border-slate-100 space-y-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-black text-slate-900 flex items-center gap-1">
+                          <span>📍</span>
+                          <span>المعالم السياحية المستهدفة:</span>
+                        </span>
+                        {pt.places && pt.places.length > 0 ? (
+                          pt.places.map((pl: any, pidx: number) => (
+                            <span key={pidx} className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold text-xs flex items-center gap-1 shadow-2xs">
+                              <span>🏛️</span>
+                              <span>{pl.place_name || pl.name} ({pl.city})</span>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-800 font-bold">{pt.customer_description || "برنامج رحلة خاصة مخصص"}</span>
+                        )}
+                      </div>
+                    </div>
 
+                    {/* Tourist Requirements and Notes (Deduplicated) */}
                     {pt.customer_requirements && (
-                      <div className="text-xs text-amber-900 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60 font-semibold">
-                        <b>متطلبات وملاحظات السائح:</b> {pt.customer_requirements}
+                      <div className="text-xs text-amber-950 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60 font-semibold leading-relaxed">
+                        <span className="font-black text-amber-900 block mb-1">📝 متطلبات وملاحظات السائح:</span>
+                        <span>
+                          {Array.from(new Set(pt.customer_requirements.split(" - ").map(s => s.trim()))).filter(Boolean).join(" • ")}
+                        </span>
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground">
-                      <span>📅 تاريخ الانطلاق المفضل: {pt.preferred_start_date}</span>
+                    {/* Assigned Vehicle Rich Card with View Specs Modal Button */}
+                    {pt.assigned_vehicle && (
+                      <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className="p-1.5 rounded-lg bg-blue-100 text-blue-900 text-base">🚍</span>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-black text-blue-950">
+                                {pt.vehicle_model || "مركبة نقل سياحي معتمدة"}
+                              </span>
+                              <span className="font-mono font-bold text-blue-800 bg-white px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                                لوحة: {pt.assigned_vehicle}
+                              </span>
+                              {pt.vehicle_capacity && (
+                                <span className="bg-white px-2 py-0.5 rounded border border-blue-200 text-slate-700 font-bold text-[11px]">
+                                  👥 سعة {pt.vehicle_capacity} راكب
+                                </span>
+                              )}
+                            </div>
+                            {pt.transport_company_name && (
+                              <div className="text-[11px] text-blue-700 font-medium mt-0.5">
+                                🏢 التابعة لـ: <span className="font-bold">{pt.transport_company_name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const foundVeh = vehicles.find(v => v.plate_number === pt.assigned_vehicle);
+                            setSelectedVehicleForModal({
+                              plate_number: pt.assigned_vehicle,
+                              vehicle_type: pt.vehicle_model || foundVeh?.vehicle_type || "مركبة نقل سياحي",
+                              capacity: pt.vehicle_capacity || foundVeh?.capacity || 25,
+                              daily_rate: pt.vehicle_daily_rate || foundVeh?.daily_rate || 500,
+                              company_name: pt.transport_company_name || foundVeh?.company_name || "شركة نقل سياحي معتمدة",
+                              phone_number: pt.transport_company_phone,
+                              vehicle_image: pt.vehicle_image,
+                              vehicle_status: pt.vehicle_status || "جاهزة",
+                            });
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                        >
+                          <span>👁️</span>
+                          <span>عرض تفاصيل المركبة</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Trip Parameters & Quoted Pricing */}
+                    <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground items-center pt-1">
+                      <span className="text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                        📅 تاريخ الانطلاق: <b className="text-foreground">{formatTripDate(pt.preferred_start_date)}</b>
+                      </span>
                       <span>⏱️ مدة الرحلة: {pt.duration_days} {pt.duration_days > 1 ? "أيام" : "يوم واحد"}</span>
                       <span>👥 عدد المرافقين: {pt.number_of_companions} أفراد</span>
                       {pt.quoted_price && (
-                        <span className="text-emerald-700 font-black bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                        <span className="text-emerald-700 font-black bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
                           💰 السعر الإجمالي المعتمد: {pt.quoted_price} د.ل
+                        </span>
+                      )}
+                      {Number(pt.additional_expenses) > 0 && (
+                        <span className="text-blue-800 font-black bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                          🛠️ مصروفات الخدمات: {pt.additional_expenses} د.ل
                         </span>
                       )}
                     </div>
@@ -2816,22 +3007,38 @@ function AdminDashboard() {
                       </div>
                     )}
 
-                    <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePrivate(pt.private_trip_id)}
-                        className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50 cursor-pointer"
-                      >
-                        حذف
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEvaluatingPrivateTrip(pt)}
-                        className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 cursor-pointer flex items-center gap-1.5"
-                      >
-                        <span>🧭</span>
-                        <span>{pt.quoted_price ? "مراجعة وتعديل جدول المحطات والتسعيرة" : "إعداد جدول المحطات واحتساب التسعيرة ↗"}</span>
-                      </button>
+                    {/* Actions and Cancellation Notice */}
+                    <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                      <div>
+                        {isCancelled ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-xl">
+                            <span>⛔</span>
+                            <span>هذه الرحلة ملغاة من قبل السائح — تم إغلاق الطلب ولا يمكن جدولتها أو تعديل تسعيرتها.</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">يمكنك إعداد جدول المحطات واحتساب التسعيرة ثم إرسالها للسائح</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mr-auto">
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePrivate(pt.private_trip_id)}
+                          className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50 cursor-pointer"
+                        >
+                          حذف
+                        </button>
+                        {!isCancelled && (
+                          <button
+                            type="button"
+                            onClick={() => setEvaluatingPrivateTrip(pt)}
+                            className="px-4 py-1.5 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow hover:opacity-95 cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>🧭</span>
+                            <span>{pt.quoted_price ? "مراجعة وتعديل جدول المحطات والتسعيرة" : "إعداد جدول المحطات واحتساب التسعيرة ↗"}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -3372,7 +3579,8 @@ function AdminDashboard() {
       {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
       {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
       {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
-      {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
+      {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
+      {selectedVehicleForModal && <VehicleDetailsModal vehicle={selectedVehicleForModal} onClose={() => setSelectedVehicleForModal(null)} />}
       {showAddHotel && <HotelModal title="إضافة فندق جديد" existingHotels={hotels} onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
       {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} existingHotels={hotels} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
       {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" existingRestaurants={restaurants} onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
@@ -4381,12 +4589,33 @@ function GuideVerificationModal({
       <div className="space-y-4 text-right">
         {/* Guide Information Summary Card */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-border text-xs space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
-            <div>
-              <span className="font-bold text-muted-foreground">اسم المرشد: </span>
-              <span className="font-black text-foreground text-sm">{guide.full_name}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+            <div className="flex items-center gap-3">
+              {guide.avatar ? (
+                <img
+                  src={guide.avatar}
+                  alt={guide.full_name}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-primary/20 shadow-xs"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xl border-2 border-primary/20">
+                  {guide.full_name ? guide.full_name.charAt(0) : "م"}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-muted-foreground text-xs">اسم المرشد: </span>
+                  <span className="font-black text-foreground text-base">{guide.full_name}</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  مرشد سياحي معتمد ومسجل
+                </div>
+              </div>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <span className="font-bold text-muted-foreground">رقم الترخيص: </span>
               <span className="font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
                 {guide.license_number}
@@ -4416,9 +4645,33 @@ function GuideVerificationModal({
               <b>السعر اليومي المقترح:</b>{" "}
               <span className="text-emerald-700 font-bold">{guide.daily_rate || guide.price_per_day || 150} د.ل / اليوم</span>
             </div>
-            <div className="sm:col-span-2">
-              <b>مكان العمل والمدن:</b>{" "}
-              <span className="text-[#EA580C] font-bold">{formatOperatingRegions(guide.operating_regions)}</span>
+            <div className="sm:col-span-2 space-y-1">
+              <b>المعالم السياحية والآثار المعتمدة لخبرته:</b>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {guide.places && guide.places.length > 0 ? (
+                  guide.places.map((p: any) => (
+                    <span key={p.place_id || p.id} className="text-xs font-bold text-[#D96B27] bg-[#D96B27]/10 px-2 py-0.5 rounded-lg border border-[#D96B27]/30">
+                      🏛️ {p.place_name || p.name} {p.city ? `(${p.city})` : ""}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground">لم يتم تحديد معالم</span>
+                )}
+              </div>
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <b>أيام الجاهزية للجولات السياحية:</b>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {Array.isArray(guide.working_days) && guide.working_days.length > 0 ? (
+                  guide.working_days.map((day: string, idx: number) => (
+                    <span key={idx} className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                      📅 {day}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground">طوال أيام الأسبوع</span>
+                )}
+              </div>
             </div>
           </div>
           {guide.bio && (
@@ -4534,6 +4787,32 @@ function GuideVerificationModal({
           >
             إلغاء وإغلاق
           </button>
+          {guide.verification_status === "موثق" && (
+            <button
+              type="button"
+              onClick={() => {
+                const guideUser = {
+                  license_number: guide.license_number,
+                  full_name: guide.full_name,
+                  phone_number: guide.phone_number,
+                  email: guide.email || `${guide.license_number.toLowerCase()}@dalni.ly`,
+                  verification_status: "موثق",
+                  role: "guide",
+                  years_of_experience: guide.years_of_experience,
+                  price_per_day: guide.price_per_day,
+                  avatar: guide.avatar,
+                };
+                localStorage.setItem("dalni_user", JSON.stringify(guideUser));
+                localStorage.setItem("dalni_role", "guide");
+                localStorage.setItem("dalni_token", `token-guide-${Date.now()}`);
+                window.dispatchEvent(new Event("storage"));
+                window.open("/dashboard/guide", "_blank");
+              }}
+              className="px-4 h-10 border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-xl font-black text-xs transition cursor-pointer flex items-center gap-1.5"
+            >
+              <span>معاينة لوحة المرشد 🧭</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onVerify(guide.license_number, "مرفوض")}
@@ -6900,14 +7179,26 @@ function EvaluatePrivateTripModal({
   trip,
   guides,
   vehicles,
+  hotels = [],
   onClose,
   onSave,
 }: {
   trip: PrivateTripRequest;
   guides: Guide[];
   vehicles: Vehicle[];
+  hotels?: Hotel[];
   onClose: () => void;
-  onSave: (id: string, status: string, price?: number, plan?: string, guide?: string, vehicle?: string) => void;
+  onSave: (
+    id: string,
+    status: string,
+    price?: number,
+    plan?: string,
+    guide?: string,
+    vehicle?: string,
+    selectedHotelIds?: string[],
+    structuredStations?: any[],
+    additionalExpenses?: number
+  ) => void;
 }) {
   const durationDays = trip.duration_days || 1;
   const isMultiDay = durationDays > 1;
@@ -6915,13 +7206,18 @@ function EvaluatePrivateTripModal({
   // Tourist preferred guide or existing assigned guide
   const initialGuideLic = trip.guide_license_number || trip.assigned_guide || guides[0]?.license_number || "";
   const [guide, setGuide] = useState(initialGuideLic);
-  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || vehicles[0]?.plate_number || "");
-  const [servicesFee, setServicesFee] = useState("150"); // الخدمات المقدمة (ضيافة، تصاريح، لوجستيات)
+  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || trip.vehicle_plate || vehicles[0]?.plate_number || "");
+  const [servicesFee, setServicesFee] = useState(
+    trip.additional_expenses !== undefined && trip.additional_expenses !== null && Number(trip.additional_expenses) > 0
+      ? String(trip.additional_expenses)
+      : "150"
+  ); // الخدمات المقدمة (ضيافة، تصاريح، لوجستيات)
+  const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>(trip.hotel_ids || (trip.hotels ? trip.hotels.map((h: any) => h.hotel_id || h.id) : []));
 
   const selectedGuide = guides.find((g) => g.license_number === guide) || guides[0];
   const selectedVehicle = vehicles.find((v) => v.plate_number === vehicle) || vehicles[0];
   const guideDailyRate = selectedGuide?.daily_rate || 150;
-  const vehicleDailyRate = selectedVehicle?.daily_rate || 450;
+  const vehicleDailyRate = selectedVehicle?.daily_rate || 500;
   const servCost = Number(servicesFee) || 0;
 
   const totalGuideCost = guideDailyRate * durationDays;
@@ -6929,9 +7225,18 @@ function EvaluatePrivateTripModal({
   const autoCalculatedTotal = totalGuideCost + totalVehicleCost + servCost;
 
   const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : String(autoCalculatedTotal));
+  const [inspectVehicle, setInspectVehicle] = useState<VehicleDetailsData | null>(null);
 
   // Initialize itinerary stations matching Daily (mode="time") or Weekly (mode="days")
   const initialSteps: ItineraryStepItem[] = useMemo(() => {
+    if (trip.stations && Array.isArray(trip.stations) && trip.stations.length > 0) {
+      return trip.stations.map((st: any) => ({
+        time: st.station_time || (st.day_number ? `اليوم ${st.day_number}` : "09:00 ص"),
+        title: st.station_title,
+        desc: st.station_desc || "",
+      }));
+    }
+
     if (trip.admin_itinerary_plan) {
       try {
         const parsed = JSON.parse(trip.admin_itinerary_plan);
@@ -6978,7 +7283,7 @@ function EvaluatePrivateTripModal({
           : `محطة اليوم ${i + 1} - استكشاف المعالم والأنشطة الميدانية`,
       desc: `برنامج ومسار اليوم ${i + 1} يشمل الجولات الميدانية التراثية مع المرشد السياحي وسيارة النقل المخصصة والإقامة والخدمات.`,
     }));
-  }, [trip.admin_itinerary_plan, isMultiDay, durationDays, trip.customer_description]);
+  }, [trip.stations, trip.admin_itinerary_plan, isMultiDay, durationDays, trip.customer_description]);
 
   const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(initialSteps);
 
@@ -6995,45 +7300,99 @@ function EvaluatePrivateTripModal({
       alert("يرجى إضافة محطة واحدة على الأقل في خط سير الرحلة.");
       return;
     }
+
+    // Convert ItineraryStepItem into normalized structured stations for DelniDB
+    const structuredStations = itinerarySteps.map((st, idx) => ({
+      station_id: `PTS-${trip.private_trip_id}-${idx + 1}`,
+      private_trip_id: trip.private_trip_id,
+      day_number: isMultiDay ? (idx < durationDays ? idx + 1 : durationDays) : 1,
+      station_order: idx + 1,
+      station_title: st.title,
+      station_time: st.time,
+      station_desc: st.desc || "",
+    }));
+
     const serializedPlan = JSON.stringify(itinerarySteps);
-    // Explicit status: "بانتظار تأكيد السائح" - sending schedule does NOT auto-confirm booking!
-    onSave(trip.private_trip_id, "بانتظار تأكيد السائح", +price, serializedPlan, guide, vehicle);
+    // Explicit status: "بانتظار تأكيد السائح"
+    onSave(
+      trip.private_trip_id,
+      "بانتظار تأكيد السائح",
+      +price,
+      serializedPlan,
+      guide,
+      vehicle,
+      selectedHotelIds,
+      structuredStations,
+      Number(servicesFee) || 0
+    );
   };
 
   return (
-    <ModalShell title={`دراسة وجدولة طلب الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
-      <div className="space-y-4 text-right">
-        {/* Tourist Request Details */}
-        <div className="p-3.5 rounded-xl bg-muted/40 text-xs space-y-1.5 border border-border/70">
-          <div className="flex justify-between items-center">
-            <div><b>العميل:</b> {trip.customer_name} ({trip.customer_phone})</div>
-            <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-black">
+    <ModalShell maxWidth="max-w-4xl sm:max-w-5xl" title={`دراسة وجدولة طلب الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
+      <div className="space-y-5 text-right p-1 sm:p-2">
+        {/* Tourist Request Details Card */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 text-xs space-y-3 border border-slate-200 shadow-2xs">
+          <div className="flex justify-between items-center flex-wrap gap-2 pb-2.5 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm text-foreground">
+                👤 العميل: {trip.customer_name || "سائح دلّني"}
+              </span>
+              {trip.customer_phone && (
+                <span className="font-mono text-xs font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200">
+                  📞 {trip.customer_phone}
+                </span>
+              )}
+            </div>
+            <span className="px-3 py-1 rounded-xl bg-primary/10 text-primary font-black text-xs">
               ⏱️ نظام الجدولة: {isMultiDay ? `متعددة الأيام (${durationDays} أيام)` : "يومية بالساعات (يوم واحد)"}
             </span>
           </div>
-          <div className="flex gap-4 text-muted-foreground font-bold">
-            <span>📅 تاريخ الانطلاق المفضل: {trip.preferred_start_date}</span>
-            <span>👥 عدد المرافقين: {trip.number_of_companions}</span>
+
+          <div className="flex flex-wrap gap-4 text-muted-foreground font-bold">
+            <span className="text-slate-800">
+              📅 تاريخ الانطلاق المفضل: <b className="text-primary font-black">{formatTripDate(trip.preferred_start_date)}</b>
+            </span>
+            <span>👥 عدد المرافقين: <b className="text-slate-800">{trip.number_of_companions} أفراد</b></span>
+            <span>⏳ مدة الرحلة: <b className="text-slate-800">{trip.duration_days} {trip.duration_days > 1 ? "أيام" : "يوم"}</b></span>
           </div>
-          <div className="mt-1 font-semibold text-muted-foreground p-2 rounded-lg bg-white border border-border/40">
-            "{trip.customer_description}"
+
+          {/* Clean Destinations Tags */}
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <span className="font-black text-slate-900 text-xs">🏛️ المعالم السياحية المستهدفة:</span>
+            {trip.places && trip.places.length > 0 ? (
+              trip.places.map((pl: any, idx: number) => (
+                <span key={idx} className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold text-xs flex items-center gap-1">
+                  <span>📍</span>
+                  <span>{pl.place_name || pl.name} ({pl.city})</span>
+                </span>
+              ))
+            ) : (
+              <span className="text-slate-700 font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                {trip.customer_description || "رحلة خاصة مخصصة"}
+              </span>
+            )}
           </div>
+
+          {/* Clean Tourist Requirements */}
           {trip.customer_requirements && (
-            <div className="text-[11px] text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200">
-              <b>متطلبات وملاحظات السائح:</b> {trip.customer_requirements}
+            <div className="text-xs text-amber-950 bg-amber-50/90 p-3 rounded-xl border border-amber-200 leading-relaxed font-semibold">
+              <b className="text-amber-900 block mb-1">📝 متطلبات وملاحظات السائح:</b>
+              <span>
+                {Array.from(new Set(trip.customer_requirements.split(" - ").map(s => s.trim()))).filter(Boolean).join(" • ")}
+              </span>
             </div>
           )}
         </div>
 
         {/* Tourist Selected Guide Display & Confirmation */}
-        <div>
-          <label className="text-xs font-black text-foreground mb-1 block">
-            👨‍✈️ المرشد السياحي المعين:
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+          <label className="text-xs font-black text-foreground block">
+            👨‍✈️ المرشد السياحي المعين للرحلة:
           </label>
           <select
             value={guide}
             onChange={(e) => setGuide(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-right focus:bg-white transition"
           >
             {guides.map((g) => (
               <option key={g.license_number} value={g.license_number}>
@@ -7043,20 +7402,20 @@ function EvaluatePrivateTripModal({
           </select>
           {trip.guide_license_number && (
             <p className="text-[11px] text-emerald-700 font-bold mt-1">
-              ✓ تم تثبيت المرشد ({trip.guide_license_number}) بناءً على رغبة واختيار السائح.
+              ✓ تم تثبيت المرشد ({trip.guide_license_number}) بناءً على رغبة واختيار السائح المسبق.
             </p>
           )}
         </div>
 
         {/* Vehicle Selection - Admin Duty */}
-        <div>
-          <label className="text-xs font-black text-foreground mb-1 block">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+          <label className="text-xs font-black text-foreground block">
             🚌 سيارة النقل المخصصة (تحديد الإدارة بحسب عدد الركاب والمسار):
           </label>
           <select
             value={vehicle}
             onChange={(e) => setVehicle(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-bold text-right"
+            className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-right focus:bg-white transition"
           >
             {vehicles.map((v) => (
               <option key={v.plate_number} value={v.plate_number}>
@@ -7064,6 +7423,100 @@ function EvaluatePrivateTripModal({
               </option>
             ))}
           </select>
+
+          {/* Live Vehicle Preview Card with Inspect Modal Trigger */}
+          {selectedVehicle && (
+            <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between gap-3 flex-wrap mt-2">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-xl bg-blue-100 text-blue-900 text-xl">🚍</span>
+                <div>
+                  <div className="font-black text-xs text-blue-950">
+                    {selectedVehicle.vehicle_type} — {selectedVehicle.company_name}
+                  </div>
+                  <div className="text-[11px] text-blue-800 flex items-center gap-2 mt-0.5 font-bold">
+                    <span className="font-mono">لوحة: {selectedVehicle.plate_number}</span>
+                    <span>•</span>
+                    <span>سعة {selectedVehicle.capacity || 25} راكب</span>
+                    <span>•</span>
+                    <span>{selectedVehicle.daily_rate} د.ل / اليوم</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setInspectVehicle({
+                    plate_number: selectedVehicle.plate_number,
+                    vehicle_type: selectedVehicle.vehicle_type,
+                    capacity: selectedVehicle.capacity,
+                    daily_rate: selectedVehicle.daily_rate,
+                    company_name: selectedVehicle.company_name,
+                    vehicle_status: selectedVehicle.status || "جاهزة",
+                  });
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs cursor-pointer shadow-xs transition flex items-center gap-1.5"
+              >
+                <span>👁️</span>
+                <span>فحص مواصفات وتفاصيل المركبة</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {inspectVehicle && (
+          <VehicleDetailsModal vehicle={inspectVehicle} onClose={() => setInspectVehicle(null)} />
+        )}
+
+        {/* Multi-Hotel Selection - Admin Duty (M:N Relational Table: hotels_trip_private) */}
+        <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-blue-900 block flex items-center gap-1.5">
+              <span>🏨</span>
+              <span>تخصيص أماكن الإقامة والفنادق المقترحة (يمكن اختيار أكثر من فندق):</span>
+            </label>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+              {selectedHotelIds.length} فنادق مختارة
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500">
+            اختر الفنادق المعتمدة التي سيقيم فيها السائح خلال مسار الرحلة لتظهر في جدوله المقترح:
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
+            {hotels.map((h) => {
+              const hid = h.hotel_id || h.id;
+              const isSelected = selectedHotelIds.includes(hid);
+              return (
+                <div
+                  key={hid}
+                  onClick={() => {
+                    setSelectedHotelIds((prev) =>
+                      prev.includes(hid) ? prev.filter((id) => id !== hid) : [...prev, hid]
+                    );
+                  }}
+                  className={`p-2 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
+                    isSelected
+                      ? "bg-white border-blue-600 shadow-xs ring-1 ring-blue-600 font-bold"
+                      : "bg-white/80 border-slate-200 hover:bg-white text-slate-700"
+                  }`}
+                >
+                  <div className="min-w-0 pr-1">
+                    <div className="truncate font-black text-[11px] text-slate-900">{h.name}</div>
+                    <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <span>📍 {h.city}</span>
+                      <span>•</span>
+                      <span>{"★".repeat(h.stars || 4)}</span>
+                    </div>
+                  </div>
+                  <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-black shrink-0 ${
+                    isSelected ? "bg-blue-600 text-white" : "border border-slate-300"
+                  }`}>
+                    {isSelected ? "✓" : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Services Fee */}

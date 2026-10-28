@@ -157,7 +157,6 @@ async function ensureDatabaseSchema(p) {
           station_title NVARCHAR(150) NOT NULL,
           station_time VARCHAR(30) NOT NULL,
           station_desc NVARCHAR(MAX) NULL,
-          created_at DATETIME DEFAULT GETDATE(),
           CONSTRAINT FK_daily_trip_stations_trips FOREIGN KEY (daily_trip_id) REFERENCES daily_trips (daily_trip_id) ON DELETE CASCADE
         );
       END;
@@ -179,7 +178,6 @@ async function ensureDatabaseSchema(p) {
         CREATE TABLE daily_trip_days (
           daily_trip_id VARCHAR(50) NOT NULL,
           day_of_week NVARCHAR(50) NOT NULL,
-          created_at DATETIME DEFAULT GETDATE(),
           CONSTRAINT PK_daily_trip_days PRIMARY KEY (daily_trip_id, day_of_week),
           CONSTRAINT FK_daily_trip_days_trip FOREIGN KEY (daily_trip_id) REFERENCES daily_trips(daily_trip_id) ON DELETE CASCADE
         );
@@ -195,7 +193,6 @@ async function ensureDatabaseSchema(p) {
           day_number INT NOT NULL DEFAULT 1,
           station_title NVARCHAR(200) NOT NULL,
           station_desc NVARCHAR(MAX) NULL,
-          created_at DATETIME DEFAULT GETDATE(),
           CONSTRAINT FK_weekly_stations_trip FOREIGN KEY (weekly_trip_id) REFERENCES weekly_trips(weekly_trip_id) ON DELETE CASCADE
         );
       END;
@@ -224,9 +221,16 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
-      -- Tour Guides operating_regions column
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tour_guides') AND name = 'operating_regions')
-        ALTER TABLE tour_guides ADD operating_regions NVARCHAR(MAX) NULL;
+      -- Normalized Table for Tour Guides Operating Regions (1NF)
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'guide_operating_regions')
+      BEGIN
+        CREATE TABLE guide_operating_regions (
+          license_number VARCHAR(50) NOT NULL,
+          region NVARCHAR(100) NOT NULL,
+          CONSTRAINT PK_guide_operating_regions PRIMARY KEY (license_number, region),
+          CONSTRAINT FK_gor_guide FOREIGN KEY (license_number) REFERENCES tour_guides(license_number) ON DELETE CASCADE
+        );
+      END;
 
       -- Normalized Junction for Tour Guide Expertise in Landmarks
       IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'guide_places')
@@ -241,7 +245,29 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
-      -- Tourists table schema conforms directly to DelniDB standard
+      -- Normalized Table for Hotel Amenities (1NF)
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'hotel_amenities')
+      BEGIN
+        CREATE TABLE hotel_amenities (
+          hotel_id VARCHAR(50) NOT NULL,
+          amenity NVARCHAR(100) NOT NULL,
+          CONSTRAINT PK_hotel_amenities PRIMARY KEY (hotel_id, amenity),
+          CONSTRAINT FK_ha_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id) ON DELETE CASCADE
+        );
+      END;
+
+      -- Normalized Table for Restaurant Features (1NF)
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'restaurant_features')
+      BEGIN
+        CREATE TABLE restaurant_features (
+          facility_id VARCHAR(50) NOT NULL,
+          feature NVARCHAR(100) NOT NULL,
+          CONSTRAINT PK_restaurant_features PRIMARY KEY (facility_id, feature),
+          CONSTRAINT FK_rf_facility FOREIGN KEY (facility_id) REFERENCES restaurants_cafes(facility_id) ON DELETE CASCADE
+        );
+      END;
+
+      -- Tourist account restriction status (تقييد وتنشيط الحساب)
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tourists') AND name = 'account_status')
       BEGIN
         ALTER TABLE tourists ADD account_status NVARCHAR(50) DEFAULT N'نشط';
@@ -274,6 +300,15 @@ async function ensureDatabaseSchema(p) {
       IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_notif_dedupe' AND object_id = OBJECT_ID('notifications'))
         CREATE NONCLUSTERED INDEX IX_notif_dedupe ON notifications (dedupe_key);
 
+      -- Direct vehicle_plate column on private_trips table
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('private_trips') AND name = 'vehicle_plate')
+      BEGIN
+        IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('private_trips') AND name = 'assigned_vehicle')
+          EXEC sp_rename 'private_trips.assigned_vehicle', 'vehicle_plate', 'COLUMN';
+        ELSE
+          ALTER TABLE private_trips ADD vehicle_plate VARCHAR(30) NULL;
+      END;
+
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('daily_trips') AND name = 'departure_date')
         ALTER TABLE daily_trips ADD departure_date DATETIME NULL;
 
@@ -296,10 +331,6 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
-      -- Direct assigned_vehicle column on private_trips table
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('private_trips') AND name = 'assigned_vehicle')
-        ALTER TABLE private_trips ADD assigned_vehicle NVARCHAR(50) NULL;
-
       -- Ensure status_order in private_trips is NVARCHAR(50) for Arabic status text
       IF EXISTS (
         SELECT 1 FROM sys.columns c
@@ -310,6 +341,12 @@ async function ensureDatabaseSchema(p) {
       )
       BEGIN
         ALTER TABLE private_trips ALTER COLUMN status_order NVARCHAR(50) NULL;
+      END;
+
+      -- Ensure additional_expenses exists in private_trips
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('private_trips') AND name = 'additional_expenses')
+      BEGIN
+        ALTER TABLE private_trips ADD additional_expenses DECIMAL(10, 2) DEFAULT 0;
       END;
 
       -- Tourist Favorites Table (المفضلة الموحدة بالقلب لجميع العناصر)
@@ -393,42 +430,42 @@ async function ensureDatabaseSchema(p) {
         );
       END;
 
-      -- Seed / Sync canonical landmarks into places_tourist table in DelniDB
+            -- Seed / Sync canonical landmarks into places_tourist table in DelniDB
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-tripoli-castle')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-tripoli-castle', N'قلعة السراي الحمراء والمدينة القديمة', N'الحصن التاريخي المطل على ميناء طرابلس ومجمع المتاحف التاريخية والأسواق العتيقة.', N'طرابلس', N'المنطقة الغربية', 13.1802, 32.8950, N'مدن قديمة وقلاع', '/assets/dest-tripoli.jpg', 'https://maps.google.com/?q=32.8950,13.1802', N'مجمع متاحف السراي الحمراء، أسواق طرابلس القديمة وسوق القزديرة، قوس ماركوس أوريليوس، جامع أحمد باشا القره مانلي');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-tripoli-castle', N'قلعة السراي الحمراء والمدينة القديمة', N'الحصن التاريخي المطل على ميناء طرابلس ومجمع المتاحف التاريخية والأسواق العتيقة.', N'طرابلس', N'المنطقة الغربية', 13.1802, 32.8950, N'مدن قديمة وقلاع', '/assets/dest-tripoli.jpg', 'https://maps.google.com/?q=32.8950,13.1802');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-gharyan-caves')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-gharyan-caves', N'بيوت الحفر التراثية في غريان', N'العمارة التحت-أرضية الفريدة المنحوتة في الصخور الجبلية ومتاجر الفخار والخزف التقليدي.', N'غريان', N'جبل نفوسة', 13.0167, 32.1667, N'طبيعة وجبال', '/assets/dest-gharyan-cave.jpg', 'https://maps.google.com/?q=32.1667,13.0167', N'حوش الحفر التراثي تحت الأرض، مصانع الخزف والفخار اليدوي، إطلالة جبل نفوسة الشاهقة، أسواق الحرف اليدوية التقليدية');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-gharyan-caves', N'بيوت الحفر التراثية في غريان', N'العمارة التحت-أرضية الفريدة المنحوتة في الصخور الجبلية ومتاجر الفخار والخزف التقليدي.', N'غريان', N'جبل نفوسة', 13.0167, 32.1667, N'طبيعة وجبال', '/assets/dest-gharyan-cave.jpg', 'https://maps.google.com/?q=32.1667,13.0167');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-nalut-ksar')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-nalut-ksar', N'قصور وقلاع الجبل الغربي (نالوت وكاباو)', N'قلاع التخزين الأمازيغية الدائرية الشاهقة على حافة الجرف الجبلي وأزقة المدينة العتيقة.', N'نالوت / كاباو', N'جبل نفوسة', 10.9833, 31.8667, N'مدن قديمة وقلاع', '/assets/dest-ksar-desert.jpg', 'https://maps.google.com/?q=31.8667,10.9833', N'قصر نالوت الدائري لتخزين الحبوب، قصر كاباو الأثري، معاصر الزيتون الصخرية القديمة، الأزقة الأمازيغية العتيقة');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-nalut-ksar', N'قصور وقلاع الجبل الغربي (نالوت وكاباو)', N'قلاع التخزين الأمازيغية الدائرية الشاهقة على حافة الجرف الجبلي وأزقة المدينة العتيقة.', N'نالوت / كاباو', N'جبل نفوسة', 10.9833, 31.8667, N'مدن قديمة وقلاع', '/assets/dest-ksar-desert.jpg', 'https://maps.google.com/?q=31.8667,10.9833');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-jabal-green')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-jabal-green', N'وادي الكوف وغابات الجبل الأخضر', N'أكبر الغابات الطبيعية وجسر وادي الكوف المعلق وأودية الطبيعة الجبلية الساحرة.', N'البيضاء / الجبل الأخضر', N'المنطقة الشرقية', 21.7500, 32.7667, N'طبيعة وجبال', '/assets/dest-jabal-akhdar-panorama.jpg', 'https://maps.google.com/?q=32.7667,21.7500', N'جسر وادي الكوف المعلق، غابات السرو والصنوبر الطبيعية، شلالات شحات والبيضاء، مسارات المشي والتنزه الجبلية');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-jabal-green', N'وادي الكوف وغابات الجبل الأخضر', N'أكبر الغابات الطبيعية وجسر وادي الكوف المعلق وأودية الطبيعة الجبلية الساحرة.', N'البيضاء / الجبل الأخضر', N'المنطقة الشرقية', 21.7500, 32.7667, N'طبيعة وجبال', '/assets/dest-jabal-akhdar-panorama.jpg', 'https://maps.google.com/?q=32.7667,21.7500');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-ubari-lakes')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-ubari-lakes', N'بحيرات رملة أوباري وقبر عون', N'عجائب الصحراء الكبرى: بحيرات مالحة بديعة وسط كثبان الرمال الذهبية الشاهقة والواحات.', N'أوباري', N'المنطقة الجنوبية', 12.8791, 26.5677, N'واحات صحراوية', '/assets/dest-ubari.jpg', 'https://maps.google.com/?q=26.5677,12.8791', N'بحيرة قبر عون الكبريتية العلاجية، بحيرة أم الماء الفيروزية، رحلات سيارات الدفع الرباعي وسفاري الكثبان، واحة قروما');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-ubari-lakes', N'بحيرات رملة أوباري وقبر عون', N'عجائب الصحراء الكبرى: بحيرات مالحة بديعة وسط كثبان الرمال الذهبية الشاهقة والواحات.', N'أوباري', N'المنطقة الجنوبية', 12.8791, 26.5677, N'واحات صحراوية', '/assets/dest-ubari.jpg', 'https://maps.google.com/?q=26.5677,12.8791');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-apollonia')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-apollonia', N'مدينة أبولونيا ومنحوتات أسلونطة الصخرية', N'الميناء الإغريقي الغارق القديم على ساحل البحر والمتحف المفتوح ومنحوتات أسلونطة.', N'سوسة / شحات', N'المنطقة الشرقية', 21.9667, 32.9000, N'آثار تاريخية', '/assets/dest-cyrene.jpg', 'https://maps.google.com/?q=32.9000,21.9667', N'الميناء الإغريقي الغارق القديم، الحمامات البيزنطية، المسرح الإغريقي المطل على البحر، منحوتات أسلونطة الصخرية');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-apollonia', N'مدينة أبولونيا ومنحوتات أسلونطة الصخرية', N'الميناء الإغريقي الغارق القديم على ساحل البحر والمتحف المفتوح ومنحوتات أسلونطة.', N'سوسة / شحات', N'المنطقة الشرقية', 21.9667, 32.9000, N'آثار تاريخية', '/assets/dest-cyrene.jpg', 'https://maps.google.com/?q=32.9000,21.9667');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'att-villa-silin')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('att-villa-silin', N'فيلا سيلين والموزاييك الروماني الفاخر', N'الفيلا الرومانية الساحلية الأشهر في المتوسط بأرضيات الفسيفساء الأثرية السليمة تماماً.', N'الخمس', N'المنطقة الغربية', 14.2667, 32.6500, N'آثار تاريخية', '/assets/hero-leptis.jpg', 'https://maps.google.com/?q=32.6500,14.2667', N'لوحات الفسيفساء الأسطورية المحفوظة، حمامات الفيلا الساحلية، الحديقة والشرفة البانورامية على ساحل البحر، الأعمدة الكورنثية');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('att-villa-silin', N'فيلا سيلين والموزاييك الروماني الفاخر', N'الفيلا الرومانية الساحلية الأشهر في المتوسط بأرضيات الفسيفساء الأثرية السليمة تماماً.', N'الخمس', N'المنطقة الغربية', 14.2667, 32.6500, N'آثار تاريخية', '/assets/hero-leptis.jpg', 'https://maps.google.com/?q=32.6500,14.2667');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'city-tripoli')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('city-tripoli', N'مدينة طرابلس التاريخية والأسواق القديمة', N'العاصمة العريقة بأسواقها وسراياها وقوس ماركوس أوريليوس وأزقتها الأندلسية العتيقة.', N'طرابلس', N'المنطقة الغربية', 13.1802, 32.8950, N'مدن سياحية', '/assets/dest-tripoli.jpg', 'https://maps.google.com/?q=32.8950,13.1802', N'ميدان الشهداء، المدينة القديمة، دار عبد الله كريستا، فندق زميط، برج الساعة العثماني، جامع الناقة العتيق');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('city-tripoli', N'مدينة طرابلس التاريخية والأسواق القديمة', N'العاصمة العريقة بأسواقها وسراياها وقوس ماركوس أوريليوس وأزقتها الأندلسية العتيقة.', N'طرابلس', N'المنطقة الغربية', 13.1802, 32.8950, N'مدن سياحية', '/assets/dest-tripoli.jpg', 'https://maps.google.com/?q=32.8950,13.1802');
 
       IF NOT EXISTS (SELECT 1 FROM places_tourist WHERE place_id = 'city-benghazi')
-        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url, highlights)
-        VALUES ('city-benghazi', N'مدينة بنغازي التاريخية والبحيرات', N'عروس البحر المتوسط، بمبانيها التاريخية وبحيراتها وشواطئها الممتدة.', N'بنغازي', N'المنطقة الشرقية', 20.0667, 32.1167, N'مدن سياحية', '/assets/dest-harbor-coast.jpg', 'https://maps.google.com/?q=32.1167,20.0667', N'المنارة الإيطالية التاريخية، كورنيش بنغازي الممتد، سوق الحوت التراثي، بحيرة 23 يوليو والكاتدرائية التاريخية');
+        INSERT INTO places_tourist (place_id, place_name, description, city, region, longitude, latitude, category, place_image, google_maps_url)
+        VALUES ('city-benghazi', N'مدينة بنغازي التاريخية والبحيرات', N'عروس البحر المتوسط، بمبانيها التاريخية وبحيراتها وشواطئها الممتدة.', N'بنغازي', N'المنطقة الشرقية', 20.0667, 32.1167, N'مدن سياحية', '/assets/dest-harbor-coast.jpg', 'https://maps.google.com/?q=32.1167,20.0667');
     `);
     try {
       await p.request().query("UPDATE tourists SET created_at = GETDATE() WHERE created_at IS NULL;");
@@ -504,6 +541,134 @@ async function createNotificationInDb(dbPool, { type, title, body, recipient_rol
   } catch (err) {
     console.warn('[Notification Create Warning]:', err.message);
     return null;
+  }
+}
+
+// Detailed Private Trips Loader with normalized relations, vehicles, guides, places, hotels, stations
+async function getDetailedPrivateTrips(db) {
+  try {
+    const result = await db.request().query(`
+      SELECT pt.private_trip_id,
+             pt.status_order,
+             t.full_name AS customer_name,
+             t.phone_number AS customer_phone,
+             t.email AS customer_email,
+             CONVERT(VARCHAR(10), pt.preferred_start_date, 120) AS preferred_start_date,
+             pt.duration_days,
+             pt.number_of_companions,
+             pt.guide_license_number,
+             pt.customer_requirements,
+             pt.tourist_id,
+             pt.quoted_price,
+             COALESCE(pt.additional_expenses, 0) AS additional_expenses,
+             pt.vehicle_plate AS assigned_vehicle,
+             pt.vehicle_plate,
+             CONVERT(VARCHAR(19), pt.created_at, 120) AS created_at,
+             g.full_name as guide_name, 
+             g.phone_number as guide_phone,
+             g.price_per_day as guide_daily_rate,
+             v.vehicle_type as vehicle_model,
+             v.seating_capacity as vehicle_capacity,
+             v.daily_rate as vehicle_daily_rate,
+             v.vehicle_image,
+             v.vehicle_status,
+             tc.company_name as transport_company_name,
+             tc.phone_number as transport_company_phone
+      FROM private_trips pt
+      LEFT JOIN tourists t ON pt.tourist_id = t.tourist_id
+      LEFT JOIN tour_guides g ON pt.guide_license_number = g.license_number
+      LEFT JOIN vehicles v ON pt.vehicle_plate = v.plate_number
+      LEFT JOIN transportation_companies tc ON v.contract_number = tc.contract_number
+      ORDER BY pt.created_at DESC, pt.preferred_start_date DESC
+    `);
+
+    // 1. Load Places
+    const placesRes = await db.request().query(`
+      SELECT ptp.private_trip_id, ptp.place_id, ptp.visit_order,
+             p.place_name, p.city, p.region, p.category, p.place_image
+      FROM places_trip_private ptp
+      JOIN places_tourist p ON ptp.place_id = p.place_id
+      ORDER BY ptp.visit_order ASC
+    `).catch(() => ({ recordset: [] }));
+
+    const placesMap = {};
+    for (const row of (placesRes.recordset || [])) {
+      if (!placesMap[row.private_trip_id]) placesMap[row.private_trip_id] = [];
+      placesMap[row.private_trip_id].push({
+        place_id: row.place_id,
+        place_name: row.place_name,
+        city: row.city,
+        region: row.region,
+        category: row.category,
+        place_image: row.place_image,
+        visit_order: row.visit_order,
+      });
+    }
+
+    // 2. Load Hotels (M:N via hotels_trip_private)
+    const hotelsRes = await db.request().query(`
+      SELECT htp.private_trip_id, h.hotel_id, h.hotel_name, h.city, h.star_rating, h.hotel_photo_1 as photo_url
+      FROM hotels_trip_private htp
+      JOIN hotels h ON htp.hotel_id = h.hotel_id
+    `).catch(() => ({ recordset: [] }));
+
+    const hotelsMap = {};
+    for (const row of (hotelsRes.recordset || [])) {
+      if (!hotelsMap[row.private_trip_id]) hotelsMap[row.private_trip_id] = [];
+      hotelsMap[row.private_trip_id].push({
+        hotel_id: row.hotel_id,
+        hotel_name: row.hotel_name,
+        name: row.hotel_name,
+        city: row.city,
+        star_rating: row.star_rating,
+        stars: row.star_rating,
+        photo_url: row.photo_url
+      });
+    }
+
+    // 3. Load Stations (Composition 1:N via private_trip_stations)
+    const stationsRes = await db.request().query(`
+      SELECT station_id, private_trip_id, day_number, station_order, station_title, station_time, station_desc
+      FROM private_trip_stations
+      ORDER BY day_number ASC, station_order ASC
+    `).catch(() => ({ recordset: [] }));
+
+    const stationsMap = {};
+    for (const row of (stationsRes.recordset || [])) {
+      if (!stationsMap[row.private_trip_id]) stationsMap[row.private_trip_id] = [];
+      stationsMap[row.private_trip_id].push({
+        station_id: row.station_id,
+        day_number: row.day_number,
+        station_order: row.station_order,
+        station_title: row.station_title,
+        station_time: row.station_time,
+        station_desc: row.station_desc,
+      });
+    }
+
+    for (const trip of (result.recordset || [])) {
+      const tripPlaces = placesMap[trip.private_trip_id] || [];
+      trip.places = tripPlaces;
+      trip.place_ids = tripPlaces.map(p => p.place_id);
+      trip.hotels = hotelsMap[trip.private_trip_id] || [];
+      trip.hotel_ids = (trip.hotels || []).map(h => h.hotel_id);
+      trip.stations = stationsMap[trip.private_trip_id] || [];
+
+      // Clean customer_description: represents target destinations list
+      trip.customer_description = tripPlaces.length > 0 
+        ? tripPlaces.map(p => `${p.place_name} (${p.city})`).join('، ')
+        : (trip.customer_requirements || 'رحلة خاصة مخصصة');
+    }
+
+    return result.recordset || [];
+  } catch (err) {
+    console.warn('[DelniDB] Could not load detailed private trips:', err.message);
+    try {
+      const fallback = await db.request().query('SELECT * FROM private_trips ORDER BY private_trip_id DESC');
+      return fallback.recordset || [];
+    } catch {
+      return [];
+    }
   }
 }
 
@@ -672,7 +837,6 @@ const server = http.createServer(async (req, res) => {
           contract_number,
           company_name,
           phone_number,
-          address,
           city,
           email,
           total_vehicles,
@@ -690,7 +854,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/db/companies' && req.method === 'POST') {
       const body = await readBody(req);
       const {
-        contract_number, company_name, phone_number, address,
+        contract_number, company_name, phone_number,
         total_vehicles, contract_start_date, contract_end_date,
         email, password, city, verification_status, isNew
       } = body;
@@ -716,7 +880,6 @@ const server = http.createServer(async (req, res) => {
       request.input('contract_number', sql.NVarChar(50), cleanContract);
       request.input('company_name', sql.NVarChar(150), String(company_name).trim());
       request.input('phone_number', sql.NVarChar(20), String(phone_number).trim());
-      request.input('address', sql.NVarChar(255), String(address || '').trim());
       const totVehicles = Number(total_vehicles) || 1;
       request.input('total_vehicles', sql.Int, totVehicles);
       request.input('contract_start_date', sql.Date, contract_start_date || null);
@@ -740,7 +903,6 @@ const server = http.createServer(async (req, res) => {
           UPDATE transportation_companies
           SET company_name = @company_name,
               phone_number = @phone_number,
-              address = @address,
               google_maps_url = CASE WHEN @google_maps_url <> '' THEN @google_maps_url ELSE google_maps_url END,
               total_vehicles = @total_vehicles,
               email = @email,
@@ -754,9 +916,9 @@ const server = http.createServer(async (req, res) => {
         ELSE
         BEGIN
           INSERT INTO transportation_companies 
-          (contract_number, company_name, phone_number, address, google_maps_url, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+          (contract_number, company_name, phone_number, google_maps_url, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
           VALUES 
-          (@contract_number, @company_name, @phone_number, @address, @google_maps_url, @total_vehicles, COALESCE(@contract_start_date, CAST(GETDATE() AS DATE)), @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
+          (@contract_number, @company_name, @phone_number, @google_maps_url, @total_vehicles, COALESCE(@contract_start_date, CAST(GETDATE() AS DATE)), @contract_end_date, @email, CASE WHEN @hasNewPassword = 1 THEN @hashedPassword ELSE @default_password END, @city, @verification_status);
         END
       `);
 
@@ -789,7 +951,8 @@ const server = http.createServer(async (req, res) => {
 
     // 3.1 Transportation Companies: DELETE
     if (pathname === '/api/db/companies' && req.method === 'DELETE') {
-      const contractNumber = url.searchParams.get('contract_number');
+      const body = await readBody(req).catch(() => ({}));
+      const contractNumber = url.searchParams.get('contract_number') || body?.contract_number || body?.contractNo || body?.id;
       if (!contractNumber) {
         return sendJson(res, 400, { success: false, error: 'رقم العقد مطلوب للحذف' });
       }
@@ -876,9 +1039,9 @@ const server = http.createServer(async (req, res) => {
           autoComp.input('c_phone', sql.NVarChar(20), `091${Math.floor(1000000 + Math.random() * 9000000)}`);
           await autoComp.query(`
             INSERT INTO transportation_companies 
-            (contract_number, company_name, phone_number, address, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+            (contract_number, company_name, phone_number, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
             VALUES 
-            (@c_num, @c_name, @c_phone, N'طرابلس', 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
+            (@c_num, @c_name, @c_phone, 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
           `);
         }
 
@@ -889,11 +1052,8 @@ const server = http.createServer(async (req, res) => {
         vReq.input('daily_rate', sql.Decimal(10, 2), Number(daily_rate) || 350);
         vReq.input('category', sql.NVarChar(50), String(category || 'سياحي').trim());
         vReq.input('vehicle_status', sql.NVarChar(50), String(vehicle_status || 'جاهزة').trim());
-        vReq.input('insurance_details', sql.NVarChar(sql.MAX), String(insurance_details || 'وثيقة تأمين ركاب سارية المفعول').trim());
-        const finalVehImg = String(vehicle_image || body.photos || '').trim();
         vReq.input('insurance_image', sql.NVarChar(sql.MAX), String(insurance_image || ''));
-        vReq.input('vehicle_image', sql.NVarChar(sql.MAX), finalVehImg);
-        vReq.input('photos', sql.NVarChar(sql.MAX), finalVehImg);
+        vReq.input('vehicle_image', sql.NVarChar(sql.MAX), String(vehicle_image || body.vehicle_image || '').trim());
         vReq.input('contract_number', sql.NVarChar(50), targetContract);
 
         await vReq.query(`
@@ -905,19 +1065,17 @@ const server = http.createServer(async (req, res) => {
                 daily_rate = @daily_rate,
                 category = @category,
                 vehicle_status = @vehicle_status,
-                insurance_details = CASE WHEN @insurance_details <> '' THEN @insurance_details ELSE insurance_details END,
                 insurance_image = CASE WHEN @insurance_image <> '' THEN @insurance_image ELSE insurance_image END,
                 vehicle_image = CASE WHEN @vehicle_image <> '' THEN @vehicle_image ELSE vehicle_image END,
-                photos = CASE WHEN @photos <> '' THEN @photos ELSE photos END,
                 contract_number = @contract_number
             WHERE plate_number = @plate_number;
           END
           ELSE
           BEGIN
             INSERT INTO vehicles
-            (plate_number, vehicle_type, seating_capacity, daily_rate, category, vehicle_status, insurance_details, insurance_image, vehicle_image, photos, contract_number)
+            (plate_number, vehicle_type, seating_capacity, daily_rate, category, vehicle_status, insurance_image, vehicle_image, contract_number)
             VALUES
-            (@plate_number, @vehicle_type, @seating_capacity, @daily_rate, @category, @vehicle_status, @insurance_details, @insurance_image, @vehicle_image, @photos, @contract_number);
+            (@plate_number, @vehicle_type, @seating_capacity, @daily_rate, @category, @vehicle_status, @insurance_image, @vehicle_image, @contract_number);
           END
         `);
 
@@ -1092,9 +1250,9 @@ const server = http.createServer(async (req, res) => {
           .input('c_phone', sql.NVarChar(20), '0910000000')
           .query(`
             INSERT INTO transportation_companies 
-            (contract_number, company_name, phone_number, address, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
+            (contract_number, company_name, phone_number, total_vehicles, contract_start_date, contract_end_date, email, password, city, verification_status)
             VALUES 
-            (@c_num, @c_name, @c_phone, N'ليبيا', 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
+            (@c_num, @c_name, @c_phone, 1, GETDATE(), '2028-01-01', @c_num + '@dalni.ly', 'password123', N'طرابلس', N'موثق')
           `);
       }
 
@@ -1228,7 +1386,7 @@ const server = http.createServer(async (req, res) => {
         const dailyBReq = db.request();
         dailyBReq.input('actualTid', sql.VarChar(50), actualTid);
         const dailyBRes = await dailyBReq.query(`
-          SELECT b.*, dt.trip_title, dt.departure_city, dt.destination_city, dt.photo as trip_photo
+          SELECT b.*, dt.trip_title, dt.departure_city, NULL as destination_city, dt.photo_1 as trip_photo
           FROM bookings_daily b
           LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id
           WHERE b.tourist_id = @actualTid
@@ -1362,7 +1520,22 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 9. Guides: GET (Includes normalized landmarks of expertise from guide_places and live ratings)
+    // 8.3 Tourists: DELETE
+    if (pathname === '/api/db/tourists' && req.method === 'DELETE') {
+      const id = url.searchParams.get('tourist_id') || url.searchParams.get('id');
+      if (!id) return sendJson(res, 400, { success: false, error: 'معرف السائح مطلوب للحذف' });
+
+      const request = db.request();
+      request.input('id', sql.VarChar(50), String(id).trim());
+      await request.query(`
+        DELETE FROM notifications WHERE recipient_id = @id;
+        DELETE FROM tourist_favorites WHERE tourist_id = @id;
+        DELETE FROM tourists WHERE tourist_id = @id;
+      `);
+      return sendJson(res, 200, { success: true, message: 'تم حذف حساب السائح بنجاح من DelniDB' });
+    }
+
+    // 9. Guides: GET (Includes normalized landmarks of expertise from guide_places, working days, and live ratings)
     if (pathname === '/api/db/guides' && req.method === 'GET') {
       const result = await db.request().query(`
         SELECT tg.*,
@@ -1385,6 +1558,7 @@ const server = http.createServer(async (req, res) => {
         FROM tour_guides tg
         ORDER BY tg.full_name ASC
       `);
+      
       let guidePlacesRes = { recordset: [] };
       try {
         guidePlacesRes = await db.request().query(`
@@ -1396,23 +1570,49 @@ const server = http.createServer(async (req, res) => {
         console.warn('[guide_places fetch notice]:', e.message);
       }
 
+      let guideDaysRes = { recordset: [] };
+      try {
+        guideDaysRes = await db.request().query(`
+          SELECT license_number, day_of_week
+          FROM guide_working_days
+          ORDER BY license_number, day_of_week
+        `);
+      } catch (e) {
+        console.warn('[guide_working_days fetch notice]:', e.message);
+      }
+
+      let guideRegionsRes = { recordset: [] };
+      try {
+        guideRegionsRes = await db.request().query(`
+          SELECT license_number, region
+          FROM guide_operating_regions
+          ORDER BY license_number, region
+        `);
+      } catch (e) {
+        console.warn('[guide_operating_regions fetch notice]:', e.message);
+      }
+
       const guidesData = (result.recordset || []).map(g => {
         const myPlaces = (guidePlacesRes.recordset || []).filter(p => p.license_number === g.license_number);
+        const myDays = (guideDaysRes.recordset || []).filter(d => d.license_number === g.license_number).map(d => d.day_of_week);
+        const myRegions = (guideRegionsRes.recordset || []).filter(r => r.license_number === g.license_number).map(r => r.region);
         return {
           ...g,
           total_tours_completed: g.total_tours_completed || 0,
           places: myPlaces,
-          place_ids: myPlaces.map(p => p.place_id)
+          place_ids: myPlaces.map(p => p.place_id),
+          working_days: myDays,
+          operating_regions: myRegions
         };
       });
 
       return sendJson(res, 200, { success: true, data: guidesData });
     }
 
-    // 9.1.0 Dedicated Guide Verification (Safely activates account preserving real email, phone, and password)
+    // 9.1.0 Dedicated Guide Verification (Academic review: activates or rejects account, and dispatches real-time notification)
     if (pathname === '/api/db/guides/verify' && req.method === 'POST') {
       const body = await readBody(req);
-      const { license_number, verification_status } = body;
+      const { license_number, verification_status, rejection_reason } = body;
       if (!license_number) {
         return sendJson(res, 400, { success: false, error: 'رقم ترخيص المرشد مطلوب' });
       }
@@ -1436,11 +1636,41 @@ const server = http.createServer(async (req, res) => {
           FROM tour_guides 
           WHERE license_number = @lic;
         `);
+        const guide = guideRes.recordset[0] || null;
+
+        // Dispatch notification to Guide based on Admin decision
+        if (guide) {
+          try {
+            if (status === 'موثق') {
+              await createNotificationInDb(db, {
+                type: 'system',
+                title: '🎉 تهانينا! تم توثيق واعتماد حسابك كمرشد سياحي',
+                body: `أهلاً بك يا (${guide.full_name})! تمت مراجعة رخصتك ووثائقك واعتماد حسابك رسمياً من قبل إدارة منصة دَلّني. يمكنك الآن تسجيل الدخول وإدارة رحلاتك السياحية.`,
+                recipient_role: 'guide',
+                recipient_id: cleanLic,
+                link: '/dashboard/guide',
+                dedupe_key: `guide_approved_${cleanLic}_${Date.now()}`
+              });
+            } else if (status === 'مرفوض') {
+              await createNotificationInDb(db, {
+                type: 'system',
+                title: '❌ إشعار بخصوص طلب اعتماد حساب المرشد',
+                body: rejection_reason || `نأسف يا (${guide.full_name})، تم رفض طلب اعتماد حسابك كمرشد سياحي بعد مراجعة الوثائق المرفوعة. يرجى التأكد من صحة المستندات والتواصل مع إدارة المنصة.`,
+                recipient_role: 'guide',
+                recipient_id: cleanLic,
+                link: '/auth/login',
+                dedupe_key: `guide_rejected_${cleanLic}_${Date.now()}`
+              });
+            }
+          } catch (notifErr) {
+            console.warn('[Guide Verification Notification Warning]:', notifErr.message);
+          }
+        }
 
         return sendJson(res, 200, {
           success: true,
-          message: status === 'موثق' ? 'تم اعتماد وتفعيل حساب المرشد السياحي بنجاح' : 'تم تحديث حالة المرشد بنجاح',
-          guide: guideRes.recordset[0] || null
+          message: status === 'موثق' ? 'تم اعتماد وتفعيل حساب المرشد السياحي بالداش بورد بنجاح' : 'تم رفض طلب المرشد وتحديث الحالة في قاعدة البيانات بنجاح',
+          guide: guide
         });
       } catch (err) {
         console.error('[Guide Verification Error]:', err.message);
@@ -1448,15 +1678,15 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // 9.1 Guides: POST (Registration & Updates)
+    // 9.1 Guides: POST (Registration & Updates - Strictly 3NF Normalized Architecture)
     if (pathname === '/api/db/guides' && req.method === 'POST') {
       const body = await readBody(req);
       const {
         license_number, full_name, phone_number, email, password,
         years_of_experience, price_per_day, bio, digital_certificate_file,
         verification_status, speaks_english, speaks_french, speaks_italian,
-        gender, working_days, operating_regions, avatar, title, certificate,
-        certificate_name, place_ids, places
+        gender, working_days, avatar, title, place_ids, places,
+        operating_regions, primaryRegion
       } = body;
 
       if (!license_number || !full_name || !phone_number) {
@@ -1471,7 +1701,23 @@ const server = http.createServer(async (req, res) => {
       const hashedPass = shouldUpdatePass ? hashPassword(rawPassword) : hashPassword('password123');
       const safeExp = Math.max(2, Number(years_of_experience) || 2);
 
-      // Check if a guide with this phone, email, or license already exists
+      // Check whether this guide is already existing or registering fresh
+      let isNewGuide = true;
+      try {
+        const existChk = await db.request()
+          .input('lic', sql.NVarChar(50), cleanLic)
+          .query('SELECT license_number, verification_status FROM tour_guides WHERE license_number = @lic');
+        if (existChk.recordset && existChk.recordset.length > 0) {
+          isNewGuide = false;
+        }
+      } catch (e) {}
+
+      // Academic Rule: Newly registered guides default strictly to 'قيد المراجعة' awaiting Admin decision
+      const finalVerificationStatus = isNewGuide
+        ? 'قيد المراجعة'
+        : String(verification_status || 'قيد المراجعة').trim();
+
+      // Check if another guide already uses this phone or email
       try {
         const conflictCheck = await db.request()
           .input('lic', sql.NVarChar(50), cleanLic)
@@ -1480,34 +1726,27 @@ const server = http.createServer(async (req, res) => {
           .query(`
             SELECT license_number, full_name, phone_number, email, verification_status
             FROM tour_guides
-            WHERE license_number = @lic OR phone_number = @phone OR email = @email
+            WHERE (phone_number = @phone OR email = @email) AND license_number <> @lic
           `);
 
         if (conflictCheck.recordset && conflictCheck.recordset.length > 0) {
-          for (const existing of conflictCheck.recordset) {
-            // If phone or email matches an existing guide with DIFFERENT license number
-            if (existing.license_number !== cleanLic) {
-              if (existing.verification_status === 'موثق') {
-                return sendJson(res, 400, {
-                  success: false,
-                  error: `رقم الهاتف (${cleanPhone}) مسجل مسبقاً بحساب مرشد سياحي معتمد في المنصة. يرجى تسجيل الدخول إلى حسابك أو استخدام رقم هاتف آخر.`
-                });
-              } else {
-                // If it is still pending verification, clean up old pending submission so the new one replaces it
-                const cleanOld = db.request();
-                cleanOld.input('oldLic', sql.NVarChar(50), existing.license_number);
-                await cleanOld.query(`
-                  DELETE FROM guide_places WHERE license_number = @oldLic;
-                  DELETE FROM tour_guides WHERE license_number = @oldLic;
-                `);
-              }
-            }
-          }
+          const conflict = conflictCheck.recordset[0];
+          return sendJson(res, 400, {
+            success: false,
+            error: `رقم الهاتف (${cleanPhone}) أو البريد (${cleanEmail}) مسجل مسبقاً لمرشد آخر في المنصة.`
+          });
         }
       } catch (confErr) {
         console.warn('[Guide conflict check warning]:', confErr.message);
       }
 
+      // Optimize avatar storage: if Base64 string, persist to disk file to avoid DB bloat
+      let cleanAvatar = String(avatar || '').trim();
+      if (cleanAvatar.startsWith('data:image/')) {
+        cleanAvatar = saveBase64ImageIfPresent(cleanAvatar, `guide-${cleanLic}`, 1);
+      }
+
+      // Upsert into master tour_guides table (Only valid 16 normalized columns)
       const request = db.request();
       request.input('license_number', sql.NVarChar(50), cleanLic);
       request.input('full_name', sql.NVarChar(150), String(full_name).trim());
@@ -1518,17 +1757,12 @@ const server = http.createServer(async (req, res) => {
       request.input('years_of_experience', sql.Int, safeExp);
       request.input('price_per_day', sql.Decimal(10, 2), Number(price_per_day) || 150);
       request.input('bio', sql.NVarChar(sql.MAX), String(bio || '').trim());
-      request.input('verification_status', sql.NVarChar(50), String(verification_status || 'بانتظار التوثيق').trim());
+      request.input('verification_status', sql.NVarChar(50), finalVerificationStatus);
       request.input('speaks_english', sql.Bit, speaks_english ? 1 : 0);
       request.input('speaks_french', sql.Bit, speaks_french ? 1 : 0);
       request.input('speaks_italian', sql.Bit, speaks_italian ? 1 : 0);
       request.input('gender', sql.NVarChar(10), String(gender || 'male').trim());
-      request.input('working_days', sql.NVarChar(sql.MAX), String(working_days || '').trim());
-      request.input('operating_regions', sql.NVarChar(sql.MAX), String(operating_regions || '').trim());
-      request.input('avatar', sql.NVarChar(sql.MAX), String(avatar || '').trim());
-      request.input('title', sql.NVarChar(150), String(title || 'مرشد سياحي معتمد').trim());
-      request.input('certificate', sql.NVarChar(sql.MAX), String(certificate || 'ترخيص رسمي صادر من وزارة السياحة').trim());
-      request.input('certificate_name', sql.NVarChar(255), String(certificate_name || 'ترخيص_سياحي.pdf').trim());
+      request.input('avatar', sql.NVarChar(sql.MAX), cleanAvatar);
       request.input('digital_certificate_file', sql.NVarChar(sql.MAX), String(digital_certificate_file || '').trim());
 
       try {
@@ -1552,12 +1786,7 @@ const server = http.createServer(async (req, res) => {
                 speaks_french = @speaks_french,
                 speaks_italian = @speaks_italian,
                 gender = @gender,
-                working_days = @working_days,
-                operating_regions = @operating_regions,
                 avatar = CASE WHEN @avatar <> '' THEN @avatar ELSE avatar END,
-                title = @title,
-                certificate = CASE WHEN @certificate <> '' THEN @certificate ELSE certificate END,
-                certificate_name = CASE WHEN @certificate_name <> '' THEN @certificate_name ELSE certificate_name END,
                 digital_certificate_file = CASE WHEN @digital_certificate_file <> '' THEN @digital_certificate_file ELSE digital_certificate_file END
             WHERE license_number = @license_number;
           END
@@ -1566,22 +1795,17 @@ const server = http.createServer(async (req, res) => {
             INSERT INTO tour_guides (
               license_number, full_name, phone_number, email, password, years_of_experience,
               price_per_day, bio, verification_status, speaks_english, speaks_french, speaks_italian,
-              gender, working_days, operating_regions, avatar, title,
-              certificate, certificate_name, digital_certificate_file
+              gender, avatar, digital_certificate_file
             ) VALUES (
               @license_number, @full_name, @phone_number, @email, @hashedPassword, @years_of_experience,
               @price_per_day, @bio, @verification_status, @speaks_english, @speaks_french, @speaks_italian,
-              @gender, @working_days, @operating_regions, @avatar, @title,
-              @certificate, @certificate_name, @digital_certificate_file
+              @gender, @avatar, @digital_certificate_file
             );
           END
         `);
       } catch (dbErr) {
         console.error('[Guide Save Error]:', dbErr.message);
         if (dbErr.message.includes('UQ__tour_gui') || dbErr.message.includes('UNIQUE KEY')) {
-          if (dbErr.message.includes(cleanPhone)) {
-            return sendJson(res, 400, { success: false, error: `رقم الهاتف (${cleanPhone}) مسجل مسبقاً في المنصة لمرشد آخر.` });
-          }
           return sendJson(res, 400, { success: false, error: 'بيانات المرشد (رقم الترخيص أو الهاتف أو البريد) مسجلة مسبقاً في المنصة.' });
         }
         if (dbErr.message.includes('chk_experience')) {
@@ -1590,7 +1814,49 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { success: false, error: dbErr.message || 'فشل حفظ بيانات المرشد في قاعدة البيانات' });
       }
 
-      // Pure 3NF Relational Junction: Sync guide_places (Landmarks of Expertise)
+      // Sync Normalized Child Table: guide_working_days (1NF)
+      try {
+        let daysList = [];
+        if (Array.isArray(working_days)) {
+          daysList = working_days;
+        } else if (typeof working_days === 'string' && working_days.trim()) {
+          try {
+            const parsed = JSON.parse(working_days);
+            if (Array.isArray(parsed)) daysList = parsed;
+          } catch (_) {
+            daysList = working_days.split(',').map(s => s.trim()).filter(Boolean);
+          }
+        }
+
+        const dayCodeMap = {
+          'sat': 'السبت', 'sun': 'الأحد', 'mon': 'الاثنين', 'tue': 'الثلاثاء',
+          'wed': 'الأربعاء', 'thu': 'الخميس', 'fri': 'الجمعة',
+          'Sa': 'السبت', 'Su': 'الأحد', 'Mo': 'الاثنين', 'Tu': 'الثلاثاء',
+          'We': 'الأربعاء', 'Th': 'الخميس', 'Fr': 'الجمعة'
+        };
+
+        const standardDays = daysList.map(d => dayCodeMap[d] || d).filter(Boolean);
+
+        if (standardDays.length > 0) {
+          const delDays = db.request();
+          delDays.input('lic', sql.VarChar(50), cleanLic);
+          await delDays.query('DELETE FROM guide_working_days WHERE license_number = @lic');
+
+          for (const day of standardDays) {
+            const insDay = db.request();
+            insDay.input('lic', sql.VarChar(50), cleanLic);
+            insDay.input('day', sql.NVarChar(50), String(day).trim());
+            await insDay.query(`
+              IF NOT EXISTS (SELECT 1 FROM guide_working_days WHERE license_number = @lic AND day_of_week = @day)
+                INSERT INTO guide_working_days (license_number, day_of_week) VALUES (@lic, @day);
+            `);
+          }
+        }
+      } catch (daysErr) {
+        console.warn('[guide_working_days sync warning]:', daysErr.message);
+      }
+
+      // Sync Normalized Junction Table: guide_places (Landmarks of Expertise)
       const rawPlaces = Array.isArray(place_ids) ? place_ids : (Array.isArray(places) ? places : []);
       if (rawPlaces.length > 0) {
         try {
@@ -1617,7 +1883,64 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      return sendJson(res, 201, { success: true, message: 'تم حفظ بيانات المرشد في DelniDB بنجاح' });
+      // Sync Normalized Table: guide_operating_regions (1NF)
+      let regionsList = [];
+      if (Array.isArray(operating_regions)) {
+        regionsList = operating_regions;
+      } else if (typeof operating_regions === 'string' && operating_regions.trim()) {
+        try {
+          const parsed = JSON.parse(operating_regions);
+          if (Array.isArray(parsed)) regionsList = parsed;
+        } catch (_) {
+          regionsList = operating_regions.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+      if (regionsList.length > 0) {
+        try {
+          const delReg = db.request();
+          delReg.input('lic', sql.VarChar(50), cleanLic);
+          await delReg.query('DELETE FROM guide_operating_regions WHERE license_number = @lic');
+          for (const reg of regionsList) {
+            const cleanReg = String(reg).trim();
+            if (cleanReg) {
+              const insReg = db.request();
+              insReg.input('lic', sql.VarChar(50), cleanLic);
+              insReg.input('reg', sql.NVarChar(100), cleanReg);
+              await insReg.query(`
+                IF NOT EXISTS (SELECT 1 FROM guide_operating_regions WHERE license_number = @lic AND region = @reg)
+                  INSERT INTO guide_operating_regions (license_number, region) VALUES (@lic, @reg);
+              `);
+            }
+          }
+        } catch (regErr) {
+          console.warn('[guide_operating_regions sync warning]:', regErr.message);
+        }
+      }
+
+      // Academic Flow: When a new guide registers, trigger real-time notification to Admin for review & approval
+      if (isNewGuide) {
+        try {
+          await createNotificationInDb(db, {
+            type: 'system',
+            title: `🧑‍💼 طلب تسجيل مرشد سياحي جديد (${full_name})`,
+            body: `قدم المرشد (${full_name}) برقم ترخيص (${cleanLic}) طلباً للانضمام إلى منصة دَلّني، وبياناته ووثائقه بانتظار مراجعة وتدقيق الإدارة لاتخاذ قرار الاعتماد أو الرفض.`,
+            recipient_role: 'admin',
+            link: '/dashboard/admin',
+            dedupe_key: `guide_reg_${cleanLic}`
+          });
+        } catch (notifErr) {
+          console.warn('[Admin Notification Warning]:', notifErr.message);
+        }
+      }
+
+      return sendJson(res, 201, { 
+        success: true, 
+        message: isNewGuide 
+          ? 'تم إرسال طلب تسجيلك كمرشد سياحي بنجاح، وهو الآن قيد مراجعة وتدقيق الإدارة لاعتماده بالداش بورد' 
+          : 'تم حفظ وتحديث بيانات المرشد في DelniDB بنجاح',
+        license_number: cleanLic,
+        verification_status: finalVerificationStatus
+      });
     }
 
     // 9.2 Guides: DELETE
@@ -1631,7 +1954,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف المرشد بنجاح من DelniDB' });
     }
 
-    // 10. Hotels: GET (Includes live rating and review counts from reviews_hotels)
+    // 10. Hotels: GET (Includes live rating, review counts, and normalized amenities from hotel_amenities)
     if (pathname === '/api/db/hotels' && req.method === 'GET') {
       const result = await db.request().query(`
         SELECT h.*,
@@ -1640,7 +1963,25 @@ const server = http.createServer(async (req, res) => {
         FROM hotels h
         ORDER BY h.hotel_name ASC
       `);
-      return sendJson(res, 200, { success: true, data: result.recordset });
+
+      let amenitiesRes = { recordset: [] };
+      try {
+        amenitiesRes = await db.request().query(`
+          SELECT hotel_id, amenity FROM hotel_amenities ORDER BY hotel_id, amenity
+        `);
+      } catch (e) {
+        console.warn('[hotel_amenities fetch warning]:', e.message);
+      }
+
+      const hotelsData = (result.recordset || []).map(h => {
+        const myAmenities = (amenitiesRes.recordset || []).filter(a => a.hotel_id === h.hotel_id).map(a => a.amenity);
+        return {
+          ...h,
+          amenities: myAmenities
+        };
+      });
+
+      return sendJson(res, 200, { success: true, data: hotelsData });
     }
 
     // 10.1 Hotels: POST
@@ -1650,7 +1991,7 @@ const server = http.createServer(async (req, res) => {
         hotel_id, id, hotel_name, name, city, address_details, address,
         phone_number, phone, star_rating, stars, partnership_status,
         hotel_photo_1, hotel_photo_2, hotel_photo_3, hotel_photo_4, hotel_photo_5,
-        verification_status, property_type, amenities, contract_date
+        property_type, amenities
       } = body;
 
       const cleanId = String(hotel_id || id || `H-0${Date.now().toString().slice(-3)}`).trim();
@@ -1672,7 +2013,8 @@ const server = http.createServer(async (req, res) => {
       request.input('hotel_name', sql.NVarChar(200), cleanName);
       request.input('city', sql.NVarChar(100), String(city || 'طرابلس').trim());
       request.input('address_details', sql.NVarChar(500), String(address_details || address || 'ليبيا').trim());
-      request.input('phone_number', sql.NVarChar(20), String(phone_number || phone || '0910000000').trim());
+      const cleanPhone = String(phone_number || phone || '0910000000').trim();
+      request.input('phone_number', sql.NVarChar(20), cleanPhone);
       request.input('star_rating', sql.Int, Number(star_rating || stars) || 5);
       request.input('partnership_status', sql.NVarChar(100), String(partnership_status || 'نشط').trim());
       request.input('photo_1', sql.NVarChar(sql.MAX), String(hotel_photo_1 || body.photo || '').trim());
@@ -1680,20 +2022,15 @@ const server = http.createServer(async (req, res) => {
       request.input('photo_3', sql.NVarChar(sql.MAX), String(hotel_photo_3 || '').trim());
       request.input('photo_4', sql.NVarChar(sql.MAX), String(hotel_photo_4 || '').trim());
       request.input('photo_5', sql.NVarChar(sql.MAX), String(hotel_photo_5 || '').trim());
-      request.input('verification_status', sql.NVarChar(50), String(verification_status || 'موثق').trim());
       request.input('property_type', sql.NVarChar(100), String(property_type || 'فندق').trim());
-      request.input('amenities', sql.NVarChar(sql.MAX), String(amenities || '').trim());
-      request.input('contract_date', sql.Date, contract_date || new Date());
       request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
       request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
       request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
       request.input('description', sql.NVarChar(sql.MAX), String(body.description || '').trim());
       request.input('working_hours', sql.NVarChar(150), String(body.working_hours || 'خدمة 24/7 على مدار الساعة').trim());
-      const cleanPhone = String(phone_number || phone || '0910000000').trim();
-      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
-      let rawDisc = body.discount_percentage === undefined || body.discount_percentage === '' ? null : Number(body.discount_percentage);
-      if (rawDisc !== null && (isNaN(rawDisc) || rawDisc < 0)) rawDisc = 0;
-      if (rawDisc !== null && rawDisc > 100) rawDisc = 100;
+      let rawDisc = body.discount_percentage === undefined || body.discount_percentage === '' ? 15 : Number(body.discount_percentage);
+      if (isNaN(rawDisc) || rawDisc < 0) rawDisc = 0;
+      if (rawDisc > 100) rawDisc = 100;
       request.input('discount_percentage', sql.Decimal(5, 2), rawDisc);
 
       await request.query(`
@@ -1711,14 +2048,11 @@ const server = http.createServer(async (req, res) => {
               hotel_photo_3 = CASE WHEN @photo_3 <> '' THEN @photo_3 ELSE hotel_photo_3 END,
               hotel_photo_4 = CASE WHEN @photo_4 <> '' THEN @photo_4 ELSE hotel_photo_4 END,
               hotel_photo_5 = CASE WHEN @photo_5 <> '' THEN @photo_5 ELSE hotel_photo_5 END,
-              verification_status = @verification_status,
               property_type = @property_type,
-              amenities = @amenities,
               google_maps_url = @google_maps_url,
               description = @description,
               working_hours = @working_hours,
               discount_percentage = COALESCE(@discount_percentage, discount_percentage),
-              whatsapp = @whatsapp,
               contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
               contract_end_date = NULLIF(@contract_end_date, '')
           WHERE hotel_id = @hotel_id;
@@ -1728,18 +2062,52 @@ const server = http.createServer(async (req, res) => {
           INSERT INTO hotels (
             hotel_id, hotel_name, city, address_details, phone_number, star_rating,
             partnership_status, hotel_photo_1, hotel_photo_2, hotel_photo_3, hotel_photo_4,
-            hotel_photo_5, verification_status, property_type, amenities, contract_date, google_maps_url,
-            description, working_hours, discount_percentage, whatsapp,
+            hotel_photo_5, property_type, google_maps_url,
+            description, working_hours, discount_percentage,
             contract_start_date, contract_end_date
           ) VALUES (
             @hotel_id, @hotel_name, @city, @address_details, @phone_number, @star_rating,
             @partnership_status, @photo_1, @photo_2, @photo_3, @photo_4,
-            @photo_5, @verification_status, @property_type, @amenities, @contract_date, @google_maps_url,
-            @description, @working_hours, COALESCE(@discount_percentage, 0), @whatsapp,
-            @contract_start_date, NULLIF(@contract_end_date, '')
+            @photo_5, @property_type, @google_maps_url,
+            @description, @working_hours, @discount_percentage,
+            @contract_start_date, @contract_end_date
           );
         END
       `);
+
+      // Sync Normalized Child Table: hotel_amenities (1NF)
+      let amList = [];
+      if (Array.isArray(amenities)) {
+        amList = amenities;
+      } else if (typeof amenities === 'string' && amenities.trim()) {
+        try {
+          const parsed = JSON.parse(amenities);
+          if (Array.isArray(parsed)) amList = parsed;
+        } catch (_) {
+          amList = amenities.split(/[,،]/).map(s => s.trim()).filter(Boolean);
+        }
+      }
+      if (amList.length > 0) {
+        try {
+          const delAm = db.request();
+          delAm.input('hid', sql.VarChar(50), cleanId);
+          await delAm.query('DELETE FROM hotel_amenities WHERE hotel_id = @hid');
+          for (const am of amList) {
+            const cleanAm = String(am).trim();
+            if (cleanAm) {
+              const insAm = db.request();
+              insAm.input('hid', sql.VarChar(50), cleanId);
+              insAm.input('amenity', sql.NVarChar(100), cleanAm);
+              await insAm.query(`
+                IF NOT EXISTS (SELECT 1 FROM hotel_amenities WHERE hotel_id = @hid AND amenity = @amenity)
+                  INSERT INTO hotel_amenities (hotel_id, amenity) VALUES (@hid, @amenity);
+              `);
+            }
+          }
+        } catch (amErr) {
+          console.warn('[hotel_amenities sync warning]:', amErr.message);
+        }
+      }
 
       return sendJson(res, 201, { success: true, message: 'تم حفظ الفندق في DelniDB بنجاح' });
     }
@@ -1755,7 +2123,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'تم حذف الفندق من DelniDB بنجاح' });
     }
 
-    // 11. Restaurants: GET (Includes live rating and review counts from reviews_facilities)
+    // 11. Restaurants: GET (Includes live rating, review counts, and normalized features from restaurant_features)
     if (pathname === '/api/db/restaurants' && req.method === 'GET') {
       const result = await db.request().query(`
         SELECT r.*,
@@ -1764,7 +2132,25 @@ const server = http.createServer(async (req, res) => {
         FROM restaurants_cafes r
         ORDER BY r.facility_name ASC
       `);
-      return sendJson(res, 200, { success: true, data: result.recordset });
+
+      let featuresRes = { recordset: [] };
+      try {
+        featuresRes = await db.request().query(`
+          SELECT facility_id, feature FROM restaurant_features ORDER BY facility_id, feature
+        `);
+      } catch (e) {
+        console.warn('[restaurant_features fetch warning]:', e.message);
+      }
+
+      const restaurantsData = (result.recordset || []).map(r => {
+        const myFeatures = (featuresRes.recordset || []).filter(f => f.facility_id === r.facility_id).map(f => f.feature);
+        return {
+          ...r,
+          features: myFeatures
+        };
+      });
+
+      return sendJson(res, 200, { success: true, data: restaurantsData });
     }
 
     // 11.1 Restaurants: POST
@@ -1774,8 +2160,8 @@ const server = http.createServer(async (req, res) => {
         facility_id, id, facility_name, name, facility_type, type,
         city, address_details, address, phone_number, phone,
         description, facility_image_1, facility_image_2, facility_image_3,
-        facility_image_4, facility_image_5, verification_status,
-        working_hours, features, contract_date
+        facility_image_4, facility_image_5, working_hours, features,
+        google_maps_url, discount_percentage
       } = body;
 
       const cleanId = String(facility_id || id || `R-0${Date.now().toString().slice(-3)}`).trim();
@@ -1792,33 +2178,27 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      const cleanPhone = String(phone_number || phone || '0910000000').trim();
+
       const request = db.request();
       request.input('facility_id', sql.NVarChar(50), cleanId);
       request.input('facility_name', sql.NVarChar(200), cleanName);
       request.input('facility_type', sql.NVarChar(100), String(facility_type || type || 'مطعم').trim());
       request.input('city', sql.NVarChar(100), String(city || 'طرابلس').trim());
       request.input('address_details', sql.NVarChar(500), String(address_details || address || 'ليبيا').trim());
-      request.input('phone_number', sql.NVarChar(20), String(phone_number || phone || '0910000000').trim());
+      request.input('phone_number', sql.NVarChar(20), cleanPhone);
       request.input('description', sql.NVarChar(sql.MAX), String(description || '').trim());
       request.input('img_1', sql.NVarChar(sql.MAX), String(facility_image_1 || body.photo || '').trim());
       request.input('img_2', sql.NVarChar(sql.MAX), String(facility_image_2 || '').trim());
       request.input('img_3', sql.NVarChar(sql.MAX), String(facility_image_3 || '').trim());
       request.input('img_4', sql.NVarChar(sql.MAX), String(facility_image_4 || '').trim());
       request.input('img_5', sql.NVarChar(sql.MAX), String(facility_image_5 || '').trim());
-      request.input('verification_status', sql.NVarChar(50), String(verification_status || 'موثق').trim());
       request.input('working_hours', sql.NVarChar(100), String(working_hours || '09:00 ص - 12:00 م').trim());
-      request.input('features', sql.NVarChar(sql.MAX), String(features || '').trim());
-      request.input('contract_date', sql.Date, contract_date || new Date());
+      request.input('google_maps_url', sql.NVarChar(500), String(google_maps_url || '').trim());
+      request.input('discount_percentage', sql.Int, Number(discount_percentage) || 0);
       request.input('contract_start_date', sql.NVarChar(50), String(body.contract_start_date || new Date().toISOString().slice(0, 10)).trim());
       request.input('contract_end_date', sql.NVarChar(50), String(body.contract_end_date || '').trim());
       request.input('partnership_status', sql.NVarChar(100), String(body.partnership_status || 'نشط').trim());
-      request.input('google_maps_url', sql.NVarChar(500), String(body.google_maps_url || '').trim());
-      const cleanPhone = String(phone_number || phone || '0910000000').trim();
-      request.input('whatsapp', sql.NVarChar(50), String(body.whatsapp || cleanPhone).trim());
-      let rawDisc = body.discount_percentage === undefined || body.discount_percentage === '' ? null : Number(body.discount_percentage);
-      if (rawDisc !== null && (isNaN(rawDisc) || rawDisc < 0)) rawDisc = 0;
-      if (rawDisc !== null && rawDisc > 100) rawDisc = 100;
-      request.input('discount_percentage', sql.Decimal(5, 2), rawDisc);
 
       await request.query(`
         IF EXISTS (SELECT 1 FROM restaurants_cafes WHERE facility_id = @facility_id)
@@ -1835,12 +2215,9 @@ const server = http.createServer(async (req, res) => {
               facility_image_3 = CASE WHEN @img_3 <> '' THEN @img_3 ELSE facility_image_3 END,
               facility_image_4 = CASE WHEN @img_4 <> '' THEN @img_4 ELSE facility_image_4 END,
               facility_image_5 = CASE WHEN @img_5 <> '' THEN @img_5 ELSE facility_image_5 END,
-              verification_status = @verification_status,
               working_hours = @working_hours,
-              features = @features,
               google_maps_url = @google_maps_url,
               discount_percentage = COALESCE(@discount_percentage, discount_percentage),
-              whatsapp = @whatsapp,
               partnership_status = @partnership_status,
               contract_start_date = COALESCE(NULLIF(@contract_start_date, ''), contract_start_date),
               contract_end_date = NULLIF(@contract_end_date, '')
@@ -1852,19 +2229,51 @@ const server = http.createServer(async (req, res) => {
             facility_id, facility_name, facility_type, city, address_details,
             phone_number, description, facility_image_1, facility_image_2,
             facility_image_3, facility_image_4, facility_image_5,
-            verification_status, working_hours, features, contract_date, google_maps_url,
-            discount_percentage, whatsapp, partnership_status,
-            contract_start_date, contract_end_date
+            working_hours, google_maps_url, discount_percentage,
+            partnership_status, contract_start_date, contract_end_date
           ) VALUES (
             @facility_id, @facility_name, @facility_type, @city, @address_details,
             @phone_number, @description, @img_1, @img_2,
             @img_3, @img_4, @img_5,
-            @verification_status, @working_hours, @features, @contract_date, @google_maps_url,
-            COALESCE(@discount_percentage, 0), @whatsapp, @partnership_status,
-            @contract_start_date, NULLIF(@contract_end_date, '')
+            @working_hours, @google_maps_url, @discount_percentage,
+            @partnership_status, @contract_start_date, @contract_end_date
           );
         END
       `);
+
+      // Sync Normalized Child Table: restaurant_features (1NF)
+      let featList = [];
+      if (Array.isArray(features)) {
+        featList = features;
+      } else if (typeof features === 'string' && features.trim()) {
+        try {
+          const parsed = JSON.parse(features);
+          if (Array.isArray(parsed)) featList = parsed;
+        } catch (_) {
+          featList = features.split(/[,،]/).map(s => s.trim()).filter(Boolean);
+        }
+      }
+      if (featList.length > 0) {
+        try {
+          const delFeat = db.request();
+          delFeat.input('fid', sql.VarChar(50), cleanId);
+          await delFeat.query('DELETE FROM restaurant_features WHERE facility_id = @fid');
+          for (const feat of featList) {
+            const cleanFeat = String(feat).trim();
+            if (cleanFeat) {
+              const insFeat = db.request();
+              insFeat.input('fid', sql.VarChar(50), cleanId);
+              insFeat.input('feature', sql.NVarChar(100), cleanFeat);
+              await insFeat.query(`
+                IF NOT EXISTS (SELECT 1 FROM restaurant_features WHERE facility_id = @fid AND feature = @feature)
+                  INSERT INTO restaurant_features (facility_id, feature) VALUES (@fid, @feature);
+              `);
+            }
+          }
+        } catch (featErr) {
+          console.warn('[restaurant_features sync warning]:', featErr.message);
+        }
+      }
 
       return sendJson(res, 201, { success: true, message: 'تم حفظ المطعم في DelniDB بنجاح' });
     }
@@ -1996,7 +2405,7 @@ const server = http.createServer(async (req, res) => {
         SELECT dt.*, 
                g.full_name as guide_name, 
                g.phone_number as guide_phone, 
-               g.title as guide_title, 
+               NULL as guide_title, 
                g.avatar as guide_avatar,
                v.vehicle_type as vehicle_model,
                v.seating_capacity as vehicle_capacity,
@@ -2179,46 +2588,6 @@ const server = http.createServer(async (req, res) => {
       const coverPhotoPath = finalSavedImages[0] || '/assets/dest-leptis-theater.jpg';
       const galleryStr = finalSavedImages.join(',');
 
-      // Conflict Prevention: Ensure vehicle is not assigned to another trip on the same departure date
-      if (cleanPlate && body.departure_date) {
-        const vChk = db.request();
-        vChk.input('chk_plate', sql.NVarChar(50), cleanPlate);
-        vChk.input('chk_dep', sql.DateTime, new Date(body.departure_date));
-        vChk.input('chk_id', sql.VarChar(50), cleanId);
-        const vConflict = await vChk.query(`
-          SELECT trip_title FROM daily_trips 
-          WHERE vehicle_plate = @chk_plate 
-            AND CAST(departure_date AS DATE) = CAST(@chk_dep AS DATE) 
-            AND daily_trip_id <> @chk_id
-        `);
-        if (vConflict.recordset?.length > 0) {
-          return sendJson(res, 400, {
-            success: false,
-            error: `تعارض في أسطول المركبات: المركبة (${cleanPlate}) مشغولة ومجدولة بالفعل لرحلة أخرى ("${vConflict.recordset[0].trip_title}") في نفس تاريخ الانطلاق.`
-          });
-        }
-      }
-
-      // Conflict Prevention: Ensure guide is not assigned to another trip on the same departure date
-      if (guideLic && body.departure_date) {
-        const gChk = db.request();
-        gChk.input('chk_glic', sql.VarChar(50), guideLic);
-        gChk.input('chk_dep', sql.DateTime, new Date(body.departure_date));
-        gChk.input('chk_id', sql.VarChar(50), cleanId);
-        const gConflict = await gChk.query(`
-          SELECT trip_title FROM daily_trips 
-          WHERE guide_license_number = @chk_glic 
-            AND CAST(departure_date AS DATE) = CAST(@chk_dep AS DATE) 
-            AND daily_trip_id <> @chk_id
-        `);
-        if (gConflict.recordset?.length > 0) {
-          return sendJson(res, 400, {
-            success: false,
-            error: `تعارض في جدول المرشدين: المرشد السياحي (${guideLic}) مرتبط برحلة أخرى ("${gConflict.recordset[0].trip_title}") في نفس تاريخ الانطلاق.`
-          });
-        }
-      }
-
       // Parse recurring days list (1 or 2 days per week)
       let cleanDaysList = [];
       if (Array.isArray(recurring_days)) cleanDaysList = recurring_days;
@@ -2248,8 +2617,6 @@ const server = http.createServer(async (req, res) => {
       request.input('avail_seats', sql.Int, cleanAvail);
       request.input('guide_lic', sql.VarChar(50), guideLic);
       request.input('departure', sql.NVarChar(100), String(departure_city || 'طرابلس').trim());
-      request.input('destination', sql.NVarChar(100), String(destination_city || destination || 'الوجهة السياحية').trim());
-      request.input('maps_url', sql.NVarChar(500), String(google_maps_url || '').trim());
       request.input('vehicle_plate', sql.NVarChar(50), cleanPlate);
       request.input('restaurant_id', sql.NVarChar(50), cleanRestaurant);
 
@@ -2261,7 +2628,6 @@ const server = http.createServer(async (req, res) => {
               description = @description,
               price_per_seat = @price,
               is_active = @is_active,
-              photo = @img1,
               photo_1 = @img1,
               photo_2 = @img2,
               photo_3 = @img3,
@@ -2271,8 +2637,6 @@ const server = http.createServer(async (req, res) => {
               available_seats = @avail_seats,
               guide_license_number = @guide_lic,
               departure_city = @departure,
-              destination_city = @destination,
-              google_maps_url = @maps_url,
               vehicle_plate = COALESCE(@vehicle_plate, vehicle_plate),
               restaurant_id = COALESCE(@restaurant_id, restaurant_id)
           WHERE daily_trip_id = @id;
@@ -2281,15 +2645,15 @@ const server = http.createServer(async (req, res) => {
         BEGIN
           INSERT INTO daily_trips (
             daily_trip_id, trip_title, description, price_per_seat, is_active,
-            photo, photo_1, photo_2, photo_3, photo_4, photo_5,
+            photo_1, photo_2, photo_3, photo_4, photo_5,
             max_capacity, available_seats, guide_license_number,
-            departure_city, destination_city, google_maps_url,
+            departure_city,
             vehicle_plate, restaurant_id
           ) VALUES (
             @id, @title, @description, @price, @is_active,
-            @img1, @img1, @img2, @img3, @img4, @img5,
+            @img1, @img2, @img3, @img4, @img5,
             @max_cap, @avail_seats, @guide_lic,
-            @departure, @destination, @maps_url,
+            @departure,
             @vehicle_plate, @restaurant_id
           );
         END
@@ -2538,8 +2902,8 @@ const server = http.createServer(async (req, res) => {
                CONVERT(VARCHAR(10), o.start_date, 120) as start_date,
                CONVERT(VARCHAR(10), o.end_date, 120) as end_date,
                o.badge,
-               dt.trip_title, dt.price_per_seat, dt.departure_city, dt.destination_city,
-               COALESCE(dt.photo_1, dt.photo) as trip_photo, COALESCE(dt.photo_1, dt.photo) as trip_gallery
+               dt.trip_title, dt.price_per_seat, dt.departure_city, NULL as destination_city,
+               dt.photo_1 as trip_photo, dt.photo_1 as trip_gallery
         FROM offers_daily_trips o
         LEFT JOIN daily_trips dt ON o.daily_trip_id = dt.daily_trip_id
         ORDER BY o.offer_daily_id DESC
@@ -2564,7 +2928,7 @@ const server = http.createServer(async (req, res) => {
 
       // Check if target daily trip exists
       const tripCheck = await db.request().input('tid', sql.VarChar(50), cleanTripId).query(`
-        SELECT daily_trip_id, trip_title, price_per_seat, photo FROM daily_trips WHERE daily_trip_id = @tid
+        SELECT daily_trip_id, trip_title, price_per_seat, photo_1 as photo FROM daily_trips WHERE daily_trip_id = @tid
       `);
       if (!tripCheck.recordset || tripCheck.recordset.length === 0) {
         return sendJson(res, 404, { success: false, error: 'الرحلة اليومية المحددة غير موجودة في قاعدة البيانات' });
@@ -2665,7 +3029,7 @@ const server = http.createServer(async (req, res) => {
         SELECT wt.*, 
                g.full_name as guide_name, 
                g.phone_number as guide_phone, 
-               g.title as guide_title, 
+               NULL as guide_title, 
                g.avatar as guide_avatar,
                v.vehicle_type as vehicle_model,
                v.seating_capacity as vehicle_capacity,
@@ -3193,7 +3557,7 @@ const server = http.createServer(async (req, res) => {
 
       // Check if target weekly trip exists
       const tripCheck = await db.request().input('tid', sql.VarChar(50), cleanTripId).query(`
-        SELECT weekly_trip_id, trip_title, seat_per_price, photo FROM weekly_trips WHERE weekly_trip_id = @tid
+        SELECT weekly_trip_id, trip_title, seat_per_price, photo_1 as photo FROM weekly_trips WHERE weekly_trip_id = @tid
       `);
       if (!tripCheck.recordset || tripCheck.recordset.length === 0) {
         return sendJson(res, 404, { success: false, error: 'الرحلة الأسبوعية المحددة غير موجودة في قاعدة البيانات' });
@@ -3290,63 +3654,8 @@ const server = http.createServer(async (req, res) => {
 
     // 14.5 Private Trips: GET
     if (pathname === '/api/db/private_trips' && req.method === 'GET') {
-      const result = await db.request().query(`
-        SELECT pt.private_trip_id,
-               pt.status_order,
-               pt.customer_name,
-               pt.customer_phone,
-               pt.preferred_start_date,
-               pt.duration_days,
-               pt.number_of_companions,
-               pt.guide_license_number,
-               pt.customer_description,
-               pt.customer_requirements,
-               pt.tourist_id,
-               pt.quoted_price,
-               pt.admin_itinerary_plan,
-               COALESCE(pt.assigned_vehicle, ptv.plate_number) AS assigned_vehicle,
-               g.full_name as guide_name, 
-               g.phone_number as guide_phone
-        FROM private_trips pt
-        LEFT JOIN tour_guides g ON pt.guide_license_number = g.license_number
-        LEFT JOIN (
-          SELECT private_trip_id, MAX(plate_number) as plate_number
-          FROM private_trip_vehicles
-          GROUP BY private_trip_id
-        ) ptv ON pt.private_trip_id = ptv.private_trip_id
-        ORDER BY pt.preferred_start_date DESC
-      `);
-
-      try {
-        const placesRes = await db.request().query(`
-          SELECT ptp.private_trip_id, ptp.place_id, ptp.visit_order,
-                 p.place_name, p.city, p.region, p.category, p.place_image
-          FROM places_trip_private ptp
-          JOIN places_tourist p ON ptp.place_id = p.place_id
-          ORDER BY ptp.visit_order ASC
-        `);
-        const placesMap = {};
-        for (const row of placesRes.recordset) {
-          if (!placesMap[row.private_trip_id]) placesMap[row.private_trip_id] = [];
-          placesMap[row.private_trip_id].push({
-            place_id: row.place_id,
-            place_name: row.place_name,
-            city: row.city,
-            region: row.region,
-            category: row.category,
-            place_image: row.place_image,
-            visit_order: row.visit_order,
-          });
-        }
-        for (const trip of result.recordset) {
-          trip.places = placesMap[trip.private_trip_id] || [];
-          trip.place_ids = (trip.places || []).map(p => p.place_id);
-        }
-      } catch (placesLoadErr) {
-        console.warn('[DelniDB] Could not load private trip places:', placesLoadErr.message);
-      }
-
-      return sendJson(res, 200, { success: true, data: result.recordset });
+      const trips = await getDetailedPrivateTrips(db);
+      return sendJson(res, 200, { success: true, data: trips });
     }
 
     // 14.6 Private Trips: POST (Create / Review / Update)
@@ -3365,17 +3674,64 @@ const server = http.createServer(async (req, res) => {
         customer_requirements,
         tourist_id,
         quoted_price,
-        admin_itinerary_plan,
         assigned_vehicle,
         place_ids,
         places,
+        hotel_ids,
+        hotels,
+        stations,
       } = body;
 
       const cleanId = String(private_trip_id || `PRV-${Date.now().toString().slice(-5)}`).trim();
       const cleanStatus = String(status_order || 'بانتظار تسعير الإدارة').trim();
 
+      // Check if trip was previously cancelled by tourist (Protection: لا يمكن جدولتها بعد الإلغاء)
+      if (cleanId) {
+        try {
+          const statusCheckReq = db.request();
+          statusCheckReq.input('chk_id', sql.VarChar(50), cleanId);
+          const exStatusRes = await statusCheckReq.query('SELECT status_order FROM private_trips WHERE private_trip_id = @chk_id');
+          if (exStatusRes.recordset && exStatusRes.recordset.length > 0) {
+            const currentStatus = String(exStatusRes.recordset[0].status_order || '').trim();
+            const isAlreadyCancelled = currentStatus.includes('ملغاة') || currentStatus.includes('مرفوضة');
+            if (isAlreadyCancelled && cleanStatus !== currentStatus && !cleanStatus.includes('ملغاة')) {
+              return sendJson(res, 400, {
+                success: false,
+                error: 'هذه الرحلة الخاصة ملغاة نهائياً من قبل السائح ولا يمكن جدولتها أو اعتماد تسعيرتها مرة أخرى.'
+              });
+            }
+          }
+        } catch (stErr) {
+          console.warn('[Check Cancelled Status Warning]:', stErr.message);
+        }
+      }
+
       // Tourist Account Verification
       let validTouristId = null;
+      let touristFullName = 'سائح دلّني';
+
+      // If updating an existing private trip, we can inherit existing tourist_id if not re-sent by Admin
+      if (!tourist_id && cleanId) {
+        try {
+          const exCheck = db.request();
+          exCheck.input('ptid', sql.VarChar(50), cleanId);
+          const exRes = await exCheck.query('SELECT tourist_id FROM private_trips WHERE private_trip_id = @ptid');
+          if (exRes.recordset && exRes.recordset.length > 0) {
+            validTouristId = exRes.recordset[0].tourist_id;
+          }
+        } catch (exErr) {
+          console.warn('[Inherit Tourist ID Notice]:', exErr.message);
+        }
+      }
+
+      // 1. Mandatory Tourist Account Validation (الرحلات الخاصة متاحة حصراً لحساب السائح فقط)
+      if (!validTouristId && !tourist_id) {
+        return sendJson(res, 401, {
+          success: false,
+          error: 'حجز الرحلات الخاصة متاح فقط للمستخدمين المسجلين بحساب سائح. يرجى تسجيل الدخول كسائح أولاً.'
+        });
+      }
+
       if (tourist_id) {
         try {
           const tCheck = db.request();
@@ -3383,16 +3739,44 @@ const server = http.createServer(async (req, res) => {
           const tRes = await tCheck.query('SELECT tourist_id, full_name FROM tourists WHERE tourist_id = @tid');
           if (tRes.recordset && tRes.recordset.length > 0) {
             validTouristId = tRes.recordset[0].tourist_id;
+            touristFullName = tRes.recordset[0].full_name || touristFullName;
           } else {
             const altCheck = db.request();
             altCheck.input('val', sql.NVarChar(150), String(tourist_id).trim());
-            const altRes = await altCheck.query('SELECT tourist_id FROM tourists WHERE email = @val OR phone_number = @val');
+            const altRes = await altCheck.query('SELECT tourist_id, full_name FROM tourists WHERE email = @val OR phone_number = @val');
             if (altRes.recordset && altRes.recordset.length > 0) {
               validTouristId = altRes.recordset[0].tourist_id;
+              touristFullName = altRes.recordset[0].full_name || touristFullName;
             }
           }
         } catch (tErr) {
           console.warn('[Tourist Status Check Notice]:', tErr.message);
+        }
+      }
+
+      // 2. Strict 10-day Start Date Validation for New Requests (شرط أن يكون تاريخ الانطلاق بعد 10 أيام على الأقل)
+      let startDateObj = preferred_start_date ? new Date(preferred_start_date) : null;
+      if (!startDateObj || isNaN(startDateObj.getTime())) {
+        if (!cleanId) {
+          return sendJson(res, 400, { success: false, error: 'يرجى تحديد تاريخ انطلاق صالح للرحلة الخاصة.' });
+        }
+        startDateObj = null;
+      }
+
+      // Check date threshold only when creating a new request (or updating unquoted)
+      if (startDateObj && (!cleanId || cleanStatus === 'بانتظار تسعير الإدارة' || cleanStatus === 'قيد الدراسة')) {
+        const minAllowedDate = new Date();
+        minAllowedDate.setHours(0, 0, 0, 0);
+        minAllowedDate.setDate(minAllowedDate.getDate() + 10);
+
+        const checkDate = new Date(startDateObj);
+        checkDate.setHours(0, 0, 0, 0);
+
+        if (checkDate < minAllowedDate) {
+          return sendJson(res, 400, {
+            success: false,
+            error: 'يجب اختيار تاريخ بدء الرحلة بحيث يكون بعد 10 أيام على الأقل من اليوم لإتاحة الوقت لدراسة المسار واعتماده وتجهيز الحافلة والمرشد.'
+          });
         }
       }
 
@@ -3402,20 +3786,32 @@ const server = http.createServer(async (req, res) => {
       }
       const vehPlate = rawPlate ? String(rawPlate).split(',')[0].trim() : null;
 
+      const priceVal = (quoted_price !== null && quoted_price !== undefined) 
+        ? Number(quoted_price) 
+        : ((body.final_price !== null && body.final_price !== undefined) ? Number(body.final_price) : null);
+
+      const expensesVal = (body.additional_expenses !== null && body.additional_expenses !== undefined)
+        ? Number(body.additional_expenses)
+        : ((body.services_fee !== null && body.services_fee !== undefined)
+          ? Number(body.services_fee)
+          : ((body.servicesFee !== null && body.servicesFee !== undefined) ? Number(body.servicesFee) : 0));
+
+      let cleanReqs = String(customer_requirements || customer_description || body.notes || '').trim() || 'برنامج رحلة خاصة بالمعالم السياحية';
+      if (body.admin_notes && String(body.admin_notes).trim() && !cleanReqs.includes(String(body.admin_notes).trim())) {
+        cleanReqs += ` - ملاحظات الإدارة: ${String(body.admin_notes).trim()}`;
+      }
+
       const request = db.request();
       request.input('id', sql.VarChar(50), cleanId);
       request.input('status', sql.NVarChar(50), cleanStatus);
-      request.input('cust_name', sql.NVarChar(100), String(customer_name || 'سائح دلّني').trim());
-      request.input('cust_phone', sql.VarChar(20), String(customer_phone || '').trim());
-      request.input('start_date', sql.Date, preferred_start_date ? new Date(preferred_start_date) : new Date());
+      request.input('start_date', sql.Date, startDateObj);
       request.input('duration', sql.Int, Number(duration_days) || 1);
       request.input('companions', sql.Int, Number(number_of_companions) || 1);
       request.input('guide_lic', sql.NVarChar(50), guide_license_number ? String(guide_license_number).trim() : null);
-      request.input('desc', sql.NVarChar(sql.MAX), String(customer_description || 'برنامج رحلة خاصة بالمعالم السياحية').trim());
-      request.input('reqs', sql.NVarChar(sql.MAX), String(customer_requirements || '').trim());
+      request.input('reqs', sql.NVarChar(sql.MAX), cleanReqs);
       request.input('tourist_id', sql.VarChar(50), validTouristId);
-      request.input('price', sql.Decimal(10, 2), quoted_price !== null && quoted_price !== undefined ? Number(quoted_price) : null);
-      request.input('plan', sql.NVarChar(sql.MAX), admin_itinerary_plan ? String(admin_itinerary_plan).trim() : null);
+      request.input('price', sql.Decimal(10, 2), priceVal);
+      request.input('expenses', sql.Decimal(10, 2), expensesVal);
       request.input('veh_plate', sql.VarChar(30), vehPlate ? String(vehPlate).trim() : null);
 
       await request.query(`
@@ -3423,49 +3819,34 @@ const server = http.createServer(async (req, res) => {
         BEGIN
           UPDATE private_trips
           SET status_order = @status,
-              customer_name = @cust_name,
-              customer_phone = @cust_phone,
-              preferred_start_date = @start_date,
-              duration_days = @duration,
-              number_of_companions = @companions,
-              guide_license_number = @guide_lic,
-              customer_description = @desc,
+              preferred_start_date = COALESCE(@start_date, preferred_start_date),
+              duration_days = COALESCE(NULLIF(@duration, 1), duration_days),
+              number_of_companions = COALESCE(NULLIF(@companions, 1), number_of_companions),
+              guide_license_number = COALESCE(@guide_lic, guide_license_number),
               customer_requirements = @reqs,
-              tourist_id = @tourist_id,
-              quoted_price = @price,
-              admin_itinerary_plan = @plan,
-              assigned_vehicle = COALESCE(@veh_plate, assigned_vehicle)
+              tourist_id = COALESCE(@tourist_id, tourist_id),
+              quoted_price = COALESCE(@price, quoted_price),
+              additional_expenses = COALESCE(@expenses, additional_expenses),
+              vehicle_plate = COALESCE(@veh_plate, vehicle_plate)
           WHERE private_trip_id = @id;
         END
         ELSE
         BEGIN
           INSERT INTO private_trips (
-            private_trip_id, status_order, customer_name, customer_phone,
+            private_trip_id, status_order,
             preferred_start_date, duration_days, number_of_companions,
-            guide_license_number, customer_description, customer_requirements,
-            tourist_id, quoted_price, admin_itinerary_plan, assigned_vehicle
+            guide_license_number, customer_requirements,
+            tourist_id, quoted_price, additional_expenses, vehicle_plate, created_at
           ) VALUES (
-            @id, @status, @cust_name, @cust_phone,
+            @id, @status,
             @start_date, @duration, @companions,
-            @guide_lic, @desc, @reqs,
-            @tourist_id, @price, @plan, @veh_plate
+            @guide_lic, @reqs,
+            @tourist_id, @price, @expenses, @veh_plate, GETDATE()
           );
-        END
-
-        IF @veh_plate IS NOT NULL
-        BEGIN
-          IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'private_trip_vehicles')
-          BEGIN
-            IF EXISTS (SELECT 1 FROM private_trip_vehicles WHERE private_trip_id = @id)
-              UPDATE private_trip_vehicles SET plate_number = @veh_plate, allocation_status = N'معينة' WHERE private_trip_id = @id;
-            ELSE
-              INSERT INTO private_trip_vehicles (private_alloc_id, private_trip_id, plate_number, start_date, end_date, allocation_status)
-              VALUES ('PA-' + SUBSTRING(CONVERT(VARCHAR(40), NEWID()), 1, 8), @id, @veh_plate, @start_date, DATEADD(day, @duration, @start_date), N'معينة');
-          END
         END
       `);
 
-      // Save Many-to-Many Places (العلاقة متعدد إلى متعدد بين الرحلات الخاصة والمعالم السياحية في places_trip_private)
+      // 3. Save Many-to-Many Places (places_trip_private)
       const targetPlaceIds = Array.isArray(place_ids) ? place_ids : (Array.isArray(places) ? places.map(p => typeof p === 'string' ? p : (p.place_id || p.id)) : []);
       if (targetPlaceIds && targetPlaceIds.length > 0) {
         try {
@@ -3486,13 +3867,74 @@ const server = http.createServer(async (req, res) => {
               IF EXISTS (SELECT 1 FROM places_tourist WHERE place_id = @pid)
               BEGIN
                 IF NOT EXISTS (SELECT 1 FROM places_trip_private WHERE private_trip_id = @ptid AND place_id = @pid)
-                  INSERT INTO places_trip_private (private_trip_id, place_id, visit_order, created_at)
-                  VALUES (@ptid, @pid, @order, GETDATE());
+                  INSERT INTO places_trip_private (private_trip_id, place_id, visit_order)
+                  VALUES (@ptid, @pid, @order);
               END
             `);
           }
         } catch (placesJuncErr) {
           console.warn('[places_trip_private Warning]:', placesJuncErr.message);
+        }
+      }
+
+      // 4. Save Many-to-Many Hotels (hotels_trip_private - Admin Assigned)
+      const targetHotelIds = Array.isArray(hotel_ids) ? hotel_ids : (Array.isArray(hotels) ? hotels.map(h => typeof h === 'string' ? h : (h.hotel_id || h.id)) : []);
+      if (Array.isArray(targetHotelIds)) {
+        try {
+          const delHotelsReq = db.request();
+          delHotelsReq.input('ptid', sql.VarChar(50), cleanId);
+          await delHotelsReq.query('DELETE FROM hotels_trip_private WHERE private_trip_id = @ptid');
+
+          for (const rawHid of targetHotelIds) {
+            const cleanHid = String(rawHid || '').trim();
+            if (!cleanHid) continue;
+
+            const insHotelReq = db.request();
+            insHotelReq.input('ptid', sql.VarChar(50), cleanId);
+            insHotelReq.input('hid', sql.VarChar(50), cleanHid);
+            await insHotelReq.query(`
+              IF EXISTS (SELECT 1 FROM hotels WHERE hotel_id = @hid)
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM hotels_trip_private WHERE private_trip_id = @ptid AND hotel_id = @hid)
+                  INSERT INTO hotels_trip_private (private_trip_id, hotel_id)
+                  VALUES (@ptid, @hid);
+              END
+            `);
+          }
+        } catch (hotelsJuncErr) {
+          console.warn('[hotels_trip_private Warning]:', hotelsJuncErr.message);
+        }
+      }
+
+      // 5. Save Structured Itinerary Stations (private_trip_stations - Admin Scheduled)
+      const targetStations = Array.isArray(stations) ? stations : (Array.isArray(body.structured_stations) ? body.structured_stations : null);
+      if (Array.isArray(targetStations)) {
+        try {
+          const delStnsReq = db.request();
+          delStnsReq.input('ptid', sql.VarChar(50), cleanId);
+          await delStnsReq.query('DELETE FROM private_trip_stations WHERE private_trip_id = @ptid');
+
+          for (let sIdx = 0; sIdx < targetStations.length; sIdx++) {
+            const stn = targetStations[sIdx];
+            if (!stn || !stn.station_title) continue;
+
+            const stnId = String(stn.station_id || `PTS-${cleanId}-${sIdx + 1}`).trim();
+            const insStnReq = db.request();
+            insStnReq.input('sid', sql.VarChar(50), stnId);
+            insStnReq.input('ptid', sql.VarChar(50), cleanId);
+            insStnReq.input('day_num', sql.Int, Number(stn.day_number) || 1);
+            insStnReq.input('stn_order', sql.Int, Number(stn.station_order) || (sIdx + 1));
+            insStnReq.input('title', sql.NVarChar(200), String(stn.station_title).trim());
+            insStnReq.input('time', sql.VarChar(30), String(stn.station_time || '').trim());
+            insStnReq.input('desc', sql.NVarChar(sql.MAX), String(stn.station_desc || '').trim());
+
+            await insStnReq.query(`
+              INSERT INTO private_trip_stations (station_id, private_trip_id, day_number, station_order, station_title, station_time, station_desc)
+              VALUES (@sid, @ptid, @day_num, @stn_order, @title, @time, @desc);
+            `);
+          }
+        } catch (stnsErr) {
+          console.warn('[private_trip_stations Warning]:', stnsErr.message);
         }
       }
 
@@ -3584,7 +4026,8 @@ const server = http.createServer(async (req, res) => {
       request.input('id', sql.VarChar(50), id);
       await request.query(`
         DELETE FROM places_trip_private WHERE private_trip_id = @id;
-        DELETE FROM private_trip_vehicles WHERE private_trip_id = @id;
+        DELETE FROM hotels_trip_private WHERE private_trip_id = @id;
+        DELETE FROM private_trip_stations WHERE private_trip_id = @id;
         DELETE FROM private_trips WHERE private_trip_id = @id;
       `);
       return sendJson(res, 200, { success: true, message: 'تم حذف طلب الرحلة الخاصة بنجاح من DelniDB' });
@@ -3599,7 +4042,7 @@ const server = http.createServer(async (req, res) => {
                t.email as tourist_email,
                dt.trip_title, 
                dt.departure_city, 
-               dt.destination_city
+               NULL as destination_city
         FROM bookings_daily b
         LEFT JOIN tourists t ON b.tourist_id = t.tourist_id
         LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id
@@ -3635,7 +4078,7 @@ const server = http.createServer(async (req, res) => {
       // Business Rule: Validate 24-Hour Cutoff & Available Seats
       const tripCheckReq = db.request();
       tripCheckReq.input('chk_trip_id', sql.VarChar(50), cleanTrip);
-      const tripRes = await tripCheckReq.query('SELECT departure_date, available_seats, max_capacity FROM daily_trips WHERE daily_trip_id = @chk_trip_id');
+      const tripRes = await tripCheckReq.query('SELECT NULL as departure_date, available_seats, max_capacity FROM daily_trips WHERE daily_trip_id = @chk_trip_id');
       if (tripRes.recordset?.length > 0) {
         const trip = tripRes.recordset[0];
         if (trip.start_date) {
@@ -4026,7 +4469,7 @@ const server = http.createServer(async (req, res) => {
         db.request().query('SELECT * FROM vehicles ORDER BY plate_number ASC'),
         db.request().query(`
           SELECT dt.*, 
-                 g.full_name as guide_name, g.phone_number as guide_phone, g.title as guide_title, g.avatar as guide_avatar,
+                 g.full_name as guide_name, g.phone_number as guide_phone, NULL as guide_title, g.avatar as guide_avatar,
                  v.vehicle_type as vehicle_model, v.seating_capacity as vehicle_capacity, v.vehicle_image,
                  tc.company_name as transport_company_name,
                  d.full_name as driver_name, d.phone_number as driver_phone, d.driver_license_number,
@@ -4041,7 +4484,7 @@ const server = http.createServer(async (req, res) => {
         `),
         db.request().query(`
           SELECT wt.*, 
-                 g.full_name as guide_name, g.phone_number as guide_phone, g.title as guide_title, g.avatar as guide_avatar,
+                 g.full_name as guide_name, g.phone_number as guide_phone, NULL as guide_title, g.avatar as guide_avatar,
                  v.vehicle_type as vehicle_model, v.seating_capacity as vehicle_capacity, v.vehicle_image,
                  tc.company_name as transport_company_name,
                  d.full_name as driver_name, d.phone_number as driver_phone, d.driver_license_number
@@ -4055,7 +4498,7 @@ const server = http.createServer(async (req, res) => {
         `),
         db.request().query('SELECT b.*, t.full_name as tourist_name, dt.trip_title FROM bookings_daily b LEFT JOIN tourists t ON b.tourist_id = t.tourist_id LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id ORDER BY b.booking_date DESC'),
         db.request().query('SELECT b.*, t.full_name as tourist_name, wt.trip_title FROM bookings_weekly b LEFT JOIN tourists t ON b.tourist_id = t.tourist_id LEFT JOIN weekly_trips wt ON b.weekly_trip_id = wt.weekly_trip_id ORDER BY b.booking_date DESC'),
-        db.request().query('SELECT * FROM private_trips ORDER BY private_trip_id DESC'),
+        getDetailedPrivateTrips(db),
         db.request().query('SELECT * FROM hotels ORDER BY hotel_name ASC'),
         db.request().query('SELECT * FROM restaurants_cafes ORDER BY facility_name ASC'),
         db.request().query('SELECT * FROM places_tourist ORDER BY place_name ASC'),
@@ -4065,8 +4508,8 @@ const server = http.createServer(async (req, res) => {
                  CONVERT(VARCHAR(10), o.start_date, 120) as start_date,
                  CONVERT(VARCHAR(10), o.end_date, 120) as end_date,
                  o.badge,
-                 dt.trip_title, dt.price_per_seat, dt.departure_city, dt.destination_city,
-                 dt.photo as trip_photo
+                 dt.trip_title, dt.price_per_seat, dt.departure_city, NULL as destination_city,
+                 dt.photo_1 as trip_photo
           FROM offers_daily_trips o
           LEFT JOIN daily_trips dt ON o.daily_trip_id = dt.daily_trip_id
           ORDER BY o.offer_daily_id DESC
@@ -4129,10 +4572,37 @@ const server = http.createServer(async (req, res) => {
         };
       });
 
+      let guidePlacesRes = { recordset: [] };
+      let guideDaysRes = { recordset: [] };
+      let guideRegionsRes = { recordset: [] };
+      try {
+        [guidePlacesRes, guideDaysRes, guideRegionsRes] = await Promise.all([
+          db.request().query('SELECT gp.license_number, pt.place_id, pt.place_name, pt.city, pt.category, pt.place_image FROM guide_places gp JOIN places_tourist pt ON gp.place_id = pt.place_id').catch(() => ({ recordset: [] })),
+          db.request().query('SELECT license_number, day_of_week FROM guide_working_days ORDER BY license_number, day_of_week').catch(() => ({ recordset: [] })),
+          db.request().query('SELECT license_number, region FROM guide_operating_regions ORDER BY license_number, region').catch(() => ({ recordset: [] }))
+        ]);
+      } catch (gHydrateErr) {
+        console.warn('[Admin Dashboard Guide Hydration Warning]:', gHydrateErr.message);
+      }
+
+      const mappedGuides = (guidesRes.recordset || []).map(g => {
+        const myPlaces = (guidePlacesRes.recordset || []).filter(p => p.license_number === g.license_number);
+        const myDays = (guideDaysRes.recordset || []).filter(d => d.license_number === g.license_number).map(d => d.day_of_week);
+        const myRegions = (guideRegionsRes.recordset || []).filter(r => r.license_number === g.license_number).map(r => r.region);
+        return {
+          ...g,
+          total_tours_completed: g.total_tours_completed || 0,
+          places: myPlaces,
+          place_ids: myPlaces.map(p => p.place_id),
+          working_days: myDays,
+          operating_regions: myRegions
+        };
+      });
+
       return sendJson(res, 200, {
         success: true,
         database: 'DelniDB (Microsoft SQL Server)',
-        guides: guidesRes.recordset || [],
+        guides: mappedGuides,
         companies: companiesRes.recordset || [],
         drivers: driversRes.recordset || [],
         vehicles: vehiclesRes.recordset || [],
@@ -4141,7 +4611,7 @@ const server = http.createServer(async (req, res) => {
         weekly_trips: mappedWeeklyWithStations,
         daily_bookings: bookDailyRes.recordset || [],
         weekly_bookings: bookWeeklyRes.recordset || [],
-        private_trips: privateRes.recordset || [],
+        private_trips: Array.isArray(privateRes) ? privateRes : (privateRes?.recordset || []),
         hotels: hotelsRes.recordset || [],
         restaurants: restRes.recordset || [],
         places: placesRes.recordset || [],
@@ -4166,8 +4636,8 @@ const server = http.createServer(async (req, res) => {
 
     // 25. Notifications: GET (Strict User Isolation)
     if (pathname === '/api/db/notifications' && req.method === 'GET') {
-      const role = url.searchParams.get('role') || 'all';
-      const userId = url.searchParams.get('user_id') || '';
+      const role = url.searchParams.get('role') || url.searchParams.get('recipient_role') || 'all';
+      const userId = url.searchParams.get('user_id') || url.searchParams.get('recipient_id') || '';
       const request = db.request();
       request.input('role', sql.NVarChar(50), role);
       request.input('userId', sql.NVarChar(100), userId);
@@ -4236,10 +4706,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 201, { success: true, message: 'تم حفظ الإشعار في DelniDB بنجاح', id: cleanId });
     }
 
-    // 25.2 Notifications: Mark Read (POST / PUT)
-    if (pathname === '/api/db/notifications/read' && (req.method === 'POST' || req.method === 'PUT')) {
+    // 25.2 Notifications: Mark Read (POST / PUT / PATCH)
+    if ((pathname === '/api/db/notifications/read' || pathname === '/api/db/notifications') && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
       const body = await readBody(req);
-      const { id, all, role, user_id } = body;
+      const { id, notification_id, all, role, user_id } = body;
+      const targetId = id || notification_id;
       const request = db.request();
       if (all) {
         request.input('role', sql.NVarChar(50), String(role || 'all').trim());
@@ -4250,8 +4721,8 @@ const server = http.createServer(async (req, res) => {
           WHERE (recipient_id IS NOT NULL AND recipient_id = @userId)
              OR (recipient_id IS NULL AND (recipient_role = 'all' OR recipient_role = @role))
         `);
-      } else if (id) {
-        request.input('id', sql.VarChar(50), String(id).trim());
+      } else if (targetId) {
+        request.input('id', sql.VarChar(50), String(targetId).trim());
         await request.query(`UPDATE notifications SET is_read = 1 WHERE id = @id`);
       }
       return sendJson(res, 200, { success: true, message: 'تم تحديث حالة القراءة بنجاح' });
@@ -4600,7 +5071,7 @@ const server = http.createServer(async (req, res) => {
         });
       } else {
         const bRes = await valReq.query(`
-          SELECT b.booking_daily_id, b.booking_date, b.booking_status, dt.departure_date
+          SELECT b.booking_daily_id, b.booking_date, b.booking_status, NULL as departure_date
           FROM bookings_daily b
           LEFT JOIN daily_trips dt ON b.daily_trip_id = dt.daily_trip_id
           WHERE b.tourist_id = @tid AND b.daily_trip_id = @trip_id

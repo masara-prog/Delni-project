@@ -70,7 +70,16 @@ function GuidesPage() {
 
           let wDays: string[] = [];
           try {
-            wDays = typeof g.working_days === 'string' ? JSON.parse(g.working_days) : (g.working_days || []);
+            if (Array.isArray(g.working_days)) {
+              wDays = g.working_days;
+            } else if (typeof g.working_days === 'string') {
+              const trimmed = g.working_days.trim();
+              if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                wDays = JSON.parse(trimmed);
+              } else if (trimmed.length > 0) {
+                wDays = trimmed.split(",").map((s: string) => s.trim()).filter(Boolean);
+              }
+            }
           } catch {
             wDays = [];
           }
@@ -98,10 +107,10 @@ function GuidesPage() {
             languages: langs,
             bio: g.bio || "مرشد سياحي معتمد ومسجل في منصة دَلّني السياحية.",
             phone: g.phone_number || "",
-            verified: g.verification_status === "موثق",
+            verified: g.verification_status === "موثق" || g.verification_status === "verified",
             totalToursCompleted: Number(g.total_tours_completed) || 0,
             specialties: Array.isArray(g.places) && g.places.length > 0
-              ? g.places.map((p: any) => p.place_name)
+              ? g.places.map((p: any) => p.place_name || p.name)
               : (Array.isArray(g.specialties) ? g.specialties : []),
             places: g.places || [],
             workingDays: wDays.length > 0 ? wDays : ["طوال أيام الأسبوع"],
