@@ -21,14 +21,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Admin User (users table)
-        User::updateOrCreate(
-            ['email' => 'admin@dalni.ly'],
-            [
-                'name' => 'مدير النظام (الأدمن)',
-                'password' => Hash::make('admin123'),
-            ]
-        );
+        // 1. Admin login handled directly via Bridge API
 
         // 2. Demo Tourist (tourists table)
         Tourist::updateOrCreate(
@@ -37,7 +30,8 @@ class DatabaseSeeder extends Seeder
                 'tourist_id' => 'T-1001',
                 'full_name' => 'أحمد سالم المصراتي',
                 'phone_number' => '0912223344',
-                'password' => Hash::make('password123'),
+                'password' => $this->hashPbkdf2('password123'),
+                'account_status' => 'نشط',
             ]
         );
 
@@ -49,22 +43,34 @@ class DatabaseSeeder extends Seeder
                 'full_name' => 'سالم القذافي',
                 'phone_number' => '0917778888',
                 'years_of_experience' => 7,
-                'certificate' => 'ترخيص وزارة السياحة والآثار رقم 4421',
                 'bio' => 'مرشد سياحي معتمد ومحب لاستكشاف معالم ليبيا التاريخية والطبيعية. متخصص في الجولات الأثرية في لبدة وصبراتة وقورينا، وسفاري الصحراء.',
                 'speaks_english' => true,
                 'speaks_french' => false,
                 'speaks_italian' => true,
                 'verification_status' => 'موثق',
-                'password' => Hash::make('password123'),
+                'password' => $this->hashPbkdf2('password123'),
                 'gender' => 'male',
-                'working_days' => json_encode(['sat', 'sun', 'mon', 'tue', 'wed', 'thu']),
-                'operating_regions' => json_encode(['tripoli', 'leptis', 'sabratha']),
-                'primaryRegion' => 'طرابلس والساحل الغربي',
                 'price_per_day' => 150,
                 'avatar' => '/assets/ai_desert.jpg',
-                'title' => 'خبير الإرشاد الأثري والصحراوي',
-                'specialties' => 'آثار رومانية، سفاري الواحات، جولات تاريخية',
-                'total_tours_completed' => 48,
+            ]
+        );
+
+        // 3b. Tour Guide "دلني" (Requested by user)
+        TourGuide::updateOrCreate(
+            ['email' => 'delni@gmail.com'],
+            [
+                'license_number' => 'k938474',
+                'full_name' => 'مرشد دلني',
+                'phone_number' => '0915554433',
+                'years_of_experience' => 5,
+                'bio' => 'مرشد سياحي رسمي في منصة دلني لرحلات وسياحة ليبيا.',
+                'speaks_english' => true,
+                'speaks_french' => false,
+                'speaks_italian' => false,
+                'verification_status' => 'موثق',
+                'password' => $this->hashPbkdf2('12345678'),
+                'gender' => 'male',
+                'price_per_day' => 120,
             ]
         );
 
@@ -75,13 +81,10 @@ class DatabaseSeeder extends Seeder
                 'company_name' => 'شركة الصفوة لنقل الركاب والسياحة',
                 'phone_number' => '0913334455',
                 'email' => 'safwa@dalni.ly',
-                'address' => 'طرابلس - طريق الشط',
                 'city' => 'طرابلس',
-                'password' => Hash::make('password123'),
+                'password' => $this->hashPbkdf2('password123'),
                 'verification_status' => 'موثق',
                 'total_vehicles' => 12,
-                'available_vehicles' => 8,
-                'contract_date' => '2025-01-15',
                 'contract_start_date' => '2025-01-15',
                 'contract_end_date' => '2028-01-15',
             ]
@@ -110,7 +113,7 @@ class DatabaseSeeder extends Seeder
                 'contract_number' => 'TC-501',
                 'assigned_vehicle_plate' => 'TRIPOLI-4517',
                 'email' => 'tariq@dalni.ly',
-                'password' => Hash::make('password123'),
+                'password' => $this->hashPbkdf2('password123'),
                 'account_status' => 'نشط',
             ]
         );
@@ -122,14 +125,12 @@ class DatabaseSeeder extends Seeder
                 'trip_title' => 'جولة لبدة الكبرى الأثرية المتكاملة',
                 'description' => 'استكشاف معالم لبدة الكبرى، المسرح الروماني، قوس سبتيموس سيفيروس، وحمامات هادريان برفقة مرشد سياحي معتمد.',
                 'departure_city' => 'طرابلس',
-                'destination_city' => 'الخمس',
                 'price_per_seat' => 120,
                 'max_capacity' => 50,
                 'available_seats' => 42,
                 'guide_license_number' => 'G-9901',
                 'is_active' => true,
-                'photo' => '/assets/dest-leptis.jpg',
-                'recurring_days' => 'الأحد,الثلاثاء,الخميس',
+                'photo_1' => '/assets/dest-leptis.jpg',
             ]
         );
 
@@ -139,14 +140,12 @@ class DatabaseSeeder extends Seeder
                 'trip_title' => 'رحلة مسرح صبراتة والساحل الغربي',
                 'description' => 'زيارة المسرح الروماني التاريخي في صبراتة ومتحف الفسيفساء الأثري والميناء القديم.',
                 'departure_city' => 'طرابلس',
-                'destination_city' => 'صبراتة',
                 'price_per_seat' => 100,
                 'max_capacity' => 25,
                 'available_seats' => 17,
                 'guide_license_number' => 'G-9901',
                 'is_active' => true,
-                'photo' => '/assets/dest-sabratah.png',
-                'recurring_days' => 'السبت,الأربعاء',
+                'photo_1' => '/assets/dest-sabratah.png',
             ]
         );
 
@@ -155,9 +154,7 @@ class DatabaseSeeder extends Seeder
             ['weekly_trip_id' => 'WT-201'],
             [
                 'trip_title' => 'مغامرة أوباري وبحيرات الصحراء الكبرى (6 أيام)',
-                'trip_description' => 'سفاري الكثبان الرملية الذهبية، التخييم في واحات بحيرة قبر عون وأم الماء، وجولات سيارات الدفع الرباعي 4x4.',
                 'departure_city' => 'طرابلس / سبها',
-                'destination_region' => 'فزان والصحراء الكبرى',
                 'start_date' => '2026-11-01',
                 'end_date' => '2026-11-06',
                 'seat_per_price' => 1850,
@@ -165,7 +162,7 @@ class DatabaseSeeder extends Seeder
                 'available_seats' => 12,
                 'guide_license_number' => 'G-9901',
                 'is_active' => true,
-                'photo' => '/assets/dest-ubari.jpg',
+                'photo_1' => '/assets/dest-ubari.jpg',
             ]
         );
 
@@ -208,5 +205,12 @@ class DatabaseSeeder extends Seeder
                 'longitude' => 12.7667,
             ]
         );
+    }
+
+    private function hashPbkdf2(string $password): string
+    {
+        $salt = bin2hex(random_bytes(16));
+        $hash = hash_pbkdf2('sha256', $password, $salt, 1000, 128);
+        return "{$salt}:{$hash}";
     }
 }
