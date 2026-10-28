@@ -16,6 +16,37 @@ class AuthController extends Controller
     /**
      * Unified Login for all 5 roles: tourist, guide, transport, driver, admin
      */
+    private function passwordMatches(string $password, ?string $hash): bool
+    {
+        if (empty($hash)) {
+            return false;
+        }
+
+        // 1. Standard Bcrypt
+        if (str_starts_with($hash, '$2y$') || str_starts_with($hash, '$2a$') || str_starts_with($hash, '$2b$')) {
+            try {
+                if (Hash::check($password, $hash)) {
+                    return true;
+                }
+            } catch (\Throwable $e) { }
+        }
+
+        // 2. PBKDF2 (salt:hash)
+        if (str_contains($hash, ':')) {
+            $parts = explode(':', $hash, 2);
+            if (count($parts) === 2) {
+                [$salt, $originalHash] = $parts;
+                $computed = hash_pbkdf2('sha256', $password, $salt, 1000, 64);
+                if (hash_equals($originalHash, $computed)) {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Plaintext fallback
+        return hash_equals($hash, $password);
+    }
+
     public function login(Request $request)
     {
         $validated = $request->validate([
@@ -38,7 +69,7 @@ class AuthController extends Controller
                     ->orWhere('tourist_id', $login)
                     ->first();
 
-                if ($user && ($user->password === $password || Hash::check($password, $user->password))) {
+                if ($user && $this->passwordMatches($password, $user->password)) {
                     $token = $user->createToken('tourist-token', ['role:tourist'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -55,7 +86,7 @@ class AuthController extends Controller
                     ->orWhere('license_number', $login)
                     ->first();
 
-                if ($user && ($user->password === $password || Hash::check($password, $user->password))) {
+                if ($user && $this->passwordMatches($password, $user->password)) {
                     $token = $user->createToken('guide-token', ['role:guide'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -72,7 +103,7 @@ class AuthController extends Controller
                     ->orWhere('contract_number', $login)
                     ->first();
 
-                if ($user && ($user->password === $password || Hash::check($password, $user->password))) {
+                if ($user && $this->passwordMatches($password, $user->password)) {
                     $token = $user->createToken('transport-token', ['role:transport'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -89,7 +120,7 @@ class AuthController extends Controller
                     ->orWhere('driver_license_number', $login)
                     ->first();
 
-                if ($user && ($user->password === $password || Hash::check($password, $user->password))) {
+                if ($user && $this->passwordMatches($password, $user->password)) {
                     $token = $user->createToken('driver-token', ['role:driver'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -102,7 +133,7 @@ class AuthController extends Controller
 
             case 'admin':
                 $user = User::where('email', $login)->first();
-                if ($user && ($user->password === $password || Hash::check($password, $user->password))) {
+                if ($user && $this->passwordMatches($password, $user->password)) {
                     $token = $user->createToken('admin-token', ['role:admin'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -127,16 +158,27 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'tourist_id' => 'required|string|max:50|unique:tourists,tourist_id',
-            'full_name' => 'required|string|max:100',
+            'full_name' => 'required|string|max:150',
             'email' => 'required|email|max:100|unique:tourists,email',
             'phone_number' => 'required|string|max:20|unique:tourists,phone_number',
             'password' => 'required|string|min:6',
+        ], [
+            'tourist_id.required' => 'رقم جواز السفر أو الرقم الوطني مطلوب',
+            'tourist_id.unique' => 'رقم جواز السفر / الرقم الوطني مسجل مسبقاً',
+            'full_name.required' => 'الاسم الكامل مطلوب',
+            'email.required' => 'البريد الإلكتروني مطلوب',
+            'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
+            'email.unique' => 'البريد الإلكتروني مسجل مسبقاً',
+            'phone_number.required' => 'رقم الهاتف مطلوب',
+            'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً',
+            'password.required' => 'كلمة المرور مطلوبة',
+            'password.min' => 'كلمة المرور يجب أن لا تقل عن 6 أحرف',
         ]);
 
         $tourist = Tourist::create([
-            'tourist_id' => $validated['tourist_id'],
+            'tourist_id' => trim($validated['tourist_id']),
             'full_name' => $validated['full_name'],
-            'email' => $validated['email'],
+            'email' => strtolower($validated['email']),
             'phone_number' => $validated['phone_number'],
             'password' => bcrypt($validated['password']),
         ]);

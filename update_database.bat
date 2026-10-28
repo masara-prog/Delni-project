@@ -15,7 +15,12 @@ const connStr = 'Driver={ODBC Driver 18 for SQL Server};Server=localhost;Databas
 
 (async () => {
   try {
-    const pool = await sql.connect({ connectionString: connStr });
+    let pool;
+    try {
+      pool = await sql.connect({ connectionString: 'Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=DelniDB;Trusted_Connection=yes;TrustServerCertificate=yes;' });
+    } catch (_) {
+      pool = await sql.connect({ connectionString: 'Driver={ODBC Driver 18 for SQL Server};Server=localhost;Database=DelniDB;Trusted_Connection=yes;TrustServerCertificate=yes;' });
+    }
     console.log('✓ تم الاتصال بقاعدة البيانات DelniDB بنجاح.');
     
     // Check tables count
