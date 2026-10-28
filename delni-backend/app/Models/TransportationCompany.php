@@ -19,16 +19,14 @@ class TransportationCompany extends Model
         'contract_number',
         'company_name',
         'phone_number',
-        'address',
         'total_vehicles',
         'verification_status',
-        'contract_date',
         'email',
         'password',
         'city',
-        'available_vehicles',
         'contract_start_date',
         'contract_end_date',
+        'google_maps_url',
     ];
 
     protected $hidden = [

@@ -21,6 +21,8 @@ class Tourist extends Model
         'email',
         'phone_number',
         'password',
+        'account_status',
+        'created_at',
     ];
 
     protected $hidden = [

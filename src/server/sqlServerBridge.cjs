@@ -309,28 +309,6 @@ async function ensureDatabaseSchema(p) {
           ALTER TABLE private_trips ADD vehicle_plate VARCHAR(30) NULL;
       END;
 
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('daily_trips') AND name = 'departure_date')
-        ALTER TABLE daily_trips ADD departure_date DATETIME NULL;
-
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('daily_trips') AND name = 'return_date')
-        ALTER TABLE daily_trips ADD return_date DATETIME NULL;
-
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('weekly_trips') AND name = 'departure_date')
-        ALTER TABLE weekly_trips ADD departure_date DATETIME NULL;
-
-      -- Private Trip Vehicles Allocation Table
-      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'private_trip_vehicles')
-      BEGIN
-        CREATE TABLE private_trip_vehicles (
-          private_alloc_id VARCHAR(50) NOT NULL PRIMARY KEY,
-          private_trip_id VARCHAR(50) NOT NULL,
-          plate_number VARCHAR(30) NOT NULL,
-          start_date DATE NOT NULL,
-          end_date DATE NOT NULL,
-          allocation_status NVARCHAR(25) NOT NULL DEFAULT N'معينة'
-        );
-      END;
-
       -- Ensure status_order in private_trips is NVARCHAR(50) for Arabic status text
       IF EXISTS (
         SELECT 1 FROM sys.columns c
@@ -474,6 +452,25 @@ async function ensureDatabaseSchema(p) {
   } catch (err) {
     console.warn('[DelniDB Schema Notice]:', err.message);
   }
+}
+
+// ---- Booking cutoff rules (server clock = Libya local time) ----
+const LIBYA_DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']; // Date#getDay() order
+const normalizeDayName = (d) => String(d || '').trim().replace(/إ/g, 'ا');
+
+// Daily trips: on a day the trip runs (no days stored = runs every day), booking for that day closes at 07:00
+function isDailyBookingClosed(runDaysCsv, now = new Date()) {
+  const days = String(runDaysCsv || '').split(',').map(normalizeDayName).filter(Boolean);
+  const runsToday = days.length === 0 || days.includes(normalizeDayName(LIBYA_DAY_NAMES[now.getDay()]));
+  return runsToday && now.getHours() >= 7;
+}
+
+// Weekly trips: booking closes 24 hours before departure (start of the start_date day)
+function isWeeklyBookingClosed(startDate, now = new Date()) {
+  if (!startDate) return false;
+  const d = new Date(startDate);
+  const departure = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); // DATE column -> local midnight
+  return now.getTime() >= departure.getTime() - 24 * 60 * 60 * 1000;
 }
 
 // Helper for JSON response
@@ -719,115 +716,53 @@ const server = http.createServer(async (req, res) => {
       const rawPassword = String(password || '').trim();
 
       if (!cleanLogin || !rawPassword) {
-        return sendJson(res, 400, { success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' });
+        return sendJson(res, 400, { success: false, error: 'يرجى إدخال البريد الإلكتروني وكلمة المرور' });
       }
 
-      // Admin verification
-      if (role === 'admin' || cleanLogin === 'admin@dalni.ly' || cleanLogin === 'admin') {
-        if ((cleanLogin === 'admin@dalni.ly' || cleanLogin === 'admin') && (rawPassword === 'admin123' || rawPassword === 'admin')) {
-          return sendJson(res, 200, {
-            success: true,
-            role: 'admin',
-            user: { name: 'مدير النظام', fullName: 'مدير النظام (الأدمن)', email: 'admin@dalni.ly', role: 'admin' },
-            message: 'تم تسجيل الدخول بنجاح'
-          });
-        }
-        return sendJson(res, 401, { success: false, error: 'بيانات دخول مدير النظام غير صحيحة' });
+      // Every account type signs in with its email and its correct password only.
+      // The admin account lives in Laravel's users table, so the admin signs in through Laravel.
+      if (role === 'admin') {
+        return sendJson(res, 401, { success: false, error: 'يتم التحقق من حساب مدير النظام عبر خادم المنصة الرئيسي (Laravel).' });
       }
 
-      // Transport company
-      if (role === 'transport') {
-        const tReq = db.request();
-        tReq.input('login', sql.NVarChar(150), cleanLogin);
-        const compRes = await tReq.query(`
-          SELECT * FROM transportation_companies 
-          WHERE LOWER(email) = @login OR LOWER(contract_number) = @login OR phone_number LIKE '%' + @login + '%'
-        `);
-        if (!compRes.recordset || compRes.recordset.length === 0) {
-          return sendJson(res, 404, { success: false, error: 'الحساب غير متوفر في المنصة' });
-        }
-        const comp = compRes.recordset[0];
-        if (comp.password && !verifyPassword(rawPassword, comp.password)) {
-          return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
-        }
-        const sanitized = { ...comp, role: 'transport' };
-        delete sanitized.password;
-        return sendJson(res, 200, { success: true, role: 'transport', user: sanitized, message: 'تم تسجيل دخول شركة النقل بنجاح' });
+      const ACCOUNTS = {
+        tourist: { table: 'tourists', label: 'الحساب', welcome: 'تم تسجيل الدخول بنجاح' },
+        guide: { table: 'tour_guides', label: 'حساب المرشد', welcome: 'تم تسجيل دخول المرشد بنجاح' },
+        transport: { table: 'transportation_companies', label: 'حساب شركة النقل', welcome: 'تم تسجيل دخول شركة النقل بنجاح' },
+        driver: { table: 'drivers', label: 'حساب السائق', welcome: 'تم تسجيل دخول السائق بنجاح' },
+      };
+      const account = ACCOUNTS[role];
+      if (!account) {
+        return sendJson(res, 400, { success: false, error: 'نوع الحساب غير مدعوم' });
       }
 
-      // Driver
-      if (role === 'driver') {
-        const dReq = db.request();
-        dReq.input('login', sql.NVarChar(150), cleanLogin);
-        const drvRes = await dReq.query(`
-          SELECT * FROM drivers 
-          WHERE LOWER(email) = @login OR LOWER(driver_license_number) = @login OR phone_number LIKE '%' + @login + '%'
-        `);
-        if (!drvRes.recordset || drvRes.recordset.length === 0) {
-          return sendJson(res, 404, { success: false, error: 'حساب السائق غير متوفر في المنصة' });
-        }
-        const drv = drvRes.recordset[0];
-        if (drv.password && !verifyPassword(rawPassword, drv.password)) {
-          return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
-        }
-        const sanitized = { ...drv, role: 'driver' };
-        delete sanitized.password;
-        return sendJson(res, 200, { success: true, role: 'driver', user: sanitized, message: 'تم تسجيل دخول السائق بنجاح' });
+      const aReq = db.request();
+      aReq.input('login', sql.NVarChar(150), cleanLogin);
+      const aRes = await aReq.query(`SELECT * FROM ${account.table} WHERE LOWER(email) = @login`);
+      const user = aRes.recordset?.[0];
+      if (!user) {
+        return sendJson(res, 404, { success: false, error: `${account.label} غير متوفر في المنصة. يرجى التأكد من البريد الإلكتروني.` });
       }
-
-      // Guide
-      if (role === 'guide') {
-        const gReq = db.request();
-        gReq.input('login', sql.NVarChar(150), cleanLogin);
-        const gRes = await gReq.query(`
-          SELECT * FROM tour_guides 
-          WHERE LOWER(email) = @login OR LOWER(license_number) = @login OR phone_number LIKE '%' + @login + '%'
-        `);
-        if (!gRes.recordset || gRes.recordset.length === 0) {
-          return sendJson(res, 404, { success: false, error: 'حساب المرشد غير متوفر في المنصة' });
-        }
-        const g = gRes.recordset[0];
-        if (g.password && !verifyPassword(rawPassword, g.password)) {
-          return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
-        }
-        if (g.verification_status !== 'موثق') {
-          return sendJson(res, 403, {
-            success: false,
-            error: 'طلب انضمامك كمرشد سياحي ما زال قيد المراجعة والتدقيق من قبل الإدارة. يرجى الانتظار حتى يتم اعتماد حسابك وتفعيله.'
-          });
-        }
-        const sanitized = { ...g, role: 'guide' };
-        delete sanitized.password;
-        return sendJson(res, 200, { success: true, role: 'guide', user: sanitized, message: 'تم تسجيل دخول المرشد بنجاح' });
+      const stored = String(user.password || '');
+      if (!stored) {
+        return sendJson(res, 401, { success: false, error: 'لا توجد كلمة مرور مسجلة لهذا الحساب. يرجى التواصل مع إدارة المنصة.' });
       }
-
-      // Tourist
-      if (role === 'tourist') {
-        const uReq = db.request();
-        uReq.input('login', sql.NVarChar(150), cleanLogin);
-        const uRes = await uReq.query(`
-          SELECT * FROM tourists 
-          WHERE LOWER(email) = @login OR phone_number LIKE '%' + @login + '%' OR tourist_id = @login
-        `);
-        if (!uRes.recordset || uRes.recordset.length === 0) {
-          return sendJson(res, 404, { success: false, error: 'الحساب غير متوفر في المنصة' });
-        }
-        const u = uRes.recordset[0];
-        if (u.password) {
-          if (String(u.password).startsWith('$2y$') || String(u.password).startsWith('$2a$') || String(u.password).startsWith('$2b$')) {
-            // Password hashed with Laravel Bcrypt: bridge defers to Laravel auth
-            return sendJson(res, 426, { success: false, error: 'يرجى تسجيل الدخول عبر خادم المصادقة الرئيسي' });
-          }
-          if (!verifyPassword(rawPassword, u.password)) {
-            return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
-          }
-        }
-        const sanitized = { ...u, role: 'tourist' };
-        delete sanitized.password;
-        return sendJson(res, 200, { success: true, role: 'tourist', user: sanitized, message: 'تم تسجيل الدخول بنجاح' });
+      if (/^\$2[aby]\$/.test(stored)) {
+        // Bcrypt hashes are created and checked by Laravel
+        return sendJson(res, 426, { success: false, error: 'يرجى تسجيل الدخول عبر خادم المصادقة الرئيسي' });
       }
-
-      return sendJson(res, 400, { success: false, error: 'نوع الحساب غير مدعوم' });
+      if (!verifyPassword(rawPassword, stored)) {
+        return sendJson(res, 401, { success: false, error: 'كلمة المرور غير صحيحة' });
+      }
+      if (role === 'guide' && user.verification_status !== 'موثق') {
+        return sendJson(res, 403, {
+          success: false,
+          error: 'طلب انضمامك كمرشد سياحي ما زال قيد المراجعة والتدقيق من قبل الإدارة. يرجى الانتظار حتى يتم اعتماد حسابك وتفعيله.'
+        });
+      }
+      const sanitized = { ...user, role };
+      delete sanitized.password;
+      return sendJson(res, 200, { success: true, role, user: sanitized, message: account.welcome });
     }
 
     // 2. Transportation Companies: GET
@@ -2070,7 +2005,7 @@ const server = http.createServer(async (req, res) => {
             @partnership_status, @photo_1, @photo_2, @photo_3, @photo_4,
             @photo_5, @property_type, @google_maps_url,
             @description, @working_hours, @discount_percentage,
-            @contract_start_date, @contract_end_date
+            NULLIF(@contract_start_date, ''), NULLIF(@contract_end_date, '')
           );
         END
       `);
@@ -2236,7 +2171,7 @@ const server = http.createServer(async (req, res) => {
             @phone_number, @description, @img_1, @img_2,
             @img_3, @img_4, @img_5,
             @working_hours, @google_maps_url, @discount_percentage,
-            @partnership_status, @contract_start_date, @contract_end_date
+            @partnership_status, NULLIF(@contract_start_date, ''), NULLIF(@contract_end_date, '')
           );
         END
       `);
@@ -2638,7 +2573,7 @@ const server = http.createServer(async (req, res) => {
               guide_license_number = @guide_lic,
               departure_city = @departure,
               vehicle_plate = COALESCE(@vehicle_plate, vehicle_plate),
-              restaurant_id = COALESCE(@restaurant_id, restaurant_id)
+              restaurant_id = COALESCE((SELECT facility_id FROM restaurants_cafes WHERE facility_id = @restaurant_id), restaurant_id)
           WHERE daily_trip_id = @id;
         END
         ELSE
@@ -2654,7 +2589,7 @@ const server = http.createServer(async (req, res) => {
             @img1, @img2, @img3, @img4, @img5,
             @max_cap, @avail_seats, @guide_lic,
             @departure,
-            @vehicle_plate, @restaurant_id
+            @vehicle_plate, (SELECT facility_id FROM restaurants_cafes WHERE facility_id = @restaurant_id)
           );
         END
       `);
@@ -4075,22 +4010,21 @@ const server = http.createServer(async (req, res) => {
 
       const seatsCount = Math.max(1, Number(number_of_seats) || 1);
 
-      // Business Rule: Validate 24-Hour Cutoff & Available Seats
+      // Business Rule: on the days a daily trip runs, booking for that day closes at 07:00 (Libya time) & Available Seats
       const tripCheckReq = db.request();
       tripCheckReq.input('chk_trip_id', sql.VarChar(50), cleanTrip);
-      const tripRes = await tripCheckReq.query('SELECT NULL as departure_date, available_seats, max_capacity FROM daily_trips WHERE daily_trip_id = @chk_trip_id');
+      const tripRes = await tripCheckReq.query(`
+        SELECT available_seats, max_capacity,
+               (SELECT STRING_AGG(day_of_week, ',') FROM daily_trip_days WHERE daily_trip_id = @chk_trip_id) AS run_days
+        FROM daily_trips WHERE daily_trip_id = @chk_trip_id
+      `);
       if (tripRes.recordset?.length > 0) {
         const trip = tripRes.recordset[0];
-        if (trip.start_date) {
-          const depTime = new Date(trip.start_date).getTime();
-          const nowTime = Date.now();
-          const hoursUntilTrip = (depTime - nowTime) / (1000 * 60 * 60);
-          if (hoursUntilTrip < 24) {
-            return sendJson(res, 400, {
-              success: false,
-              error: 'عذراً، تم إغلاق الحجز على هذه الرحلة! يُقفل الحجز تلقائياً قبل موعد انطلاق الرحلة بـ 24 ساعة لترتيب الحافلات وقوائم الركاب وتنسيق المرشدين.'
-            });
-          }
+        if (isDailyBookingClosed(trip.run_days)) {
+          return sendJson(res, 400, {
+            success: false,
+            error: 'عذراً، تم إغلاق الحجز على رحلة اليوم. يُقفل الحجز على الرحلات اليومية الساعة 7 صباحاً من يوم الرحلة.'
+          });
         }
         if (typeof trip.available_seats === 'number' && trip.available_seats < seatsCount) {
           return sendJson(res, 400, {
@@ -4291,16 +4225,11 @@ const server = http.createServer(async (req, res) => {
       const wTripRes = await wTripCheckReq.query('SELECT start_date, available_seats, max_capacity FROM weekly_trips WHERE weekly_trip_id = @chk_trip_id');
       if (wTripRes.recordset?.length > 0) {
         const trip = wTripRes.recordset[0];
-        if (trip.departure_date) {
-          const depTime = new Date(trip.departure_date).getTime();
-          const nowTime = Date.now();
-          const hoursUntilTrip = (depTime - nowTime) / (1000 * 60 * 60);
-          if (hoursUntilTrip < 24) {
-            return sendJson(res, 400, {
-              success: false,
-              error: 'عذراً، تم إغلاق استقبال الحجوزات لهذه الرحلة الأسبوعية! يُقفل الحجز تلقائياً قبل موعد الرحلة بـ 24 ساعة.'
-            });
-          }
+        if (isWeeklyBookingClosed(trip.start_date)) {
+          return sendJson(res, 400, {
+            success: false,
+            error: 'عذراً، تم إغلاق استقبال الحجوزات لهذه الرحلة الأسبوعية! يُقفل الحجز تلقائياً قبل موعد انطلاق الرحلة بـ 24 ساعة.'
+          });
         }
         if (typeof trip.available_seats === 'number' && trip.available_seats < seatsCount) {
           return sendJson(res, 400, {
@@ -5013,7 +4942,7 @@ const server = http.createServer(async (req, res) => {
 
       if (cleanType === 'weekly') {
         const bRes = await valReq.query(`
-          SELECT b.booking_weekly_id, b.booking_date, b.booking_status, wt.departure_date, wt.start_date
+          SELECT b.booking_weekly_id, b.booking_date, b.booking_status, wt.start_date
           FROM bookings_weekly b
           LEFT JOIN weekly_trips wt ON b.weekly_trip_id = wt.weekly_trip_id
           WHERE b.tourist_id = @tid AND b.weekly_trip_id = @trip_id
@@ -5145,6 +5074,41 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// ---- Partnership contract expiry alerts ----
+// Warns the admin once per contract when a hotel, restaurant/cafe or transport company contract ends within the next 24 hours.
+const CONTRACT_SOURCES = [
+  { code: 'h', kind: 'فندق', table: 'hotels', id: 'hotel_id', name: 'hotel_name' },
+  { code: 'r', kind: 'مطعم/مقهى', table: 'restaurants_cafes', id: 'facility_id', name: 'facility_name' },
+  { code: 't', kind: 'شركة نقل', table: 'transportation_companies', id: 'contract_number', name: 'company_name' },
+];
+
+async function checkExpiringContracts() {
+  try {
+    const db = await getPool();
+    for (const src of CONTRACT_SOURCES) {
+      // contract_end_date is the last day of the contract: alert from the day before it until it ends
+      const result = await db.request().query(`
+        SELECT ${src.id} AS id, ${src.name} AS name, CONVERT(varchar(10), contract_end_date, 23) AS end_date
+        FROM ${src.table}
+        WHERE contract_end_date IS NOT NULL
+          AND contract_end_date BETWEEN CAST(GETDATE() AS DATE) AND DATEADD(day, 1, CAST(GETDATE() AS DATE))
+      `);
+      for (const row of result.recordset) {
+        await createNotificationInDb(db, {
+          type: 'contract',
+          title: `⏰ عقد شراكة ينتهي خلال 24 ساعة: ${row.name}`,
+          body: `ينتهي عقد الشراكة مع ${src.kind} (${row.name}) بتاريخ ${row.end_date}. يرجى التواصل لتجديد العقد قبل انتهائه.`,
+          recipient_role: 'admin',
+          link: '/dashboard/admin',
+          dedupe_key: `contract-end-${src.code}-${row.id}-${row.end_date}`, // fits VARCHAR(100)
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Contract Expiry Check]:', err?.message || err);
+  }
+}
+
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`[DelniDB Secure Bridge] Listening on http://localhost:${PORT}`);
   try {
@@ -5152,4 +5116,6 @@ server.listen(PORT, '0.0.0.0', async () => {
   } catch (err) {
     console.error('[DelniDB Startup Connection Warning]:', err?.message || err);
   }
+  checkExpiringContracts();
+  setInterval(checkExpiringContracts, 60 * 60 * 1000); // hourly
 });

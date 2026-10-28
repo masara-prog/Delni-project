@@ -245,26 +245,30 @@ class TripController extends Controller
                 'hotel_photo_5' => 'nullable|string',
             ]);
 
-            $hotel = \App\Models\Hotel::updateOrCreate(
-                ['hotel_id' => $validated['hotel_id']],
-                [
-                    'hotel_name' => $validated['hotel_name'],
-                    'city' => $validated['city'] ?? 'طرابلس',
-                    'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
-                    'phone_number' => $validated['phone_number'] ?? '0910000000',
-                    'star_rating' => $validated['star_rating'] ?? 4,
-                    'partnership_status' => $validated['partnership_status'] ?? 'نشط',
-                    'contract_date' => !empty($validated['contract_date']) ? $validated['contract_date'] : null,
-                    'verification_status' => $validated['verification_status'] ?? 'معتمد',
-                    'property_type' => $validated['property_type'] ?? 'فندق',
-                    'amenities' => $validated['amenities'] ?? null,
-                    'hotel_photo_1' => $validated['hotel_photo_1'] ?? '/assets/ai_city.jpg',
-                    'hotel_photo_2' => $validated['hotel_photo_2'] ?? null,
-                    'hotel_photo_3' => $validated['hotel_photo_3'] ?? null,
-                    'hotel_photo_4' => $validated['hotel_photo_4'] ?? null,
-                    'hotel_photo_5' => $validated['hotel_photo_5'] ?? null,
-                ]
-            );
+            // Amenities live in hotel_amenities, not as a hotels column
+            $hotel = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+                $hotel = \App\Models\Hotel::updateOrCreate(
+                    ['hotel_id' => $validated['hotel_id']],
+                    [
+                        'hotel_name' => $validated['hotel_name'],
+                        'city' => $validated['city'] ?? 'طرابلس',
+                        'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
+                        'phone_number' => $validated['phone_number'] ?? '0910000000',
+                        'star_rating' => $validated['star_rating'] ?? 4,
+                        'partnership_status' => $validated['partnership_status'] ?? 'نشط',
+                        'property_type' => $validated['property_type'] ?? 'فندق',
+                        'hotel_photo_1' => $validated['hotel_photo_1'] ?? '/assets/ai_city.jpg',
+                        'hotel_photo_2' => $validated['hotel_photo_2'] ?? null,
+                        'hotel_photo_3' => $validated['hotel_photo_3'] ?? null,
+                        'hotel_photo_4' => $validated['hotel_photo_4'] ?? null,
+                        'hotel_photo_5' => $validated['hotel_photo_5'] ?? null,
+                    ]
+                );
+                if (array_key_exists('amenities', $validated)) {
+                    $hotel->replaceAmenities($validated['amenities']);
+                }
+                return $hotel;
+            });
 
             return response()->json(['status' => 'success', 'hotel' => $hotel], 201);
         } catch (\Illuminate\Validation\ValidationException $ve) {
@@ -313,26 +317,30 @@ class TripController extends Controller
                 'features' => 'nullable|string',
             ]);
 
-            $facility = \App\Models\RestaurantCafe::updateOrCreate(
-                ['facility_id' => $validated['facility_id']],
-                [
-                    'facility_name' => $validated['facility_name'],
-                    'facility_type' => $validated['facility_type'] ?? 'مطعم وكافيه',
-                    'city' => $validated['city'] ?? 'طرابلس',
-                    'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
-                    'phone_number' => $validated['phone_number'] ?? '0910000000',
-                    'description' => $validated['description'] ?? null,
-                    'facility_image_1' => $validated['facility_image_1'] ?? '/assets/ai_food.jpg',
-                    'facility_image_2' => $validated['facility_image_2'] ?? null,
-                    'facility_image_3' => $validated['facility_image_3'] ?? null,
-                    'facility_image_4' => $validated['facility_image_4'] ?? null,
-                    'facility_image_5' => $validated['facility_image_5'] ?? null,
-                    'contract_date' => !empty($validated['contract_date']) ? $validated['contract_date'] : null,
-                    'verification_status' => $validated['verification_status'] ?? 'معتمد',
-                    'working_hours' => $validated['working_hours'] ?? '09:00 ص - 12:00 م',
-                    'features' => $validated['features'] ?? null,
-                ]
-            );
+            // Features live in restaurant_features, not as a restaurants_cafes column
+            $facility = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+                $facility = \App\Models\RestaurantCafe::updateOrCreate(
+                    ['facility_id' => $validated['facility_id']],
+                    [
+                        'facility_name' => $validated['facility_name'],
+                        'facility_type' => $validated['facility_type'] ?? 'مطعم وكافيه',
+                        'city' => $validated['city'] ?? 'طرابلس',
+                        'address_details' => $validated['address_details'] ?? 'العنوان الرئيسي',
+                        'phone_number' => $validated['phone_number'] ?? '0910000000',
+                        'description' => $validated['description'] ?? null,
+                        'facility_image_1' => $validated['facility_image_1'] ?? '/assets/ai_food.jpg',
+                        'facility_image_2' => $validated['facility_image_2'] ?? null,
+                        'facility_image_3' => $validated['facility_image_3'] ?? null,
+                        'facility_image_4' => $validated['facility_image_4'] ?? null,
+                        'facility_image_5' => $validated['facility_image_5'] ?? null,
+                        'working_hours' => $validated['working_hours'] ?? '09:00 ص - 12:00 م',
+                    ]
+                );
+                if (array_key_exists('features', $validated)) {
+                    $facility->replaceFeatures($validated['features']);
+                }
+                return $facility;
+            });
 
             return response()->json(['status' => 'success', 'facility' => $facility], 201);
         } catch (\Illuminate\Validation\ValidationException $ve) {

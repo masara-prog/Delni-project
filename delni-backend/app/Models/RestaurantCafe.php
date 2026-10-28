@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ListInput;
 use Illuminate\Database\Eloquent\Model;
 
 class RestaurantCafe extends Model
@@ -25,10 +26,12 @@ class RestaurantCafe extends Model
         'facility_image_3',
         'facility_image_4',
         'facility_image_5',
-        'contract_date',
-        'verification_status',
         'working_hours',
-        'features',
+        'google_maps_url',
+        'discount_percentage',
+        'contract_start_date',
+        'contract_end_date',
+        'partnership_status',
     ];
 
     protected $casts = [
@@ -43,5 +46,29 @@ class RestaurantCafe extends Model
     public function reviews()
     {
         return $this->hasMany(ReviewFacility::class, 'facility_id', 'facility_id');
+    }
+
+    public function features()
+    {
+        return $this->hasMany(RestaurantFeature::class, 'facility_id', 'facility_id');
+    }
+
+    public function dailyTrips()
+    {
+        return $this->hasMany(DailyTrip::class, 'restaurant_id', 'facility_id');
+    }
+
+    public function weeklyTrips()
+    {
+        return $this->belongsToMany(WeeklyTrip::class, 'restaurants_trip_weekly', 'facility_id', 'weekly_trip_id');
+    }
+
+    // Replaces the facility's rows in restaurant_features
+    public function replaceFeatures($value): void
+    {
+        $this->features()->delete();
+        foreach (ListInput::parse($value) as $feature) {
+            $this->features()->create(['feature' => $feature]);
+        }
     }
 }

@@ -272,7 +272,7 @@ function TransportDashboard() {
   const [companyNewPassword, setCompanyNewPassword] = useState("");
   const [companyConfirmPassword, setCompanyConfirmPassword] = useState("");
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (companyNewPassword) {
       if (companyNewPassword.length < 4) {
@@ -283,10 +283,14 @@ function TransportDashboard() {
         alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
         return;
       }
-      updateTransportCompany(companyInfo.contract_number, {
+      const result = await updateTransportCompany(companyInfo.contract_number, {
         ...companyInfo,
         password: companyNewPassword,
       });
+      if (!result.ok) {
+        alert("❌ لم يتم تحديث كلمة المرور في قاعدة البيانات.\n" + result.error);
+        return;
+      }
       setCompanyNewPassword("");
       setCompanyConfirmPassword("");
       alert("تم تحديث كلمة مرور حساب شركة النقل بنجاح ✓");
@@ -296,7 +300,7 @@ function TransportDashboard() {
   };
 
   return (
-    <DashboardShell role="transport" roleLabel="شركة نقل سياحي" userName={companyInfo.company_name.split(" ")[0]} nav={nav} active={active} onNavigate={setActive}>
+    <DashboardShell role="transport" roleLabel="شركة نقل سياحي" userName={companyInfo.company_name} nav={nav} active={active} onNavigate={setActive}>
       {active === "overview" && (
         <>
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-right">
@@ -1191,6 +1195,7 @@ function VehicleModal({
       category,
       vehicle_status: status,
       insurance_image: insuranceImg,
+      vehicle_image: vehicleImg,
     }, { licenseNumber: selectedDriverLic });
   };
 
@@ -1341,8 +1346,8 @@ function VehicleModal({
         </div>
 
         <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2">
-          <label className="text-xs font-black text-foreground block">{isAr ? "🛡️ وثيقة التأمين الشامل" : "🛡️ Comprehensive Insurance Document"}</label>
-          <ImageFilePicker label={isAr ? "صورة وثيقة التأمين" : "Insurance Image"} value={insuranceImg} onChange={setInsuranceImg} />
+          <label className="text-xs font-black text-foreground block">{isAr ? "🛡️ إضافة صورة وثيقة التأمين أو كتيّب السيارة" : "🛡️ Add Insurance Document or Vehicle Booklet Image"}</label>
+          <ImageFilePicker label={isAr ? "صورة الوثيقة أو الكتيّب" : "Document or Booklet Image"} value={insuranceImg} onChange={setInsuranceImg} />
         </div>
 
         <div className="pt-2 border-t border-border">
@@ -1362,6 +1367,8 @@ function VehicleModal({
 function ImageFilePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Reset the input so choosing the same file again still triggers onChange
+    e.target.value = "";
     if (!file) return;
 
     const reader = new FileReader();

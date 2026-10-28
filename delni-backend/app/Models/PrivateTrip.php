@@ -15,17 +15,16 @@ class PrivateTrip extends Model
     protected $fillable = [
         'private_trip_id',
         'status_order',
-        'customer_description',
         'preferred_start_date',
         'duration_days',
         'number_of_companions',
         'quoted_price',
-        'admin_itinerary_plan',
         'guide_license_number',
         'tourist_id',
-        'customer_name',
-        'customer_phone',
         'customer_requirements',
+        'vehicle_plate',
+        'created_at',
+        'additional_expenses',
     ];
 
     protected $casts = [
@@ -45,14 +44,26 @@ class PrivateTrip extends Model
         return $this->belongsTo(TourGuide::class, 'guide_license_number', 'license_number');
     }
 
-    public function vehicleAllocations()
+    public function vehicle()
     {
-        return $this->hasMany(PrivateTripVehicle::class, 'private_trip_id', 'private_trip_id');
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
     }
 
+    // Kept for existing callers that eager-load 'vehicles'
     public function vehicles()
     {
-        return $this->belongsToMany(Vehicle::class, 'private_trip_vehicles', 'private_trip_id', 'plate_number');
+        return $this->vehicle();
+    }
+
+    public function hotels()
+    {
+        return $this->belongsToMany(Hotel::class, 'hotels_trip_private', 'private_trip_id', 'hotel_id');
+    }
+
+    public function stations()
+    {
+        return $this->hasMany(PrivateTripStation::class, 'private_trip_id', 'private_trip_id')
+                    ->orderBy('day_number')->orderBy('station_order');
     }
 
     public function places()

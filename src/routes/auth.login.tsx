@@ -67,49 +67,22 @@ function LoginPage() {
   const handleRoleSelect = (rId: Role) => {
     setRole(rId);
     setErrorMsg("");
-    if (rId === "admin") {
-      setEmail("admin@dalni.ly");
-      setPassword("admin123");
-    } else {
-      setEmail("");
-      setPassword("");
-    }
+    setEmail("");
+    setPassword("");
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    const isLoginAsAdmin = role === "admin" || email.toLowerCase().trim().includes("admin");
-
-    if (isLoginAsAdmin) {
-      const cleanEmail = email.trim().toLowerCase();
-      if ((cleanEmail === "admin@dalni.ly" || cleanEmail === "admin") && (password === "admin123" || password === "admin")) {
-        localStorage.setItem("dalni_token", "admin_session_token");
-        localStorage.setItem("dalni_role", "admin");
-        localStorage.setItem(
-          "dalni_user",
-          JSON.stringify({
-            name: "مدير النظام",
-            fullName: "مدير النظام (الأدمن)",
-            email: "admin@dalni.ly",
-            role: "admin",
-            loginTime: new Date().toISOString(),
-          })
-        );
-        navigate({ to: "/dashboard/admin" });
-        return;
-      } else {
-        setErrorMsg("عذراً، بيانات دخول مدير النظام غير صحيحة! البريد: admin@dalni.ly | كلمة المرور: admin123");
-        return;
-      }
-    }
-
+    // Every account type, the admin included, is verified by the server with its email and password
     // Connect to live Laravel API
     try {
       const res = await apiLogin({ role, login: email, password });
       if (res && res.status === "success" && res.token) {
-        if (role === "guide") {
+        if (role === "admin") {
+          navigate({ to: "/dashboard/admin" });
+        } else if (role === "guide") {
           navigate({ to: "/dashboard/guide" });
         } else if (role === "transport") {
           navigate({ to: "/dashboard/transport" });
@@ -255,7 +228,7 @@ function LoginPage() {
                 <span>🚌</span>
                 <span>دخول شركات النقل السياحي المعتمدة:</span>
               </div>
-              <div>يرجى إدخال البريد الإلكتروني أو رقم العقد الرسمي وكلمة المرور المسجلة بشركتكم.</div>
+              <div>يرجى إدخال البريد الإلكتروني وكلمة المرور المسجلين لشركتكم.</div>
             </div>
           )}
 
@@ -266,7 +239,7 @@ function LoginPage() {
                 <span>🧑‍✈️</span>
                 <span>دخول السائقين المعتمدين:</span>
               </div>
-              <div>يرجى إدخال البريد الإلكتروني أو رقم رخصة القيادة وكلمة المرور المسجلة لدى شركة النقل.</div>
+              <div>يرجى إدخال البريد الإلكتروني وكلمة المرور المسجلين لدى شركة النقل.</div>
             </div>
           )}
 
@@ -281,10 +254,10 @@ function LoginPage() {
           <form className="space-y-4 text-right" onSubmit={handleLoginSubmit}>
             <div>
               <label className="text-xs sm:text-sm font-bold text-[#0F172A] mb-1.5 block text-right">
-                البريد الإلكتروني أو رقم الهاتف
+                البريد الإلكتروني
               </label>
               <input
-                type="text"
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@dalni.ly"

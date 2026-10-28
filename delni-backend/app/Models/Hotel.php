@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ListInput;
 use Illuminate\Database\Eloquent\Model;
 
 class Hotel extends Model
@@ -25,10 +26,13 @@ class Hotel extends Model
         'hotel_photo_3',
         'hotel_photo_4',
         'hotel_photo_5',
-        'contract_date',
-        'verification_status',
         'property_type',
-        'amenities',
+        'google_maps_url',
+        'description',
+        'working_hours',
+        'discount_percentage',
+        'contract_start_date',
+        'contract_end_date',
     ];
 
     protected $casts = [
@@ -49,5 +53,24 @@ class Hotel extends Model
     public function reviews()
     {
         return $this->hasMany(ReviewHotel::class, 'hotel_id', 'hotel_id');
+    }
+
+    public function amenities()
+    {
+        return $this->hasMany(HotelAmenity::class, 'hotel_id', 'hotel_id');
+    }
+
+    public function privateTrips()
+    {
+        return $this->belongsToMany(PrivateTrip::class, 'hotels_trip_private', 'hotel_id', 'private_trip_id');
+    }
+
+    // Replaces the hotel's rows in hotel_amenities
+    public function replaceAmenities($value): void
+    {
+        $this->amenities()->delete();
+        foreach (ListInput::parse($value) as $amenity) {
+            $this->amenities()->create(['amenity' => $amenity]);
+        }
     }
 }

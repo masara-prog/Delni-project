@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ListInput;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -20,9 +21,6 @@ class TourGuide extends Model
         'full_name',
         'phone_number',
         'years_of_experience',
-        'certificate',
-        'certificate_name',
-        'digital_certificate_file',
         'bio',
         'speaks_english',
         'speaks_french',
@@ -31,14 +29,9 @@ class TourGuide extends Model
         'password',
         'email',
         'gender',
-        'working_days',
-        'operating_regions',
-        'primaryRegion',
         'price_per_day',
         'avatar',
-        'title',
-        'specialties',
-        'total_tours_completed',
+        'digital_certificate_file',
     ];
 
     protected $hidden = [
@@ -67,5 +60,37 @@ class TourGuide extends Model
     public function privateTrips()
     {
         return $this->hasMany(PrivateTrip::class, 'guide_license_number', 'license_number');
+    }
+
+    public function workingDays()
+    {
+        return $this->hasMany(GuideWorkingDay::class, 'license_number', 'license_number');
+    }
+
+    public function operatingRegions()
+    {
+        return $this->hasMany(GuideOperatingRegion::class, 'license_number', 'license_number');
+    }
+
+    public function places()
+    {
+        return $this->belongsToMany(PlaceTourist::class, 'guide_places', 'license_number', 'place_id');
+    }
+
+    // Replaces the guide's rows in guide_working_days / guide_operating_regions
+    public function replaceWorkingDays($value): void
+    {
+        $this->workingDays()->delete();
+        foreach (ListInput::dayNames($value) as $day) {
+            $this->workingDays()->create(['day_of_week' => $day]);
+        }
+    }
+
+    public function replaceOperatingRegions($value): void
+    {
+        $this->operatingRegions()->delete();
+        foreach (ListInput::parse($value) as $region) {
+            $this->operatingRegions()->create(['region' => $region]);
+        }
     }
 }

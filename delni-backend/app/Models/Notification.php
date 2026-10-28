@@ -21,8 +21,8 @@ class Notification extends Model
         'recipient_id',
         'link',
         'is_read',
-        'dedupe_key',
         'created_at',
+        'dedupe_key',
     ];
 
     protected $casts = [

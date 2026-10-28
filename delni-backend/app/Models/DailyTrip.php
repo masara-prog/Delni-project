@@ -18,20 +18,17 @@ class DailyTrip extends Model
         'description',
         'price_per_seat',
         'is_active',
-        'photo',
+        'max_capacity',
+        'available_seats',
+        'guide_license_number',
+        'departure_city',
+        'vehicle_plate',
+        'restaurant_id',
         'photo_1',
         'photo_2',
         'photo_3',
         'photo_4',
         'photo_5',
-        'max_capacity',
-        'available_seats',
-        'guide_license_number',
-        'departure_city',
-        'destination_city',
-        'google_maps_url',
-        'vehicle_plate',
-        'restaurant_id',
     ];
 
     protected $casts = [
@@ -79,5 +76,29 @@ class DailyTrip extends Model
     public function places()
     {
         return $this->belongsToMany(PlaceTourist::class, 'places_trip_daily', 'daily_trip_id', 'place_id');
+    }
+
+    public function days()
+    {
+        return $this->hasMany(DailyTripDay::class, 'daily_trip_id', 'daily_trip_id');
+    }
+
+    public function stations()
+    {
+        return $this->hasMany(DailyTripStation::class, 'daily_trip_id', 'daily_trip_id')->orderBy('station_order');
+    }
+
+    // On a day the trip runs (no stored days = every day), booking for that day closes at 07:00 Libya time
+    public function bookingClosedReason(): ?string
+    {
+        $now = now('Africa/Tripoli');
+        $normalize = fn ($d) => str_replace('إ', 'ا', trim((string) $d));
+        $dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        $runDays = $this->days()->pluck('day_of_week')->map($normalize)->all();
+        $runsToday = empty($runDays) || in_array($normalize($dayNames[$now->dayOfWeek]), $runDays, true);
+
+        return $runsToday && $now->hour >= 7
+            ? 'عذراً، تم إغلاق الحجز على رحلة اليوم. يُقفل الحجز على الرحلات اليومية الساعة 7 صباحاً من يوم الرحلة.'
+            : null;
     }
 }

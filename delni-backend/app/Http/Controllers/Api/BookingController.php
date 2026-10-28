@@ -72,6 +72,10 @@ class BookingController extends Controller
             ], 404);
         }
 
+        if ($reason = $trip->bookingClosedReason()) {
+            return response()->json(['status' => 'error', 'message' => $reason], 422);
+        }
+
         return DB::transaction(function () use ($validated, $trip, $request) {
             $lockedTrip = DailyTrip::lockForUpdate()->find($trip->daily_trip_id);
 
@@ -167,6 +171,10 @@ class BookingController extends Controller
                  'status' => 'error',
                  'message' => 'عذراً، لم يتم العثور على الرحلة الأسبوعية المطلوبة في قاعدة البيانات.',
             ], 404);
+        }
+
+        if ($reason = $trip->bookingClosedReason()) {
+            return response()->json(['status' => 'error', 'message' => $reason], 422);
         }
 
         return DB::transaction(function () use ($validated, $trip, $request) {

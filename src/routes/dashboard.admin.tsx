@@ -406,26 +406,33 @@ function AdminDashboard() {
   const [editingWeeklyOffer, setEditingWeeklyOffer] = useState<WeeklyOffer | null>(null);
 
   /* ---- HANDLERS ---- */
-  const handleAddCompany = (c: any) => {
-    const saved = addTransportCompany(c);
+  // Company handlers return an error message (or null) so the modal can stay open and show it when the save fails
+  const handleAddCompany = async (c: any): Promise<string | null> => {
+    const result = await addTransportCompany(c);
+    if (!result.ok) return result.error;
+    const saved = result.record;
     const mapped: Company = {
       ...saved,
       name: saved.company_name || saved.name || "شركة نقل",
       phone: saved.phone_number || saved.phone || "",
       status: saved.verification_status || saved.status || "موثق",
     };
-    setCompanies([mapped, ...companies]);
+    setCompanies((prev) => [mapped, ...prev]);
     setShowAddCompany(false);
+    return null;
   };
-  const handleUpdateCompany = (updated: Company) => { 
-    updateTransportCompany(updated.contract_number, updated);
-    setCompanies(companies.map(c => c.contract_number === updated.contract_number ? updated : c)); 
-    setEditingCompany(null); 
+  const handleUpdateCompany = async (updated: Company): Promise<string | null> => {
+    const result = await updateTransportCompany(updated.contract_number, updated);
+    if (!result.ok) return result.error;
+    setCompanies((prev) => prev.map(c => c.contract_number === updated.contract_number ? updated : c));
+    setEditingCompany(null);
+    return null;
   };
-  const handleDeleteCompany = (contractNumber: string) => {
+  const handleDeleteCompany = async (contractNumber: string) => {
     if (confirm("هل تريد حذف شركة النقل؟")) {
-      deleteTransportCompany(contractNumber);
-      setCompanies(companies.filter(c => c.contract_number !== contractNumber));
+      if (await deleteTransportCompany(contractNumber)) {
+        setCompanies((prev) => prev.filter(c => c.contract_number !== contractNumber));
+      }
     }
   };
   const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
@@ -680,14 +687,17 @@ function AdminDashboard() {
       }
 
       if (res.companies && Array.isArray(res.companies)) {
+        // Keep every stored field (google_maps_url, total_vehicles, contract dates) so the table and the edit form see the real values
         setCompanies(res.companies.map((c: any) => ({
+          ...c,
           id: c.contract_number,
           contract_number: c.contract_number,
           name: c.company_name,
           company_name: c.company_name,
           phone: c.phone_number,
           phone_number: c.phone_number,
-          address: c.address_details || "",
+          // The company location is stored in google_maps_url
+          address: c.google_maps_url || c.address || "",
           city: c.city || "طرابلس",
           email: c.email || "",
           status: c.verification_status || "موثق",
@@ -1412,7 +1422,7 @@ function AdminDashboard() {
     setAttractions([...attractions, newPlace]); 
     setShowAddAttraction(false); 
     try {
-      await sendToSecureBackend("places", {
+      const saved = await sendToSecureBackend("places", {
         place_id: placeId,
         municipality_code: placeId,
         place_name: newPlace.place_name || newPlace.name,
@@ -1429,6 +1439,10 @@ function AdminDashboard() {
         is_new: true,
         mode: "create",
       });
+      if (!saved) {
+        setAttractions((prev) => prev.filter((x) => x !== newPlace));
+        return;
+      }
       alert(`✅ تم توثيق وإضافة المعلم السياحي (${newPlace.place_name || newPlace.name}) بنجاح.`);
     } catch (err: any) {
       console.warn("Failed to persist place to backend:", err);
@@ -1436,10 +1450,11 @@ function AdminDashboard() {
   };
   const handleUpdateAttraction = async (a: Attraction) => { 
     const placeId = String(a.place_id || a.id).trim();
+    const previousAttractions = attractions;
     setAttractions(attractions.map(x => (x.id === a.id || x.place_id === placeId) ? { ...x, ...a } : x)); 
     setEditingAttraction(null); 
     try {
-      await sendToSecureBackend("places", {
+      const saved = await sendToSecureBackend("places", {
         place_id: placeId,
         municipality_code: placeId,
         place_name: a.place_name || a.name || (a as any).name,
@@ -1455,16 +1470,21 @@ function AdminDashboard() {
         highlights: (a as any).highlights,
         mode: "update",
       });
+      if (!saved) {
+        setAttractions(previousAttractions);
+        return;
+      }
       alert(`✅ تم حفظ وتحديث بيانات المعلم السياحي (${a.place_name || a.name}) بنجاح في قاعدة البيانات.`);
     } catch (err: any) {
       console.warn("Failed to update place in backend:", err);
-      alert("⚠️ تم تحديث البيانات محلياً ولكن حدث خطأ في الاتصال بقاعدة البيانات: " + err.message);
+      setAttractions(previousAttractions);
+      alert("❌ لم يتم حفظ التعديلات في قاعدة البيانات: " + err.message);
     }
   };
-  const handleDeleteAttraction = (id: string) => { 
+  const handleDeleteAttraction = async (id: string) => { 
     if (confirm("هل تريد حذف المعلم السياحي؟")) {
-      setAttractions(attractions.filter(a => a.id !== id)); 
-      deleteFromSecureBackend("places", "place_id", id);
+      if (!(await deleteFromSecureBackend("places", "place_id", id))) return;
+      setAttractions((prev) => prev.filter(a => a.id !== id)); 
     }
   };
   const handleReplyTicket = (ticketId: string, reply: string) => {
@@ -4061,7 +4081,7 @@ function LocationMapPickerModal({
   );
 }
 
-function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Company[]; onClose: () => void; onAdd: (c: any) => void }) {
+function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Company[]; onClose: () => void; onAdd: (c: any) => Promise<string | null> }) {
   const [contractNo, setContractNo] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -4070,11 +4090,14 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(5);
+  const contractStartDate = new Date().toLocaleDateString("en-CA");
+  const [contractEndDate, setContractEndDate] = useState("");
   const [companyStatus, setCompanyStatus] = useState("نشطة");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -4127,9 +4150,20 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
       return;
     }
+    if (!contractEndDate) {
+      setErrorMsg("يرجى تحديد تاريخ انتهاء التعاقد.");
+      return;
+    }
+    if (contractEndDate <= contractStartDate) {
+      setErrorMsg("تاريخ انتهاء التعاقد يجب أن يكون بعد تاريخ بداية التعاقد (اليوم).");
+      return;
+    }
 
-    onAdd({
+    setSaving(true);
+    const saveError = await onAdd({
       contract_number: cleanContract,
+      contract_start_date: contractStartDate,
+      contract_end_date: contractEndDate,
       name: name.trim(),
       company_name: name.trim(),
       phone: phone.trim(),
@@ -4145,6 +4179,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       status: companyStatus,
       verification_status: companyStatus,
     });
+    setSaving(false);
+    if (saveError) setErrorMsg("لم يتم حفظ الشركة في قاعدة البيانات: " + saveError);
   };
 
   return (
@@ -4249,11 +4285,11 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
             </div>
           </div>
 
-          {/* 3. سعة الأسطول وحالة التشغيل */}
+          {/* 3. سعة الأسطول وفترة التعاقد والحالة */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
               <span>📊</span>
-              <span>سعة الأسطول وحالة التشغيل</span>
+              <span>سعة الأسطول وسريان التعاقد والتشغيل</span>
             </div>
 
             <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/90 text-right space-y-1">
@@ -4265,6 +4301,25 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
             <div>
               <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
+                  <span>تاريخ بداية التعاقد (تاريخ اليوم) 🔒</span>
+                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">تلقائي</span>
+                </label>
+                <input
+                  type="date"
+                  value={contractStartDate}
+                  disabled
+                  readOnly
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed shadow-xs"
+                />
+              </div>
+              <div>
+                <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
+              </div>
             </div>
 
             <div>
@@ -4290,9 +4345,10 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
             </button>
             <button
               type="submit"
-              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+              disabled={saving}
+              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
             >
-              <span>حفظ واعتماد الشركة في المنظومة</span>
+              <span>{saving ? "جاري الحفظ في قاعدة البيانات..." : "حفظ واعتماد الشركة في المنظومة"}</span>
               <span>✓</span>
             </button>
           </div>
@@ -4311,7 +4367,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
   );
 }
 
-function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; onClose: () => void; onUpdate: (c: Company) => void }) {
+function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; onClose: () => void; onUpdate: (c: Company) => Promise<string | null> }) {
   const [contractNo, setContractNo] = useState(company.contract_number || "");
   const [name, setName] = useState(company.company_name || company.name || "");
   const [phone, setPhone] = useState(company.phone_number || company.phone || "");
@@ -4319,11 +4375,18 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
   const [address, setAddress] = useState(company.google_maps_url || company.address || "");
   const [email, setEmail] = useState(company.email || "");
   const [vehiclesCount, setVehiclesCount] = useState<number | string>(company.total_vehicles ?? 5);
+  const [contractStartDate] = useState(
+    company.contract_start_date ? String(company.contract_start_date).split("T")[0] : new Date().toLocaleDateString("en-CA")
+  );
+  const [contractEndDate, setContractEndDate] = useState(
+    company.contract_end_date ? String(company.contract_end_date).split("T")[0] : ""
+  );
   const [status, setStatus] = useState(company.status === "موقوفة" || company.verification_status === "موقوفة" || company.status === "مرفوض" ? "موقوفة" : "نشطة");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -4354,10 +4417,21 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       setErrorMsg("إجمالي عدد مركبات الأسطول يجب أن يكون رقماً صحيحاً أكبر من الصفر.");
       return;
     }
+    if (!contractEndDate) {
+      setErrorMsg("يرجى تحديد تاريخ انتهاء التعاقد.");
+      return;
+    }
+    if (contractEndDate <= contractStartDate) {
+      setErrorMsg("تاريخ انتهاء التعاقد يجب أن يكون بعد تاريخ بداية التعاقد.");
+      return;
+    }
 
-    onUpdate({
+    setSaving(true);
+    const saveError = await onUpdate({
       ...company,
       contract_number: contractNo.trim(),
+      contract_start_date: contractStartDate,
+      contract_end_date: contractEndDate,
       company_name: name.trim(),
       name: name.trim(),
       phone_number: phone.trim(),
@@ -4371,6 +4445,8 @@ available_cars: totalV,
       verification_status: status,
       status: status,
     });
+    setSaving(false);
+    if (saveError) setErrorMsg("لم يتم حفظ التعديلات في قاعدة البيانات: " + saveError);
   };
 
   return (
@@ -4497,7 +4573,7 @@ available_cars: totalV,
                 </label>
                 <input
                   type="date"
-                  value={contractStartDate ? String(contractStartDate).split("T")[0] : ""}
+                  value={contractStartDate}
                   disabled
                   readOnly
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed shadow-xs"
@@ -4505,7 +4581,7 @@ available_cars: totalV,
               </div>
 
               <div>
-                <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate ? String(contractEndDate).split("T")[0] : ""} onChange={setContractEndDate} required />
+                <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
               </div>
             </div>
           </div>
@@ -4520,9 +4596,10 @@ available_cars: totalV,
             </button>
             <button
               type="submit"
-              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+              disabled={saving}
+              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
             >
-              <span>حفظ وتحديث في قاعدة البيانات</span>
+              <span>{saving ? "جاري الحفظ في قاعدة البيانات..." : "حفظ وتحديث في قاعدة البيانات"}</span>
               <span>✓</span>
             </button>
           </div>
@@ -5715,6 +5792,26 @@ function TripHotelSelector({
   );
 }
 
+// Guide working-day names <-> codes, shared by the trip create and edit modals
+const arabicToCodeMap: Record<string, string> = {
+  "السبت": "sat",
+  "الأحد": "sun",
+  "الإثنين": "mon",
+  "الثلاثاء": "tue",
+  "الأربعاء": "wed",
+  "الخميس": "thu",
+  "الجمعة": "fri",
+};
+const codeToArabicMap: Record<string, string> = {
+  "sat": "السبت",
+  "sun": "الأحد",
+  "mon": "الإثنين",
+  "tue": "الثلاثاء",
+  "wed": "الأربعاء",
+  "thu": "الخميس",
+  "fri": "الجمعة",
+};
+
 function CreateTripModal({
   type,
   guides,
@@ -5816,24 +5913,6 @@ function CreateTripModal({
 
   const [showAllGuides, setShowAllGuides] = useState(false);
 
-  const arabicToCodeMap: Record<string, string> = {
-    "السبت": "sat",
-    "الأحد": "sun",
-    "الإثنين": "mon",
-    "الثلاثاء": "tue",
-    "الأربعاء": "wed",
-    "الخميس": "thu",
-    "الجمعة": "fri",
-  };
-  const codeToArabicMap: Record<string, string> = {
-    "sat": "السبت",
-    "sun": "الأحد",
-    "mon": "الإثنين",
-    "tue": "الثلاثاء",
-    "wed": "الأربعاء",
-    "thu": "الخميس",
-    "fri": "الجمعة",
-  };
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter((g) => {
@@ -6685,8 +6764,8 @@ function DailyTripEditModal({
           restaurants={restaurants}
           selectedIds={selectedRestaurantIds}
           onToggleSelect={handleToggleRestaurant}
-          targetCity={multiDestinations[0] || destination || undefined}
-          targetCities={multiDestinations.length > 0 ? multiDestinations : (destination ? [destination] : [])}
+          targetCity={multiDestinations[0] || undefined}
+          targetCities={multiDestinations}
           attractions={attractions}
         />
 

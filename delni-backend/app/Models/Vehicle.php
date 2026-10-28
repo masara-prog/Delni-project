@@ -16,14 +16,12 @@ class Vehicle extends Model
         'plate_number',
         'vehicle_type',
         'seating_capacity',
-        'vehicle_image',
         'vehicle_status',
-        'insurance_details',
         'contract_number',
         'daily_rate',
         'category',
-        'photos',
         'insurance_image',
+        'vehicle_image',
     ];
 
     protected $casts = [
@@ -41,18 +39,19 @@ class Vehicle extends Model
         return $this->hasOne(Driver::class, 'assigned_vehicle_plate', 'plate_number');
     }
 
-    public function dailyTripAllocations()
+    // Trips reference their vehicle directly through vehicle_plate
+    public function dailyTrips()
     {
-        return $this->hasMany(DailyTripVehicle::class, 'plate_number', 'plate_number');
+        return $this->hasMany(DailyTrip::class, 'vehicle_plate', 'plate_number');
     }
 
-    public function weeklyTripAllocations()
+    public function weeklyTrips()
     {
-        return $this->hasMany(WeeklyTripVehicle::class, 'plate_number', 'plate_number');
+        return $this->hasMany(WeeklyTrip::class, 'vehicle_plate', 'plate_number');
     }
 
-    public function privateTripAllocations()
+    public function privateTrips()
     {
-        return $this->hasMany(PrivateTripVehicle::class, 'plate_number', 'plate_number');
+        return $this->hasMany(PrivateTrip::class, 'vehicle_plate', 'plate_number');
     }
 }

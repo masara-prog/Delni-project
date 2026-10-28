@@ -2,11 +2,11 @@
    DELNI PLATFORM - CANONICAL DATABASE SCHEMA (MICROSOFT SQL SERVER)
    Database: DelniDB
    Target Engine: Microsoft SQL Server 2019 / 2022 / Azure SQL
-   Tables: 39 Tables
-   Primary Keys: 39
-   Foreign Keys: 49
+   Tables: 41 Tables
+   Primary Keys: 41
+   Foreign Keys: 50
    Order of Execution:
-     1. CREATE TABLE (All 39 tables created first)
+     1. CREATE TABLE (All 41 tables created first)
      2. PRIMARY KEYS & UNIQUE CONSTRAINTS (All PKs created second)
      3. FOREIGN KEYS (All FKs created third, guaranteeing 0 dependency errors)
    ============================================================================== */
@@ -21,7 +21,7 @@ USE [DelniDB];
 GO
 
 /* ==============================================================================
-   SECTION 1: CREATE TABLES (39 TABLES)
+   SECTION 1: CREATE TABLES (41 TABLES)
    ============================================================================== */
 
 -- ----------------------------------------------------------------------------
@@ -111,7 +111,7 @@ BEGIN
         [guide_license_number] VARCHAR(50) NOT NULL,
         [departure_city] NVARCHAR(100) NULL,
         [vehicle_plate] VARCHAR(30) NULL,
-        [restaurant_id] NVARCHAR(50) NULL,
+        [restaurant_id] VARCHAR(50) NULL,
         [photo_1] NVARCHAR(500) NULL,
         [photo_2] NVARCHAR(500) NULL,
         [photo_3] NVARCHAR(500) NULL,
@@ -220,8 +220,8 @@ BEGIN
         [description] NVARCHAR(MAX) NULL,
         [working_hours] NVARCHAR(150) NULL,
         [discount_percentage] INT NULL,
-        [contract_start_date] NVARCHAR(50) NULL,
-        [contract_end_date] NVARCHAR(50) NULL
+        [contract_start_date] DATE NULL,
+        [contract_end_date] DATE NULL
     );
 END;
 GO
@@ -466,7 +466,8 @@ BEGIN
         [tourist_id] VARCHAR(50) NULL,
         [customer_requirements] NVARCHAR(MAX) NULL,
         [vehicle_plate] VARCHAR(30) NULL,
-        [created_at] DATETIME NOT NULL DEFAULT (getdate())
+        [created_at] DATETIME NOT NULL DEFAULT (getdate()),
+        [additional_expenses] DECIMAL(10, 2) NULL DEFAULT ((0))
     );
 END;
 GO
@@ -506,8 +507,8 @@ BEGIN
         [working_hours] NVARCHAR(100) NULL,
         [google_maps_url] NVARCHAR(500) NULL,
         [discount_percentage] INT NULL,
-        [contract_start_date] NVARCHAR(50) NULL,
-        [contract_end_date] NVARCHAR(50) NULL,
+        [contract_start_date] DATE NULL,
+        [contract_end_date] DATE NULL,
         [partnership_status] NVARCHAR(50) NULL DEFAULT (N'نشط')
     );
 END;
@@ -740,8 +741,54 @@ BEGIN
 END;
 GO
 
+-- ----------------------------------------------------------------------------
+-- Table: dbo.[users]
+-- Description: Laravel accounts (admin login through AuthController)
+-- ----------------------------------------------------------------------------
+IF OBJECT_ID('dbo.[users]', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.[users] (
+        [id] BIGINT IDENTITY(1,1) NOT NULL,
+        [name] NVARCHAR(255) NOT NULL,
+        [email] NVARCHAR(255) NOT NULL,
+        [email_verified_at] DATETIME NULL,
+        [password] NVARCHAR(255) NOT NULL,
+        [remember_token] NVARCHAR(100) NULL,
+        [created_at] DATETIME NULL,
+        [updated_at] DATETIME NULL,
+        CONSTRAINT [PK_users] PRIMARY KEY ([id]),
+        CONSTRAINT [users_email_unique] UNIQUE ([email])
+    );
+END;
+GO
+
+-- ----------------------------------------------------------------------------
+-- Table: dbo.[personal_access_tokens]
+-- Description: Laravel Sanctum tokens (tokenable_id is text: tourist/guide/company ids are text)
+-- ----------------------------------------------------------------------------
+IF OBJECT_ID('dbo.[personal_access_tokens]', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.[personal_access_tokens] (
+        [id] BIGINT IDENTITY(1,1) NOT NULL,
+        [tokenable_type] NVARCHAR(255) NOT NULL,
+        [tokenable_id] NVARCHAR(255) NOT NULL,
+        [name] NVARCHAR(MAX) NOT NULL,
+        [token] NVARCHAR(64) NOT NULL,
+        [abilities] NVARCHAR(MAX) NULL,
+        [last_used_at] DATETIME NULL,
+        [expires_at] DATETIME NULL,
+        [created_at] DATETIME NULL,
+        [updated_at] DATETIME NULL,
+        CONSTRAINT [PK_personal_access_tokens] PRIMARY KEY ([id]),
+        CONSTRAINT [personal_access_tokens_token_unique] UNIQUE ([token])
+    );
+    CREATE INDEX [personal_access_tokens_tokenable_type_tokenable_id_index] ON dbo.[personal_access_tokens] ([tokenable_type], [tokenable_id]);
+    CREATE INDEX [personal_access_tokens_expires_at_index] ON dbo.[personal_access_tokens] ([expires_at]);
+END;
+GO
+
 /* ==============================================================================
-   SECTION 2: PRIMARY KEYS & UNIQUE CONSTRAINTS (39 PKs + UNIQUE CONSTRAINTS)
+   SECTION 2: PRIMARY KEYS & UNIQUE CONSTRAINTS (41 PKs + UNIQUE CONSTRAINTS)
    ============================================================================== */
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__bookings__3D23616D961628F0')
@@ -937,7 +984,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__weekly_t__BC5
 GO
 
 /* ==============================================================================
-   SECTION 3: FOREIGN KEY RELATIONSHIPS (49 FOREIGN KEYS)
+   SECTION 3: FOREIGN KEY RELATIONSHIPS (50 FOREIGN KEYS)
    ============================================================================== */
 
 -- ==============================================================================
@@ -1138,5 +1185,9 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_weekly_trips_vehicle')
     ALTER TABLE dbo.[weekly_trips] ADD CONSTRAINT [FK_weekly_trips_vehicle] FOREIGN KEY ([vehicle_plate]) REFERENCES dbo.[vehicles]([plate_number]);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_daily_trips_restaurant')
+    ALTER TABLE dbo.[daily_trips] ADD CONSTRAINT [FK_daily_trips_restaurant] FOREIGN KEY ([restaurant_id]) REFERENCES dbo.[restaurants_cafes]([facility_id]) ON DELETE SET NULL;
 GO
 

@@ -15,15 +15,15 @@ class WeeklyTrip extends Model
     protected $fillable = [
         'weekly_trip_id',
         'trip_title',
-        'departure_city',
-        'seat_per_price',
-        'available_seats',
-        'is_active',
         'start_date',
         'end_date',
         'max_capacity',
-        'vehicle_plate',
+        'available_seats',
+        'seat_per_price',
         'guide_license_number',
+        'is_active',
+        'departure_city',
+        'vehicle_plate',
         'photo_1',
         'photo_2',
         'photo_3',
@@ -55,9 +55,15 @@ class WeeklyTrip extends Model
         return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
     }
 
-    public function restaurant()
+    public function restaurants()
     {
-        return $this->belongsTo(RestaurantCafe::class, 'restaurant_id', 'facility_id');
+        return $this->belongsToMany(RestaurantCafe::class, 'restaurants_trip_weekly', 'weekly_trip_id', 'facility_id');
+    }
+
+    public function stations()
+    {
+        return $this->hasMany(WeeklyTripStation::class, 'weekly_trip_id', 'weekly_trip_id')
+                    ->orderBy('day_number')->orderBy('station_order');
     }
 
     public function bookings()
@@ -83,5 +89,19 @@ class WeeklyTrip extends Model
     public function reviews()
     {
         return $this->hasMany(ReviewWeeklyTrip::class, 'weekly_trip_id', 'weekly_trip_id');
+    }
+
+    // Booking closes 24 hours before departure (start of the start_date day, Libya time)
+    public function bookingClosedReason(): ?string
+    {
+        if (empty($this->start_date)) {
+            return null;
+        }
+        $departure = \Carbon\Carbon::parse($this->start_date)->format('Y-m-d');
+        $departure = \Carbon\Carbon::parse($departure, 'Africa/Tripoli')->startOfDay();
+
+        return now('Africa/Tripoli')->gte($departure->copy()->subDay())
+            ? 'عذراً، تم إغلاق استقبال الحجوزات لهذه الرحلة الأسبوعية! يُقفل الحجز تلقائياً قبل موعد انطلاق الرحلة بـ 24 ساعة.'
+            : null;
     }
 }

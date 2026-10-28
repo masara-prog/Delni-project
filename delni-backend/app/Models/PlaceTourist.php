@@ -17,12 +17,12 @@ class PlaceTourist extends Model
         'place_name',
         'description',
         'city',
-        'region',
         'longitude',
         'latitude',
         'category',
         'place_image',
         'google_maps_url',
+        'region',
         'highlights',
     ];
 
@@ -44,5 +44,15 @@ class PlaceTourist extends Model
     public function privateTrips()
     {
         return $this->belongsToMany(PrivateTrip::class, 'places_trip_private', 'place_id', 'private_trip_id')->withPivot('visit_order');
+    }
+
+    public function highlightItems()
+    {
+        return $this->hasMany(PlaceTouristHighlight::class, 'place_id', 'place_id')->orderBy('display_order');
+    }
+
+    public function guides()
+    {
+        return $this->belongsToMany(TourGuide::class, 'guide_places', 'place_id', 'license_number');
     }
 }

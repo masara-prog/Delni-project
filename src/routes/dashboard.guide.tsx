@@ -8,8 +8,6 @@ import {
   getStoredSession,
   apiGetGuideDashboard,
   apiUpdateGuideProfile,
-  apiGuideRespondTrip,
-  apiToggleAttendance,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/guide")({
@@ -33,6 +31,7 @@ type AssignedTrip = {
   status: "بانتظار القبول" | "مقبولة" | "مرفوضة";
   is_active_now?: boolean;
   rejection_reason?: string;
+  raw: any; // full trip record from DelniDB, shown read-only in TripDetailsModal
 };
 
 type TouristManifestItem = {
@@ -85,8 +84,8 @@ function GuideDashboard() {
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "assigned_trips", label: isAr ? "الرحلات المسندة والقبول" : "Assigned Tours", icon: "🧭" },
-    { id: "active_tourists", label: isAr ? "كشف حضور سياح الرحلة" : "Active Manifest", icon: "☑️" },
+    { id: "assigned_trips", label: isAr ? "الرحلات المسندة إليّ" : "Assigned Tours", icon: "🧭" },
+    { id: "active_tourists", label: isAr ? "كشف سياح الرحلة" : "Active Manifest", icon: "☑️" },
     { id: "profile", label: isAr ? "الملف الشخصي والشهادات" : "Profile & Credentials", icon: "📄" },
   ];
 
@@ -183,6 +182,7 @@ function GuideDashboard() {
               seats_booked: d.bookings ? d.bookings.length : 0,
               status: "مقبولة",
               is_active_now: Boolean(d.is_active),
+              raw: d,
             });
           });
         }
@@ -198,6 +198,7 @@ function GuideDashboard() {
               seats_booked: w.bookings ? w.bookings.length : 0,
               status: "مقبولة",
               is_active_now: Boolean(w.is_active),
+              raw: w,
             });
           });
         }
@@ -213,6 +214,7 @@ function GuideDashboard() {
               seats_booked: (Number(p.number_of_companions) || 0) + 1,
               status: p.status_order === "مؤكدة" ? "مقبولة" : "بانتظار القبول",
               is_active_now: false,
+              raw: p,
             });
           });
         }
@@ -265,8 +267,7 @@ function GuideDashboard() {
     loadGuideData();
   }, []);
 
-  const [rejectionModalTrip, setRejectionModalTrip] = useState<AssignedTrip | null>(null);
-  const [rejectionReasonInput, setRejectionReasonInput] = useState("");
+  const [detailsTrip, setDetailsTrip] = useState<AssignedTrip | null>(null);
 
   const activeTrip = assignedTrips.find((t) => t.is_active_now);
   const activeTripTourists = tourists.filter((t) => activeTrip && t.trip_name === activeTrip.trip_name);
@@ -287,35 +288,6 @@ function GuideDashboard() {
       return [];
     }
   })();
-
-  const handleTripResponse = async (tripId: string, status: "مقبولة" | "مرفوضة", reason?: string) => {
-    try {
-      await apiGuideRespondTrip(guideInfo.license_number, {
-        trip_id: tripId,
-        status,
-        rejection_reason: reason,
-      });
-    } catch (err) {
-      console.error(err);
-    }
-    setAssignedTrips(assignedTrips.map((t) => (t.id === tripId ? { ...t, status, rejection_reason: reason } : t)));
-    setRejectionModalTrip(null);
-    setRejectionReasonInput("");
-  };
-
-  const handleToggleAttendance = async (bookingId: string) => {
-    const current = tourists.find((t) => t.booking_id === bookingId);
-    if (!current) return;
-    const newAttended = !current.attended;
-    const type = bookingId.startsWith("BK-D") ? "daily" : "weekly";
-    const rawBookingId = bookingId.replace(/^BK-[DW]-/, "");
-    try {
-      await apiToggleAttendance({ type, booking_id: rawBookingId, attended: newAttended });
-    } catch (err) {
-      console.error(err);
-    }
-    setTourists(tourists.map((t) => (t.booking_id === bookingId ? { ...t, attended: newAttended } : t)));
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -463,13 +435,13 @@ function GuideDashboard() {
                 </SectionCard>
               )}
 
-              <SectionCard title="طلبات الرحلات المسندة حديثاً من الإدارة">
+              <SectionCard title="الرحلات المسندة إليك من الإدارة">
                 {assignedTrips.length === 0 ? (
                   <div className="p-8 rounded-xl border border-dashed border-stone-200 text-center space-y-1.5 bg-stone-50/50">
                     <div className="text-2xl">📭</div>
                     <div className="font-bold text-stone-800 text-xs">لا توجد رحلات مسندة إليك حالياً من الإدارة</div>
                     <p className="text-[11px] text-stone-500 max-w-sm mx-auto">
-                      عندما تقوم إدارة المنصة بإسناد رحلة جديدة لك، ستظهر تفاصيلها هنا فوراً لتتمكن من مراجعتها وقبولها ومباشرة الإشراف.
+                      عندما تقوم إدارة المنصة بإسناد رحلة جديدة لك، ستظهر هنا فوراً ويمكنك الاطلاع على تفاصيلها كاملة.
                     </p>
                   </div>
                 ) : (
@@ -489,22 +461,12 @@ function GuideDashboard() {
                             🗓️ {t.date} · ⏱️ {t.time_or_duration} · 👥 {t.seats_booked} سياح
                           </div>
                         </div>
-                        {t.status === "بانتظار القبول" && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleTripResponse(t.id, "مقبولة")}
-                              className="px-3.5 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
-                            >
-                              قبول الرحلة
-                            </button>
-                            <button
-                              onClick={() => setRejectionModalTrip(t)}
-                              className="px-3 py-1.5 border border-stone-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold"
-                            >
-                              اعتذار
-                            </button>
-                          </div>
-                        )}
+                        <button
+                          onClick={() => setDetailsTrip(t)}
+                          className="px-3.5 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
+                        >
+                          📋 عرض تفاصيل الرحلة
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -550,7 +512,7 @@ function GuideDashboard() {
 
       {/* Assigned Trips Tab */}
       {active === "assigned_trips" && (
-        <SectionCard title="إدارة قبول ورفض الرحلات المسندة من الأدمن">
+        <SectionCard title="الرحلات المسندة إليك من الإدارة (للاطلاع فقط)">
           {assignedTrips.length === 0 ? (
             <div className="p-10 rounded-xl border border-dashed border-stone-200 text-center space-y-2 bg-stone-50/50">
               <div className="text-3xl">📭</div>
@@ -586,25 +548,15 @@ function GuideDashboard() {
                   <div className="pt-2 border-t border-stone-100 flex justify-between items-center">
                     {t.is_active_now && (
                       <button onClick={() => setActive("active_tourists")} className="text-primary text-xs font-bold hover:underline">
-                        تأكيد وتعداد حضور سياح هذه الرحلة النشطة الآن ←
+                        عرض كشف سياح هذه الرحلة النشطة ←
                       </button>
                     )}
-                    {t.status === "بانتظار القبول" && (
-                      <div className="flex gap-2 mr-auto">
-                        <button
-                          onClick={() => handleTripResponse(t.id, "مقبولة")}
-                          className="px-4 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
-                        >
-                          قبول ومباشرة الإشراف
-                        </button>
-                        <button
-                          onClick={() => setRejectionModalTrip(t)}
-                          className="px-3 py-1.5 border border-stone-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold"
-                        >
-                          اعتذار
-                        </button>
-                      </div>
-                    )}
+                    <button
+                      onClick={() => setDetailsTrip(t)}
+                      className="mr-auto px-4 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
+                    >
+                      📋 عرض تفاصيل الرحلة كاملة
+                    </button>
                   </div>
                 </div>
               ))}
@@ -621,7 +573,7 @@ function GuideDashboard() {
               <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-wrap justify-between items-center gap-3">
                 <div>
                   <h4 className="font-bold text-emerald-950 text-xs sm:text-sm">الرحلة الحالية: {activeTrip.trip_name}</h4>
-                  <p className="text-[11px] text-emerald-800 mt-0.5">⏱️ الموعد: {activeTrip.time_or_duration} · يرجى التحقق من صعود السياح للحافلة وتأكيد حضورهم.</p>
+                  <p className="text-[11px] text-emerald-800 mt-0.5">⏱️ الموعد: {activeTrip.time_or_duration} · قائمة السياح المحجوزين في هذه الرحلة (للاطلاع فقط).</p>
                 </div>
                 <div className="text-left">
                   <div className="text-xl font-bold text-emerald-800">{attendedCount} / {activeTrip.seats_booked}</div>
@@ -645,7 +597,7 @@ function GuideDashboard() {
                         <th className="p-2.5">رقم الهاتف</th>
                         <th className="p-2.5">عدد المقاعد</th>
                         <th className="p-2.5">حالة الدفع</th>
-                        <th className="p-2.5">إجراء الحضور</th>
+                        <th className="p-2.5">الحضور</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-200 bg-white">
@@ -667,16 +619,13 @@ function GuideDashboard() {
                             </span>
                           </td>
                           <td className="p-2.5">
-                            <button
-                              onClick={() => handleToggleAttendance(tr.booking_id)}
-                              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
-                                tr.attended
-                                  ? "bg-emerald-600 text-white shadow-2xs"
-                                  : "bg-stone-100 text-stone-700 hover:bg-emerald-50 hover:text-emerald-700"
+                            <span
+                              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] ${
+                                tr.attended ? "bg-emerald-600 text-white" : "bg-stone-100 text-stone-600"
                               }`}
                             >
-                              {tr.attended ? "✓ حاضر" : "تسجيل الحضور"}
-                            </button>
+                              {tr.attended ? "✓ حاضر" : "لم يُسجَّل"}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1114,38 +1063,7 @@ function GuideDashboard() {
         </div>
       )}
 
-      {/* Rejection Modal */}
-      {rejectionModalTrip && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-3.5 shadow-xl text-right border border-stone-200">
-            <h3 className="text-sm font-bold text-stone-900">اعتذار عن رحلة: {rejectionModalTrip.trip_name}</h3>
-            <div>
-              <label className="text-xs font-semibold text-stone-700 mb-1 block">سبب الاعتذار أو عدم الجاهزية:</label>
-              <textarea
-                value={rejectionReasonInput}
-                onChange={(e) => setRejectionReasonInput(e.target.value)}
-                placeholder="مثال: تعارض مع موعد رحلة أخرى..."
-                rows={3}
-                className="w-full p-2.5 rounded-xl border border-stone-200 text-xs font-medium text-right outline-none focus:border-[#1B5A78]"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setRejectionModalTrip(null)}
-                className="px-3.5 py-1.5 border border-stone-200 rounded-lg text-xs font-bold text-stone-600 cursor-pointer"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={() => handleTripResponse(rejectionModalTrip.id, "مرفوضة", rejectionReasonInput || "تعارض بالمواعيد")}
-                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer"
-              >
-                تأكيد الرفض
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {detailsTrip && <TripDetailsModal trip={detailsTrip} onClose={() => setDetailsTrip(null)} />}
     </DashboardShell>
   );
 }
@@ -1189,6 +1107,176 @@ function Field({
             : "bg-white border-stone-200 text-stone-800 hover:border-stone-300 focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/10"
         }`}
       />
+    </div>
+  );
+}
+
+/* ---- READ-ONLY TRIP DETAILS (the guide can view everything about an assigned trip but change nothing) ---- */
+function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () => void }) {
+  const r = trip.raw || {};
+  const fmtDate = (v?: string) => (v ? new Date(v).toLocaleDateString("ar-LY") : "—");
+  const money = (v: any) => (v !== null && v !== undefined && v !== "" ? `${Number(v).toLocaleString("ar-LY")} د.ل` : "—");
+  const list = (v: any): any[] => (Array.isArray(v) ? v : []);
+  const stations = [...list(r.stations)].sort(
+    (a, b) => (a.day_number || 1) - (b.day_number || 1) || (a.station_order || 0) - (b.station_order || 0)
+  );
+  const restaurants = r.restaurant ? [r.restaurant, ...list(r.restaurants)] : list(r.restaurants);
+  const bookings = list(r.bookings);
+
+  const info: [string, string][] = [];
+  if (trip.type === "يومية") {
+    info.push(["أيام التشغيل", list(r.days).map((d) => d.day_of_week).join("، ") || trip.date]);
+    info.push(["سعر المقعد", money(r.price_per_seat)]);
+  } else if (trip.type === "أسبوعية") {
+    info.push(["من", fmtDate(r.start_date)], ["إلى", fmtDate(r.end_date)]);
+    info.push(["سعر المقعد", money(r.seat_per_price)]);
+  } else {
+    info.push(["تاريخ البدء المفضل", fmtDate(r.preferred_start_date)], ["المدة", `${r.duration_days || 1} أيام`]);
+    info.push(["عدد المرافقين", String(r.number_of_companions ?? "—")], ["حالة الطلب", r.status_order || "—"]);
+    info.push(["السعر المعتمد", money(r.quoted_price)]);
+    if (Number(r.additional_expenses) > 0) info.push(["مصروفات الخدمات", money(r.additional_expenses)]);
+    if (r.tourist) info.push(["العميل", `${r.tourist.full_name || ""} — ${r.tourist.phone_number || ""}`]);
+  }
+  if (r.departure_city) info.push(["مدينة الانطلاق", r.departure_city]);
+  if (r.max_capacity) info.push(["السعة / المقاعد المتاحة", `${r.max_capacity} / ${r.available_seats ?? "—"}`]);
+  if (r.vehicle) info.push(["المركبة", `${r.vehicle.vehicle_type || ""} — لوحة ${r.vehicle.plate_number} (${r.vehicle.seating_capacity || "?"} مقعد)`]);
+  else if (r.vehicle_plate) info.push(["المركبة", `لوحة ${r.vehicle_plate}`]);
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="space-y-1.5">
+      <h4 className="text-xs font-bold text-stone-900 border-b border-stone-100 pb-1">{title}</h4>
+      {children}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-center p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-2xl p-5 space-y-4 shadow-xl text-right border border-stone-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-start gap-3">
+          <div>
+            <span className="text-[11px] font-mono font-bold text-stone-400">{trip.id}</span>
+            <h3 className="text-base font-bold text-stone-900">{trip.trip_name}</h3>
+            <div className="flex gap-2 mt-1">
+              <Badge tone={trip.type === "خاصة VIP" ? "sun" : "sea"}>{trip.type}</Badge>
+              <Badge tone="green">للاطلاع فقط</Badge>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500" aria-label="إغلاق">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {(r.description || r.trip_description || r.customer_requirements) && (
+          <p className="text-xs text-stone-700 leading-relaxed bg-stone-50 rounded-xl p-3">
+            {r.description || r.trip_description || `متطلبات العميل: ${r.customer_requirements}`}
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {info.map(([k, v]) => (
+            <div key={k} className="p-2.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
+              <div className="text-stone-500">{k}</div>
+              <div className="font-bold text-stone-900 mt-0.5">{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {stations.length > 0 && (
+          <Section title="🗺️ برنامج الرحلة والمحطات">
+            <ol className="space-y-1.5">
+              {stations.map((s, i) => (
+                <li key={s.station_id || i} className="p-2.5 rounded-lg border border-stone-100 text-xs">
+                  <div className="font-bold text-stone-900">
+                    {s.day_number ? `اليوم ${s.day_number} · ` : ""}{s.station_order ? `${s.station_order}. ` : ""}{s.station_title}
+                    {s.station_time ? <span className="text-stone-500 font-medium"> — {s.station_time}</span> : null}
+                  </div>
+                  {s.station_desc && <div className="text-stone-600 mt-0.5">{s.station_desc}</div>}
+                </li>
+              ))}
+            </ol>
+          </Section>
+        )}
+
+        {list(r.places).length > 0 && (
+          <Section title="🏛️ المعالم السياحية">
+            <div className="flex flex-wrap gap-1.5">
+              {list(r.places).map((p) => (
+                <span key={p.place_id} className="px-2 py-1 rounded-lg bg-teal-50 text-teal-800 text-[11px] font-bold">
+                  {p.place_name}{p.city ? ` — ${p.city}` : ""}
+                </span>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {list(r.hotels).length > 0 && (
+          <Section title="🏨 الإقامة">
+            <ul className="text-xs text-stone-700 space-y-1">
+              {list(r.hotels).map((h) => (
+                <li key={h.hotel_id}>• {h.hotel_name} — {h.city}{h.star_rating ? ` (${h.star_rating}★)` : ""}</li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {restaurants.length > 0 && (
+          <Section title="🍽️ المطاعم والمقاهي">
+            <ul className="text-xs text-stone-700 space-y-1">
+              {restaurants.map((f) => (
+                <li key={f.facility_id}>• {f.facility_name} — {f.city}</li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {list(r.offers).length > 0 && (
+          <Section title="🏷️ العروض">
+            <ul className="text-xs text-stone-700 space-y-1">
+              {list(r.offers).map((o, i) => (
+                <li key={o.offer_daily_id || o.offer_weekly_id || i}>
+                  • {o.offer_title} — خصم {Number(o.percent_discount ?? o.discount_percentage ?? 0)}%
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {bookings.length > 0 && (
+          <Section title={`👥 السياح المحجوزون (${bookings.length})`}>
+            <div className="overflow-x-auto rounded-lg border border-stone-100">
+              <table className="w-full text-[11px] text-right">
+                <thead className="bg-stone-50 text-stone-600">
+                  <tr>
+                    <th className="p-2">السائح</th>
+                    <th className="p-2">الهاتف</th>
+                    <th className="p-2">المقاعد</th>
+                    <th className="p-2">الدفع</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {bookings.map((b, i) => (
+                    <tr key={b.booking_daily_id || b.booking_weekly_id || i}>
+                      <td className="p-2 font-bold text-stone-900">{b.tourist?.full_name || b.tourist_id}</td>
+                      <td className="p-2 font-mono" dir="ltr">{b.tourist?.phone_number || "—"}</td>
+                      <td className="p-2">{b.number_of_seats}</td>
+                      <td className="p-2">{b.payment_status || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+        )}
+
+        <div className="flex justify-end pt-1">
+          <button onClick={onClose} className="px-4 py-1.5 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 hover:bg-stone-50">
+            إغلاق
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

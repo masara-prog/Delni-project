@@ -144,20 +144,35 @@ const DEFAULT_COMPANIES: TransportCompanyRecord[] = [];
 const DEFAULT_VEHICLES: VehicleRecord[] = [];
 const DEFAULT_DRIVERS: DriverRecord[] = [];
 
-// Automatic one-time cleanup to ensure fresh start with 0 companies/vehicles/drivers
+// Automatic one-time cleanup to ensure complete fresh start with 0 static records
 if (typeof window !== "undefined") {
-  const resetDone = localStorage.getItem("dalni_companies_wiped_clean_v2");
+  const resetDone = localStorage.getItem("dalni_full_wipe_clean_v3");
   if (!resetDone) {
     try {
-      localStorage.removeItem(STORAGE_KEYS.COMPANIES);
-      localStorage.removeItem(STORAGE_KEYS.VEHICLES);
-      localStorage.removeItem(STORAGE_KEYS.DRIVERS);
-      localStorage.removeItem("dalni_companies");
-      localStorage.removeItem("dalni_all_companies");
-      localStorage.setItem(STORAGE_KEYS.COMPANIES, "[]");
-      localStorage.setItem(STORAGE_KEYS.VEHICLES, "[]");
-      localStorage.setItem(STORAGE_KEYS.DRIVERS, "[]");
-      localStorage.setItem("dalni_companies_wiped_clean_v2", "true");
+      const keysToClear = [
+        STORAGE_KEYS.COMPANIES,
+        STORAGE_KEYS.VEHICLES,
+        STORAGE_KEYS.DRIVERS,
+        STORAGE_KEYS.GUIDES,
+        STORAGE_KEYS.HOTELS,
+        STORAGE_KEYS.RESTAURANTS,
+        STORAGE_KEYS.PRIVATE_TRIPS,
+        "dalni_chat_sessions",
+        "dalni_notifications",
+        "dallani_cached_offers",
+        "dalni_live_trips_cache",
+        "dalni_hotel_offers",
+        "dalni_registered_users",
+        "dalni_companies",
+        "dalni_all_companies",
+      ];
+      keysToClear.forEach((k) => {
+        try {
+          localStorage.removeItem(k);
+          localStorage.setItem(k, "[]");
+        } catch {}
+      });
+      localStorage.setItem("dalni_full_wipe_clean_v3", "true");
     } catch { }
   }
 }
@@ -167,57 +182,76 @@ if (typeof window !== "undefined") {
    ========================================================= */
 const BACKEND_API_URL = "http://127.0.0.1:5001/api/db";
 
-/**
- * Sends data securely to the Backend API for persistent SQL Server storage.
- * If the Backend API is not running or temporarily offline, it gracefully falls back
- * to LocalStorage (Safe Fallback) without freezing or causing errors.
- */
-export async function sendToSecureBackend(endpoint: string, payload: any): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+export type BackendResult = { ok: boolean; error?: string };
 
+const BACKEND_UNREACHABLE_ERROR =
+  "تعذر الاتصال بخادم قاعدة البيانات (المنفذ 5001). تأكد من تشغيل الجسر ثم أعد المحاولة.";
+
+// Reads the bridge's error text ({ error } or { message }) from a failed response
+async function readBackendError(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    return body?.error || body?.message || `رمز الخطأ ${res.status}`;
+  } catch {
+    return `رمز الخطأ ${res.status}`;
+  }
+}
+
+/**
+ * Saves data to SQL Server (DelniDB) through the bridge and reports whether it was really stored.
+ */
+export async function postToSecureBackend(endpoint: string, payload: any): Promise<BackendResult> {
+  if (typeof window === "undefined") return { ok: false, error: BACKEND_UNREACHABLE_ERROR };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  try {
     const res = await fetch(`${BACKEND_API_URL}/${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      console.log(`[Backend API] ✅ تم الحفظ بنجاح في قاعدة بيانات Microsoft SQL Server (DelniDB): ${endpoint}`);
-      return true;
-    }
+    if (res.ok) return { ok: true };
+    return { ok: false, error: await readBackendError(res) };
   } catch {
-    console.debug(`[Safe Fallback] 🛡️ تم الاحتفاظ بالبيانات بنظام الطوارئ المحلي (LocalStorage) بأمان.`);
+    return { ok: false, error: BACKEND_UNREACHABLE_ERROR };
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return false;
 }
 
 /**
- * Deletes data securely from Backend API (Microsoft SQL Server)
+ * Same as postToSecureBackend, but tells the user when the save failed instead of failing silently.
+ */
+export async function sendToSecureBackend(endpoint: string, payload: any): Promise<boolean> {
+  const result = await postToSecureBackend(endpoint, payload);
+  if (!result.ok && typeof window !== "undefined") {
+    window.alert(`❌ لم يتم الحفظ في قاعدة البيانات.\n${result.error}`);
+  }
+  return result.ok;
+}
+
+/**
+ * Deletes data from SQL Server (DelniDB) through the bridge; tells the user when the delete failed.
  */
 export async function deleteFromSecureBackend(endpoint: string, paramName: string, paramValue: string): Promise<boolean> {
   if (typeof window === "undefined") return false;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  let error: string;
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
     const res = await fetch(`${BACKEND_API_URL}/${endpoint}?${paramName}=${encodeURIComponent(paramValue)}`, {
       method: "DELETE",
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      console.log(`[Backend API] 🗑️ تم الحذف بنجاح من قاعدة بيانات Microsoft SQL Server (DelniDB): ${endpoint}`);
-      return true;
-    }
+    if (res.ok) return true;
+    error = await readBackendError(res);
   } catch {
-    console.debug(`[Safe Fallback] 🛡️ تم الحذف محلياً بأمان.`);
+    error = BACKEND_UNREACHABLE_ERROR;
+  } finally {
+    clearTimeout(timeoutId);
   }
+  window.alert(`❌ لم يتم الحذف من قاعدة البيانات.\n${error}`);
   return false;
 }
 
@@ -256,7 +290,12 @@ export function saveTransportCompanies(companies: TransportCompanyRecord[]) {
   localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(companies));
 }
 
-export function addTransportCompany(company: Partial<TransportCompanyRecord>): TransportCompanyRecord {
+export type CompanySaveResult = { ok: true; record: TransportCompanyRecord } | { ok: false; error: string };
+
+/**
+ * Adds a transport company. The local list is only updated after DelniDB confirms the save.
+ */
+export async function addTransportCompany(company: Partial<TransportCompanyRecord>, isNew = true): Promise<CompanySaveResult> {
   const list = getTransportCompanies();
   const newComp: TransportCompanyRecord = {
     id: company.id || `COM-00${list.length + 1}`,
@@ -276,16 +315,18 @@ export function addTransportCompany(company: Partial<TransportCompanyRecord>): T
     status: company.verification_status || company.status || "موثق",
     google_maps_url: company.google_maps_url || (company.address && (company.address.startsWith("http") || company.address.includes("maps")) ? company.address : "") || "",
   };
+  const saved = await postToSecureBackend("companies", { ...newComp, isNew });
+  if (!saved.ok) return { ok: false, error: saved.error || "فشل حفظ شركة النقل" };
+
   list.unshift(newComp);
   saveTransportCompanies(list);
-
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  sendToSecureBackend("companies", newComp);
-
-  return newComp;
+  return { ok: true, record: newComp };
 }
 
-export function updateTransportCompany(contractNumber: string, data: Partial<TransportCompanyRecord>) {
+/**
+ * Updates a transport company. The local list is only updated after DelniDB confirms the save.
+ */
+export async function updateTransportCompany(contractNumber: string, data: Partial<TransportCompanyRecord>): Promise<CompanySaveResult> {
   const list = getTransportCompanies();
   const idx = list.findIndex(c => c.contract_number === contractNumber || c.id === contractNumber);
   if (idx !== -1) {
@@ -306,6 +347,9 @@ export function updateTransportCompany(contractNumber: string, data: Partial<Tra
       contract_start_date: data.contract_start_date || list[idx].contract_start_date,
       contract_end_date: data.contract_end_date || list[idx].contract_end_date,
     };
+    const saved = await postToSecureBackend("companies", updatedRecord);
+    if (!saved.ok) return { ok: false, error: saved.error || "فشل تحديث شركة النقل" };
+
     list[idx] = updatedRecord;
     saveTransportCompanies(list);
 
@@ -313,21 +357,23 @@ export function updateTransportCompany(contractNumber: string, data: Partial<Tra
     if (current && (current.contract_number === contractNumber || current.id === contractNumber)) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...updatedRecord }));
     }
-    // Async Safe Sync to Backend API (Microsoft SQL Server)
-    sendToSecureBackend("companies", updatedRecord);
-    return updatedRecord;
+    return { ok: true, record: updatedRecord };
   } else {
-    // If contract number was changed or not found, register it
-    return addTransportCompany({ ...data, contract_number: contractNumber });
+    // Company exists in DelniDB but not in this browser's cache: save it as an update, not a new registration
+    return addTransportCompany({ ...data, contract_number: contractNumber }, false);
   }
 }
 
-export function deleteTransportCompany(contractNumber: string) {
+/**
+ * Deletes a transport company. The local list is only updated after DelniDB confirms the delete.
+ */
+export async function deleteTransportCompany(contractNumber: string): Promise<boolean> {
+  const deleted = await deleteFromSecureBackend("companies", "contract_number", contractNumber);
+  if (!deleted) return false;
   const list = getTransportCompanies();
   const filtered = list.filter(c => c.contract_number !== contractNumber && c.id !== contractNumber);
   saveTransportCompanies(filtered);
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  deleteFromSecureBackend("companies", "contract_number", contractNumber);
+  return true;
 }
 
 /* =========================================================
@@ -748,103 +794,12 @@ export async function apiLogin(params: {
         };
       }
     }
+    const dbError = await dbRes.json().catch(() => null);
+    return { status: "error", message: dbError?.error || "بيانات تسجيل الدخول غير صحيحة، يرجى التأكد من البريد الإلكتروني وكلمة المرور" };
   } catch { }
 
-
-
-  // 2. Local Fallback Verification (Zero Mock Users)
-  // Admin Login
-  if (role === "admin" || cleanLogin === "admin@dalni.ly" || cleanLogin === "admin") {
-    if ((cleanLogin === "admin@dalni.ly" || cleanLogin === "admin") && (rawPassword === "admin123" || rawPassword === "admin")) {
-      const adminUser = {
-        name: "مدير النظام",
-        full_name: "مدير النظام (الأدمن)",
-        email: "admin@dalni.ly",
-        role: "admin",
-      };
-      localStorage.setItem(STORAGE_KEYS.TOKEN, `admin-token-${Date.now()}`);
-      localStorage.setItem(STORAGE_KEYS.ROLE, "admin");
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(adminUser));
-      window.dispatchEvent(new Event("storage"));
-      return { status: "success", message: "تم تسجيل الدخول بنجاح", user: adminUser, role: "admin", token: "admin_token" };
-    }
-    return { status: "error", message: "بيانات دخول مدير النظام غير صحيحة" };
-  }
-
-  // Transport Company Login
-  if (role === "transport") {
-    const companies = getTransportCompanies();
-    const found = companies.find(
-      c => (c.email && c.email.toLowerCase() === cleanLogin) ||
-        (c.contract_number && c.contract_number.toLowerCase() === cleanLogin) ||
-        (c.phone_number && c.phone_number.includes(cleanLogin))
-    );
-    if (!found) {
-      return { status: "error", message: "حساب شركة النقل غير متوفر في المنصة. يرجى التأكد من البريد أو التسجيل أولاً." };
-    }
-    if (found.password && found.password !== rawPassword && found.password !== "••••••••") {
-      return { status: "error", message: "كلمة المرور غير صحيحة" };
-    }
-    const userObj = { ...found, role: "transport" };
-    localStorage.setItem(STORAGE_KEYS.TOKEN, `transport-token-${Date.now()}`);
-    localStorage.setItem(STORAGE_KEYS.ROLE, "transport");
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
-    window.dispatchEvent(new Event("storage"));
-    return { status: "success", message: "تم تسجيل دخول شركة النقل بنجاح", user: userObj, role: "transport", token: "transport_token" };
-  }
-
-  // Driver Login
-  if (role === "driver") {
-    const drivers = getDrivers();
-    const found = drivers.find(
-      d => (d.email && d.email.toLowerCase() === cleanLogin) ||
-        (d.driver_license_number && d.driver_license_number.toLowerCase() === cleanLogin) ||
-        (d.phone_number && d.phone_number.includes(cleanLogin))
-    );
-    if (!found) {
-      return { status: "error", message: "حساب السائق غير متوفر في المنصة. يرجى التواصل مع شركة النقل لتسجيلك." };
-    }
-    if (found.password && found.password !== rawPassword && found.password !== "••••••••") {
-      return { status: "error", message: "كلمة المرور غير صحيحة" };
-    }
-    const userObj = { ...found, role: "driver" };
-    localStorage.setItem(STORAGE_KEYS.TOKEN, `driver-token-${Date.now()}`);
-    localStorage.setItem(STORAGE_KEYS.ROLE, "driver");
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
-    window.dispatchEvent(new Event("storage"));
-    return { status: "success", message: "تم تسجيل دخول السائق بنجاح", user: userObj, role: "driver", token: "driver_token" };
-  }
-
-  // Guide Login
-  if (role === "guide") {
-    const guides = getAllGuides();
-    const found = guides.find(
-      g => (g.email && g.email.toLowerCase() === cleanLogin) ||
-        (g.license_number && g.license_number.toLowerCase() === cleanLogin) ||
-        (g.phone_number && g.phone_number.includes(cleanLogin))
-    );
-    if (!found) {
-      return { status: "error", message: "حساب المرشد السياحي غير متوفر في المنصة. يرجى التقدم بطلب انضمام أولاً." };
-    }
-    if (found.verification_status !== "موثق") {
-      return {
-        status: "error",
-        message: "طلب انضمامك كمرشد سياحي ما زال قيد المراجعة والتدقيق من قبل الإدارة. يرجى الانتظار حتى يتم اعتماد حسابك.",
-      };
-    }
-    if (found.password && found.password !== rawPassword && found.password !== "••••••••") {
-      return { status: "error", message: "كلمة المرور غير صحيحة" };
-    }
-    const userObj = { ...found, role: "guide" };
-    localStorage.setItem(STORAGE_KEYS.TOKEN, `guide-token-${Date.now()}`);
-    localStorage.setItem(STORAGE_KEYS.ROLE, "guide");
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
-    window.dispatchEvent(new Event("storage"));
-    return { status: "success", message: "تم تسجيل دخول المرشد بنجاح", user: userObj, role: "guide", token: "guide_token" };
-  }
-
-  // Tourist Login
-  return { status: "error", message: "الحساب غير متوفر في المنصة. يرجى التسجيل أولاً." };
+  // No local (browser) fallback: an account can only sign in after the database verifies its email and password
+  return { status: "error", message: "تعذر الاتصال بخادم المنصة للتحقق من بيانات الدخول. يرجى المحاولة لاحقاً." };
 }
 
 export function apiLogout() {
@@ -955,7 +910,7 @@ export async function apiRegisterTourist(params: {
     window.dispatchEvent(new Event("storage"));
 
     // Async sync to backup bridge if running (without password to prevent hash corruption)
-    sendToSecureBackend("tourists", {
+    postToSecureBackend("tourists", {
       tourist_id,
       full_name: payload.full_name,
       email: payload.email,
@@ -993,7 +948,7 @@ export async function apiUpdateTouristProfile(params: {
   localStorage.setItem("dalni_user", JSON.stringify(updated));
 
   // Async Safe Sync to SQL Server bridge
-  sendToSecureBackend("tourists", params);
+  postToSecureBackend("tourists", params);
 
   try {
     const res = await fetch(`${LARAVEL_API_URL}/auth/tourist/update-profile`, {
@@ -1620,7 +1575,7 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
 export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
   // Sync directly to backend SQL Server DelniDB
   try {
-    await sendToSecureBackend("guides", {
+    await postToSecureBackend("guides", {
       ...data,
       license_number: licenseNumber,
     });

@@ -27,8 +27,6 @@ class Driver extends Model
         'account_status',
         'password',
         'operational_status',
-        'experience_years',
-        'driver_photo',
     ];
 
     protected $hidden = [

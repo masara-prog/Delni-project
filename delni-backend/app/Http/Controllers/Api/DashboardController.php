@@ -38,10 +38,14 @@ class DashboardController extends Controller
             ], 404);
         }
 
+        // Full trip details for the guide's read-only view (itinerary, places, lodging, food, vehicle, passengers)
         $lic = $guide->license_number;
-        $dailyTrips = DailyTrip::with(['bookings.tourist'])->where('guide_license_number', $lic)->get();
-        $weeklyTrips = WeeklyTrip::with(['bookings.tourist'])->where('guide_license_number', $lic)->get();
-        $privateTrips = PrivateTrip::where('guide_license_number', $lic)->get();
+        $dailyTrips = DailyTrip::with(['bookings.tourist', 'days', 'stations', 'places', 'restaurant', 'vehicle', 'offers'])
+            ->where('guide_license_number', $lic)->get();
+        $weeklyTrips = WeeklyTrip::with(['bookings.tourist', 'stations', 'places', 'hotels', 'restaurants', 'vehicle', 'offers'])
+            ->where('guide_license_number', $lic)->get();
+        $privateTrips = PrivateTrip::with(['tourist', 'stations', 'places', 'hotels', 'vehicle'])
+            ->where('guide_license_number', $lic)->get();
 
         return response()->json([
             'guide' => $guide,
@@ -82,7 +86,20 @@ class DashboardController extends Controller
             unset($validated['full_name'], $validated['gender'], $validated['email']);
         }
 
-        $guide->update(array_filter($validated, fn($v) => !is_null($v)));
+        // Working days and operating regions live in their own tables, not as tour_guides columns
+        $workingDays = $validated['working_days'] ?? null;
+        $regions = $validated['operating_regions'] ?? null;
+        unset($validated['working_days'], $validated['operating_regions']);
+
+        DB::transaction(function () use ($guide, $validated, $workingDays, $regions) {
+            $guide->update(array_filter($validated, fn($v) => !is_null($v)));
+            if (!is_null($workingDays)) {
+                $guide->replaceWorkingDays($workingDays);
+            }
+            if (!is_null($regions)) {
+                $guide->replaceOperatingRegions($regions);
+            }
+        });
 
         return response()->json([
             'status' => 'success',
@@ -194,25 +211,13 @@ class DashboardController extends Controller
             'assigned_vehicle_plate' => 'nullable|string|exists:vehicles,plate_number',
         ]);
 
+        // The assigned vehicle is stored directly on the trip (private_trips.vehicle_plate)
         $trip->update([
             'status_order' => $validated['status_order'],
             'quoted_price' => $validated['quoted_price'] ?? $trip->quoted_price,
-            'admin_itinerary_plan' => $validated['admin_itinerary_plan'] ?? $trip->admin_itinerary_plan,
             'guide_license_number' => $validated['assigned_guide_license'] ?? $trip->guide_license_number,
+            'vehicle_plate' => $validated['assigned_vehicle_plate'] ?? $trip->vehicle_plate,
         ]);
-
-        if (!empty($validated['assigned_vehicle_plate'])) {
-            \App\Models\PrivateTripVehicle::updateOrCreate(
-                ['private_trip_id' => $trip->private_trip_id],
-                [
-                    'private_alloc_id' => 'PA-' . rand(1000, 9999),
-                    'plate_number' => $validated['assigned_vehicle_plate'],
-                    'start_date' => $trip->preferred_start_date ?? now(),
-                    'end_date' => $trip->preferred_start_date ? \Carbon\Carbon::parse($trip->preferred_start_date)->addDays($trip->duration_days) : now()->addDays(1),
-                    'allocation_status' => 'معينة',
-                ]
-            );
-        }
 
         return response()->json([
             'status' => 'success',
