@@ -1101,12 +1101,7 @@ function Places() {
 function RestaurantsCafes() {
   const { language } = useLanguage();
   const modals = useModals();
-  const restaurants = [
-    { name: language === 'ar' ? "مطعم الأصالة الليبي" : "Al-Asala Libyan Restaurant", city: language === 'ar' ? "طرابلس" : "Tripoli", cuisine: language === 'ar' ? "ليبي تقليدي" : "Traditional Libyan", rating: 4.8, img: restaurantImg, price: "$$" },
-    { name: language === 'ar' ? "مطعم النخيل" : "Al-Nakheel Restaurant", city: language === 'ar' ? "بنغازي" : "Benghazi", cuisine: language === 'ar' ? "مأكولات بحرية" : "Seafood", rating: 4.7, img: restaurantImg, price: "$$$" },
-    { name: language === 'ar' ? "مقهى الفنون" : "Arts Cafe", city: language === 'ar' ? "طرابلس المدينة القديمة" : "Tripoli Old City", cuisine: language === 'ar' ? "قهوة وحلويات" : "Coffee & Sweets", rating: 4.9, img: cafeImg, price: "$" },
-    { name: language === 'ar' ? "مقهى الواحة" : "Oasis Cafe", city: language === 'ar' ? "غدامس" : "Ghadames", cuisine: language === 'ar' ? "شاي وأتاي" : "Tea & Atay", rating: 4.6, img: cafeImg, price: "$" },
-  ];
+  const restaurants: any[] = [];
 
   return (
 

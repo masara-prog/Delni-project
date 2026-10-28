@@ -458,6 +458,7 @@ function AttractionsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-10">
         {/* ── UNESCO World Heritage Showcase (Vibrant Pro, No Prev/Next Buttons, 5s Auto-Rotation, Expanded Width) ── */}
+        {unescoSites.length > 0 && activeUnescoSite && (
         <div className="max-w-6xl mx-auto">
           <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#F8FAFC] to-blue-50/30 border border-blue-900/15 p-6 sm:p-9 shadow-[0_20px_50px_-12px_rgba(0,53,128,0.15)] overflow-hidden text-[#0F172A]">
             {/* Dynamic Ambient Royal Blue & Vibrant Orange Glows */}
@@ -661,6 +662,7 @@ function AttractionsPage() {
             </div>
           </section>
         </div>
+        )}
 
         {/* ── Custom Private Trips System Notice ── */}
         <section className="bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">

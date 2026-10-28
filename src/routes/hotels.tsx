@@ -40,88 +40,7 @@ type HotelOffer = {
   emoji: string;
 };
 
-const HOTEL_OFFERS: HotelOffer[] = [
-  {
-    offerId: "HOFF-001",
-    hotelId: "HTL-001",
-    title: "عرض نهاية الأسبوع الفاخر - فندق الفصول الأربعة",
-    details: "إقامة استثنائية مطلة على البحر الأبيض المتوسط مع إفطار بوفيه مفتوح وخدمة الواي فاي وساعة مجانية بالنادي الصحي.",
-    image: "/assets/ai_city.jpg",
-    gallery: [
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-    ],
-    city: "طرابلس",
-    price: 988,
-    oldPrice: 1318,
-    discountPct: 25,
-    startDate: "2026-08-01",
-    endDate: "2026-09-30",
-    badge: "خصم حصري 25%",
-    emoji: "🏨",
-  },
-  {
-    offerId: "HOFF-002",
-    hotelId: "HTL-002",
-    title: "ليالٍ سياحية مخفضة في فندق تيبستي بنغازي",
-    details: "إطلالة بانورامية ساحرة على بحيرة 23 يوليو والمدينة مع وجبة عشاء مجانية في مطعم الفندق وخصم 20% لرواد دلّني.",
-    image: "/assets/ai_city.jpg",
-    gallery: [
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-      "/assets/ai_city.jpg",
-    ],
-    city: "بنغازي",
-    price: 1048,
-    oldPrice: 1294,
-    discountPct: 20,
-    startDate: "2026-08-15",
-    endDate: "2026-10-15",
-    badge: "تخفيض خاص 20%",
-    emoji: "⭐",
-  },
-  {
-    offerId: "HOFF-003",
-    hotelId: "HTL-004",
-    title: "مغامرة الصحراء الملكية في مخيم بحيرات أوباري",
-    details: "إقامة صحراوية فاخرة تحت النجوم مع خيام ملكية مجهزة وجولة سفاري بالدفع الرباعي وسهرة فلكلورية طوارقية.",
-    image: "/assets/ai_desert.jpg",
-    gallery: [
-      "/assets/ai_desert.jpg",
-      "/assets/ai_desert.jpg",
-      "/assets/ai_desert.jpg",
-    ],
-    city: "أوباري",
-    price: 3013,
-    oldPrice: 4293,
-    discountPct: 30,
-    startDate: "2026-09-01",
-    endDate: "2026-12-31",
-    badge: "مغامرة فزان 30%",
-    emoji: "🏜️",
-  },
-  {
-    offerId: "HOFF-004",
-    hotelId: "HTL-005",
-    title: "عطلة الجبل الأخضر الطبيعية - منتجع شحات الفاخر",
-    details: "إقامة هادئة بين غابات الصنوبر ونسائم الجبل العليلة بالقرب من آثار قورينا ومعبد أبولو مع إفطار ريفي طازج.",
-    image: "/assets/dest-jabal-akhdar-panorama.jpg",
-    gallery: [
-      "/assets/dest-jabal-akhdar-panorama.jpg",
-      "/assets/dest-jabal-akhdar-panorama.jpg",
-      "/assets/dest-jabal-akhdar-bridge.jpg",
-    ],
-    city: "شحات",
-    price: 840,
-    oldPrice: 1120,
-    discountPct: 25,
-    startDate: "2026-09-01",
-    endDate: "2026-11-30",
-    badge: "طبيعة وجبال 25%",
-    emoji: "🌿",
-  },
-];
+const HOTEL_OFFERS: HotelOffer[] = [];
 
 function getHotels(): HotelData[] { return []; }
 
@@ -302,35 +221,7 @@ function HotelDetailsView({
     { title: isAr ? "المرافق والاستجمام" : "Amenities & Wellness", icon: "✨" },
   ];
 
-  const hotelBio: Record<string, string> = {
-    "HTL-001": isAr
-      ? "يُعد فندق الفصول الأربعة طرابلس أحد أبرز صروح الإقامة الفاخرة على الواجهة البحرية للعاصمة. يتميز بإطلالات ساحرة مباشرة على البحر الأبيض المتوسط، ويجمع بين فخامة العمارة الكلاسيكية ووسائل الراحة العصرية. يقع الفندق على مقربة من كورنيش طرابلس وميدان الشهداء والمدينة القديمة، ويوفر بيئة هادئة ومثالية للوفود ورجال الأعمال والعائلات الباحثين عن أعلى مستويات الراحة والخدمة الفندقية."
-      : "Four Seasons Hotel Tripoli is a premier luxury waterfront landmark in Tripoli overlooking the Mediterranean.",
-    "HTL-002": isAr
-      ? "فندق تيبستي الدولي هو أيقونة الضيافة التاريخية في قلب مدينة بنغازي. يتميز بموقعه الاستراتيجي في ميدان الشجرة وإطلالاته البانورامية على بحيرة 23 يوليو والمدينة. يضم مرافق متكاملة وقاعات مؤتمرات ومطاعم متنوعة تخدم الزوار وتوفر استراحة مريحة لزوار المنطقة الشرقية."
-      : "Tibesti International Hotel is a historic landmark in central Benghazi overlooking July 23 Lake.",
-    "HTL-003": isAr
-      ? "يقدم نزل غدامس التراثي تجربة إقامة أصيلة تعكس عبق العمارة الطينية الفريدة للؤلؤة الصحراء المسجلة على لائحة التراث العالمي (اليونسكو). غرف تراثية مريحة تحافظ على البرودة الطبيعية صيفاً والدفء شتاءً، مع أسقف من خشب النخيل وجلسات شاي صحراوي تحت ضوء القمر."
-      : "Ghadames Authentic Heritage Lodge offers traditional mud-brick architecture and UNESCO heritage hospitality.",
-    "HTL-004": isAr
-      ? "يقدم مخيم بحيرات أوباري الفاخر تجربة صحراوية استثنائية وسط الكثبان الذهبية لبحر الرمال العظيم في فزان. خيام ملكية مجهزة بأعلى معايير الراحة والخصوصية، مع جلسات شاي طوارقي فلكلورية تحت النجوم وسهرات سمر أصيلة ورحلات سفاري 4x4 لبحيرة قبرعون وأم الماء."
-      : "Ubari Desert Camp offers an authentic Sahara glamping experience near Gaberoun and Umm al-Maa lakes.",
-    "HTL-005": isAr
-      ? "يتربع منتجع شحات وقورينا الجبلي على قمم الجبل الأخضر وسط غابات الصنوبر البديعة ونسائم البحر العليلة، مطلاً على المعالم الأثرية لمدينة قورينا الإغريقية، ويوفر إقامة جبلية هادئة لعشاق الطبيعة والتاريخ مع مأكولات ريفية طازجة."
-      : "Cyrene Mountain Panoramic Resort offers alpine tranquility and views over Cyrene ancient temples.",
-    "HTL-006": isAr
-      ? "يتمتع فندق ساحل الخمس بموقع استراتيجي على شاطئ البحر الأبيض المتوسط على بعد دقائق قليلة من مدينة لبدة الكبرى الأثرية الرومانية. غرف فسيحة ومطلة على البحر مع مطعم أسماك بحري طازج وخدمات راقية للوفود والباحثين والمصطافين."
-      : "Leptis Coast Seafront Hotel offers sea views and proximity to Leptis Magna UNESCO Roman ruins.",
-    "HTL-007": isAr
-      ? "أجنحة السرايا الفندقية بطرابلس تجمع بين راحة الشقق السكنية الفسيحة والخدمة الفندقية الراقية في شارع عمر المختار. مناسبة جداً للعائلات ورجال الأعمال، وتتضمن صالات جلوس خاصة ومطابخ تحضيرية مجهزة ومواقف سيارات آمنة."
-      : "Al-Saraya Luxury Suites provide spacious serviced accommodations in central Tripoli.",
-    "HTL-008": isAr
-      ? "منتجع شاطئ زوارة السياحي يمتد على شريط ساحلي بكر يتميز بالرمال البيضاء ومياه البحر الفيروزية الصافية. يوفر شاليهات بحرية خاصة، وأنشطة رياضات مائية، ومطاعم بحرية، ومساحات لعب للأطفال لعطلات عائلية لا تُنسى."
-      : "Zuwara Beachfront Resort offers white sand private beaches and seaside chalets.",
-    "HTL-009": isAr
-      ? "فيلا ونزل وادي درنة التراثي يقع في قلب الطبيعة الغناء لوادي درنة بالقرب من الشلال التاريخي. محاط بأشجار الفواكه والنخيل مع جلسات شرفة جبلية هادئة ومأكولات برقاوبة أصيلة لعشاق الاستجمام والهدوء."
-      : "Derna Valley Heritage Villa offers peaceful stays surrounded by waterfalls and lush nature.",
-  };
+  const hotelBio: Record<string, string> = {};
 
   const bio = hotelBio[hotel.id] || (isAr
     ? `${hotel.name} هو أحد أماكن الإقامة المعتمدة لدى منصة دلّني في مدينة ${hotel.city}. يتميز بمستوى خدمات راقٍ وموقع استراتيجي قريب من المعالم والخدمات، ويوفر لرواد المنصة خصومات حصرية وتجربة إقامة نموذجية ومريحة.`

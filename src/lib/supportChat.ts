@@ -26,31 +26,7 @@ export type ChatSession = {
 const STORAGE_KEY = "dalni_chat_sessions";
 const SYNC_EVENT = "dalni_chat_sync";
 
-const defaultSampleSessions: ChatSession[] = [
-  {
-    id: "session-tourist-sample",
-    user_name: "محمد عبد الله",
-    user_type: "سائح",
-    last_message: "أود الاستفسار عن تفاصيل رحلة وادي درنة الأسبوعية",
-    time: "10:30 ص",
-    unread: false,
-    messages: [
-      { id: "m1", from: "user", text: "السلام عليكم، أود الاستفسار عن تفاصيل رحلة وادي درنة الأسبوعية ومواعيد الانطلاق.", time: "10:28 ص" },
-      { id: "m2", from: "admin", text: "وعليكم السلام ورحمة الله، مرحباً بك أستاذ محمد! الرحلة تنطلق كل صباح سبت من طرابلس وبنغازي، وتشمل النقل والإقامة.", time: "10:30 ص" }
-    ]
-  },
-  {
-    id: "session-guide-sample",
-    user_name: "طارق مسعود",
-    user_type: "مرشد سياحي",
-    last_message: "تم تحديث شهادة الترخيص المعتمدة وأرجو المراجعة",
-    time: "09:45 ص",
-    unread: true,
-    messages: [
-      { id: "m1", from: "user", text: "مرحباً إدارة دلّني، قمت برفع شهادة الترخيص الصادرة من هيئة السياحة، أرجو توثيق الحساب.", time: "09:45 ص" }
-    ]
-  }
-];
+const defaultSampleSessions: ChatSession[] = [];
 
 export function getChatSessions(): ChatSession[] {
   if (typeof window === "undefined") return defaultSampleSessions;

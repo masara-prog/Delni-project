@@ -4,7 +4,7 @@
    Target Engine: Microsoft SQL Server 2019 / 2022 / Azure SQL
    Tables: 39 Tables
    Primary Keys: 39
-   Foreign Keys: 45
+   Foreign Keys: 49
    Order of Execution:
      1. CREATE TABLE (All 39 tables created first)
      2. PRIMARY KEYS & UNIQUE CONSTRAINTS (All PKs created second)
@@ -302,13 +302,13 @@ BEGIN
     CREATE TABLE dbo.[offers_facilities] (
         [facility_offer_id] VARCHAR(50) NOT NULL,
         [facility_id] VARCHAR(50) NOT NULL,
-        [description] TEXT NOT NULL,
-        [offer_title] VARCHAR(100) NOT NULL,
+        [description] NVARCHAR(MAX) NOT NULL,
+        [offer_title] NVARCHAR(100) NOT NULL,
         [offer_image_url] VARCHAR(255) NOT NULL,
         [discount_percentage] DECIMAL(5, 2) NOT NULL,
         [start_date] DATE NOT NULL,
         [end_date] DATE NOT NULL,
-        [badge] VARCHAR(50) NULL
+        [badge] NVARCHAR(50) NULL
     );
 END;
 GO
@@ -321,14 +321,14 @@ IF OBJECT_ID('dbo.[offers_hotels]', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.[offers_hotels] (
         [id_offer] VARCHAR(50) NOT NULL,
-        [title_offer] VARCHAR(100) NOT NULL,
-        [description] TEXT NOT NULL,
+        [title_offer] NVARCHAR(100) NOT NULL,
+        [description] NVARCHAR(MAX) NOT NULL,
         [percent_discount] INT NOT NULL,
         [offer_image] VARCHAR(255) NOT NULL,
         [hotel_id] VARCHAR(50) NOT NULL,
         [date_start] DATE NOT NULL,
         [date_end] DATE NOT NULL,
-        [badge] VARCHAR(50) NULL
+        [badge] NVARCHAR(50) NULL
     );
 END;
 GO
@@ -508,7 +508,7 @@ BEGIN
         [discount_percentage] INT NULL,
         [contract_start_date] NVARCHAR(50) NULL,
         [contract_end_date] NVARCHAR(50) NULL,
-        [partnership_status] NVARCHAR(50) NULL DEFAULT ('???')
+        [partnership_status] NVARCHAR(50) NULL DEFAULT (N'نشط')
     );
 END;
 GO
@@ -537,7 +537,7 @@ BEGIN
         [tourist_id] VARCHAR(50) NOT NULL,
         [daily_trip_id] VARCHAR(50) NOT NULL,
         [stars_rating] INT NOT NULL,
-        [comment_text] TEXT NULL,
+        [comment_text] NVARCHAR(MAX) NULL,
         [created_at] DATETIME NOT NULL DEFAULT (getdate())
     );
 END;
@@ -588,7 +588,7 @@ BEGIN
         [tourist_id] VARCHAR(50) NOT NULL,
         [weekly_trip_id] VARCHAR(50) NOT NULL,
         [stars_rating] INT NOT NULL,
-        [comment_text] TEXT NULL,
+        [comment_text] NVARCHAR(MAX) NULL,
         [created_at] DATETIME NOT NULL DEFAULT (getdate())
     );
 END;
@@ -612,7 +612,7 @@ BEGIN
         [verification_status] NVARCHAR(50) NULL DEFAULT (N'قيد المراجعة'),
         [password] VARCHAR(255) NOT NULL,
         [email] VARCHAR(100) NOT NULL,
-        [gender] VARCHAR(10) NULL,
+        [gender] NVARCHAR(10) NULL,
         [price_per_day] DECIMAL(10, 2) NULL,
         [avatar] NVARCHAR(MAX) NULL,
         [digital_certificate_file] NVARCHAR(MAX) NULL
@@ -648,7 +648,7 @@ BEGIN
         [email] VARCHAR(100) NOT NULL,
         [phone_number] VARCHAR(20) NOT NULL,
         [password] VARCHAR(255) NOT NULL,
-        [account_status] NVARCHAR(50) NULL DEFAULT ('???'),
+        [account_status] NVARCHAR(50) NULL DEFAULT (N'نشط'),
         [created_at] DATETIME NULL DEFAULT (getdate())
     );
 END;
@@ -753,7 +753,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__bookings__CC6
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_daily_trip_days')
-    ALTER TABLE dbo.[daily_trip_days] ADD CONSTRAINT [PK_daily_trip_days] PRIMARY KEY ([daily_trip_id]);
+    ALTER TABLE dbo.[daily_trip_days] ADD CONSTRAINT [PK_daily_trip_days] PRIMARY KEY ([daily_trip_id], [day_of_week]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_daily_trip_stations')
@@ -781,19 +781,19 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ__drivers__AB6E
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_guide_operating_regions')
-    ALTER TABLE dbo.[guide_operating_regions] ADD CONSTRAINT [PK_guide_operating_regions] PRIMARY KEY ([license_number]);
+    ALTER TABLE dbo.[guide_operating_regions] ADD CONSTRAINT [PK_guide_operating_regions] PRIMARY KEY ([license_number], [region]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_guide_places')
-    ALTER TABLE dbo.[guide_places] ADD CONSTRAINT [PK_guide_places] PRIMARY KEY ([license_number]);
+    ALTER TABLE dbo.[guide_places] ADD CONSTRAINT [PK_guide_places] PRIMARY KEY ([license_number], [place_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_guide_working_days')
-    ALTER TABLE dbo.[guide_working_days] ADD CONSTRAINT [PK_guide_working_days] PRIMARY KEY ([day_of_week]);
+    ALTER TABLE dbo.[guide_working_days] ADD CONSTRAINT [PK_guide_working_days] PRIMARY KEY ([license_number], [day_of_week]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_hotel_amenities')
-    ALTER TABLE dbo.[hotel_amenities] ADD CONSTRAINT [PK_hotel_amenities] PRIMARY KEY ([amenity]);
+    ALTER TABLE dbo.[hotel_amenities] ADD CONSTRAINT [PK_hotel_amenities] PRIMARY KEY ([hotel_id], [amenity]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__hotels__45FE7E265C780494')
@@ -801,11 +801,11 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__hotels__45FE7
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_hotels_trip_private')
-    ALTER TABLE dbo.[hotels_trip_private] ADD CONSTRAINT [PK_hotels_trip_private] PRIMARY KEY ([hotel_id]);
+    ALTER TABLE dbo.[hotels_trip_private] ADD CONSTRAINT [PK_hotels_trip_private] PRIMARY KEY ([private_trip_id], [hotel_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__hotels_t__6E3B1DF7C3852CA5')
-    ALTER TABLE dbo.[hotels_trip_weekly] ADD CONSTRAINT [PK__hotels_t__6E3B1DF7C3852CA5] PRIMARY KEY ([hotel_id]);
+    ALTER TABLE dbo.[hotels_trip_weekly] ADD CONSTRAINT [PK__hotels_t__6E3B1DF7C3852CA5] PRIMARY KEY ([hotel_id], [weekly_trip_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__notifica__3213E83FCCA35CE5')
@@ -837,15 +837,15 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_places_tourist
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__places_t__2647FC5D9E65664D')
-    ALTER TABLE dbo.[places_trip_daily] ADD CONSTRAINT [PK__places_t__2647FC5D9E65664D] PRIMARY KEY ([daily_trip_id]);
+    ALTER TABLE dbo.[places_trip_daily] ADD CONSTRAINT [PK__places_t__2647FC5D9E65664D] PRIMARY KEY ([place_id], [daily_trip_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__places_t__1C7049889271FEB5')
-    ALTER TABLE dbo.[places_trip_private] ADD CONSTRAINT [PK__places_t__1C7049889271FEB5] PRIMARY KEY ([place_id]);
+    ALTER TABLE dbo.[places_trip_private] ADD CONSTRAINT [PK__places_t__1C7049889271FEB5] PRIMARY KEY ([private_trip_id], [place_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__places_t__94EE0B9B736F60D7')
-    ALTER TABLE dbo.[places_trip_weekly] ADD CONSTRAINT [PK__places_t__94EE0B9B736F60D7] PRIMARY KEY ([place_id]);
+    ALTER TABLE dbo.[places_trip_weekly] ADD CONSTRAINT [PK__places_t__94EE0B9B736F60D7] PRIMARY KEY ([place_id], [weekly_trip_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__private___44B370E9A15E57E8')
@@ -857,7 +857,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__private___A78
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_restaurant_features')
-    ALTER TABLE dbo.[restaurant_features] ADD CONSTRAINT [PK_restaurant_features] PRIMARY KEY ([facility_id]);
+    ALTER TABLE dbo.[restaurant_features] ADD CONSTRAINT [PK_restaurant_features] PRIMARY KEY ([facility_id], [feature]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__restaura__B2E8EAAEC22F3B94')
@@ -865,7 +865,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__restaura__B2E
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_restaurants_trip_weekly')
-    ALTER TABLE dbo.[restaurants_trip_weekly] ADD CONSTRAINT [PK_restaurants_trip_weekly] PRIMARY KEY ([facility_id]);
+    ALTER TABLE dbo.[restaurants_trip_weekly] ADD CONSTRAINT [PK_restaurants_trip_weekly] PRIMARY KEY ([weekly_trip_id], [facility_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__reviews___0C52942457BD19DC')
@@ -901,7 +901,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__tourist___46A
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_tourist_favorites')
-    ALTER TABLE dbo.[tourist_favorites] ADD CONSTRAINT [UQ_tourist_favorites] UNIQUE ([item_id]);
+    ALTER TABLE dbo.[tourist_favorites] ADD CONSTRAINT [UQ_tourist_favorites] UNIQUE ([tourist_id], [item_type], [item_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__tourists__83DD92C931AF8585')
@@ -937,12 +937,28 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__weekly_t__BC5
 GO
 
 /* ==============================================================================
-   SECTION 3: FOREIGN KEY RELATIONSHIPS (45 FOREIGN KEYS)
+   SECTION 3: FOREIGN KEY RELATIONSHIPS (49 FOREIGN KEYS)
    ============================================================================== */
 
 -- ==============================================================================
 -- PRIMARY KEYS, UNIQUE CONSTRAINTS & FOREIGN KEYS
 -- ==============================================================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_places_trip_daily_trip')
+    ALTER TABLE dbo.[places_trip_daily] ADD CONSTRAINT [FK_places_trip_daily_trip] FOREIGN KEY ([daily_trip_id]) REFERENCES dbo.[daily_trips]([daily_trip_id]) ON DELETE CASCADE;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_places_trip_daily_place')
+    ALTER TABLE dbo.[places_trip_daily] ADD CONSTRAINT [FK_places_trip_daily_place] FOREIGN KEY ([place_id]) REFERENCES dbo.[places_tourist]([place_id]) ON DELETE CASCADE;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_places_trip_private_trip')
+    ALTER TABLE dbo.[places_trip_private] ADD CONSTRAINT [FK_places_trip_private_trip] FOREIGN KEY ([private_trip_id]) REFERENCES dbo.[private_trips]([private_trip_id]) ON DELETE CASCADE;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_places_trip_private_place')
+    ALTER TABLE dbo.[places_trip_private] ADD CONSTRAINT [FK_places_trip_private_place] FOREIGN KEY ([place_id]) REFERENCES dbo.[places_tourist]([place_id]) ON DELETE CASCADE;
+GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__bookings___daily__1332DBDC')
     ALTER TABLE dbo.[bookings_daily] ADD CONSTRAINT [FK__bookings___daily__1332DBDC] FOREIGN KEY ([daily_trip_id]) REFERENCES dbo.[daily_trips]([daily_trip_id]);
@@ -1123,3 +1139,4 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_weekly_trips_vehicle')
     ALTER TABLE dbo.[weekly_trips] ADD CONSTRAINT [FK_weekly_trips_vehicle] FOREIGN KEY ([vehicle_plate]) REFERENCES dbo.[vehicles]([plate_number]);
 GO
+
