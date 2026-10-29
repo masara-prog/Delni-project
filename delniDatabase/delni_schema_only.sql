@@ -362,7 +362,6 @@ IF OBJECT_ID('dbo.[places_tourist]', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.[places_tourist] (
         [place_id] VARCHAR(50) NOT NULL,
-        [place_name] NVARCHAR(200) NOT NULL,
         [description] NVARCHAR(MAX) NOT NULL,
         [city] NVARCHAR(100) NOT NULL,
         [longitude] DECIMAL(9, 6) NOT NULL,

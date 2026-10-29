@@ -91,7 +91,7 @@ class GuideController extends Controller
         $places = DB::table('guide_places as gp')
             ->join('places_tourist as pt', 'gp.place_id', '=', 'pt.place_id')
             ->whereIn('gp.license_number', $licenses)
-            ->select('gp.license_number', 'pt.place_id', 'pt.place_name', 'pt.city', 'pt.category', 'pt.place_image')
+            ->select('gp.license_number', 'pt.place_id', 'pt.city as place_name', 'pt.city', 'pt.category', 'pt.place_image')
             ->get()->groupBy('license_number');
         $days = DB::table('guide_working_days')->whereIn('license_number', $licenses)->get()->groupBy('license_number');
         $regions = DB::table('guide_operating_regions')->whereIn('license_number', $licenses)->get()->groupBy('license_number');

@@ -170,7 +170,6 @@ class DatabaseSeeder extends Seeder
         PlaceTourist::updateOrCreate(
             ['place_id' => 'PL-01'],
             [
-                'place_name' => 'لبدة الكبرى (Leptis Magna)',
                 'city' => 'الخمس',
                 'category' => 'آثار رومانية',
                 'description' => 'واحدة من أبرز وأجمل المدن الأثرية الرومانية في حوض المتوسط، تضم مسرحاً مهيباً وقوس سبتيموس وحمامات هادريان.',
@@ -183,7 +182,6 @@ class DatabaseSeeder extends Seeder
         PlaceTourist::updateOrCreate(
             ['place_id' => 'PL-02'],
             [
-                'place_name' => 'مسرح صبراتة الأثري',
                 'city' => 'صبراتة',
                 'category' => 'آثار رومانية وفينيقية',
                 'description' => 'مسرح روماني ساحلي بديع بهيكل معماري متفرد ذي ثلاثة طوابق من الأعمدة الرخامية البديعة المطلة على البحر.',
@@ -196,7 +194,6 @@ class DatabaseSeeder extends Seeder
         PlaceTourist::updateOrCreate(
             ['place_id' => 'PL-03'],
             [
-                'place_name' => 'بحيرات أوباري وقبر عون',
                 'city' => 'أوباري - فزان',
                 'category' => 'سياحة صحراوية وواحات طبيعية',
                 'description' => 'بحيرات مائية عذبة ومالحة تحتضنها كثبان الرمال الذهبية الشاهقة في واحدة من أندر الظواهر الطبيعية في الصحراء الكبرى.',

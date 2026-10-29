@@ -64,7 +64,7 @@ class PrivateTripController extends Controller
 
         $places = DB::table('places_trip_private as j')->join('places_tourist as p', 'j.place_id', '=', 'p.place_id')
             ->whereIn('j.private_trip_id', $ids)->orderBy('j.visit_order')
-            ->get(['j.private_trip_id', 'p.place_id', 'p.place_name', 'p.city', 'p.region', 'p.category', 'p.place_image', 'j.visit_order'])
+            ->get(['j.private_trip_id', 'p.place_id', 'p.city as place_name', 'p.city', 'p.region', 'p.category', 'p.place_image', 'j.visit_order'])
             ->groupBy('private_trip_id');
         $hotels = DB::table('hotels_trip_private as j')->join('hotels as h', 'j.hotel_id', '=', 'h.hotel_id')
             ->whereIn('j.private_trip_id', $ids)
@@ -83,7 +83,7 @@ class PrivateTripController extends Controller
                 'hotel_ids' => array_column($tripHotels, 'hotel_id'),
                 'stations' => ($stations[$trip->private_trip_id] ?? collect())->values()->all(),
                 'customer_description' => $tripPlaces
-                    ? implode('، ', array_map(fn ($p) => "{$p['place_name']} ({$p['city']})", $tripPlaces))
+                    ? implode('، ', array_column($tripPlaces, 'city'))
                     : ($trip->customer_requirements ?: 'رحلة خاصة مخصصة'),
             ];
         })->values()->all();

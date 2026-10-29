@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Tourist landmarks (replaces the bridge's /places and /attractions). Landmarks are never deleted.
- * A landmark is a tourist city: its name is the city, and its highlights (the sites to visit there) are rows
+ * A landmark is a tourist city (there is no separate name column; the API sends place_name = city), and its highlights (the sites to visit there) are rows
  * of places_tourist_highlights, one per highlight (first normal form).
  */
 class PlaceController extends Controller
@@ -28,7 +28,7 @@ class PlaceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = PlaceTourist::query()->orderBy('place_name');
+        $query = PlaceTourist::query()->orderBy('city');
         foreach (['city', 'category', 'region'] as $filter) {
             if ($request->filled($filter) && $request->input($filter) !== 'all') {
                 $query->where($filter, $request->input($filter));
@@ -78,8 +78,7 @@ class PlaceController extends Controller
             }
         }
         if (isset($data['city'])) {
-            // The landmark is named by its tourist city
-            $values['city'] = $values['place_name'] = trim($data['city']);
+            $values['city'] = trim($data['city']);
         }
         if (!empty($data['place_image'])) {
             $values['place_image'] = Base64Image::store($data['place_image'], "place-{$id}", 'places');

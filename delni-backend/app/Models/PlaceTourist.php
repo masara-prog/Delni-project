@@ -14,7 +14,6 @@ class PlaceTourist extends Model
 
     protected $fillable = [
         'place_id',
-        'place_name',
         'description',
         'city',
         'longitude',
@@ -25,6 +24,14 @@ class PlaceTourist extends Model
         'region',
     ];
     // Highlights are rows of places_tourist_highlights (highlightItems)
+
+    // A landmark is named by its tourist city (the place_name column was removed); sent as place_name for the pages
+    protected $appends = ['place_name'];
+
+    public function getPlaceNameAttribute(): ?string
+    {
+        return $this->city;
+    }
 
     protected $casts = [
         'longitude' => 'decimal:6',

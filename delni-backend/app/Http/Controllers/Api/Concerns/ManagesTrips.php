@@ -81,10 +81,11 @@ trait ManagesTrips
         if (!$values) {
             return [];
         }
-        $rows = DB::table('places_tourist')->whereIn('place_id', $values)->orWhereIn('place_name', $values)->get(['place_id', 'place_name']);
+        // A landmark can be given by its id or by its name (its tourist city)
+        $rows = DB::table('places_tourist')->whereIn('place_id', $values)->orWhereIn('city', $values)->get(['place_id', 'city']);
         $ids = [];
         foreach ($values as $value) {
-            $match = $rows->first(fn ($r) => $r->place_id === $value) ?? $rows->first(fn ($r) => $r->place_name === $value);
+            $match = $rows->first(fn ($r) => $r->place_id === $value) ?? $rows->first(fn ($r) => $r->city === $value);
             if ($match && !in_array($match->place_id, $ids, true)) {
                 $ids[] = $match->place_id;
             }

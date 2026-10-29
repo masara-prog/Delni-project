@@ -510,7 +510,7 @@ class TripCatalogController extends Controller
     {
         return DB::table("{$junction} as j")->join('places_tourist as p', 'j.place_id', '=', 'p.place_id')
             ->whereIn("j.{$key}", $ids)
-            ->get(["j.{$key}", 'p.place_id', 'p.place_name', 'p.city', 'p.category', 'p.place_image'])
+            ->get(["j.{$key}", 'p.place_id', 'p.city as place_name', 'p.city', 'p.category', 'p.place_image'])
             ->groupBy($key)->map(fn ($rows) => $rows->map(fn ($r) => (array) $r)->values()->all())->all();
     }
 
