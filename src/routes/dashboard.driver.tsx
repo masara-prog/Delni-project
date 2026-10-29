@@ -3,12 +3,26 @@ import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import type { Driver, Vehicle } from "@/lib/dbSchema";
-import { 
-  getStoredSession, 
-  getDrivers, 
-  updateDriver, 
-  getVehicles 
+import {
+  getStoredSession,
+  getDrivers,
+  apiUpdateDriver,
+  apiChangeDriverPassword,
+  apiGetDriverDashboard,
+  apiUpdateDriverTripStage,
+  getVehicles,
+  type DriverTrip,
 } from "@/lib/api";
+import { fetchUserNotifications, markNotificationRead, notificationTarget, type NotificationItem } from "@/lib/notifications";
+
+// Trip stages the driver reports; saved in drivers.current_trip_stage
+const TRIP_STAGES = [
+  { stage: "في الانتظار", icon: "⏳" },
+  { stage: "تم الانطلاق", icon: "🚌" },
+  { stage: "في الطريق - استراحة", icon: "☕" },
+  { stage: "وصلنا الوجهة", icon: "📍" },
+  { stage: "مكتملة", icon: "🏁" },
+];
 
 export const Route = createFileRoute("/dashboard/driver")({
   head: () => ({
@@ -19,29 +33,6 @@ export const Route = createFileRoute("/dashboard/driver")({
   }),
   component: DriverDashboard,
 });
-
-type NotificationItem = {
-  id: string;
-  title: string;
-  message: string;
-  trip_route: string;
-  assigned_at: string;
-  is_read: boolean;
-};
-
-type AssignedDriverTrip = {
-  id: string;
-  route: string;
-  company_name: string;
-  contract_number: string;
-  plate_number: string;
-  date: string;
-  pickup_time: string;
-  pax_count: number;
-  status: "مجدولة" | "قيد التنفيذ" | "مكتملة";
-  current_location: string;
-  status_stage: "في الانتظار" | "تم الانطلاق" | "في الطريق - استراحة" | "وصلنا الوجهة" | "مكتملة";
-};
 
 function DriverDashboard() {
   const navigate = useNavigate();
@@ -154,73 +145,145 @@ function DriverDashboard() {
     }
   }, [driverInfo.assigned_vehicle_plate, active]);
 
+  // Trips the admin assigned to this driver's vehicle, and the driver's own notifications (from DelniDB)
+  const [trips, setTrips] = useState<DriverTrip[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    if (!driverInfo.driver_license_number) return;
+    apiGetDriverDashboard(driverInfo.driver_license_number).then((data) => {
+      if (!data) return;
+      setDriverInfo((prev) => ({ ...prev, ...data.driver } as Driver));
+      setTrips(data.trips || []);
+      setAssignedVehicle(data.vehicle ? ({ ...data.vehicle, vehicle_status: data.vehicle.vehicle_status || "جاهزة" } as Vehicle) : null);
+    });
+    fetchUserNotifications().then(setNotifications);
+  }, [driverInfo.driver_license_number, active]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const tripStage: string = (driverInfo as any).current_trip_stage || "في الانتظار";
+  const [savingStage, setSavingStage] = useState(false);
+  const handleTripStage = async (stage: string) => {
+    setSavingStage(true);
+    const res = await apiUpdateDriverTripStage(driverInfo.driver_license_number, stage);
+    setSavingStage(false);
+    if (!res.success) {
+      alert("❌ " + res.error);
+      return;
+    }
+    setDriverInfo((prev) => ({ ...prev, current_trip_stage: stage } as Driver));
+  };
+
+  const openNotification = (n: NotificationItem) => {
+    if (!n.read) {
+      markNotificationRead(n.id);
+      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    }
+    const target = notificationTarget(n);
+    if (target) navigate({ to: target.to as any, search: target.search as any });
+  };
+
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "notifications", label: isAr ? "إشعارات التعيين" : "Assignments", icon: "🔔", badge: 2 },
-    { id: "live_trip", label: isAr ? "متابعة الرحلة الحالية" : "Current Active Trip", icon: "📍" },
+    { id: "notifications", label: isAr ? "الإشعارات" : "Notifications", icon: "🔔", badge: unreadCount || undefined },
+    { id: "live_trip", label: isAr ? "الرحلات المسندة لمركبتي" : "Assigned Trips", icon: "📍" },
     { id: "vehicle", label: isAr ? "مركبتي المسندة" : "Assigned Vehicle", icon: "🚐" },
     { id: "profile", label: isAr ? "ملف السائق والرخصة" : "Driver License & Profile", icon: "👤" },
   ];
 
-  // Notifications
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-
-  // Trips & Live Status
-  const [activeTrip, setActiveTrip] = useState<AssignedDriverTrip>({
-    id: `TRP-${driverInfo.driver_license_number || '101'}`,
-    route: driverInfo.assigned_vehicle_plate ? `جولة سياحية — حافلة ${driverInfo.assigned_vehicle_plate}` : "لا توجد رحلة مسندة حالياً",
-    company_name: driverInfo.company_name || "شركة النقل السياحي",
-    contract_number: driverInfo.contract_number || "",
-    plate_number: driverInfo.assigned_vehicle_plate || "غير محدد",
-    date: "اليوم",
-    pickup_time: "09:00 ص",
-    pax_count: 0,
-    status: driverInfo.assigned_vehicle_plate ? "قيد التنفيذ" : "مجدولة",
-    current_location: "مقر الشركة",
-    status_stage: "في الانتظار"
-  });
-
-  const handleToggleOperationalStatus = () => {
+  const handleToggleOperationalStatus = async () => {
     const nextStatus: "متاح" | "إجازة" = driverInfo.operational_status === "متاح" ? "إجازة" : "متاح";
-    const updated: Driver = { ...driverInfo, operational_status: nextStatus };
-    setDriverInfo(updated);
-    updateDriver(driverInfo.driver_license_number, updated);
+    const res = await apiUpdateDriver(driverInfo.driver_license_number, { operational_status: nextStatus });
+    if (!res.success) {
+      alert("❌ لم يتم تحديث الحالة.\n" + res.error);
+      return;
+    }
+    setDriverInfo({ ...driverInfo, operational_status: nextStatus });
   };
 
-  const handleUpdateStatusStage = (newStage: AssignedDriverTrip["status_stage"], newLocation: string) => {
-    setActiveTrip({
-      ...activeTrip,
-      status_stage: newStage,
-      current_location: newLocation,
-      status: newStage === "مكتملة" ? "مكتملة" : "قيد التنفيذ"
-    });
-  };
-
+  const [driverCurrentPassword, setDriverCurrentPassword] = useState("");
   const [driverNewPassword, setDriverNewPassword] = useState("");
   const [driverConfirmPassword, setDriverConfirmPassword] = useState("");
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (driverNewPassword) {
-      if (driverNewPassword.length < 4) {
-        alert("كلمة المرور يجب أن تتكون من 4 خانات على الأقل");
-        return;
-      }
-      if (driverNewPassword !== driverConfirmPassword) {
-        alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
-        return;
-      }
-      updateDriver(driverInfo.driver_license_number, {
-        ...driverInfo,
-        password: driverNewPassword,
-      });
-      setDriverNewPassword("");
-      setDriverConfirmPassword("");
-      alert("تم تحديث كلمة المرور الخاصة بحساب السائق بنجاح ✓");
+    if (!driverNewPassword) {
+      alert("يرجى كتابة كلمة المرور الجديدة.");
       return;
     }
-    alert("لم يتم إدخال كلمة مرور جديدة. باقي بيانات الحساب معتمدة ومحمية.");
+    if (!driverCurrentPassword) {
+      alert("يرجى كتابة كلمة المرور الحالية لتأكيد أنك صاحب الحساب.");
+      return;
+    }
+    if (driverNewPassword.length < 6) {
+      alert("كلمة المرور يجب أن تتكون من 6 خانات على الأقل");
+      return;
+    }
+    if (driverNewPassword !== driverConfirmPassword) {
+      alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
+      return;
+    }
+    const res = await apiChangeDriverPassword(driverInfo.driver_license_number, driverCurrentPassword, driverNewPassword);
+    if (!res.success) {
+      alert("❌ " + res.error);
+      return;
+    }
+    setDriverCurrentPassword("");
+    setDriverNewPassword("");
+    setDriverConfirmPassword("");
+    alert("✅ تم تغيير كلمة المرور بنجاح");
   };
+
+  const stageControl = trips.length > 0 && (
+    <div className="space-y-2 mb-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-black text-foreground text-sm">مرحلة الرحلة الحالية:</h3>
+        <Badge tone={tripStage === "مكتملة" ? "green" : "sea"}>{tripStage}</Badge>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        {TRIP_STAGES.map((st) => (
+          <button
+            key={st.stage}
+            disabled={savingStage}
+            onClick={() => handleTripStage(st.stage)}
+            className={`p-3 rounded-2xl border text-center transition disabled:opacity-60 ${
+              tripStage === st.stage ? "border-primary bg-primary/10 text-primary font-black shadow-soft" : "border-border bg-white text-foreground hover:border-primary/40"
+            }`}
+          >
+            <div className="text-xl">{st.icon}</div>
+            <div className="text-xs font-black mt-1">{st.stage}</div>
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-muted-foreground">تُحفظ المرحلة فوراً وتظهر لشركة النقل وإدارة المنصة.</p>
+    </div>
+  );
+
+  const tripsList = (
+    trips.length === 0 ? (
+      <div className="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+        <div className="text-2xl">🗓️</div>
+        <div className="font-bold text-sm text-foreground">لا توجد رحلات مسندة لمركبتك حالياً</div>
+        <p className="text-xs text-muted-foreground">تظهر هنا الرحلات فقط عندما تسند إدارة المنصة رحلة لمركبتك.</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {trips.map((t) => (
+          <div key={`${t.kind}-${t.id}`} className="p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-1.5">
+            <div className="flex justify-between items-center gap-2">
+              <span className="font-black text-foreground text-sm">{t.title}</span>
+              <Badge tone="sea">رحلة {t.kind}</Badge>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              🗓️ {t.schedule}
+              {t.departure_city ? ` · 📍 الانطلاق من ${t.departure_city}` : ""} · 👥 الركاب: {t.passengers}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  );
 
   return (
     <DashboardShell role="driver" roleLabel="سائق معتمد" userName={driverInfo.full_name} nav={nav} active={active} onNavigate={setActive}>
@@ -232,7 +295,7 @@ function DriverDashboard() {
                 <div className="text-sm opacity-80">صباح الخير 👋</div>
                 <h1 className="text-2xl md:text-3xl font-black mt-1">{driverInfo.full_name}</h1>
                 <p className="mt-1 text-sm text-white/90 font-semibold">
-                  {driverInfo.company_name} · عقد {driverInfo.contract_number} · مركبة {driverInfo.assigned_vehicle_plate}
+                  {driverInfo.company_name}{driverInfo.assigned_vehicle_plate ? ` · مركبة ${driverInfo.assigned_vehicle_plate}` : ""}
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-bold">
@@ -255,38 +318,29 @@ function DriverDashboard() {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="إشعارات التعيين" value={notifications.filter(n => !n.is_read).length} icon="🔔" tone="sea" />
-            <StatCard label="حالة رحلة اليوم" value={activeTrip.status_stage} icon="🧭" tone="green" />
+            <StatCard label="إشعارات غير مقروءة" value={unreadCount} icon="🔔" tone="sea" />
+            <StatCard label="الرحلات المسندة" value={trips.length} icon="🧭" tone="green" />
             <StatCard label="المركبة المسندة" value={driverInfo.assigned_vehicle_plate || "غير محدد"} icon="🚐" tone="clay" />
             <StatCard label="حالة الحساب" value={driverInfo.account_status} icon="🛡️" tone="sun" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
             <div className="lg:col-span-2 space-y-6">
-              <SectionCard title="متابعة وتحديث حالة الرحلة الحالية">
-                <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-black text-foreground text-base">{activeTrip.route}</span>
-                    <Badge tone="green">{activeTrip.status_stage}</Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground">📍 الموقع الحالي: <span className="font-bold text-foreground">{activeTrip.current_location}</span></div>
-                  <div className="pt-2 flex flex-wrap gap-2">
-                    <button onClick={() => setActive("live_trip")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow">
-                      تحديث الموقع وحالة الطريق الآن 📍
-                    </button>
-                  </div>
-                </div>
+              <SectionCard title="الرحلات المسندة لمركبتي">
+                {stageControl}
+                {tripsList}
               </SectionCard>
             </div>
 
             <div className="space-y-6">
-              <SectionCard title="آخر إشعارات التعيين">
+              <SectionCard title="آخر الإشعارات">
                 <div className="space-y-2">
-                  {notifications.map((n) => (
-                    <div key={n.id} className="p-3 rounded-xl bg-muted/40 text-xs text-right">
+                  {notifications.length === 0 && <div className="text-xs text-muted-foreground text-center py-4">لا توجد إشعارات</div>}
+                  {notifications.slice(0, 5).map((n) => (
+                    <div key={n.id} onClick={() => openNotification(n)} className="p-3 rounded-xl bg-muted/40 text-xs text-right cursor-pointer hover:bg-muted/70 transition">
                       <div className="font-black text-foreground">{n.title}</div>
-                      <p className="text-muted-foreground mt-0.5">{n.message}</p>
-                      <span className="text-[10px] text-muted-foreground mt-1 block">{n.assigned_at}</span>
+                      <p className="text-muted-foreground mt-0.5">{n.body}</p>
+                      <span className="text-[10px] text-muted-foreground mt-1 block">{n.time}</span>
                     </div>
                   ))}
                 </div>
@@ -298,24 +352,30 @@ function DriverDashboard() {
 
       {/* Notifications Feed */}
       {active === "notifications" && (
-        <SectionCard title="إشعارات تعيين الرحلات والمهام الجديدة (Assignment Notifications)">
+        <SectionCard title="إشعاراتي">
           <div className="space-y-3 text-right">
+            {notifications.length === 0 && (
+              <div className="p-8 text-center text-xs text-muted-foreground bg-slate-50 rounded-2xl border border-slate-200">لا توجد إشعارات لحسابك حتى الآن</div>
+            )}
             {notifications.map((n) => (
-              <div key={n.id} className="p-4 rounded-xl border border-border bg-white flex justify-between items-start">
+              <div key={n.id} onClick={() => openNotification(n)} className={`p-4 rounded-xl border bg-white flex justify-between items-start gap-3 cursor-pointer hover:shadow-md transition ${n.read ? "border-border" : "border-primary/40"}`}>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-foreground text-sm">{n.title}</span>
-                    <Badge tone="sea">{n.trip_route}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
-                  <span className="text-xs font-bold text-primary mt-2 block">{n.assigned_at}</span>
+                  <span className="font-black text-foreground text-sm">{n.title}</span>
+                  <p className="text-xs text-muted-foreground mt-1">{n.body}</p>
+                  <span className="text-xs font-bold text-primary mt-2 block">{n.time}</span>
                 </div>
-                <button
-                  onClick={() => setNotifications(notifications.map(x => x.id === n.id ? { ...x, is_read: true } : x))}
-                  className="px-3 py-1.5 bg-muted rounded-lg text-xs font-bold"
-                >
-                  تم الاطلاع
-                </button>
+                {!n.read && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markNotificationRead(n.id);
+                      setNotifications(notifications.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+                    }}
+                    className="px-3 py-1.5 bg-muted rounded-lg text-xs font-bold shrink-0"
+                  >
+                    تم الاطلاع
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -324,48 +384,10 @@ function DriverDashboard() {
 
       {/* Live Trip Tracker */}
       {active === "live_trip" && (
-        <SectionCard title="لوحة التحكم وتحديث موقع وحالة الرحلة المباشرة">
-          <div className="space-y-6 text-right">
-            <div className="p-6 rounded-3xl bg-gradient-sea text-white space-y-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-xs opacity-80">كود المهمة: {activeTrip.id} · {activeTrip.company_name} (عقد {activeTrip.contract_number})</div>
-                  <h2 className="text-2xl font-black mt-1">{activeTrip.route}</h2>
-                </div>
-                <Badge tone="green">{activeTrip.status_stage}</Badge>
-              </div>
-              <div className="p-4 rounded-xl bg-white/10 backdrop-blur text-sm">
-                <div>📍 الموقع المسجل حالياً: <span className="font-bold">{activeTrip.current_location}</span></div>
-                <div className="mt-1">🕘 وقت الانطلاق: {activeTrip.pickup_time} · 👥 الركاب: {activeTrip.pax_count} شخص · 🚐 اللوحة: {activeTrip.plate_number}</div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="font-black text-foreground text-sm">تحديث مرحلة وتطور الرحلة (Trip Status Control):</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                {[
-                  { stage: "في الانتظار" as const, loc: "مقر الانطلاق (طرابلس)", icon: "⏳" },
-                  { stage: "تم الانطلاق" as const, loc: "الطريق السريع / الساحلي", icon: "🚌" },
-                  { stage: "في الطريق - استراحة" as const, loc: "محطة الاستراحة الوسطى", icon: "☕" },
-                  { stage: "وصلنا الوجهة" as const, loc: "موقع المعالم السياحية (لبدة/غدامس)", icon: "📍" },
-                  { stage: "مكتملة" as const, loc: "العودة والتسليم النهائي", icon: "🏁" },
-                ].map((st) => (
-                  <button
-                    key={st.stage}
-                    onClick={() => handleUpdateStatusStage(st.stage, st.loc)}
-                    className={`p-4 rounded-2xl border text-right transition ${
-                      activeTrip.status_stage === st.stage
-                        ? "border-primary bg-primary/10 text-primary font-black shadow-soft"
-                        : "border-border bg-white text-foreground hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="text-2xl">{st.icon}</div>
-                    <div className="text-xs font-black mt-2">{st.stage}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{st.loc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        <SectionCard title="الرحلات المسندة لمركبتي">
+          <div className="text-right">
+            {stageControl}
+            {tripsList}
           </div>
         </SectionCard>
       )}
@@ -402,10 +424,7 @@ function DriverDashboard() {
                     <span>{driverInfo.company_name || "شركة النقل السياحي"}</span>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">✓ معتمد</span>
                   </div>
-                  <div className="text-xs text-muted-foreground font-semibold flex items-center justify-between pt-1 border-t border-[#1B5A78]/15">
-                    <span>رقم العقد الرسمي:</span>
-                    <span className="font-mono font-bold text-foreground">{driverInfo.contract_number}</span>
-                  </div>
+
                 </div>
               </div>
 
@@ -472,7 +491,7 @@ function DriverDashboard() {
                 <span>بيانات السائق ورخصة القيادة (معتمدة ومحمية من التعديل):</span>
               </div>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                الاسم، رقم الهاتف، رقم الرخصة، تاريخ الانتهاء، الرقم الوطني والبريد الإلكتروني هي بيانات رسمية معتمدة عبر شركة النقل، ولا يمكن تعديلها من حساب السائق. يمكنك هنا فقط تحديث كلمة المرور (الرمز) لحسابك.
+                الاسم، رقم الهاتف، رقم الرخصة، تاريخ الانتهاء، الرقم الوطني والبريد الإلكتروني هي بيانات رسمية معتمدة عبر شركة النقل، ولا يمكن تعديلها من حساب السائق. يمكنك هنا فقط تغيير كلمة المرور لحسابك، ولا يستطيع أحد غيرك تغييرها.
               </p>
             </div>
 
@@ -546,13 +565,22 @@ function DriverDashboard() {
               </div>
             </div>
 
-            {/* Editable Password Section */}
+            {/* Password change: only the driver, who must enter the current password */}
             <div className="p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-3 pt-4">
               <div className="text-xs font-black text-primary flex items-center gap-1.5">
                 <span>🔑</span>
-                <span>تحديث رمز الدخول (كلمة المرور):</span>
+                <span>تغيير كلمة المرور:</span>
               </div>
-              
+              <div>
+                <label className="text-xs font-bold text-foreground mb-1 block">كلمة المرور الحالية</label>
+                <input
+                  type="password"
+                  value={driverCurrentPassword}
+                  onChange={(e) => setDriverCurrentPassword(e.target.value)}
+                  placeholder="اكتب كلمة المرور الحالية..."
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-foreground mb-1 block">كلمة المرور الجديدة</label>
@@ -560,7 +588,7 @@ function DriverDashboard() {
                     type="password"
                     value={driverNewPassword}
                     onChange={(e) => setDriverNewPassword(e.target.value)}
-                    placeholder="اكتب كلمة مرور جديدة..."
+                    placeholder="6 خانات على الأقل"
                     className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
                   />
                 </div>
@@ -575,13 +603,10 @@ function DriverDashboard() {
                   />
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                * اترك الحقل فارغاً إذا كنت لا ترغب في تغيير كلمة المرور الحالية.
-              </p>
             </div>
 
             <button className="px-6 h-11 bg-gradient-sea text-white font-black text-sm rounded-xl shadow-glow cursor-pointer hover:opacity-95 transition">
-              حفظ وتحديث كلمة المرور ✓
+              تغيير كلمة المرور ✓
             </button>
           </form>
         </SectionCard>

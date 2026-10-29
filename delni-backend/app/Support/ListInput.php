@@ -37,6 +37,13 @@ class ListInput
         return $clean;
     }
 
+    // Stored Arabic day names -> the codes the guide forms use (sat, sun, ...)
+    public static function dayCodes(array $names): array
+    {
+        $codes = array_flip(array_slice(self::DAY_NAMES, 0, 7, true));
+        return array_values(array_map(fn ($name) => $codes[$name] ?? $name, $names));
+    }
+
     public static function dayNames($value): array
     {
         return array_values(array_unique(array_map(

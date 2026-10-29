@@ -17,11 +17,6 @@ class PlaceTouristHighlight extends Model
         'place_id',
         'highlight_name',
         'display_order',
-        'created_at',
-    ];
-
-    protected $casts = [
-        'created_at' => 'datetime',
     ];
 
     public function place()

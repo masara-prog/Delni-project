@@ -26,7 +26,7 @@ import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { getNearbyServices } from "@/lib/homeData";
 import { TOUR_GUIDES_DATA, type TourGuide, formatWorkingDays, REGIONS_MAP } from "@/lib/guidesData";
 import { LIBYAN_ATTRACTIONS, LIBYAN_CITIES, type AttractionItem } from "@/lib/attractionsData";
-import { apiBookDailyTrip, apiBookWeeklyTrip, getStoredSession } from "@/lib/api";
+import { apiBookDailyTrip, apiBookWeeklyTrip, apiRequestPrivateTrip, getStoredSession, LARAVEL_API_URL } from "@/lib/api";
 
 function resolveTripImage(title?: string, kind?: string | null, customImage?: string): string {
   if (customImage) return customImage;
@@ -259,7 +259,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               // Connect to real DelniDB
               try {
                 const s = getStoredSession();
-                const touristId = s.user?.tourist_id || s.user?.passport || s.user?.id || `T-${phone}`;
+                const touristId = s.user?.tourist_id || "";
                 const nSeats = parseInt(seats, 10) || 1;
                 const isWeekly = item.id?.startsWith("w") || item.subtitle?.includes("أسبوع") || item.title?.includes("أسبوع");
 
@@ -267,13 +267,13 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 if (isWeekly) {
                   res = await apiBookWeeklyTrip({
                     tourist_id: touristId,
-                    weekly_trip_id: item.id || "WT-201",
+                    weekly_trip_id: item.id || "",
                     number_of_seats: nSeats,
                   });
                 } else {
                   res = await apiBookDailyTrip({
                     tourist_id: touristId,
-                    daily_trip_id: item.id || "DT-101",
+                    daily_trip_id: item.id || "",
                     number_of_seats: nSeats,
                   });
                 }
@@ -1246,7 +1246,7 @@ export function TripScheduleModal({
           if (session.user?.account_status === "مقيّد") {
             setIsAccountRestricted(true);
           }
-          fetch(`http://127.0.0.1:5001/api/db/tourists?tourist_id=${encodeURIComponent(touristId)}`)
+          fetch(`${LARAVEL_API_URL}/tourists/${encodeURIComponent(touristId)}`, { headers: { Accept: "application/json" } })
             .then(r => r.json())
             .then(res => {
               if (res && res.success && res.data) {
@@ -1571,35 +1571,23 @@ export function TripScheduleModal({
               // Connect to real DelniDB
               try {
                 const session = getStoredSession();
-                const touristId = session.user?.tourist_id || session.user?.passport || session.user?.id || `T-GUEST-${Date.now().toString().slice(-4)}`;
+                const touristId = session.user?.tourist_id || "";
                 const isWeekly = selectedTrip.kind === "weekly" || selectedTrip.id?.startsWith("w") || kindLabel.includes("أسبوع");
-                const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id || (isWeekly ? "WT-220" : "DT-366");
-                const targetTitle = selectedTrip?.tripTitle || customTitle || tripTitle || (isWeekly ? "رحلة أسبوعية" : "رحلة يومية");
+                const targetTripId = selectedTrip?.tripId || selectedTrip?.id || tripId || trip?.id || "";
 
-                const code = bookingConfirmedCode || `DL-${Math.floor(Math.random() * 90000 + 10000)}`;
-                setBookingConfirmedCode(code);
-                const newTotal = priorBookedSeats + n;
-                setTotalSeatsAfterBooking(newTotal);
-
-                if (isWeekly) {
-                  await apiBookWeeklyTrip({
-                    tourist_id: touristId,
-                    weekly_trip_id: targetTripId,
-                    trip_title: targetTitle,
-                    seat_per_price: selectedTrip.price,
-                    number_of_seats: n,
-                  });
-                } else {
-                  await apiBookDailyTrip({
-                    tourist_id: touristId,
-                    daily_trip_id: targetTripId,
-                    trip_title: targetTitle,
-                    price_per_seat: selectedTrip.price,
-                    number_of_seats: n,
-                  });
+                const res = isWeekly
+                  ? await apiBookWeeklyTrip({ tourist_id: touristId, weekly_trip_id: targetTripId, number_of_seats: n })
+                  : await apiBookDailyTrip({ tourist_id: touristId, daily_trip_id: targetTripId, number_of_seats: n });
+                if (res.status !== "success") {
+                  alert("❌ لم يتم تسجيل الحجز في قاعدة البيانات.\n" + (res.message || ""));
+                  return;
                 }
-              } catch (err) {
-                console.error("TripScheduleModal Booking API error:", err);
+                // The ticket number is the booking id stored in DelniDB
+                setBookingConfirmedCode(res.booking_id || "");
+                setTotalSeatsAfterBooking(priorBookedSeats + n);
+              } catch (err: any) {
+                alert("❌ تعذر الاتصال بخادم المنصة لإتمام الحجز.\n" + (err?.message || ""));
+                return;
               }
 
               setStep("done");
@@ -1849,7 +1837,7 @@ export function PrivateTripModal({
   const loadLandmarks = () => {
     setLoadingPlaces(true);
     setPlacesError(null);
-    fetch("http://127.0.0.1:5001/api/db/places")
+    fetch(`${LARAVEL_API_URL}/places`, { headers: { Accept: "application/json" } })
       .then((r) => {
         if (!r.ok) throw new Error("تعذر جلب المعالم من خادم المنصة");
         return r.json();
@@ -1910,7 +1898,7 @@ export function PrivateTripModal({
   const [dbGuides, setDbGuides] = useState<any[]>([]);
   useEffect(() => {
     if (open) {
-      fetch("http://127.0.0.1:5001/api/db/guides")
+      fetch(`${LARAVEL_API_URL}/guides?status=${encodeURIComponent("موثق")}`, { headers: { Accept: "application/json" } })
         .then((r) => r.json())
         .then((res) => {
           if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
@@ -2220,8 +2208,6 @@ export function PrivateTripModal({
 
     // Case 1: Active Logged-in Tourist -> Process and Save to Database
     setIsSubmitting(true);
-    const tripId = `PRV-${Date.now().toString().slice(-5)}`;
-    setCreatedTripId(tripId);
 
     const touristId = session?.user?.tourist_id || session?.user?.id || session?.user?.username || null;
     const placesNames = selectedLandmarks.map((l) => l.name).join(" • ");
@@ -2233,44 +2219,23 @@ export function PrivateTripModal({
 
     const requirements = `المعالم السياحية المستهدفة: ${placesWithCities}. ${guideRequirement}${notes ? `ملاحظات ومتطلبات السائح: ${notes}` : ""}`.trim();
 
-    // Payload matching SQL Server DelniDB clean normalized private_trips and places_trip_private schema
+    // The id, status and price are set by the server; the tourist only sends the request details
     const payload = {
-      private_trip_id: tripId,
-      status_order: "قيد الدراسة",
       preferred_start_date: startDate,
       duration_days: Math.max(1, parseInt(durationDays, 10) || 1),
       number_of_companions: Math.max(1, parseInt(companions, 10) || 1),
       guide_license_number: selectedGuideLicense || null,
       tourist_id: touristId,
       customer_requirements: requirements,
-      quoted_price: null,
       place_ids: selectedLandmarkIds,
     };
 
     try {
-      const res = await fetch("http://127.0.0.1:5001/api/db/private_trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok || data?.success === false) {
-        throw new Error(data?.error || "فشل حفظ طلب الرحلة في قاعدة البيانات");
+      const res = await apiRequestPrivateTrip(payload);
+      if (!res.success) {
+        throw new Error(res.error);
       }
-
-      // Sync locally for instant dashboard preview
-      try {
-        const existing = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-        existing.unshift({
-          ...payload,
-          places: selectedLandmarks,
-          guide_name: selectedGuide ? selectedGuide.name : null,
-          created_at: new Date().toISOString(),
-        });
-        localStorage.setItem("delni_private_trips", JSON.stringify(existing));
-        localStorage.setItem("dalni_private_trips", JSON.stringify(existing));
-      } catch (_) {}
-
+      setCreatedTripId(res.tripId || "");
       sessionStorage.removeItem("delni_pending_private_trip");
       setStep("done");
     } catch (err: any) {

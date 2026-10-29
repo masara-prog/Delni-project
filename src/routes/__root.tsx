@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { FloatingChat } from "@/components/FloatingChat";
+import { PlatformAlert } from "@/components/PlatformAlert";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
 
@@ -315,6 +316,7 @@ function RootComponent() {
       <LanguageProvider>
         <Outlet />
         <FloatingChat />
+        <PlatformAlert />
       </LanguageProvider>
     </QueryClientProvider>
   );

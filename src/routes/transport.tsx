@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
-import { getTransportCompanies, getVehicles as getApiVehicles, getDrivers } from "@/lib/api";
+import { getTransportCompanies, getVehicles as getApiVehicles, getDrivers, LARAVEL_API_URL } from "@/lib/api";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import {
   Car,
@@ -43,7 +43,7 @@ type Vehicle = {
   plateNumber: string;
   vehicleType: string;
   name: string;
-  category: "حافلة سياحية" | "ميني باص" | "فان" | "سيارة دفع رباعي (4x4)" | "سيدان" | string;
+  category: "حافلة سياحية" | "ميني باص" | "باص VIP" | string;
   categoryLabelAr: string;
   categoryLabelEn: string;
   vehicleStatus: string;
@@ -106,7 +106,7 @@ function TransportPage() {
     let isMounted = true;
     async function fetchLiveData() {
       try {
-        const compRes = await fetch("http://127.0.0.1:5001/api/db/companies", { signal: AbortSignal.timeout(3000) });
+        const compRes = await fetch(`${LARAVEL_API_URL}/transport/companies`, { signal: AbortSignal.timeout(3000) });
         if (compRes.ok) {
           const compData = await compRes.json();
           if (compData.success && Array.isArray(compData.data) && isMounted) {
@@ -116,7 +116,7 @@ function TransportPage() {
       } catch {}
 
       try {
-        const vehRes = await fetch("http://127.0.0.1:5001/api/db/vehicles", { signal: AbortSignal.timeout(3000) });
+        const vehRes = await fetch(`${LARAVEL_API_URL}/transport/vehicles`, { signal: AbortSignal.timeout(3000) });
         if (vehRes.ok) {
           const vehData = await vehRes.json();
           if (vehData.success && Array.isArray(vehData.data) && isMounted) {
@@ -126,7 +126,7 @@ function TransportPage() {
       } catch {}
 
       try {
-        const drvRes = await fetch("http://127.0.0.1:5001/api/db/drivers", { signal: AbortSignal.timeout(3000) });
+        const drvRes = await fetch(`${LARAVEL_API_URL}/transport/drivers`, { signal: AbortSignal.timeout(3000) });
         if (drvRes.ok) {
           const drvData = await drvRes.json();
           if (drvData.success && Array.isArray(drvData.data) && isMounted) {
@@ -193,46 +193,20 @@ function TransportPage() {
     const finalRaw = verifiedRawVehicles.length > 0 ? verifiedRawVehicles : rawVehicles;
 
     return finalRaw.map((v, idx) => {
-      // 5 Exact Standard Categories matching Dashboard Transport:
-      // 1. حافلة سياحية  2. ميني باص  3. فان  4. سيارة دفع رباعي (4x4)  5. سيدان
-      let cat = "ميني باص";
+      // The 3 vehicle categories of the transport companies' form: حافلة سياحية، ميني باص، باص VIP
       const rawCat = String(v.category || "").trim();
-      const catLower = rawCat.toLowerCase();
-      const typeLower = String(v.vehicle_type || "").toLowerCase();
-
-      if (rawCat === "حافلة سياحية" || rawCat === "ميني باص" || rawCat === "فان" || rawCat === "سيارة دفع رباعي (4x4)" || rawCat === "سيدان") {
-        cat = rawCat;
-      } else if (
-        catLower.includes("4x4") ||
-        catLower.includes("دفع رباعي") ||
-        typeLower.includes("دفع رباعي") ||
-        catLower.includes("صحراو") ||
-        typeLower.includes("لاند")
-      ) {
-        cat = "سيارة دفع رباعي (4x4)";
-      } else if (
-        catLower.includes("large") ||
-        catLower.includes("كبير") ||
-        catLower.includes("حافلة") ||
-        (typeLower.includes("باص") && (v.seating_capacity || 0) >= 30)
-      ) {
-        cat = "حافلة سياحية";
-      } else if (catLower.includes("فان") || typeLower.includes("van") || typeLower.includes("فان")) {
-        cat = "فان";
-      } else if (catLower.includes("سيدان") || typeLower.includes("sedan") || typeLower.includes("سيدان")) {
-        cat = "سيدان";
-      } else if (catLower.includes("ميني") || typeLower.includes("ميني") || typeLower.includes("كوستر") || typeLower.includes("coaster")) {
-        cat = "ميني باص";
-      } else {
-        cat = "ميني باص";
-      }
+      const cat = ["حافلة سياحية", "ميني باص", "باص VIP"].includes(rawCat)
+        ? rawCat
+        : /vip/i.test(rawCat)
+          ? "باص VIP"
+          : rawCat.includes("حافلة") || (v.seating_capacity || 0) >= 30
+            ? "حافلة سياحية"
+            : "ميني باص";
 
       const catLabels: Record<string, { ar: string; en: string }> = {
         "حافلة سياحية": { ar: "حافلة سياحية", en: "Tourist Bus" },
         "ميني باص": { ar: "ميني باص", en: "Mini Bus" },
-        "فان": { ar: "فان", en: "Van" },
-        "سيارة دفع رباعي (4x4)": { ar: "سيارة دفع رباعي (4x4)", en: "4x4 SUV" },
-        "سيدان": { ar: "سيدان", en: "Sedan" },
+        "باص VIP": { ar: "باص VIP", en: "VIP Bus" },
       };
 
       const parentCompany = verifiedCompanies.find(
@@ -253,12 +227,9 @@ function TransportPage() {
         !String(assignedDriver.full_name).includes("متاح للرحلات")
       );
 
-      let defaultPhoto = "/assets/office-bus.jpg";
-      if (cat === "سيارة دفع رباعي (4x4)") defaultPhoto = "/assets/private-trip.jpg";
-      else if (cat === "حافلة سياحية") defaultPhoto = "/assets/6692d389-47a4-48fc-a344-016619726724.jpg";
-      else if (cat === "فان") defaultPhoto = "/assets/69262c03-9b5e-485f-88ef-723c7bd432bc.jpg";
-      else if (cat === "سيدان") defaultPhoto = "/assets/ai_hotel.jpg";
-      else defaultPhoto = "/assets/office-bus.jpg";
+      const defaultPhoto = cat === "حافلة سياحية" || cat === "باص VIP"
+        ? "/assets/6692d389-47a4-48fc-a344-016619726724.jpg"
+        : "/assets/office-bus.jpg";
 
       // City strictly normalized to Tripoli or Benghazi
       const rawCity = parentCompany?.city || v.city || "طرابلس";
@@ -290,7 +261,7 @@ function TransportPage() {
         categoryLabelAr: catLabels[cat]?.ar || cat,
         categoryLabelEn: catLabels[cat]?.en || cat,
         vehicleStatus: v.vehicle_status || (isAr ? "جاهزة" : "Ready"),
-        seats: Number(v.seating_capacity) || (cat === "حافلة سياحية" ? 45 : cat === "سيارة دفع رباعي (4x4)" ? 6 : 14),
+        seats: Number(v.seating_capacity) || (cat === "ميني باص" ? 15 : 45),
         pricePerDay: Number(v.daily_rate) || 350,
         insuranceDetails: cleanInsurance,
         insuranceDocument: v.insurance_image || v.insurance_document || "/assets/test-enhanced.jpg",
@@ -464,9 +435,7 @@ function TransportPage() {
                   <option value="all">{isAr ? "كافة أنواع المركبات" : "All Vehicle Types"}</option>
                   <option value="حافلة سياحية">{isAr ? "حافلة سياحية" : "Tourist Bus"}</option>
                   <option value="ميني باص">{isAr ? "ميني باص" : "Mini Bus"}</option>
-                  <option value="فان">{isAr ? "فان" : "Van"}</option>
-                  <option value="سيارة دفع رباعي (4x4)">{isAr ? "سيارة دفع رباعي (4x4)" : "4x4 SUV"}</option>
-                  <option value="سيدان">{isAr ? "سيدان" : "Sedan"}</option>
+                  <option value="باص VIP">{isAr ? "باص VIP" : "VIP Bus"}</option>
                 </select>
               </div>
             </div>

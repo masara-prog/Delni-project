@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class WeeklyTrip extends Model
 {
+    // guide_approval_status: the trip is published only once its guide accepts it (NULL = trips from before this step)
+    public const GUIDE_PENDING = 'بانتظار رد المرشد';
+    public const GUIDE_APPROVED = 'وافق المرشد';
+    public const GUIDE_DECLINED = 'اعتذر المرشد';
+
     protected $table = 'weekly_trips';
     protected $primaryKey = 'weekly_trip_id';
     public $incrementing = false;
@@ -29,12 +34,14 @@ class WeeklyTrip extends Model
         'photo_3',
         'photo_4',
         'photo_5',
+        'trip_description',
+        'guide_approval_status',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'start_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
         'seat_per_price' => 'decimal:2',
         'max_capacity' => 'integer',
         'available_seats' => 'integer',
@@ -94,6 +101,9 @@ class WeeklyTrip extends Model
     // Booking closes 24 hours before departure (start of the start_date day, Libya time)
     public function bookingClosedReason(): ?string
     {
+        if ($this->guide_approval_status !== null && $this->guide_approval_status !== self::GUIDE_APPROVED) {
+            return 'هذه الرحلة الأسبوعية غير متاحة للحجز بعد، فهي بانتظار موافقة المرشد السياحي.';
+        }
         if (empty($this->start_date)) {
             return null;
         }

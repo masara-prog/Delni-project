@@ -28,7 +28,7 @@ class PrivateTrip extends Model
     ];
 
     protected $casts = [
-        'preferred_start_date' => 'date',
+        'preferred_start_date' => 'date:Y-m-d',
         'duration_days' => 'integer',
         'number_of_companions' => 'integer',
         'quoted_price' => 'decimal:2',

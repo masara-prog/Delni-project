@@ -1,3 +1,5 @@
+import { LARAVEL_API_URL } from "./api";
+
 export interface TripReview {
   review_id: string;
   tourist_id: string;
@@ -44,7 +46,8 @@ export type AnyReview = TripReview | HotelReview | FacilityReview;
 export async function fetchTripReviews(tripId: string, type: 'daily' | 'weekly' = 'daily'): Promise<TripReview[]> {
   if (!tripId) return [];
   try {
-    const res = await fetch(`http://127.0.0.1:5001/api/db/reviews?trip_id=${encodeURIComponent(tripId)}&type=${type}`, {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews?trip_id=${encodeURIComponent(tripId)}&type=${type}`, {
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(4000),
     });
     if (res.ok) {
@@ -68,9 +71,9 @@ export async function submitTripReview(payload: {
   guide_license_number?: string;
 }): Promise<{ success: boolean; message: string; error?: string }> {
   try {
-    const res = await fetch("http://127.0.0.1:5001/api/db/reviews", {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -98,7 +101,8 @@ export async function submitTripReview(payload: {
 export async function fetchHotelReviews(hotelId?: string): Promise<HotelReview[]> {
   try {
     const query = hotelId ? `?hotel_id=${encodeURIComponent(hotelId)}&type=hotel` : `?type=hotel`;
-    const res = await fetch(`http://127.0.0.1:5001/api/db/reviews${query}`, {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews${query}`, {
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(4000),
     });
     if (res.ok) {
@@ -120,9 +124,9 @@ export async function submitHotelReview(payload: {
   comment_text?: string;
 }): Promise<{ success: boolean; message: string; error?: string }> {
   try {
-    const res = await fetch("http://127.0.0.1:5001/api/db/reviews", {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ ...payload, type: 'hotel' }),
     });
 
@@ -150,7 +154,8 @@ export async function submitHotelReview(payload: {
 export async function fetchFacilityReviews(facilityId?: string): Promise<FacilityReview[]> {
   try {
     const query = facilityId ? `?facility_id=${encodeURIComponent(facilityId)}&type=facility` : `?type=facility`;
-    const res = await fetch(`http://127.0.0.1:5001/api/db/reviews${query}`, {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews${query}`, {
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(4000),
     });
     if (res.ok) {
@@ -172,9 +177,9 @@ export async function submitFacilityReview(payload: {
   comment_text?: string;
 }): Promise<{ success: boolean; message: string; error?: string }> {
   try {
-    const res = await fetch("http://127.0.0.1:5001/api/db/reviews", {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ ...payload, type: 'facility' }),
     });
 
@@ -201,7 +206,8 @@ export async function submitFacilityReview(payload: {
 
 export async function fetchAllReviews(): Promise<AnyReview[]> {
   try {
-    const res = await fetch("http://127.0.0.1:5001/api/db/reviews", {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews`, {
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(4000),
     });
     if (res.ok) {

@@ -35,7 +35,9 @@ class RestaurantCafe extends Model
     ];
 
     protected $casts = [
-        'contract_date' => 'date',
+        'discount_percentage' => 'integer',
+        'contract_start_date' => 'date:Y-m-d',
+        'contract_end_date' => 'date:Y-m-d',
     ];
 
     public function offers()

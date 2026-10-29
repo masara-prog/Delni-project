@@ -10,21 +10,14 @@ import type { TransportationCompany, Vehicle, Driver } from "@/lib/dbSchema";
 import { 
   getStoredSession,
   getTransportCompanies,
-  updateTransportCompany,
+  apiChangeCompanyPassword,
   getVehicles,
-  addVehicle,
-  updateVehicle,
-  deleteVehicle,
+  saveVehicle,
   getDrivers,
-  addDriver,
-  updateDriver,
-  deleteDriver,
-  saveVehicles,
-  saveDrivers,
-  saveTransportCompanies,
+  refreshFleet,
   apiAddDriver,
   apiUpdateDriver,
-  apiDeleteDriver
+  laravelRequest
 } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/transport")({
@@ -125,25 +118,27 @@ function TransportDashboard() {
     const loadedDrivers = getDrivers(companyInfo.contract_number) as Driver[];
     setDrivers(loadedDrivers);
 
-    // Live sync with SQL Server DelniDB
+    // Live sync with DelniDB through Laravel
     if (companyInfo.contract_number) {
-      fetch(`http://127.0.0.1:5001/api/db/vehicles?contract_number=${encodeURIComponent(companyInfo.contract_number)}`)
-        .then(r => r.json())
-        .then(res => {
-          if (res?.success && Array.isArray(res.data)) {
-            saveVehicles(res.data);
-            setVehicles(res.data);
-          }
-        }).catch(() => {});
-
-      fetch(`http://127.0.0.1:5001/api/db/drivers?contract_number=${encodeURIComponent(companyInfo.contract_number)}`)
-        .then(r => r.json())
-        .then(res => {
-          if (res?.success && Array.isArray(res.data)) {
-            saveDrivers(res.data);
-            setDrivers(res.data);
-          }
-        }).catch(() => {});
+      // The contract terms (agreed vehicle count, dates) are set by the admin and may have changed
+      laravelRequest<any[]>("GET", "/transport/companies").then(res => {
+        const mine = res.ok && Array.isArray(res.data) ? res.data.find(c => c.contract_number === companyInfo.contract_number) : null;
+        if (mine) {
+          setCompanyInfo(prev => ({
+            ...prev,
+            total_vehicles: Number(mine.total_vehicles) || 0,
+            contract_start_date: mine.contract_start_date || prev.contract_start_date,
+            contract_end_date: mine.contract_end_date || prev.contract_end_date,
+            verification_status: mine.verification_status || prev.verification_status,
+          }));
+        }
+      });
+      refreshFleet(companyInfo.contract_number).then(fleet => {
+        if (fleet) {
+          setVehicles(fleet.vehicles as Vehicle[]);
+          setDrivers(fleet.drivers as Driver[]);
+        }
+      });
     }
   }, [active, companyInfo.contract_number]);
 
@@ -158,145 +153,97 @@ function TransportDashboard() {
     { id: "profile", label: isAr ? "بيانات الشركة" : "Company Profile", icon: "🏢" },
   ];
 
-  /* ---- HANDLERS DRIVERS ---- */
-  const handleAddDriver = async (newDrv: Driver) => {
-    try {
-      const res = await apiAddDriver({
-        ...newDrv,
-        contract_number: companyInfo.contract_number,
-        company_name: companyInfo.company_name,
-      });
-      if (!res.success) {
-        alert("⚠️ " + (res.error || "فشل حفظ بيانات السائق في قاعدة البيانات"));
-        return;
-      }
-      
-      // Success! Fetch fresh drivers from DelniDB immediately
-      if (companyInfo.contract_number) {
-        const fresh = await fetch(`http://127.0.0.1:5001/api/db/drivers?contract_number=${encodeURIComponent(companyInfo.contract_number)}`);
-        const json = await fresh.json().catch(() => null);
-        if (json?.success && Array.isArray(json.data)) {
-          saveDrivers(json.data);
-          setDrivers(json.data);
-        } else if (res.data) {
-          setDrivers(prev => [res.data as unknown as Driver, ...prev.filter(x => x.driver_license_number !== res.data!.driver_license_number)]);
-        }
-      } else if (res.data) {
-        setDrivers(prev => [res.data as unknown as Driver, ...prev.filter(x => x.driver_license_number !== res.data!.driver_license_number)]);
-      }
-
-      setShowAddDriver(false);
-      alert(isAr ? "✅ تم إضافة السائق وتثبيته في قاعدة البيانات بنجاح، وهو متاح الآن للتعيين للمركبات." : "Driver added successfully to DelniDB.");
-    } catch (err: any) {
-      alert("⚠️ حدث خطأ أثناء إضافة السائق: " + (err.message || "فشلت العملية"));
+  // A company cannot register more vehicles than the number agreed in its contract (also enforced by the server)
+  const vehicleLimitReached = companyInfo.total_vehicles > 0 && vehicles.length >= companyInfo.total_vehicles;
+  const openAddVehicle = () => {
+    if (vehicleLimitReached) {
+      alert(`⚠️ وصلت شركتك إلى الحد الأقصى لعدد المركبات المتفق عليه في العقد (${companyInfo.total_vehicles} مركبات). لزيادة العدد يرجى التواصل مع إدارة المنصة.`);
+      return;
     }
+    setShowAddVehicle(true);
+  };
+
+  /* ---- HANDLERS DRIVERS ---- */
+  // Reloads vehicles and drivers from DelniDB after a confirmed change
+  const reloadFleet = async () => {
+    const fleet = await refreshFleet(companyInfo.contract_number);
+    if (fleet) {
+      setVehicles(fleet.vehicles as Vehicle[]);
+      setDrivers(fleet.drivers as Driver[]);
+    }
+  };
+
+  const handleAddDriver = async (newDrv: Driver) => {
+    const res = await apiAddDriver({
+      ...newDrv,
+      contract_number: companyInfo.contract_number,
+      company_name: companyInfo.company_name,
+    });
+    if (!res.success) {
+      alert("⚠️ " + res.error);
+      return;
+    }
+    await reloadFleet();
+    setShowAddDriver(false);
+    alert(isAr ? "✅ تمت إضافة السائق بنجاح، وهو متاح الآن للتعيين على المركبات." : "✅ Driver added successfully.");
   };
 
   const handleUpdateDriver = async (updated: Driver) => {
-    try {
-      const res = await apiUpdateDriver(updated.driver_license_number, updated);
-      if (!res.success) {
-        alert("⚠️ " + (res.error || "فشل تحديث بيانات السائق"));
-        return;
-      }
-      setDrivers(drivers.map(d => d.driver_license_number === updated.driver_license_number ? updated : d));
-      setEditingDriver(null);
-      alert(isAr ? "✅ تم تحديث بيانات السائق بنجاح في قاعدة البيانات." : "Driver updated successfully.");
-    } catch (err: any) {
-      alert("⚠️ حدث خطأ أثناء التحديث: " + (err.message || "فشلت العملية"));
+    const res = await apiUpdateDriver(updated.driver_license_number, updated);
+    if (!res.success) {
+      alert("⚠️ " + res.error);
+      return;
     }
-  };
-
-  const handleDeleteDriver = async (lic: string) => {
-    if (confirm("هل أنت متأكد من حذف حساب هذا السائق نهائياً من قاعدة البيانات؟")) {
-      await apiDeleteDriver(lic);
-      setDrivers(drivers.filter(d => d.driver_license_number !== lic));
-      alert(isAr ? "✅ تم حذف السائق بنجاح." : "Driver deleted successfully.");
-    }
+    await reloadFleet();
+    setEditingDriver(null);
+    alert(isAr ? "✅ تم تحديث بيانات السائق بنجاح." : "✅ Driver updated successfully.");
   };
 
   /* ---- HANDLERS VEHICLES ---- */
-  const handleAddVehicle = (newVeh: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => {
-    const saved = addVehicle({
-      ...newVeh,
+  // Returns an error message for the form, or null once DelniDB confirmed the save
+  const handleSaveVehicle = async (veh: Vehicle, isNew: boolean, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => {
+    const res = await saveVehicle({
+      ...veh,
       contract_number: companyInfo.contract_number,
       company_name: companyInfo.company_name,
-    }, driverInfo) as Vehicle;
-    setVehicles([saved, ...vehicles]);
-
-    if (driverInfo?.licenseNumber) {
-      setDrivers(prev => prev.map(d => {
-        if (d.driver_license_number === driverInfo.licenseNumber) {
-          return { ...d, assigned_vehicle_plate: saved.plate_number };
-        }
-        if (d.assigned_vehicle_plate === saved.plate_number) {
-          return { ...d, assigned_vehicle_plate: null };
-        }
-        return d;
-      }));
-    }
-
-    setShowAddVehicle(false);
+    }, isNew, driverInfo);
+    if (!res.success) return res.error;
+    await reloadFleet();
+    if (isNew) setShowAddVehicle(false);
+    else setEditingVehicle(null);
+    return null;
   };
-  const handleUpdateVehicle = (updated: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => {
-    updateVehicle(updated.plate_number, updated, driverInfo);
-    setVehicles(vehicles.map(v => v.plate_number === updated.plate_number ? updated : v));
-    if (driverInfo) {
-      setDrivers(prev => prev.map(d => {
-        if (driverInfo.licenseNumber && d.driver_license_number === driverInfo.licenseNumber) {
-          return { ...d, assigned_vehicle_plate: updated.plate_number };
-        }
-        if (d.assigned_vehicle_plate === updated.plate_number && d.driver_license_number !== driverInfo.licenseNumber) {
-          return { ...d, assigned_vehicle_plate: null };
-        }
-        return d;
-      }));
-    }
-    setEditingVehicle(null);
-  };
-  const handleDeleteVehicle = (plate: string) => {
-    if (confirm("هل تريد حذف هذه المركبة نهائياً من أسطول الشركة؟")) {
-      deleteVehicle(plate);
-      setVehicles(vehicles.filter(v => v.plate_number !== plate));
-      setDrivers(prev => prev.map(d => {
-        if (d.assigned_vehicle_plate === plate) {
-          const freed = { ...d, assigned_vehicle_plate: "" };
-          updateDriver(d.driver_license_number, freed);
-          return freed;
-        }
-        return d;
-      }));
-    }
-  };
-
+  const [companyCurrentPassword, setCompanyCurrentPassword] = useState("");
   const [companyNewPassword, setCompanyNewPassword] = useState("");
   const [companyConfirmPassword, setCompanyConfirmPassword] = useState("");
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (companyNewPassword) {
-      if (companyNewPassword.length < 4) {
-        alert("كلمة المرور يجب أن تتكون من 4 خانات على الأقل");
-        return;
-      }
-      if (companyNewPassword !== companyConfirmPassword) {
-        alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
-        return;
-      }
-      const result = await updateTransportCompany(companyInfo.contract_number, {
-        ...companyInfo,
-        password: companyNewPassword,
-      });
-      if (!result.ok) {
-        alert("❌ لم يتم تحديث كلمة المرور في قاعدة البيانات.\n" + result.error);
-        return;
-      }
-      setCompanyNewPassword("");
-      setCompanyConfirmPassword("");
-      alert("تم تحديث كلمة مرور حساب شركة النقل بنجاح ✓");
+    if (!companyNewPassword) {
+      alert("يرجى كتابة كلمة المرور الجديدة.");
       return;
     }
-    alert("لم يتم إدخال كلمة مرور جديدة. باقي بيانات العقد والاتصال معتمدة وثابتة.");
+    if (!companyCurrentPassword) {
+      alert("يرجى كتابة كلمة المرور الحالية لتأكيد أنك صاحب الحساب.");
+      return;
+    }
+    if (companyNewPassword.length < 6) {
+      alert("كلمة المرور يجب أن تتكون من 6 خانات على الأقل");
+      return;
+    }
+    if (companyNewPassword !== companyConfirmPassword) {
+      alert("كلمتا المرور غير متطابقتين، يرجى التأكد وإعادة المحاولة");
+      return;
+    }
+    const result = await apiChangeCompanyPassword(companyInfo.contract_number, companyCurrentPassword, companyNewPassword);
+    if (!result.success) {
+      alert("❌ " + result.error);
+      return;
+    }
+    setCompanyCurrentPassword("");
+    setCompanyNewPassword("");
+    setCompanyConfirmPassword("");
+    alert("✅ تم تغيير كلمة مرور حساب الشركة بنجاح");
   };
 
   return (
@@ -312,7 +259,7 @@ function TransportDashboard() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setShowAddVehicle(true)}
+                onClick={openAddVehicle}
                 className="inline-flex items-center gap-1.5 px-4 h-11 rounded-xl border border-primary text-primary font-bold text-sm bg-white hover:bg-primary/5 transition shadow-sm"
               >
                 + إضافة مركبة جديدة 🚌
@@ -328,7 +275,7 @@ function TransportDashboard() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="عدد السائقين" value={drivers.length} icon="🧑‍✈️" tone="sea" />
-            <StatCard label="حجم الأسطول" value={vehicles.length} hint={`${vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} جاهزة · ${vehicles.filter(v => v.vehicle_status === "صيانة" || v.status === "صيانة").length} صيانة`} icon="🚌" tone="clay" />
+            <StatCard label="حجم الأسطول" value={`${vehicles.length} / ${companyInfo.total_vehicles}`} hint={`${vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} جاهزة · ${vehicles.filter(v => v.vehicle_status === "صيانة" || v.status === "صيانة").length} صيانة`} icon="🚌" tone="clay" />
             <StatCard label="السيارات المتاحة" value={vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} icon="🚗" tone="green" />
             <StatCard label="حالة توثيق العقد" value={companyInfo.verification_status || "موثق"} icon="📜" tone="sun" />
           </div>
@@ -362,7 +309,6 @@ function TransportDashboard() {
                           </td>
                           <td className="py-3 flex items-center gap-1.5">
                             <button onClick={() => setEditingDriver(d)} className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                            <button onClick={() => handleDeleteDriver(d.driver_license_number)} className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                           </td>
                         </tr>
                       ))}
@@ -371,7 +317,7 @@ function TransportDashboard() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="أسطول السيارات والحافلات" action={<button onClick={() => setShowAddVehicle(true)} className="text-primary text-sm font-black hover:underline">+ إضافة مركبة</button>}>
+              <SectionCard title="أسطول السيارات والحافلات" action={<button onClick={openAddVehicle} className="text-primary text-sm font-black hover:underline">+ إضافة مركبة</button>}>
                 <div className="grid md:grid-cols-2 gap-4">
                   {vehicles.map((v) => (
                     <div key={v.plate_number} className="p-4 rounded-2xl border border-border bg-white flex flex-col justify-between hover:border-primary/40 transition shadow-sm space-y-3 text-right">
@@ -390,7 +336,6 @@ function TransportDashboard() {
                       </div>
                       <div className="flex justify-end gap-2 pt-1">
                         <button onClick={() => setEditingVehicle(v)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل البيانات والتأمين</button>
-                        <button onClick={() => handleDeleteVehicle(v.plate_number)} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                       </div>
                     </div>
                   ))}
@@ -498,6 +443,9 @@ function TransportDashboard() {
                       <Badge tone={d.operational_status === "متاح" ? "green" : d.operational_status === "في رحلة" ? "sea" : "muted"}>
                         {d.operational_status || "متاح"}
                       </Badge>
+                      {(d as any).current_trip_stage && (
+                        <div className="text-[10px] font-bold text-primary mt-1">🧭 مرحلة الرحلة: {(d as any).current_trip_stage}</div>
+                      )}
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center justify-center gap-1.5">
@@ -508,13 +456,6 @@ function TransportDashboard() {
                         >
                           <span>✏️</span>
                           <span>تعديل واطلاع</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDriver(d.driver_license_number)}
-                          className="px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 transition text-xs font-black rounded-xl cursor-pointer"
-                          title="حذف السائق"
-                        >
-                          🗑️
                         </button>
                       </div>
                     </td>
@@ -532,7 +473,7 @@ function TransportDashboard() {
           title="أسطول السيارات والحافلات"
           action={
             <button
-              onClick={() => setShowAddVehicle(true)}
+              onClick={openAddVehicle}
               className="px-4 py-2 rounded-xl bg-gradient-sea text-white text-xs font-black shadow-glow"
             >
               + إضافة مركبة جديدة 🚌
@@ -582,7 +523,6 @@ function TransportDashboard() {
 
                   <div className="flex gap-2 pt-2 border-t border-border">
                     <button onClick={() => setEditingVehicle(v)} className="flex-1 py-2 bg-primary/10 text-primary rounded-xl text-xs font-black hover:bg-primary/20 transition">تعديل المركبة والتأمين</button>
-                    <button onClick={() => handleDeleteVehicle(v.plate_number)} className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-black hover:bg-red-100 transition">حذف</button>
                   </div>
                 </div>
               </div>
@@ -776,7 +716,18 @@ function TransportDashboard() {
             <div className="p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-3 pt-4">
               <div className="text-xs font-black text-primary flex items-center gap-1.5">
                 <span>🔑</span>
-                <span>تحديث كلمة مرور حساب شركة النقل:</span>
+                <span>تغيير كلمة مرور حساب شركة النقل:</span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-foreground mb-1 block">كلمة المرور الحالية</label>
+                <input
+                  type="password"
+                  value={companyCurrentPassword}
+                  onChange={(e) => setCompanyCurrentPassword(e.target.value)}
+                  placeholder="اكتب كلمة المرور الحالية..."
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -801,13 +752,10 @@ function TransportDashboard() {
                   />
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                * اترك الحقل فارغاً إذا كنت لا ترغب في تغيير كلمة المرور الحالية.
-              </p>
             </div>
 
             <button className="px-6 h-11 rounded-xl bg-gradient-sea text-white font-black text-sm shadow-glow cursor-pointer hover:opacity-95 transition">
-              حفظ وتحديث كلمة المرور ✓
+              تغيير كلمة المرور ✓
             </button>
           </form>
         </SectionCard>
@@ -843,7 +791,7 @@ function TransportDashboard() {
           drivers={drivers}
           vehicles={vehicles}
           onClose={() => setShowAddVehicle(false)}
-          onSave={handleAddVehicle}
+          onSave={(v, driverInfo) => handleSaveVehicle(v, true, driverInfo)}
         />
       )}
       {editingVehicle && (
@@ -854,7 +802,7 @@ function TransportDashboard() {
           drivers={drivers}
           vehicles={vehicles}
           onClose={() => setEditingVehicle(null)}
-          onSave={handleUpdateVehicle}
+          onSave={(v, driverInfo) => handleSaveVehicle(v, false, driverInfo)}
         />
       )}
 
@@ -933,7 +881,8 @@ function DriverModal({
   const [expire, setExpire] = useState(driver?.license_date_valid || "2029-12-31");
   const [nid, setNid] = useState(driver?.national_id_or_passport || "");
   const [email, setEmail] = useState(driver?.email || "");
-  const [pass, setPass] = useState(driver?.password || "");
+  // Set only when the driver is created; afterwards only the driver can change it
+  const [pass, setPass] = useState("");
   const [assignedPlate, setAssignedPlate] = useState(driver?.assigned_vehicle_plate || "");
   const [operationalStatus, setOperationalStatus] = useState<Driver["operational_status"]>(driver?.operational_status || "متاح");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -962,6 +911,9 @@ function DriverModal({
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       return alert(isAr ? "يرجى إدخال بريد إلكتروني صحيح" : "Please enter a valid email address");
     }
+    if (!driver && pass.trim().length < 6) {
+      return alert(isAr ? "كلمة مرور السائق مطلوبة (6 خانات على الأقل)" : "Driver password is required (at least 6 characters)");
+    }
 
     setIsSubmitting(true);
     try {
@@ -972,7 +924,7 @@ function DriverModal({
         license_date_valid: expire,
         national_id_or_passport: nid.trim(),
         email: email.trim(),
-        password: pass || "••••••••",
+        ...(driver ? {} : { password: pass }),
         contract_number: contractNumber,
         assigned_vehicle_plate: driver ? (assignedPlate.trim() || null) : null,
         account_status: driver?.account_status || "نشط",
@@ -1003,7 +955,9 @@ function DriverModal({
               onChange={(e) => setLic(e.target.value.replace(/\D/g, ""))}
               placeholder="مثال: 77452"
               required
-              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+              disabled={Boolean(driver)}
+              title={driver ? "رقم الرخصة هو معرّف السائق ولا يمكن تغييره" : undefined}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
             />
           </div>
           <Field label={isAr ? "تاريخ صلاحية الرخصة *" : "License Expiry Date *"} type="date" value={expire} onChange={setExpire} required />
@@ -1055,10 +1009,15 @@ function DriverModal({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid gap-2 ${driver ? "grid-cols-1" : "grid-cols-2"}`}>
           <Field label={isAr ? "البريد الإلكتروني *" : "Email Address *"} type="email" value={email} onChange={setEmail} placeholder="driver@dalni.ly" required />
-          <Field label={isAr ? "كلمة المرور *" : "Password *"} type="password" value={pass} onChange={setPass} required />
+          {!driver && (
+            <Field label={isAr ? "كلمة المرور (تُحدد مرة واحدة عند الإنشاء) *" : "Password (set once) *"} type="password" value={pass} onChange={setPass} required />
+          )}
         </div>
+        {driver && (
+          <p className="text-[10px] text-muted-foreground">🔒 كلمة مرور السائق لا تُعدّل من هنا؛ يغيّرها السائق بنفسه من لوحته.</p>
+        )}
 
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "الحالة التشغيلية *" : "Operational Status *"}</label>
@@ -1072,7 +1031,7 @@ function DriverModal({
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 h-10 rounded-xl border font-black text-xs cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
           <button type="submit" disabled={isSubmitting} className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow cursor-pointer disabled:opacity-50">
-            {isSubmitting ? (isAr ? "جاري الحفظ في DelniDB..." : "Saving to DelniDB...") : (isAr ? "حفظ بيانات السائق" : "Save Driver Details")}
+            {isSubmitting ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ بيانات السائق" : "Save Driver Details")}
           </button>
         </div>
       </form>
@@ -1081,6 +1040,8 @@ function DriverModal({
 }
 
 /* ============ VEHICLE MODAL (DelniDB: vehicles) ============ */
+const VEHICLE_CATEGORIES = ["حافلة سياحية", "ميني باص", "باص VIP"];
+
 function VehicleModal({
   title,
   vehicle,
@@ -1096,7 +1057,7 @@ function VehicleModal({
   drivers?: Driver[];
   vehicles?: Vehicle[];
   onClose: () => void;
-  onSave: (v: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => void;
+  onSave: (v: Vehicle, driverInfo?: { licenseNumber?: string; newDriver?: Driver }) => Promise<string | null>;
 }) {
   const { language } = useLanguage();
   const isAr = language === 'ar';
@@ -1106,7 +1067,7 @@ function VehicleModal({
   const [type, setType] = useState(vehicle?.vehicle_type || "");
   const [seats, setSeats] = useState(vehicle?.seating_capacity ? String(vehicle.seating_capacity) : "15");
   const [dailyRate, setDailyRate] = useState(vehicle?.daily_rate ? String(vehicle.daily_rate) : "");
-  const [category, setCategory] = useState(vehicle?.category || (isAr ? "حافلة سياحية" : "Tourist Bus"));
+  const [category, setCategory] = useState(VEHICLE_CATEGORIES.includes(vehicle?.category || "") ? vehicle!.category! : "حافلة سياحية");
   const [status, setStatus] = useState<Vehicle["vehicle_status"]>(vehicle?.vehicle_status || "جاهزة");
   const [insuranceImg, setInsuranceImg] = useState(vehicle?.insurance_image || "");
   const [vehicleImg, setVehicleImg] = useState(vehicle?.vehicle_image || (vehicle ? officeBusImg : ""));
@@ -1143,8 +1104,9 @@ function VehicleModal({
     initiallyAssigned?.driver_license_number || ""
   );
   const [errorMsg, setErrorMsg] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -1186,7 +1148,8 @@ function VehicleModal({
       return;
     }
 
-    onSave({
+    setIsSaving(true);
+    const saveError = await onSave({
       plate_number: cleanPlate,
       contract_number: contractNumber,
       vehicle_type: type.trim(),
@@ -1197,6 +1160,8 @@ function VehicleModal({
       insurance_image: insuranceImg,
       vehicle_image: vehicleImg,
     }, { licenseNumber: selectedDriverLic });
+    setIsSaving(false);
+    if (saveError) setErrorMsg((isAr ? "لم يتم حفظ المركبة: " : "Vehicle was not saved: ") + saveError);
   };
 
   return (
@@ -1267,9 +1232,7 @@ function VehicleModal({
             >
               <option value="حافلة سياحية">{isAr ? "حافلة سياحية" : "Tourist Bus"}</option>
               <option value="ميني باص">{isAr ? "ميني باص" : "Mini Bus"}</option>
-              <option value="فان">{isAr ? "فان" : "Van"}</option>
-              <option value="سيارة دفع رباعي (4x4)">{isAr ? "سيارة دفع رباعي (4x4)" : "4x4 SUV"}</option>
-              <option value="سيدان">{isAr ? "سيدان" : "Sedan"}</option>
+              <option value="باص VIP">{isAr ? "باص VIP" : "VIP Bus"}</option>
             </select>
           </div>
         </div>
@@ -1310,7 +1273,7 @@ function VehicleModal({
                 <option value="">{isAr ? "-- بدون تعيين سائق حالياً --" : "-- No Driver Assigned --"}</option>
                 {selectableDrivers.map((d) => (
                   <option key={d.driver_license_number} value={d.driver_license_number}>
-                    🧑‍✈️ {d.full_name} ({d.phone_number}) — رخصة: {d.driver_license_number} {d.assigned_vehicle_plate && d.assigned_vehicle_plate === plate ? `(السائق المخصص الحالي)` : ""}
+                    {d.full_name}
                   </option>
                 ))}
               </select>
@@ -1356,7 +1319,7 @@ function VehicleModal({
 
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs hover:bg-slate-50 transition cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer">{isAr ? "حفظ وتعيين المركبة بالسائق ✓" : "Save Vehicle with Driver ✓"}</button>
+          <button type="submit" disabled={isSaving} className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow hover:opacity-95 transition cursor-pointer disabled:opacity-50">{isSaving ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ وتعيين المركبة بالسائق ✓" : "Save Vehicle with Driver ✓")}</button>
         </div>
       </form>
     </ModalShell>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getStoredSession } from "./api";
+import { getStoredSession, LARAVEL_API_URL } from "./api";
 
 export type FavoriteType = "hotel" | "restaurant" | "vehicle" | "daily_trip" | "weekly_trip" | "landmark";
 
@@ -40,7 +40,8 @@ export function setCachedFavorites(touristId: string, favKeys: Set<string>) {
 export async function fetchTouristFavorites(touristId: string): Promise<FavoriteRecord[]> {
   if (!touristId) return [];
   try {
-    const res = await fetch(`http://127.0.0.1:5001/api/db/favorites?tourist_id=${encodeURIComponent(touristId)}`, {
+    const res = await fetch(`${LARAVEL_API_URL}/favorites?tourist_id=${encodeURIComponent(touristId)}`, {
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(4000),
     });
     if (res.ok) {
@@ -61,48 +62,36 @@ export async function toggleFavorite(
   itemTitle?: string
 ): Promise<{ isFavorite: boolean; message: string }> {
   const session = getStoredSession();
-  const touristId = session.user?.tourist_id || session.user?.id || session.user?.phone_number || "guest";
+  const touristId = session.user?.tourist_id || "";
   const compositeKey = `${itemType}:${itemId}`;
-
   const currentSet = getCachedFavorites(touristId);
-  const willBeFav = !currentSet.has(compositeKey);
 
-  if (willBeFav) {
-    currentSet.add(compositeKey);
-  } else {
-    currentSet.delete(compositeKey);
+  // Favorites belong to a tourist account and are stored in DelniDB
+  if (!touristId || session.role !== "tourist") {
+    return { isFavorite: currentSet.has(compositeKey), message: "يرجى تسجيل الدخول بحساب سائح لحفظ المفضلة" };
   }
-  setCachedFavorites(touristId, currentSet);
 
-  if (session.user && touristId !== "guest") {
-    try {
-      const res = await fetch("http://127.0.0.1:5001/api/db/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tourist_id: touristId,
-          item_type: itemType,
-          item_id: itemId,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          isFavorite: data.is_favorite ?? willBeFav,
-          message: data.message || (willBeFav ? `تمت إضافة "${itemTitle || 'العنصر'}" إلى المفضلة ❤️` : `تمت إزالة "${itemTitle || 'العنصر'}" من المفضلة`),
-        };
-      }
-    } catch (e) {
-      console.warn("Favorite API sync failed, kept in local cache", e);
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/favorites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ tourist_id: touristId, item_type: itemType, item_id: itemId }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.success) {
+      const isFavorite = Boolean(data.is_favorite);
+      if (isFavorite) currentSet.add(compositeKey);
+      else currentSet.delete(compositeKey);
+      setCachedFavorites(touristId, currentSet);
+      return {
+        isFavorite,
+        message: isFavorite ? `تمت إضافة "${itemTitle || 'العنصر'}" إلى المفضلة ❤️` : `تمت إزالة "${itemTitle || 'العنصر'}" من المفضلة`,
+      };
     }
+    return { isFavorite: currentSet.has(compositeKey), message: data?.error || "تعذر حفظ المفضلة في قاعدة البيانات" };
+  } catch {
+    return { isFavorite: currentSet.has(compositeKey), message: "تعذر الاتصال بخادم المنصة لحفظ المفضلة" };
   }
-
-  return {
-    isFavorite: willBeFav,
-    message: willBeFav
-      ? `تمت إضافة "${itemTitle || 'العنصر'}" إلى المفضلة ❤️`
-      : `تمت إزالة "${itemTitle || 'العنصر'}" من المفضلة`,
-  };
 }
 
 export function useFavorites() {

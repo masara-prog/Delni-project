@@ -29,13 +29,15 @@ class Driver extends Model
         'operational_status',
     ];
 
+    // Stages the driver reports during a trip (stored in drivers.current_trip_stage)
+    public const TRIP_STAGES = ['في الانتظار', 'تم الانطلاق', 'في الطريق - استراحة', 'وصلنا الوجهة', 'مكتملة'];
+
     protected $hidden = [
         'password',
     ];
 
     protected $casts = [
-        'license_date_valid' => 'date',
-        'experience_years' => 'integer',
+        'license_date_valid' => 'date:Y-m-d',
     ];
 
     public function company()

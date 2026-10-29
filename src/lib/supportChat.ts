@@ -4,7 +4,8 @@
  * Synchronizes user messages and admin replies across all dashboards & pages
  */
 
-import { notifyChatbotUserMessage, notifyAdminChatReply } from "./notifications";
+import { notifyChatbotUserMessage, notifyAdminChatReply, recipientIdFor, type NotificationItem } from "./notifications";
+import { getStoredSession } from "./api";
 
 export type ChatMessage = {
   id: string;
@@ -21,7 +22,19 @@ export type ChatSession = {
   time: string;
   unread: boolean;
   messages: ChatMessage[];
+  // Who the admin's replies are sent to (the signed-in account that opened the chat)
+  recipient_role?: NonNullable<NotificationItem["recipientRole"]>;
+  recipient_id?: string;
 };
+
+// The signed-in account writing to support; visitors without an account cannot receive replies as notifications
+function currentRecipient(): Pick<ChatSession, "recipient_role" | "recipient_id"> {
+  const session = getStoredSession();
+  const id = recipientIdFor(session);
+  if (!session.role || !id) return {};
+  const role = (session.role === "transport" ? "company" : session.role) as NonNullable<NotificationItem["recipientRole"]>;
+  return { recipient_role: role, recipient_id: id };
+}
 
 const STORAGE_KEY = "dalni_chat_sessions";
 const SYNC_EVENT = "dalni_chat_sync";
@@ -55,9 +68,20 @@ export function saveChatSessions(sessions: ChatSession[]): void {
 export function getOrCreateUserSession(userId: string, userName: string, userRole: string): ChatSession {
   const sessions = getChatSessions();
   const existing = sessions.find(s => s.id === userId || s.user_name === userName);
-  if (existing) return existing;
+  if (existing) {
+    // Conversations opened before replies were addressed by account get their owner now, so replies reach them
+    if (!existing.recipient_id) {
+      const owned = { ...existing, ...currentRecipient() };
+      if (owned.recipient_id) {
+        saveChatSessions(sessions.map(s => (s === existing ? owned : s)));
+        return owned;
+      }
+    }
+    return existing;
+  }
 
   const newSession: ChatSession = {
+    ...currentRecipient(),
     id: userId || `user-${Date.now()}`,
     user_name: userName || "مستخدم دلّني",
     user_type: userRole || "سائح",
@@ -94,6 +118,7 @@ export function sendUserMessage(sessionId: string, userName: string, userRole: s
       found = true;
       return {
         ...s,
+        ...currentRecipient(),
         last_message: text.trim(),
         time,
         unread: true,
@@ -105,6 +130,7 @@ export function sendUserMessage(sessionId: string, userName: string, userRole: s
 
   if (!found) {
     const newSession: ChatSession = {
+      ...currentRecipient(),
       id: sessionId,
       user_name: userName,
       user_type: userRole,
@@ -175,9 +201,11 @@ export function sendAdminReply(sessionId: string, text: string): ChatSession | n
   const target = updated.find(s => s.id === sessionId) || null;
   if (target) {
     saveChatSessions(updated);
-    try {
-      notifyAdminChatReply(target.user_name, text, target.id);
-    } catch {}
+    if (target.recipient_role && target.recipient_id) {
+      try {
+        notifyAdminChatReply(text.trim(), target.recipient_role, target.recipient_id);
+      } catch {}
+    }
   }
   return target;
 }

@@ -16,28 +16,14 @@ class NotificationController extends Controller
     {
         $role = $request->query('role', 'all');
         $userId = $request->query('user_id');
+        if ($role === 'admin') {
+            \App\Support\ContractExpiryAlerts::runHourly();
+        }
 
         $query = Notification::query();
 
         // Strict isolation: only show notifications targeted to this user or role-wide broadcasts
-        $query->where(function ($q) use ($role, $userId) {
-            if ($userId) {
-                $q->where('recipient_id', $userId)
-                  ->orWhere(function ($sub) use ($role) {
-                      $sub->whereNull('recipient_id')
-                          ->where(function ($roleSub) use ($role) {
-                              $roleSub->where('recipient_role', 'all')
-                                      ->orWhere('recipient_role', $role);
-                          });
-                  });
-            } else {
-                $q->whereNull('recipient_id')
-                  ->where(function ($sub) use ($role) {
-                      $sub->where('recipient_role', 'all')
-                          ->orWhere('recipient_role', $role);
-                  });
-            }
-        });
+        $this->forRecipient($query, $role, $userId);
 
         $unreadCount = (clone $query)->where('is_read', false)->count();
 
@@ -54,12 +40,14 @@ class NotificationController extends Controller
                     'recipient_id' => $item->recipient_id,
                     'link' => $item->link,
                     'read' => (bool)$item->is_read,
+                    // Stored in Libya local time; sent without a timezone so the browser reads it as local time
                     'time' => $item->created_at ? $item->created_at->format('Y-m-d H:i') : null,
-                    'created_at' => $item->created_at,
+                    'created_at' => $item->created_at ? $item->created_at->format('Y-m-d\TH:i:s') : null,
                 ];
             });
 
         return response()->json([
+            'success' => true,
             'status' => 'success',
             'data' => $notifications,
             'unread_count' => $unreadCount,
@@ -76,26 +64,10 @@ class NotificationController extends Controller
 
         $query = Notification::where('is_read', false);
 
-        $query->where(function ($q) use ($role, $userId) {
-            if ($userId) {
-                $q->where('recipient_id', $userId)
-                  ->orWhere(function ($sub) use ($role) {
-                      $sub->whereNull('recipient_id')
-                          ->where(function ($roleSub) use ($role) {
-                              $roleSub->where('recipient_role', 'all')
-                                      ->orWhere('recipient_role', $role);
-                          });
-                  });
-            } else {
-                $q->whereNull('recipient_id')
-                  ->where(function ($sub) use ($role) {
-                      $sub->where('recipient_role', 'all')
-                          ->orWhere('recipient_role', $role);
-                  });
-            }
-        });
+        $this->forRecipient($query, $role, $userId);
 
         return response()->json([
+            'success' => true,
             'status' => 'success',
             'count' => $query->count(),
         ]);
@@ -128,7 +100,7 @@ class NotificationController extends Controller
             }
         }
 
-        $id = 'notif-' . now()->timestamp . '-' . rand(100, 999);
+        $id = 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(100, 999);
 
         $notification = Notification::create([
             'id' => $id,
@@ -140,7 +112,7 @@ class NotificationController extends Controller
             'link' => $validated['link'] ?? null,
             'dedupe_key' => $validated['dedupe_key'] ?? null,
             'is_read' => false,
-            'created_at' => now(),
+            'created_at' => now('Africa/Tripoli'),
         ]);
 
         return response()->json([
@@ -162,24 +134,7 @@ class NotificationController extends Controller
 
         if ($all) {
             $query = Notification::where('is_read', false);
-            $query->where(function ($q) use ($role, $userId) {
-                if ($userId) {
-                    $q->where('recipient_id', $userId)
-                      ->orWhere(function ($sub) use ($role) {
-                          $sub->whereNull('recipient_id')
-                              ->where(function ($roleSub) use ($role) {
-                                  $roleSub->where('recipient_role', 'all')
-                                          ->orWhere('recipient_role', $role);
-                              });
-                      });
-                } else {
-                    $q->whereNull('recipient_id')
-                      ->where(function ($sub) use ($role) {
-                          $sub->where('recipient_role', 'all')
-                              ->orWhere('recipient_role', $role);
-                      });
-                }
-            });
+            $this->forRecipient($query, $role, $userId);
             $query->update(['is_read' => true]);
 
             return response()->json([
@@ -200,5 +155,19 @@ class NotificationController extends Controller
             'status' => 'error',
             'message' => 'مطلوب معرف الإشعار أو خيار تحديد الكل',
         ], 400);
+    }
+
+    // Personal notifications must match both the id and the role (a driver's record also carries its company's
+    // contract number); role-wide broadcasts have no recipient id. A transport company's notifications use "company".
+    private function forRecipient($query, string $role, ?string $userId): void
+    {
+        $roles = $role === 'transport' ? ['transport', 'company'] : [$role];
+        $query->where(function ($q) use ($roles, $userId) {
+            if ($userId) {
+                $q->where(fn ($own) => $own->where('recipient_id', $userId)->whereIn('recipient_role', $roles));
+            }
+            $q->orWhere(fn ($all) => $all->whereNull('recipient_id')
+                ->where(fn ($r) => $r->where('recipient_role', 'all')->orWhereIn('recipient_role', $roles)));
+        });
     }
 }

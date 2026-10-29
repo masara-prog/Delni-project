@@ -35,10 +35,8 @@ class TransportationCompany extends Model
 
     protected $casts = [
         'total_vehicles' => 'integer',
-        'available_vehicles' => 'integer',
-        'contract_date' => 'date',
-        'contract_start_date' => 'date',
-        'contract_end_date' => 'date',
+        'contract_start_date' => 'date:Y-m-d',
+        'contract_end_date' => 'date:Y-m-d',
     ];
 
     public function vehicles()

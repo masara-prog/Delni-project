@@ -63,7 +63,7 @@ import { Header } from "@/components/Header";
 import { TRIP_VIDEO_DATABASE, TripVideoTrailerModal } from "@/components/TripVideoShowcase";
 import { useLanguage } from "@/lib/i18n";
 import { GuideCVModal, GuideCVData } from "@/components/GuideCVModal";
-import { VehicleDetailsModal, VehicleData } from "@/components/VehicleDetailsModal";
+import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
 import { Footer } from "@/components/Footer";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { 
@@ -114,13 +114,13 @@ export type DailyTrip = {
   daysOfWeek: string;
   departure: "طرابلس" | "بنغازي";
   entertainment?: string;
-  guide: {
+  guide?: {
     name: string;
     title: string;
     phone: string;
     cv?: GuideCVData;
   };
-  vehicle: {
+  vehicle?: {
     model: string;
     company: string;
     driver: string;
@@ -163,13 +163,13 @@ export type WeeklyTrip = {
   hotels: string[];
   departure: "طرابلس" | "بنغازي";
   entertainment?: string;
-  guide: {
+  guide?: {
     name: string;
     title: string;
     phone: string;
     cv?: GuideCVData;
   };
-  vehicle: {
+  vehicle?: {
     model: string;
     company: string;
     driver: string;
@@ -422,7 +422,7 @@ function TripDetailsView({
   onBack: () => void;
   onBook: () => void;
   onOpenGuideCV?: (cv: GuideCVData) => void;
-  onOpenVehicleDetails?: (v: VehicleData) => void;
+  onOpenVehicleDetails?: (v: VehicleDetailsData) => void;
 }) {
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
@@ -1416,19 +1416,12 @@ function TripDetailsView({
                   <button
                     type="button"
                     onClick={() => onOpenVehicleDetails?.({
-                      model: info.vehicle!.model,
-                      company: info.vehicle!.company,
-                      driver: info.vehicle!.driver,
-                      licensePlate: (info.vehicle!.plateNumber || "").replace(/\?+/g, "").trim() || "ليبيا - 5-99214",
+                      // Field names the vehicle details modal reads; no invented plate or phone
+                      name: info.vehicle!.model,
+                      companyName: info.vehicle!.company,
+                      plateNumber: (info.vehicle!.plateNumber || "").replace(/\?+/g, "").trim() || undefined,
                       seats: info.vehicle!.capacity,
-                      phone: info.vehicle!.driverPhone || "091-2345678",
-                      features: [
-                        "تكييف هوائي مركزي متطور",
-                        "مقاعد مريحة مخصصة للجولات السياحية",
-                        "حقيبة إسعافات أولية وطفاية حريق",
-                        "شاشات عرض ونظام صوتي متكامل",
-                        "سائق ذو خبرة ورخصة قيادة عمومية معتمدة"
-                      ],
+                      phone_number: info.vehicle!.driverPhone || undefined,
                     })}
                     className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
@@ -1738,7 +1731,7 @@ function TripsPage() {
 
   // Guide CV & Vehicle Inspector Modals State
   const [selectedGuideCV, setSelectedGuideCV] = useState<GuideCVData | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleData | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleDetailsData | null>(null);
 
   // Horizontal Scroll Container Ref for Trips
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -2150,7 +2143,6 @@ function TripsPage() {
         />
 
         <VehicleDetailsModal
-          open={!!selectedVehicle}
           onClose={() => setSelectedVehicle(null)}
           vehicle={selectedVehicle}
         />
@@ -2664,7 +2656,6 @@ function TripsPage() {
       />
 
       <VehicleDetailsModal
-        open={!!selectedVehicle}
         onClose={() => setSelectedVehicle(null)}
         vehicle={selectedVehicle}
       />
@@ -2744,16 +2735,16 @@ function buildDetails(t: Trip, lang: "ar" | "en" = "ar"): DetailsItem {
       currency: isAr ? "د.ل / مقعد" : "LYD / seat",
       bookable: true,
       refId: t.id,
-      vehicle: {
+      vehicle: t.vehicle ? {
         model: t.vehicle.model,
         company: t.vehicle.company,
         driver: t.vehicle.driver,
-      },
-      guide: {
+      } : undefined,
+      guide: t.guide ? {
         name: t.guide.name,
         title: t.guide.title,
         phone: t.guide.phone,
-      },
+      } : undefined,
       info: [
         { label: isAr ? "نوع الرحلة" : "Tour Type", value: isAr ? "يومية" : "Daily" },
         { label: isAr ? "نقطة الانطلاق" : "Departure", value: t.departure },
@@ -2774,16 +2765,16 @@ function buildDetails(t: Trip, lang: "ar" | "en" = "ar"): DetailsItem {
       currency: isAr ? "د.ل / مقعد" : "LYD / seat",
       bookable: true,
       refId: t.id,
-      vehicle: {
+      vehicle: t.vehicle ? {
         model: t.vehicle.model,
         company: t.vehicle.company,
         driver: t.vehicle.driver,
-      },
-      guide: {
+      } : undefined,
+      guide: t.guide ? {
         name: t.guide.name,
         title: t.guide.title,
         phone: t.guide.phone,
-      },
+      } : undefined,
       info: [
         { label: isAr ? "تاريخ البداية" : "Start Date", value: t.startDate || "" },
         { label: isAr ? "تاريخ النهاية" : "End Date", value: t.endDate || "" },

@@ -8,6 +8,10 @@ import {
   getStoredSession,
   apiGetGuideDashboard,
   apiUpdateGuideProfile,
+  apiGuideRespondPrivateTrip,
+  apiGuideRespondWeeklyTrip,
+  apiGetPlaces,
+  apiLogout,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/guide")({
@@ -46,19 +50,6 @@ type TouristManifestItem = {
   attended: boolean;
 };
 
-const REGIONS_LIST = [
-  { id: "tripoli", nameAr: "طرابلس وضواحيها", nameEn: "Tripoli & Suburbs" },
-  { id: "leptis", nameAr: "لبدة الكبرى والخمس", nameEn: "Leptis Magna & Al-Khoms" },
-  { id: "sabratha", nameAr: "صبراتة والساحل الغربي", nameEn: "Sabratha & West Coast" },
-  { id: "cyrene", nameAr: "شحات وقورينا (الجبل الأخضر)", nameEn: "Cyrene & Shahhat (Green Mtn)" },
-  { id: "benghazi", nameAr: "بنغازي والمنطقة الشرقية", nameEn: "Benghazi & Eastern Region" },
-  { id: "ghadames", nameAr: "غدامس والواحات", nameEn: "Ghadames & Oases" },
-  { id: "ubari", nameAr: "أوباري وفزان والبحيرات", nameEn: "Ubari, Fezzan & Lakes" },
-  { id: "acacus", nameAr: "جبال تدرارت أكاكوس وغات", nameEn: "Tadrart Acacus & Ghat" },
-  { id: "sousa", nameAr: "سوسة وأبولونيا الأثرية", nameEn: "Sousa & Apollonia" },
-  { id: "tobruk", nameAr: "طبرق والمعالم التاريخية", nameEn: "Tobruk & Historic Sites" },
-];
-
 const WEEKDAYS = [
   { id: "sat", nameAr: "السبت", nameEn: "Saturday" },
   { id: "sun", nameAr: "الأحد", nameEn: "Sunday" },
@@ -81,6 +72,17 @@ function GuideDashboard() {
       navigate({ to: "/auth/login" });
     }
   }, [navigate]);
+
+  // A guide the admin has not approved (still under review, or rejected) cannot use the dashboard
+  const blockUnapprovedGuide = (status: string | undefined) => {
+    if (getStoredSession().role !== "guide" || (status || "").trim() === "موثق") return false;
+    apiLogout();
+    alert((status || "").trim() === "مرفوض"
+      ? "⚠️ تم رفض طلب اعتماد حسابك كمرشد سياحي. يرجى التواصل مع إدارة المنصة."
+      : "⚠️ حسابك قيد المراجعة من إدارة المنصة، وسيتم إشعارك فور اعتماده.");
+    navigate({ to: "/auth/login" });
+    return true;
+  };
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
@@ -141,8 +143,10 @@ function GuideDashboard() {
       }
 
       const data = await apiGetGuideDashboard(lic);
+      if (data && data.live && blockUnapprovedGuide(data.guide?.verification_status)) return;
       if (data && data.guide) {
         const g = data.guide;
+        setSelectedPlaceIds(Array.isArray(g.place_ids) ? g.place_ids : []);
         setGuideInfo({
           license_number: g.license_number || "",
           full_name: g.full_name || "",
@@ -196,23 +200,25 @@ function GuideDashboard() {
               time_or_duration: "6 أيام",
               tourist_group_name: w.trip_title || w.title || "رحلة أسبوعية",
               seats_booked: w.bookings ? w.bookings.length : 0,
-              status: "مقبولة",
-              is_active_now: Boolean(w.is_active),
+              // guide_approval_status: empty for trips created before the guide's approval step
+              status: w.guide_approval_status === "بانتظار رد المرشد" ? "بانتظار القبول" : w.guide_approval_status === "اعتذر المرشد" ? "مرفوضة" : "مقبولة",
+              is_active_now: Boolean(w.is_active) && (!w.guide_approval_status || w.guide_approval_status === "وافق المرشد"),
               raw: w,
             });
           });
         }
         if (data.private_trips && Array.isArray(data.private_trips)) {
           data.private_trips.forEach((p: any) => {
+            const places = Array.isArray(p.places) ? p.places.map((pl: any) => pl.place_name).filter(Boolean).join("، ") : "";
             realTrips.push({
               id: p.private_trip_id || `PT-${p.id}`,
-              trip_name: p.customer_description || "رحلة خاصة VIP",
+              trip_name: places ? `رحلة خاصة: ${places}` : "رحلة خاصة VIP",
               type: "خاصة VIP",
-              date: p.preferred_start_date || "تاريخ مفضل",
+              date: p.preferred_start_date ? String(p.preferred_start_date).split("T")[0] : "تاريخ مفضل",
               time_or_duration: `${p.duration_days || 1} أيام`,
-              tourist_group_name: p.customer_name || "عميل VIP",
-              seats_booked: (Number(p.number_of_companions) || 0) + 1,
-              status: p.status_order === "مؤكدة" ? "مقبولة" : "بانتظار القبول",
+              tourist_group_name: p.tourist?.full_name || "عميل VIP",
+              seats_booked: Number(p.number_of_companions) || 1,
+              status: p.status_order === "بانتظار رد المرشد" ? "بانتظار القبول" : p.status_order === "اعتذر المرشد" ? "مرفوضة" : "مقبولة",
               is_active_now: false,
               raw: p,
             });
@@ -269,21 +275,64 @@ function GuideDashboard() {
 
   const [detailsTrip, setDetailsTrip] = useState<AssignedTrip | null>(null);
 
+  // Landmarks registered on the platform; the guide picks the ones they work at (guide_places)
+  const [platformPlaces, setPlatformPlaces] = useState<any[]>([]);
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState<string[]>([]);
+  useEffect(() => {
+    apiGetPlaces().then(setPlatformPlaces);
+  }, []);
+
+  const [respondingTripId, setRespondingTripId] = useState<string | null>(null);
+  const respondToTrip = async (trip: AssignedTrip, decision: "accept" | "decline") => {
+    let reason: string | undefined;
+    if (decision === "decline") {
+      const typed = window.prompt("سبب الاعتذار عن الرحلة (اختياري):");
+      if (typed === null) return;
+      reason = typed.trim() || undefined;
+    }
+    setRespondingTripId(trip.id);
+    const respond = trip.type === "أسبوعية" ? apiGuideRespondWeeklyTrip : apiGuideRespondPrivateTrip;
+    const res = await respond(guideInfo.license_number, trip.id, decision, reason);
+    setRespondingTripId(null);
+    if (!res.success) {
+      alert("❌ " + res.error);
+      return;
+    }
+    setAssignedTrips((prev) => prev.map((t) => (t.id === trip.id ? { ...t, status: decision === "accept" ? "مقبولة" : "مرفوضة" } : t)));
+    alert(decision === "accept"
+      ? (trip.type === "أسبوعية" ? "✅ تم قبول الرحلة، وأصبحت منشورة للسياح." : "✅ تم قبول الرحلة، وأُرسل البرنامج والتسعيرة للسائح.")
+      : "تم تسجيل اعتذارك عن الرحلة وإبلاغ الإدارة لتعيين مرشد آخر.");
+  };
+
+  // Private and weekly trips wait for the guide's answer
+  const tripActions = (t: AssignedTrip) =>
+    t.type !== "يومية" && t.status === "بانتظار القبول" ? (
+      <div className="flex gap-2">
+        <button
+          disabled={respondingTripId === t.id}
+          onClick={() => respondToTrip(t, "accept")}
+          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs disabled:opacity-50"
+        >
+          ✓ قبول الرحلة
+        </button>
+        <button
+          disabled={respondingTripId === t.id}
+          onClick={() => respondToTrip(t, "decline")}
+          className="px-3.5 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold disabled:opacity-50"
+        >
+          ✕ اعتذار
+        </button>
+      </div>
+    ) : null;
+
   const activeTrip = assignedTrips.find((t) => t.is_active_now);
   const activeTripTourists = tourists.filter((t) => activeTrip && t.trip_name === activeTrip.trip_name);
   const attendedCount = activeTripTourists.filter((t) => t.attended).reduce((acc, curr) => acc + curr.seats_count, 0);
 
-  const selectedRegions: string[] = (() => {
-    try {
-      return guideInfo.operating_regions ? JSON.parse(guideInfo.operating_regions) : [];
-    } catch {
-      return [];
-    }
-  })();
-
   const selectedDays: string[] = (() => {
     try {
-      return guideInfo.working_days ? JSON.parse(guideInfo.working_days) : [];
+      const days = guideInfo.working_days;
+      return Array.isArray(days) ? days : days ? JSON.parse(days) : [];
     } catch {
       return [];
     }
@@ -318,19 +367,20 @@ function GuideDashboard() {
       return;
     }
 
-    try {
-      const res = await apiUpdateGuideProfile(guideInfo.license_number, guideInfo);
-      if (res && res.status === "success") {
-        alert("تم حفظ التعديلات وتحديث ملفك بنجاح ✓");
-        const session = getStoredSession();
-        if (session.user) {
-          localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...guideInfo }));
-        }
-      } else {
-        alert(res?.message || "تم حفظ البيانات بنجاح");
-      }
-    } catch {
-      alert("تم حفظ البيانات محلياً");
+    if (selectedPlaceIds.length === 0) {
+      alert("يرجى اختيار معلم سياحي واحد على الأقل من أماكن العمل.");
+      return;
+    }
+    const { operating_regions: _regions, ...profile } = guideInfo;
+    const res = await apiUpdateGuideProfile(guideInfo.license_number, { ...profile, place_ids: selectedPlaceIds });
+    if (res.status !== "success") {
+      alert("❌ لم يتم حفظ التعديلات.\n" + res.message);
+      return;
+    }
+    alert("تم حفظ التعديلات وتحديث ملفك بنجاح ✓");
+    const session = getStoredSession();
+    if (session.user) {
+      localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...res.guide }));
     }
   };
 
@@ -461,12 +511,15 @@ function GuideDashboard() {
                             🗓️ {t.date} · ⏱️ {t.time_or_duration} · 👥 {t.seats_booked} سياح
                           </div>
                         </div>
-                        <button
-                          onClick={() => setDetailsTrip(t)}
-                          className="px-3.5 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
-                        >
-                          📋 عرض تفاصيل الرحلة
-                        </button>
+                        <div className="flex gap-2 flex-wrap">
+                          {tripActions(t)}
+                          <button
+                            onClick={() => setDetailsTrip(t)}
+                            className="px-3.5 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
+                          >
+                            📋 عرض تفاصيل الرحلة
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -512,7 +565,7 @@ function GuideDashboard() {
 
       {/* Assigned Trips Tab */}
       {active === "assigned_trips" && (
-        <SectionCard title="الرحلات المسندة إليك من الإدارة (للاطلاع فقط)">
+        <SectionCard title="الرحلات المسندة إليك من الإدارة">
           {assignedTrips.length === 0 ? (
             <div className="p-10 rounded-xl border border-dashed border-stone-200 text-center space-y-2 bg-stone-50/50">
               <div className="text-3xl">📭</div>
@@ -551,12 +604,15 @@ function GuideDashboard() {
                         عرض كشف سياح هذه الرحلة النشطة ←
                       </button>
                     )}
-                    <button
-                      onClick={() => setDetailsTrip(t)}
-                      className="mr-auto px-4 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
-                    >
-                      📋 عرض تفاصيل الرحلة كاملة
-                    </button>
+                    <div className="mr-auto flex gap-2 flex-wrap">
+                      {tripActions(t)}
+                      <button
+                        onClick={() => setDetailsTrip(t)}
+                        className="px-4 py-1.5 bg-gradient-sea text-white rounded-lg text-xs font-bold shadow-2xs"
+                      >
+                        📋 عرض تفاصيل الرحلة كاملة
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -807,42 +863,37 @@ function GuideDashboard() {
               </div>
             </div>
 
-            {/* Section 4: Operating Regions */}
+            {/* Section 4: Workplaces = landmarks registered on the platform */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-stone-700">مناطق ووجهات العمل الرئيسية:</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allSelected = selectedRegions.length === REGIONS_LIST.length;
-                    setGuideInfo({ ...guideInfo, operating_regions: JSON.stringify(allSelected ? [] : REGIONS_LIST.map((r) => r.id)) });
-                  }}
-                  className="text-[11px] font-bold text-[#1B5A78] hover:underline cursor-pointer"
-                >
-                  {selectedRegions.length === REGIONS_LIST.length ? "✕ إلغاء تحديد الكل" : "✓ تحديد كافة المناطق"}
-                </button>
+                <label className="text-xs font-semibold text-stone-700">أماكن العمل (من المعالم السياحية المسجلة في المنصة):</label>
+                <span className="text-[11px] font-bold text-[#1B5A78]">{selectedPlaceIds.length} معالم مختارة</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 p-2.5 bg-stone-50/70 rounded-xl border border-stone-200 max-h-44 overflow-y-auto">
-                {REGIONS_LIST.map((reg) => {
-                  const isChecked = selectedRegions.includes(reg.id);
-                  return (
-                    <div
-                      key={reg.id}
-                      onClick={() => {
-                        const next = isChecked ? selectedRegions.filter((r) => r !== reg.id) : [...selectedRegions, reg.id];
-                        setGuideInfo({ ...guideInfo, operating_regions: JSON.stringify(next) });
-                      }}
-                      className={`flex items-center gap-2 p-2 rounded-lg border text-right transition cursor-pointer ${
-                        isChecked ? "border-[#1B5A78] bg-white text-[#0B132B] font-bold shadow-2xs" : "border-stone-200 bg-white/70 text-stone-500"
-                      }`}
-                    >
-                      <MapPin className={`w-3.5 h-3.5 ${isChecked ? "text-[#1B5A78]" : "text-stone-400"}`} />
-                      <span className="text-xs flex-1 truncate">{reg.nameAr}</span>
-                      {isChecked && <Check className="w-3.5 h-3.5 text-[#1B5A78]" />}
-                    </div>
-                  );
-                })}
-              </div>
+              {platformPlaces.length === 0 ? (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold">
+                  لا توجد معالم سياحية مسجلة في المنصة حالياً. تضيفها إدارة المنصة، ثم يمكنك اختيار أماكن عملك منها.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 p-2.5 bg-stone-50/70 rounded-xl border border-stone-200 max-h-52 overflow-y-auto">
+                  {platformPlaces.map((place) => {
+                    const pid = String(place.place_id);
+                    const isChecked = selectedPlaceIds.includes(pid);
+                    return (
+                      <div
+                        key={pid}
+                        onClick={() => setSelectedPlaceIds(isChecked ? selectedPlaceIds.filter((p) => p !== pid) : [...selectedPlaceIds, pid])}
+                        className={`flex items-center gap-2 p-2 rounded-lg border text-right transition cursor-pointer ${
+                          isChecked ? "border-[#1B5A78] bg-white text-[#0B132B] font-bold shadow-2xs" : "border-stone-200 bg-white/70 text-stone-500"
+                        }`}
+                      >
+                        <MapPin className={`w-3.5 h-3.5 ${isChecked ? "text-[#1B5A78]" : "text-stone-400"}`} />
+                        <span className="text-xs flex-1 truncate">{place.place_name}{place.city ? ` (${place.city})` : ""}</span>
+                        {isChecked && <Check className="w-3.5 h-3.5 text-[#1B5A78]" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Section 5: Available Days */}

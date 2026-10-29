@@ -178,96 +178,46 @@ if (typeof window !== "undefined") {
 }
 
 /* =========================================================
-   SECURE BACKEND API INTEGRATION & SAFE FALLBACK SYSTEM
+   LARAVEL API CLIENT (the only server that reads and writes DelniDB)
    ========================================================= */
-const BACKEND_API_URL = "http://127.0.0.1:5001/api/db";
-
-export type BackendResult = { ok: boolean; error?: string };
-
-const BACKEND_UNREACHABLE_ERROR =
-  "تعذر الاتصال بخادم قاعدة البيانات (المنفذ 5001). تأكد من تشغيل الجسر ثم أعد المحاولة.";
-
-// Reads the bridge's error text ({ error } or { message }) from a failed response
+// Reads the error text from a failed response: { error }, Laravel's first validation message, or { message }
 async function readBackendError(res: Response): Promise<string> {
   try {
     const body = await res.json();
-    return body?.error || body?.message || `رمز الخطأ ${res.status}`;
+    const firstValidation = body?.errors ? (Object.values(body.errors).flat() as string[])[0] : undefined;
+    return body?.error || firstValidation || body?.message || `رمز الخطأ ${res.status}`;
   } catch {
     return `رمز الخطأ ${res.status}`;
   }
 }
 
+export type LaravelResult<T = any> = { ok: true; data?: T; body?: any } | { ok: false; error: string };
+
+const LARAVEL_UNREACHABLE_ERROR =
+  "تعذر الاتصال بخادم المنصة Laravel (المنفذ 8000). تأكد من تشغيله ثم أعد المحاولة.";
+
 /**
- * Saves data to SQL Server (DelniDB) through the bridge and reports whether it was really stored.
+ * Calls the Laravel API, which is the only layer that writes to DelniDB; the result says whether it was really stored.
  */
-export async function postToSecureBackend(endpoint: string, payload: any): Promise<BackendResult> {
-  if (typeof window === "undefined") return { ok: false, error: BACKEND_UNREACHABLE_ERROR };
+export async function laravelRequest<T = any>(method: "GET" | "POST" | "PUT", path: string, payload?: any): Promise<LaravelResult<T>> {
+  if (typeof window === "undefined") return { ok: false, error: LARAVEL_UNREACHABLE_ERROR };
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BACKEND_API_URL}/${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    const res = await fetch(`${LARAVEL_API_URL}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
       signal: controller.signal,
     });
-    if (res.ok) return { ok: true };
-    return { ok: false, error: await readBackendError(res) };
+    if (!res.ok) return { ok: false, error: await readBackendError(res) };
+    const body = await res.json().catch(() => null);
+    return { ok: true, data: body?.data, body };
   } catch {
-    return { ok: false, error: BACKEND_UNREACHABLE_ERROR };
+    return { ok: false, error: LARAVEL_UNREACHABLE_ERROR };
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-/**
- * Same as postToSecureBackend, but tells the user when the save failed instead of failing silently.
- */
-export async function sendToSecureBackend(endpoint: string, payload: any): Promise<boolean> {
-  const result = await postToSecureBackend(endpoint, payload);
-  if (!result.ok && typeof window !== "undefined") {
-    window.alert(`❌ لم يتم الحفظ في قاعدة البيانات.\n${result.error}`);
-  }
-  return result.ok;
-}
-
-/**
- * Deletes data from SQL Server (DelniDB) through the bridge; tells the user when the delete failed.
- */
-export async function deleteFromSecureBackend(endpoint: string, paramName: string, paramValue: string): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-  let error: string;
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/${endpoint}?${paramName}=${encodeURIComponent(paramValue)}`, {
-      method: "DELETE",
-      signal: controller.signal,
-    });
-    if (res.ok) return true;
-    error = await readBackendError(res);
-  } catch {
-    error = BACKEND_UNREACHABLE_ERROR;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-  window.alert(`❌ لم يتم الحذف من قاعدة البيانات.\n${error}`);
-  return false;
-}
-
-/**
- * Health check helper (checks SQL Server backend or falls back locally)
- */
-export async function checkBackendHealth(): Promise<{ online: boolean; database?: string }> {
-  if (typeof window !== "undefined") {
-    try {
-      const res = await fetch(`${BACKEND_API_URL}/health`, { signal: AbortSignal.timeout(2000) });
-      if (res.ok) {
-        return { online: true, database: "Microsoft SQL Server (DelniDB) - متصل وآمن" };
-      }
-    } catch { }
-  }
-  return { online: true, database: "محلي (Safe Fallback)" };
 }
 
 /* =========================================================
@@ -306,8 +256,8 @@ export async function addTransportCompany(company: Partial<TransportCompanyRecor
     phone: company.phone_number || company.phone || "0910000000",
     address: company.address || "طرابلس",
     city: company.city || "طرابلس",
-    email: company.email || `company${list.length + 1}@dalni.ly`,
-    password: company.password || "password123",
+    email: company.email || "",
+    password: company.password || "",
     total_vehicles: Number(company.total_vehicles) || 5,
     contract_start_date: company.contract_start_date || null,
     contract_end_date: company.contract_end_date || null,
@@ -315,9 +265,11 @@ export async function addTransportCompany(company: Partial<TransportCompanyRecor
     status: company.verification_status || company.status || "موثق",
     google_maps_url: company.google_maps_url || (company.address && (company.address.startsWith("http") || company.address.includes("maps")) ? company.address : "") || "",
   };
-  const saved = await postToSecureBackend("companies", { ...newComp, isNew });
+  const saved = await laravelRequest("POST", "/transport/companies", { ...newComp, isNew });
   if (!saved.ok) return { ok: false, error: saved.error || "فشل حفظ شركة النقل" };
 
+  // The password is stored hashed in DelniDB only, never in the browser
+  newComp.password = "";
   list.unshift(newComp);
   saveTransportCompanies(list);
   return { ok: true, record: newComp };
@@ -347,8 +299,9 @@ export async function updateTransportCompany(contractNumber: string, data: Parti
       contract_start_date: data.contract_start_date || list[idx].contract_start_date,
       contract_end_date: data.contract_end_date || list[idx].contract_end_date,
     };
-    const saved = await postToSecureBackend("companies", updatedRecord);
+    const saved = await laravelRequest("POST", "/transport/companies", { ...updatedRecord, isNew: false });
     if (!saved.ok) return { ok: false, error: saved.error || "فشل تحديث شركة النقل" };
+    updatedRecord.password = "";
 
     list[idx] = updatedRecord;
     saveTransportCompanies(list);
@@ -362,18 +315,6 @@ export async function updateTransportCompany(contractNumber: string, data: Parti
     // Company exists in DelniDB but not in this browser's cache: save it as an update, not a new registration
     return addTransportCompany({ ...data, contract_number: contractNumber }, false);
   }
-}
-
-/**
- * Deletes a transport company. The local list is only updated after DelniDB confirms the delete.
- */
-export async function deleteTransportCompany(contractNumber: string): Promise<boolean> {
-  const deleted = await deleteFromSecureBackend("companies", "contract_number", contractNumber);
-  if (!deleted) return false;
-  const list = getTransportCompanies();
-  const filtered = list.filter(c => c.contract_number !== contractNumber && c.id !== contractNumber);
-  saveTransportCompanies(filtered);
-  return true;
 }
 
 /* =========================================================
@@ -402,83 +343,65 @@ export function saveVehicles(vehicles: VehicleRecord[]) {
   localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(vehicles));
 }
 
-export function addVehicle(v: Partial<VehicleRecord>, driverInfo?: { licenseNumber?: string; newDriver?: any }): VehicleRecord {
-  const list = getVehicles();
-  const cleanContract = (v.contract_number && String(v.contract_number).trim()) || "123445";
-  const newV: VehicleRecord = {
+export type DriverAssignment = { licenseNumber?: string; newDriver?: any };
+export type SaveResult<T> = { success: true; data: T } | { success: false; error: string };
+
+const isRealPlate = (plate: unknown) => {
+  const p = plate ? String(plate).trim() : "";
+  return p && p !== "غير مسند" && p !== "غير معين" && p !== "none" ? p : null;
+};
+
+/**
+ * Reloads the company's vehicles and drivers from DelniDB (through Laravel) into the local cache.
+ */
+export async function refreshFleet(contractNumber: string): Promise<{ vehicles: VehicleRecord[]; drivers: DriverRecord[] } | null> {
+  const q = `?contract_number=${encodeURIComponent(contractNumber)}`;
+  const [veh, drv] = await Promise.all([
+    laravelRequest<VehicleRecord[]>("GET", `/transport/vehicles${q}`),
+    laravelRequest<DriverRecord[]>("GET", `/transport/drivers${q}`),
+  ]);
+  if (!veh.ok || !drv.ok || !Array.isArray(veh.data) || !Array.isArray(drv.data)) return null;
+  // Keep other companies' cached rows, replace this company's
+  saveVehicles([...veh.data, ...getVehicles().filter(v => v.contract_number !== contractNumber)]);
+  saveDrivers([...drv.data, ...getDrivers().filter(d => d.contract_number !== contractNumber)]);
+  return { vehicles: veh.data, drivers: drv.data };
+}
+
+/**
+ * Saves a vehicle (new or edited) and its driver assignment. Local state is only updated after DelniDB confirms.
+ */
+export async function saveVehicle(v: Partial<VehicleRecord>, isNew: boolean, driverInfo?: DriverAssignment): Promise<SaveResult<VehicleRecord>> {
+  const plate = String(v.plate_number || "").trim();
+  const contract = String(v.contract_number || "").trim();
+  if (!plate || !contract) return { success: false, error: "رقم اللوحة ورقم عقد الشركة مطلوبان" };
+
+  const payload = {
     ...v,
-    plate_number: v.plate_number || `طرابلس ${Math.floor(1000 + Math.random() * 9000)}`,
-    contract_number: cleanContract,
-    company_name: v.company_name || "شركة النقل السياحي",
+    plate_number: plate,
+    contract_number: contract,
     vehicle_type: v.vehicle_type || "حافلة سياحية",
     seating_capacity: Number(v.seating_capacity) || 15,
-    daily_rate: Number(v.daily_rate) || 350,
-    category: v.category || "سياحي مريح",
-    vehicle_status: v.vehicle_status || "جاهزة",
-    status: v.vehicle_status || v.status || "جاهزة",
-    insurance_details: v.insurance_details || "تأمين ركاب ساري المفعول",
+    daily_rate: Number(v.daily_rate) || null,
+    category: v.category || null,
+    vehicle_status: v.vehicle_status || v.status || "جاهزة",
     insurance_image: v.insurance_image || "",
-    vehicle_image: v.vehicle_image || "/assets/office-bus.jpg",
+    vehicle_image: v.vehicle_image || "",
+    isNew,
+    driverInfo: driverInfo ?? null,
   };
-  list.unshift(newV);
-  saveVehicles(list);
+  const saved = await laravelRequest<VehicleRecord>("POST", "/transport/vehicles", payload);
+  if (!saved.ok) return { success: false, error: saved.error };
 
-  // If driver assigned, enforce 1-to-1 dedicated driver in local state
-  if (driverInfo?.licenseNumber) {
-    const drvs = getDrivers();
-    const updatedDrvs = drvs.map(d => {
-      if (d.driver_license_number === driverInfo.licenseNumber) {
-        return { ...d, assigned_vehicle_plate: newV.plate_number };
-      }
-      if (d.assigned_vehicle_plate === newV.plate_number) {
-        return { ...d, assigned_vehicle_plate: null };
-      }
+  const record = { ...v, ...(saved.data || {}), company_name: v.company_name } as VehicleRecord;
+  saveVehicles([record, ...getVehicles().filter(x => x.plate_number !== plate)]);
+  if (driverInfo) {
+    saveDrivers(getDrivers().map(d => {
+      if (driverInfo.licenseNumber && d.driver_license_number === driverInfo.licenseNumber) return { ...d, assigned_vehicle_plate: plate };
+      if (d.assigned_vehicle_plate === plate) return { ...d, assigned_vehicle_plate: null };
       return d;
-    });
-    saveDrivers(updatedDrvs);
+    }));
   }
-
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  sendToSecureBackend("vehicles", { ...newV, driverInfo, isNew: true });
-
-  return newV;
-}
-
-export function updateVehicle(plateNumber: string, data: Partial<VehicleRecord>, driverInfo?: { licenseNumber?: string; newDriver?: any }) {
-  const list = getVehicles();
-  const idx = list.findIndex(v => v.plate_number === plateNumber);
-  if (idx !== -1) {
-    list[idx] = { ...list[idx], ...data };
-    saveVehicles(list);
-
-    // If driver assigned or changed, update driver in local state
-    if (driverInfo) {
-      const drvs = getDrivers();
-      const updatedDrvs = drvs.map(d => {
-        if (driverInfo.licenseNumber && d.driver_license_number === driverInfo.licenseNumber) {
-          return { ...d, assigned_vehicle_plate: plateNumber };
-        }
-        if (d.assigned_vehicle_plate === plateNumber && d.driver_license_number !== driverInfo.licenseNumber) {
-          return { ...d, assigned_vehicle_plate: null };
-        }
-        return d;
-      });
-      saveDrivers(updatedDrvs);
-    }
-
-    // Async Safe Sync to Backend API (Microsoft SQL Server)
-    sendToSecureBackend("vehicles", { ...list[idx], driverInfo, isNew: false });
-    return list[idx];
-  }
-  return null;
-}
-
-export function deleteVehicle(plateNumber: string) {
-  const list = getVehicles();
-  const filtered = list.filter(v => v.plate_number !== plateNumber);
-  saveVehicles(filtered);
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  deleteFromSecureBackend("vehicles", "plate_number", plateNumber);
+  return { success: true, data: record };
 }
 
 /* =========================================================
@@ -507,153 +430,74 @@ export function saveDrivers(drivers: DriverRecord[]) {
   localStorage.setItem(STORAGE_KEYS.DRIVERS, JSON.stringify(drivers));
 }
 
-export function addDriver(d: Partial<DriverRecord>): DriverRecord {
-  const list = getDrivers();
-  const rawPlate = d.assigned_vehicle_plate ? String(d.assigned_vehicle_plate).trim() : "";
-  const validPlate = rawPlate && rawPlate !== "غير مسند" && rawPlate !== "غير معين" && rawPlate !== "none" ? rawPlate : null;
-
-  const newD: DriverRecord = {
-    driver_license_number: d.driver_license_number || `77${Math.floor(1000 + Math.random() * 9000)}`,
-    full_name: d.full_name || "سائق معتمد",
-    phone_number: d.phone_number || "0910000000",
-    national_id_or_passport: d.national_id_or_passport || "",
-    license_date_valid: d.license_date_valid || "2029-12-31",
-    contract_number: d.contract_number || "9898",
-    assigned_vehicle_plate: validPlate || null,
-    email: d.email || `driver_${Date.now()}@dalni.ly`,
-    password: d.password || "password123",
-    account_status: d.account_status || "نشط",
-    operational_status: d.operational_status || "متاح",
-    company_name: d.company_name || "شركة النقل السياحي",
-  };
-  list.unshift(newD);
-  saveDrivers(list);
-
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  sendToSecureBackend("drivers", { ...newD, isNew: true });
-
-  return newD;
+// Stores the confirmed driver locally (without the password) and refreshes the signed-in driver's session
+function cacheDriver(record: DriverRecord) {
+  const clean = { ...record, password: "" };
+  saveDrivers([clean, ...getDrivers().filter(x => x.driver_license_number !== record.driver_license_number)]);
+  const current = getStoredSession().user;
+  if (current && current.driver_license_number === record.driver_license_number) {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...clean }));
+  }
+  return clean;
 }
 
-export async function apiAddDriver(d: Partial<DriverRecord>): Promise<{ success: boolean; error?: string; data?: DriverRecord }> {
-  const rawPlate = d.assigned_vehicle_plate ? String(d.assigned_vehicle_plate).trim() : "";
-  const validPlate = rawPlate && rawPlate !== "غير مسند" && rawPlate !== "غير معين" && rawPlate !== "none" ? rawPlate : null;
-
+export async function apiAddDriver(d: Partial<DriverRecord>): Promise<SaveResult<DriverRecord>> {
   const newD: DriverRecord = {
     driver_license_number: String(d.driver_license_number || "").trim(),
     full_name: String(d.full_name || "").trim(),
     phone_number: String(d.phone_number || "").trim(),
     national_id_or_passport: String(d.national_id_or_passport || "").trim(),
     license_date_valid: d.license_date_valid || "2029-12-31",
-    contract_number: String(d.contract_number || "9898").trim(),
-    assigned_vehicle_plate: validPlate,
-    email: String(d.email || `driver_${d.driver_license_number || Date.now()}@dalni.ly`).trim(),
-    password: d.password || "password123",
+    contract_number: String(d.contract_number || "").trim(),
+    assigned_vehicle_plate: isRealPlate(d.assigned_vehicle_plate),
+    email: String(d.email || "").trim(),
+    password: d.password || "",
     account_status: d.account_status || "نشط",
     operational_status: d.operational_status || "متاح",
-    company_name: d.company_name || "شركة النقل السياحي",
+    company_name: d.company_name || "",
   };
-
-  try {
-    const res = await fetch("http://127.0.0.1:5001/api/db/drivers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newD, isNew: true }),
-    });
-
-    const json = await res.json().catch(() => null);
-
-    if (!res.ok || !json?.success) {
-      return {
-        success: false,
-        error: json?.error || "فشل تسجيل السائق في قاعدة البيانات",
-      };
-    }
-
-    // Success in DelniDB: Save to local state as well
-    const list = getDrivers();
-    const existingIdx = list.findIndex(x => x.driver_license_number === newD.driver_license_number);
-    if (existingIdx !== -1) {
-      list[existingIdx] = newD;
-    } else {
-      list.unshift(newD);
-    }
-    saveDrivers(list);
-
-    return { success: true, data: newD };
-  } catch (err: any) {
-    const list = getDrivers();
-    list.unshift(newD);
-    saveDrivers(list);
-    return { success: true, data: newD };
-  }
+  const saved = await laravelRequest<DriverRecord>("POST", "/transport/drivers", { ...newD, isNew: true });
+  if (!saved.ok) return { success: false, error: saved.error };
+  return { success: true, data: cacheDriver({ ...newD, ...(saved.data || {}) }) };
 }
 
-export function updateDriver(licenseNumber: string, data: Partial<DriverRecord>) {
-  const list = getDrivers();
-  const idx = list.findIndex(d => d.driver_license_number === licenseNumber);
-  if (idx !== -1) {
-    const rawPlate = data.assigned_vehicle_plate !== undefined ? data.assigned_vehicle_plate : list[idx].assigned_vehicle_plate;
-    const strPlate = rawPlate ? String(rawPlate).trim() : "";
-    const cleanPlate = strPlate && strPlate !== "غير مسند" && strPlate !== "غير معين" && strPlate !== "none" ? strPlate : null;
-
-    list[idx] = { ...list[idx], ...data, assigned_vehicle_plate: cleanPlate };
-    saveDrivers(list);
-
-    const current = getStoredSession().user;
-    if (current && (current.driver_license_number === licenseNumber || current.email === list[idx].email)) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...list[idx] }));
-    }
-    // Async Safe Sync to Backend API (Microsoft SQL Server)
-    sendToSecureBackend("drivers", { ...list[idx], isNew: false });
-    return list[idx];
-  }
-  return null;
+// Edits a driver's details; the password is never sent here (only the driver changes it, see apiChangeDriverPassword)
+export async function apiUpdateDriver(licenseNumber: string, data: Partial<DriverRecord>): Promise<SaveResult<DriverRecord>> {
+  const current = getDrivers().find(d => d.driver_license_number === licenseNumber);
+  const { password: _password, ...merged } = { ...(current || {}), ...data, driver_license_number: licenseNumber } as DriverRecord;
+  merged.assigned_vehicle_plate = isRealPlate(merged.assigned_vehicle_plate);
+  const saved = await laravelRequest<DriverRecord>("POST", "/transport/drivers", { ...merged, isNew: false });
+  if (!saved.ok) return { success: false, error: saved.error };
+  return { success: true, data: cacheDriver({ ...merged, ...(saved.data || {}) } as DriverRecord) };
 }
 
-export async function apiUpdateDriver(licenseNumber: string, data: Partial<DriverRecord>): Promise<{ success: boolean; error?: string; data?: DriverRecord }> {
-  const updated = updateDriver(licenseNumber, data);
-  if (!updated) return { success: false, error: "السائق غير موجود" };
-
-  try {
-    const res = await fetch("http://127.0.0.1:5001/api/db/drivers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...updated, isNew: false }),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json?.success) {
-      return { success: false, error: json?.error || "فشل تحديث بيانات السائق في قاعدة البيانات" };
-    }
-    return { success: true, data: updated };
-  } catch {
-    return { success: true, data: updated };
-  }
+// Only the account owner changes a password: the current one must be entered
+async function changePassword(path: string, currentPassword: string, newPassword: string): Promise<SaveResult<null>> {
+  const res = await laravelRequest("POST", path, { current_password: currentPassword, new_password: newPassword });
+  return res.ok ? { success: true, data: null } : { success: false, error: res.error };
 }
 
-export function deleteDriver(licenseNumber: string) {
-  const list = getDrivers();
-  const filtered = list.filter(d => d.driver_license_number !== licenseNumber);
-  saveDrivers(filtered);
-  // Async Safe Sync to Backend API (Microsoft SQL Server)
-  deleteFromSecureBackend("drivers", "driver_license_number", licenseNumber);
+export function apiChangeDriverPassword(licenseNumber: string, currentPassword: string, newPassword: string) {
+  return changePassword(`/transport/drivers/${encodeURIComponent(licenseNumber)}/password`, currentPassword, newPassword);
 }
 
-export async function apiDeleteDriver(licenseNumber: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch(`http://127.0.0.1:5001/api/db/drivers?driver_license_number=${encodeURIComponent(licenseNumber)}`, {
-      method: "DELETE",
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json?.success) {
-      return { success: false, error: json?.error || "فشل حذف السائق من قاعدة البيانات" };
-    }
-    deleteDriver(licenseNumber);
-    return { success: true };
-  } catch {
-    deleteDriver(licenseNumber);
-    return { success: true };
-  }
+export function apiChangeCompanyPassword(contractNumber: string, currentPassword: string, newPassword: string) {
+  return changePassword(`/transport/companies/${encodeURIComponent(contractNumber)}/password`, currentPassword, newPassword);
+}
+
+// The driver reports the current stage of the trip on their vehicle (drivers.current_trip_stage)
+export async function apiUpdateDriverTripStage(licenseNumber: string, stage: string): Promise<SaveResult<null>> {
+  const res = await laravelRequest("POST", `/transport/drivers/${encodeURIComponent(licenseNumber)}/trip-stage`, { stage });
+  return res.ok ? { success: true, data: null } : { success: false, error: res.error };
+}
+
+export type DriverTrip = { kind: string; id: string; title: string; schedule: string; departure_city: string | null; passengers: number };
+
+// The driver's record, assigned vehicle and the trips the admin assigned to that vehicle
+export async function apiGetDriverDashboard(licenseNumber: string) {
+  const res = await laravelRequest("GET", `/dashboard/driver/${encodeURIComponent(licenseNumber)}`);
+  if (!res.ok) return null;
+  return res.body as { driver: DriverRecord & { company_name?: string }; vehicle: VehicleRecord | null; trips: DriverTrip[] };
 }
 
 /* =========================================================
@@ -705,13 +549,6 @@ export function updateGuideVerification(licenseNumber: string, status: "موثق
   return false;
 }
 
-export function deleteGuideAccount(licenseNumber: string): boolean {
-  const guides = getAllGuides();
-  const filtered = guides.filter((g) => g.license_number !== licenseNumber);
-  saveAllGuides(filtered);
-  return true;
-}
-
 /* =========================================================
    AUTHENTICATION
    ========================================================= */
@@ -728,7 +565,7 @@ export async function apiLogin(params: {
     return { status: "error", message: "يرجى كتابة البريد الإلكتروني وكلمة المرور" };
   }
 
-  // 1. Try Live Official Laravel API (DelniDB on Port 8000)
+  // Laravel verifies the email and password against DelniDB
   try {
     const res = await fetch(`${LARAVEL_API_URL}/auth/login`, {
       method: "POST",
@@ -758,45 +595,8 @@ export async function apiLogin(params: {
       };
     }
   } catch (laravelErr) {
-    console.warn("Laravel login unreachable, attempting fallback...", laravelErr);
+    console.warn("Laravel login unreachable", laravelErr);
   }
-
-  // 2. Fallback to SQL Server Bridge if Laravel API is offline
-  try {
-    const dbRes = await fetch("http://127.0.0.1:5001/api/db/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, login: cleanLogin, password: rawPassword }),
-      signal: AbortSignal.timeout(3000),
-    });
-
-    if (dbRes.ok) {
-      const dbData = await dbRes.json();
-      if (dbData.success && dbData.user) {
-        if (role === "guide" && dbData.user.verification_status !== "موثق") {
-          return {
-            status: "error",
-            message: "طلب انضمامك كمرشد سياحي ما زال قيد المراجعة والتدقيق من قبل الإدارة. يرجى الانتظار حتى يتم اعتماد حسابك.",
-          };
-        }
-        const userObj = { ...dbData.user, role: dbData.role || role };
-        localStorage.setItem(STORAGE_KEYS.TOKEN, `token-${Date.now()}`);
-        localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
-        localStorage.setItem("dalni_user", JSON.stringify(userObj));
-        window.dispatchEvent(new Event("storage"));
-        return {
-          status: "success",
-          message: dbData.message || "تم تسجيل الدخول بنجاح",
-          user: userObj,
-          role: userObj.role,
-          token: "db_token",
-        };
-      }
-    }
-    const dbError = await dbRes.json().catch(() => null);
-    return { status: "error", message: dbError?.error || "بيانات تسجيل الدخول غير صحيحة، يرجى التأكد من البريد الإلكتروني وكلمة المرور" };
-  } catch { }
 
   // No local (browser) fallback: an account can only sign in after the database verifies its email and password
   return { status: "error", message: "تعذر الاتصال بخادم المنصة للتحقق من بيانات الدخول. يرجى المحاولة لاحقاً." };
@@ -909,14 +709,6 @@ export async function apiRegisterTourist(params: {
     localStorage.setItem("dalni_user", JSON.stringify(savedUser));
     window.dispatchEvent(new Event("storage"));
 
-    // Async sync to backup bridge if running (without password to prevent hash corruption)
-    postToSecureBackend("tourists", {
-      tourist_id,
-      full_name: payload.full_name,
-      email: payload.email,
-      phone_number: payload.phone_number,
-    }).catch(() => {});
-
     return {
       status: "success",
       message: resData?.message || "تم إنشاء حساب السائح وتخزينه في قاعدة البيانات بنجاح",
@@ -942,31 +734,15 @@ export async function apiUpdateTouristProfile(params: {
   phone_number: string;
   password?: string;
 }): Promise<ApiResponse> {
+  // The session is only updated after DelniDB confirms the change
+  const saved = await laravelRequest("POST", "/auth/tourist/update-profile", params);
+  if (!saved.ok) return { status: "error", message: saved.error };
+
   const current = getStoredSession().user || {};
-  const updated = { ...current, ...params };
+  const updated = { ...current, ...(saved.body?.user || {}), password: undefined };
   localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
   localStorage.setItem("dalni_user", JSON.stringify(updated));
-
-  // Async Safe Sync to SQL Server bridge
-  postToSecureBackend("tourists", params);
-
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/auth/tourist/update-profile`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(params),
-      signal: AbortSignal.timeout(1000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data;
-    }
-  } catch { }
-
-  return { status: "success", message: "تم تحديث الملف الشخصي بنجاح", user: updated };
+  return { status: "success", message: saved.body?.message || "تم تحديث الملف الشخصي بنجاح", user: updated };
 }
 
 /**
@@ -976,26 +752,8 @@ export async function apiBookDailyTrip(params: {
   tourist_id: string;
   daily_trip_id: string;
   number_of_seats: number;
-  trip_title?: string;
-  price_per_seat?: number;
-  total_price?: number;
 }): Promise<ApiResponse> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/bookings_daily`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(params),
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      return { status: "success", message: data.message || "تم تسجيل الحجز بنجاح في قاعدة البيانات", ...data };
-    }
-    return { status: "error", message: data.error || "تعذر إتمام الحجز" };
-  } catch {
-    return { status: "error", message: "تعذر إرسال الحجز لقاعدة بيانات DelniDB" };
-  }
+  return bookTrip("daily", params);
 }
 
 /**
@@ -1005,26 +763,44 @@ export async function apiBookWeeklyTrip(params: {
   tourist_id: string;
   weekly_trip_id: string;
   number_of_seats: number;
-  trip_title?: string;
-  seat_per_price?: number;
-  total_price?: number;
 }): Promise<ApiResponse> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/bookings_weekly`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(params),
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      return { status: "success", message: data.message || "تم تسجيل الحجز بنجاح في قاعدة البيانات", ...data };
-    }
-    return { status: "error", message: data.error || "تعذر إتمام الحجز" };
-  } catch {
-    return { status: "error", message: "تعذر إرسال الحجز لقاعدة بيانات DelniDB" };
-  }
+  return bookTrip("weekly", params);
+}
+
+// The server computes the price (trip price minus any running offer); the browser only sends the seats
+async function bookTrip(kind: "daily" | "weekly", params: Record<string, any>): Promise<ApiResponse> {
+  const key = kind === "daily" ? "daily_trip_id" : "weekly_trip_id";
+  const res = await laravelRequest("POST", `/bookings/${kind}`, {
+    tourist_id: params.tourist_id,
+    [key]: params[key],
+    number_of_seats: params.number_of_seats,
+  });
+  if (!res.ok) return { status: "error", message: res.error };
+  return { status: "success", message: res.body?.message || "تم تسجيل الحجز بنجاح", booking_id: res.body?.booking_id, booking: res.data };
+}
+
+type BookingKind = "daily" | "weekly";
+
+export async function apiSetBookingPayment(kind: BookingKind, id: string, paid: boolean): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/bookings/${kind}/${encodeURIComponent(id)}/payment`, { payment_status: paid ? "paid" : "unpaid" });
+  return res.ok ? { success: true, data: res.data } : { success: false, error: res.error };
+}
+
+export async function apiSetBookingAttendance(kind: BookingKind, id: string, attended: boolean): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/bookings/${kind}/${encodeURIComponent(id)}/attendance`, { attended });
+  return res.ok ? { success: true, data: res.data } : { success: false, error: res.error };
+}
+
+// Ticket desk: cash received + check-in in one step
+export async function apiCheckInBooking(kind: BookingKind, id: string): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/bookings/${kind}/${encodeURIComponent(id)}/check-in`);
+  return res.ok ? { success: true, data: res.data } : { success: false, error: res.error };
+}
+
+// Exact ticket code lookup in DelniDB
+export async function apiFindTicket(code: string): Promise<{ success: true; kind: BookingKind; data: any } | { success: false; error: string }> {
+  const res = await laravelRequest("GET", `/bookings/ticket/${encodeURIComponent(code)}`);
+  return res.ok ? { success: true, kind: res.body?.kind, data: res.data } : { success: false, error: res.error };
 }
 
 /**
@@ -1076,64 +852,28 @@ export async function apiRegisterGuide(params: {
     registered_at: new Date().toISOString(),
   };
 
-  // Directly persist to Microsoft SQL Server DelniDB
-  try {
-    const bridgeRes = await fetch(`${BACKEND_API_URL}/guides`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        license_number: params.license_number,
-        full_name: params.full_name,
-        phone_number: params.phone_number,
-        years_of_experience: params.years_of_experience || 2,
-        email: params.email,
-        password: params.password || "123456",
-        gender: params.gender || "male",
-        price_per_day: params.price_per_day || 150,
-        bio: params.bio || "",
-        title: params.title || "مرشد سياحي معتمد",
-        avatar: params.avatar || null,
-        certificate: params.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-        certificate_name: params.certificate_name,
-        digital_certificate_file: params.digital_certificate_file,
-        working_days: params.working_days,
-        operating_regions: params.operating_regions,
-        speaks_english: Boolean(params.speaks_english),
-        speaks_french: Boolean(params.speaks_french),
-        speaks_italian: Boolean(params.speaks_italian),
-        place_ids: params.place_ids,
-        verification_status: "بانتظار التوثيق",
-      }),
-    });
-    const resData = await bridgeRes.json().catch(() => ({}));
-    if (!bridgeRes.ok) {
-      return {
-        status: "error",
-        message: resData.error || resData.message || "فشل حفظ بيانات المرشد في قاعدة البيانات",
-      };
-    }
-  } catch (e: any) {
-    console.error("Failed to connect to backend for guide registration:", e);
-    return {
-      status: "error",
-      message: "تعذر الاتصال بقاعدة البيانات. يرجى التأكد من تشغيل خادم المنصة والمحاولة مجدداً.",
-    };
-  }
-
-  try {
-    const guides = getAllGuides();
-    const existingIdx = guides.findIndex((g) => g.license_number === newGuide.license_number);
-    if (existingIdx !== -1) {
-      guides[existingIdx] = { ...guides[existingIdx], ...newGuide };
-    } else {
-      guides.push(newGuide);
-    }
-    saveAllGuides(guides);
-  } catch (localErr) {
-    console.warn("apiRegisterGuide local storage warning:", localErr);
+  // Saved in DelniDB through Laravel; the account stays «قيد المراجعة» until the admin approves it
+  const saved = await laravelRequest("POST", "/auth/register/guide", {
+    license_number: params.license_number,
+    full_name: params.full_name,
+    phone_number: params.phone_number,
+    years_of_experience: params.years_of_experience,
+    email: params.email,
+    password: params.password,
+    gender: params.gender || "male",
+    price_per_day: params.price_per_day ?? null,
+    bio: params.bio || "",
+    avatar: params.avatar || null,
+    digital_certificate_file: params.digital_certificate_file,
+    working_days: params.working_days,
+    operating_regions: params.operating_regions,
+    speaks_english: Boolean(params.speaks_english),
+    speaks_french: Boolean(params.speaks_french),
+    speaks_italian: Boolean(params.speaks_italian),
+    place_ids: params.place_ids || [],
+  });
+  if (!saved.ok) {
+    return { status: "error", message: saved.error };
   }
 
   return {
@@ -1144,369 +884,184 @@ export async function apiRegisterGuide(params: {
 }
 
 export async function apiGetTouristBookings(touristId: string) {
-  try {
-    const [resD, resW] = await Promise.all([
-      fetch(`${BACKEND_API_URL}/bookings_daily`).then(r => r.ok ? r.json() : { data: [] }),
-      fetch(`${BACKEND_API_URL}/bookings_weekly`).then(r => r.ok ? r.json() : { data: [] }),
-    ]);
-    const dailyData = Array.isArray(resD.data) ? resD.data : [];
-    const weeklyData = Array.isArray(resW.data) ? resW.data : [];
-
-    const dailyFiltered = dailyData.filter((b: any) => !touristId || b.tourist_id === touristId || touristId.includes(b.tourist_id) || b.tourist_id.includes(touristId));
-    const weeklyFiltered = weeklyData.filter((b: any) => !touristId || b.tourist_id === touristId || touristId.includes(b.tourist_id) || b.tourist_id.includes(touristId));
-
-    if (dailyFiltered.length > 0 || weeklyFiltered.length > 0) {
-      return {
-        daily: dailyFiltered,
-        weekly: weeklyFiltered,
-        daily_bookings: dailyFiltered,
-        weekly_bookings: weeklyFiltered,
-        privateTrips: [],
-      };
-    }
-  } catch { }
-
-  try {
-    const daily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
-    const weekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
-    const privateTrips = JSON.parse(localStorage.getItem("dalni_private_trips") || "[]");
-    const dailyFiltered = daily.filter((b: any) => b.tourist_id === touristId);
-    const weeklyFiltered = weekly.filter((b: any) => b.tourist_id === touristId);
-    return {
-      daily: dailyFiltered,
-      weekly: weeklyFiltered,
-      daily_bookings: dailyFiltered,
-      weekly_bookings: weeklyFiltered,
-      privateTrips,
-    };
-  } catch {
-    return { daily: [], weekly: [], daily_bookings: [], weekly_bookings: [], privateTrips: [] };
-  }
+  const res = await laravelRequest("GET", `/bookings/tourist/${encodeURIComponent(touristId)}`);
+  const daily = res.ok && Array.isArray(res.body?.daily) ? res.body.daily : [];
+  const weekly = res.ok && Array.isArray(res.body?.weekly) ? res.body.weekly : [];
+  return { daily, weekly, daily_bookings: daily, weekly_bookings: weekly, privateTrips: [] };
 }
 
 export async function apiGetAdminDashboard(): Promise<any> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/dashboard_admin`, { signal: AbortSignal.timeout(12000) });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.success) {
-        return json;
-      }
-    }
-  } catch { }
-
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/dashboard/admin`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(1000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data;
-    }
-  } catch { }
-
-  const guides = getAllGuides();
-  const companies = getTransportCompanies();
-  const vehicles = getVehicles();
-  const drivers = getDrivers();
+  // Everything comes from DelniDB through Laravel
+  const [daily_trips, weekly_trips, private_trips, daily_offers, weekly_offers, bookings] = await Promise.all([
+    apiGetDailyTrips(true),
+    apiGetWeeklyTrips(true),
+    apiGetPrivateTrips(),
+    apiGetDailyOffers(true),
+    apiGetWeeklyOffers(true),
+    Promise.all([laravelRequest<any[]>("GET", "/bookings/daily"), laravelRequest<any[]>("GET", "/bookings/weekly")]),
+  ]);
   return {
-    guides,
-    companies,
-    vehicles,
-    drivers,
-    daily_trips: [],
-    weekly_trips: [],
-    private_trips: [],
-    daily_bookings: [],
-    weekly_bookings: [],
-    stats: {
-      total_guides: guides.length,
-      pending_guides: guides.filter((g) => g.verification_status === "قيد المراجعة").length,
-      verified_guides: guides.filter((g) => g.verification_status === "موثق").length,
-      total_companies: companies.length,
-      total_vehicles: vehicles.length,
-      total_drivers: drivers.length,
-    },
+    daily_trips,
+    weekly_trips,
+    private_trips,
+    daily_offers,
+    weekly_offers,
+    daily_bookings: bookings[0].ok && Array.isArray(bookings[0].data) ? bookings[0].data : [],
+    weekly_bookings: bookings[1].ok && Array.isArray(bookings[1].data) ? bookings[1].data : [],
   };
 }
 
-export async function apiVerifyGuide(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة") {
-  const success = updateGuideVerification(licenseNumber, status);
-  return {
-    status: success ? "success" : "error",
-    message: success ? "تم تحديث حالة المرشد بنجاح" : "تعذر العثور على المرشد",
-  };
+export async function apiVerifyGuide(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة", rejectionReason?: string) {
+  const saved = await laravelRequest("POST", `/guides/${encodeURIComponent(licenseNumber)}/verify`, {
+    verification_status: status,
+    rejection_reason: rejectionReason,
+  });
+  if (!saved.ok) return { status: "error", message: saved.error };
+  updateGuideVerification(licenseNumber, status);
+  return { status: "success", message: saved.body?.message || "تم تحديث حالة المرشد بنجاح", guide: saved.data };
 }
 
 /**
- * Delete a Tour Guide from DelniDB
+ * Trips, offers and private trips: read and saved in DelniDB through Laravel only.
+ * Nothing is deleted: trips are cancelled, offers are ended, private trips are rejected or cancelled.
  */
-export async function apiDeleteGuide(licenseNumber: string) {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/guides?license_number=${encodeURIComponent(licenseNumber)}`, {
-      method: "DELETE",
-    });
-    if (res.ok) return await res.json();
-  } catch { }
-  return deleteGuideAccount(licenseNumber);
+type TripResult = { status: "success"; trip: any; message?: string } | { status: "error"; message: string };
+
+async function saveTrip(kind: "daily" | "weekly", data: any, id?: string): Promise<TripResult> {
+  const key = kind === "daily" ? "daily_trip_id" : "weekly_trip_id";
+  const saved = await laravelRequest("POST", `/trips/${kind}`, id ? { ...data, [key]: id, isNew: false } : data);
+  if (!saved.ok) return { status: "error", message: saved.error };
+  return { status: "success", trip: saved.data, message: saved.body?.message };
 }
 
-/**
- * Trip API functions connecting to DelniDB
- */
-export async function apiGetDailyTrips(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, { signal: AbortSignal.timeout(8000) });
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch { }
+async function cancelTrip(kind: "daily" | "weekly", id: string): Promise<{ ok: boolean; message: string }> {
+  const res = await laravelRequest("POST", `/trips/${kind}/${encodeURIComponent(id)}/cancel`);
+  return res.ok ? { ok: true, message: res.body?.message || "تم إلغاء الرحلة" } : { ok: false, message: res.error };
+}
 
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(2000),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      return Array.isArray(json) ? json : (json.data || []);
-    }
-  } catch (err) {
-    console.error("apiGetDailyTrips failed:", err);
-  }
-  return [];
+// Public pages get active trips only; the admin dashboard passes all = true
+export async function apiGetDailyTrips(all = false): Promise<any[]> {
+  const res = await laravelRequest<any[]>("GET", `/trips/daily${all ? "?all=1" : ""}`);
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 
 export async function apiCreateDailyTrip(data: any) {
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (res.ok && (json.status === "success" || json.trip)) {
-      return { status: "success", trip: json.trip || data, ...json };
-    }
-  } catch (err) {
-    console.error("apiCreateDailyTrip error:", err);
-  }
-
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (res.ok && json.success) {
-      return { status: "success", trip: { ...data, daily_trip_id: json.trip_id || data.daily_trip_id || data.id }, ...json };
-    }
-    return { status: "error", message: json?.error || "فشل حفظ الرحلة" };
-  } catch {
-    return null;
-  }
+  return saveTrip("daily", data);
 }
 
 export async function apiUpdateDailyTrip(id: string, data: any) {
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      return { status: "success", ...json };
-    }
-  } catch { }
-
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_trips`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, daily_trip_id: id }),
-    });
-    const json = await res.json();
-    if (res.ok && json.success) {
-      return { status: "success", ...json };
-    }
-  } catch { }
-  return null;
+  return saveTrip("daily", data, id);
 }
 
-export async function apiDeleteDailyTrip(id: string) {
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      headers: { Accept: "application/json" },
-    });
-    if (res.ok) return await res.json();
-  } catch { }
-
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_trips?daily_trip_id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    if (res.ok) return await res.json();
-  } catch { }
-  return null;
+export async function apiCancelDailyTrip(id: string) {
+  return cancelTrip("daily", id);
 }
 
-export async function apiGetWeeklyTrips(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, { signal: AbortSignal.timeout(8000) });
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch { }
-
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/trips/weekly`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(2000),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      return Array.isArray(json) ? json : (json.data || []);
-    }
-  } catch (err) {
-    console.error("apiGetWeeklyTrips failed:", err);
-  }
-  return [];
+export async function apiGetWeeklyTrips(all = false): Promise<any[]> {
+  const res = await laravelRequest<any[]>("GET", `/trips/weekly${all ? "?all=1" : ""}`);
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 
 export async function apiCreateWeeklyTrip(data: any) {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (res.ok && json.success) {
-      return { status: "success", trip: { ...data, weekly_trip_id: json.trip_id || data.weekly_trip_id || data.id }, ...json };
-    }
-    return { status: "error", message: json.error || "فشل حفظ الرحلة الأسبوعية" };
-  } catch {
-    return null;
-  }
+  return saveTrip("weekly", data);
 }
 
 export async function apiUpdateWeeklyTrip(id: string, data: any) {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_trips`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, weekly_trip_id: id }),
-    });
-    const json = await res.json();
-    if (res.ok && json.success) {
-      return { status: "success", ...json };
-    }
-  } catch { }
-  return null;
+  return saveTrip("weekly", data, id);
 }
 
-export async function apiDeleteWeeklyTrip(id: string) {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_trips?weekly_trip_id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    if (res.ok) return await res.json();
-  } catch { }
-  return null;
+export async function apiCancelWeeklyTrip(id: string) {
+  return cancelTrip("weekly", id);
 }
 
 /**
- * Daily & Weekly Trip Offers API functions connecting to DelniDB
+ * Daily & Weekly Trip Offers. Public pages get running offers only; the admin dashboard passes all = true.
  */
-export async function apiGetDailyOffers(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_offers`, { signal: AbortSignal.timeout(8000) });
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch (err) {
-    console.error("apiGetDailyOffers error:", err);
-  }
-  return [];
+type OfferResult = { success: true; offer: any } | { success: false; error: string };
+
+async function saveOffer(kind: "daily" | "weekly", payload: any): Promise<OfferResult> {
+  const saved = await laravelRequest("POST", `/offers/${kind}`, payload);
+  return saved.ok ? { success: true, offer: saved.body?.offer } : { success: false, error: saved.error };
 }
 
-export async function apiCreateDailyOffer(payload: any): Promise<any> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/daily_offers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    return await res.json();
-  } catch (err) {
-    console.error("apiCreateDailyOffer error:", err);
-    return { success: false, error: err };
-  }
+async function endOffer(kind: "daily" | "weekly", id: string): Promise<{ ok: boolean; message: string }> {
+  const res = await laravelRequest("POST", `/offers/${kind}/${encodeURIComponent(id)}/end`);
+  return res.ok ? { ok: true, message: res.body?.message || "تم إنهاء العرض" } : { ok: false, message: res.error };
 }
 
-export async function apiDeleteDailyOffer(id: string): Promise<boolean> {
-  return await deleteFromSecureBackend("daily_offers", "offer_daily_id", id);
+export async function apiGetDailyOffers(all = false): Promise<any[]> {
+  const res = await laravelRequest<any[]>("GET", `/offers/daily${all ? "?all=1" : ""}`);
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 
-export async function apiGetWeeklyOffers(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_offers`, { signal: AbortSignal.timeout(8000) });
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch (err) {
-    console.error("apiGetWeeklyOffers error:", err);
-  }
-  return [];
+export async function apiCreateDailyOffer(payload: any): Promise<OfferResult> {
+  return saveOffer("daily", payload);
 }
 
-export async function apiCreateWeeklyOffer(payload: any): Promise<any> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/weekly_offers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    return await res.json();
-  } catch (err) {
-    console.error("apiCreateWeeklyOffer error:", err);
-    return { success: false, error: err };
-  }
+export async function apiEndDailyOffer(id: string) {
+  return endOffer("daily", id);
 }
 
-export async function apiDeleteWeeklyOffer(id: string): Promise<boolean> {
-  return await deleteFromSecureBackend("weekly_offers", "offer_weekly_id", id);
+export async function apiGetWeeklyOffers(all = false): Promise<any[]> {
+  const res = await laravelRequest<any[]>("GET", `/offers/weekly${all ? "?all=1" : ""}`);
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 
+export async function apiCreateWeeklyOffer(payload: any): Promise<OfferResult> {
+  return saveOffer("weekly", payload);
+}
+
+export async function apiEndWeeklyOffer(id: string) {
+  return endOffer("weekly", id);
+}
+
+/**
+ * Private (VIP) trips: the tourist requests and decides, the admin prices and schedules.
+ */
+export async function apiGetPrivateTrips(touristId?: string): Promise<any[]> {
+  const res = await laravelRequest<any[]>("GET", `/private-trips${touristId ? `?tourist_id=${encodeURIComponent(touristId)}` : ""}`);
+  return res.ok && Array.isArray(res.data) ? res.data : [];
+}
+
+export async function apiRequestPrivateTrip(payload: any): Promise<SaveResult<any> & { tripId?: string }> {
+  const saved = await laravelRequest("POST", "/private-trips", payload);
+  return saved.ok ? { success: true, data: saved.data, tripId: saved.body?.trip_id } : { success: false, error: saved.error };
+}
+
+export async function apiReviewPrivateTrip(id: string, payload: any): Promise<SaveResult<any>> {
+  const saved = await laravelRequest("POST", `/private-trips/${encodeURIComponent(id)}/review`, payload);
+  return saved.ok ? { success: true, data: saved.data } : { success: false, error: saved.error };
+}
+
+export async function apiDecidePrivateTrip(id: string, touristId: string, decision: "مؤكدة" | "ملغاة من السائح"): Promise<SaveResult<any>> {
+  const saved = await laravelRequest("POST", `/private-trips/${encodeURIComponent(id)}/decision`, { tourist_id: touristId, decision });
+  return saved.ok ? { success: true, data: saved.data } : { success: false, error: saved.error };
+}
 
 export async function apiGetHotels(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/hotels`);
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch { }
-  return [];
+  const res = await laravelRequest<any[]>("GET", "/hotels");
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 
 export async function apiGetRestaurants(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/restaurants`);
-    if (res.ok) {
-      const json = await res.json();
-      return json.data || [];
-    }
-  } catch { }
-  return [];
+  const res = await laravelRequest<any[]>("GET", "/restaurants");
+  return res.ok && Array.isArray(res.data) ? res.data : [];
+}
+
+/**
+ * Saves a hotel (new or edited) in DelniDB through Laravel; the caller updates its list only on success.
+ */
+export async function apiSaveHotel(hotel: Record<string, any>, isNew: boolean): Promise<SaveResult<any>> {
+  const saved = await laravelRequest("POST", "/hotels", { ...hotel, isNew });
+  return saved.ok ? { success: true, data: saved.data } : { success: false, error: saved.error };
+}
+
+/**
+ * Saves a restaurant/cafe (new or edited) in DelniDB through Laravel; the caller updates its list only on success.
+ */
+export async function apiSaveRestaurant(restaurant: Record<string, any>, isNew: boolean): Promise<SaveResult<any>> {
+  const saved = await laravelRequest("POST", "/restaurants", { ...restaurant, isNew });
+  return saved.ok ? { success: true, data: saved.data } : { success: false, error: saved.error };
 }
 
 /**
@@ -1516,7 +1071,7 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/dashboard/guide/${encodeURIComponent(licenseNumber)}`, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(1000),
+      signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
       const liveData = await res.json();
@@ -1540,6 +1095,7 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
         }
 
         return {
+          live: true, // read from DelniDB now (the fallback below is the browser's cached copy)
           guide: liveData.guide,
           assigned_trips: liveData.guide.assigned_trips || [],
           tourists: [],
@@ -1563,6 +1119,7 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
     assigned_trips: [],
   };
   return {
+    live: false,
     guide: targetGuide,
     assigned_trips: targetGuide.assigned_trips || [],
     tourists: [],
@@ -1573,58 +1130,23 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
 }
 
 export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
-  // Sync directly to backend SQL Server DelniDB
-  try {
-    await postToSecureBackend("guides", {
-      ...data,
-      license_number: licenseNumber,
-    });
-  } catch (err) {
-    console.warn("[apiUpdateGuideProfile] failed to sync to backend:", err);
-  }
+  const saved = await laravelRequest("PUT", `/dashboard/guide/${encodeURIComponent(licenseNumber)}`, data);
+  if (!saved.ok) return { status: "error", message: saved.error };
 
+  const guide = { ...(getStoredSession().user || {}), ...data, ...(saved.body?.guide || {}), password: undefined };
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(guide));
   const guides = getAllGuides();
   const idx = guides.findIndex((g) => g.license_number === licenseNumber);
   if (idx !== -1) {
-    guides[idx] = { ...guides[idx], ...data };
+    guides[idx] = { ...guides[idx], ...guide };
     saveAllGuides(guides);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(guides[idx]));
-    return { status: "success", message: "تم حفظ التعديلات وتحديث ملفك بنجاح ✓", guide: guides[idx] };
   }
-  const current = getStoredSession().user || {};
-  const merged = { ...current, ...data };
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(merged));
-  return { status: "success", message: "تم حفظ التعديلات وتحديث ملفك بنجاح ✓", guide: merged };
+  return { status: "success", message: saved.body?.message || "تم حفظ التعديلات وتحديث ملفك بنجاح ✓", guide };
 }
 
 export async function apiGetGuidesCatalog(): Promise<GuideRecord[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/guides`, { signal: AbortSignal.timeout(2000) });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
-        // Return only approved and verified guides for tourists and the public catalog
-        return json.data.filter((g: any) => g.verification_status === "موثق");
-      }
-    }
-  } catch { }
-
-  try {
-    const res = await fetch(`${LARAVEL_API_URL}/guides`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(1000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : (data.guides || data.data || []);
-      if (list.length > 0) {
-        return list.filter((g: any) => g.verification_status === "موثق");
-      }
-    }
-  } catch { }
-
-  const guides = getAllGuides();
-  return guides.filter((g) => g.verification_status === "موثق");
+  const res = await laravelRequest<GuideRecord[]>("GET", `/guides?status=${encodeURIComponent("موثق")}`);
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 
 export async function apiToggleAttendance(_params: {
@@ -1635,12 +1157,24 @@ export async function apiToggleAttendance(_params: {
   return { status: "success", message: "تم تسجيل الحضور بنجاح" };
 }
 
-export async function apiGuideRespondTrip(_licenseNumber: string, _params: {
-  trip_id: string;
-  status: "مقبولة" | "مرفوضة";
-  rejection_reason?: string;
-}): Promise<ApiResponse> {
-  return { status: "success", message: "تم تسجيل الرد على الرحلة بنجاح" };
+// The weekly trip's guide accepts it (it is then published) or declines it (the admin chooses another guide)
+export async function apiGuideRespondWeeklyTrip(licenseNumber: string, tripId: string, decision: "accept" | "decline", reason?: string): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/trips/weekly/${encodeURIComponent(tripId)}/guide-response`, {
+    license_number: licenseNumber,
+    decision,
+    reason: reason || undefined,
+  });
+  return res.ok ? { success: true, data: res.body?.message } : { success: false, error: res.error };
+}
+
+// The assigned guide accepts a private trip (the offer then goes to the tourist) or declines it (the admin assigns another guide)
+export async function apiGuideRespondPrivateTrip(licenseNumber: string, tripId: string, decision: "accept" | "decline", reason?: string): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/private-trips/${encodeURIComponent(tripId)}/guide-response`, {
+    license_number: licenseNumber,
+    decision,
+    reason: reason || undefined,
+  });
+  return res.ok ? { success: true, data: res.body?.message } : { success: false, error: res.error };
 }
 
 export async function sendAIChatMessage(message: string): Promise<{
@@ -1678,15 +1212,7 @@ export async function sendAIChatMessage(message: string): Promise<{
 }
 
 export async function apiGetPlaces(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/places`);
-    if (res.ok) {
-      const json = await res.json();
-      return Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-    }
-  } catch (err) {
-    console.error("apiGetPlaces fetch error:", err);
-  }
-  return [];
+  const res = await laravelRequest<any[]>("GET", "/places");
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }
 

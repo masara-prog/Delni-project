@@ -105,6 +105,7 @@ export interface Driver {
   account_status: "نشط" | "معلق" | "موقوف"; // VARCHAR(20)
   password?: string; // VARCHAR(255)
   operational_status?: "متاح" | "في رحلة" | "إجازة" | null; // VARCHAR(20)
+  current_trip_stage?: string | null; // NVARCHAR(50), the stage the driver reports during a trip
   driver_photo?: string | null; // VARCHAR(255)
   company_name?: string; // Virtual join field
 }
@@ -121,7 +122,7 @@ export interface PlaceTourist {
   longitude: number; // DECIMAL(10,6)
   latitude: number; // DECIMAL(10,6)
   category: string; // VARCHAR(100)
-  highlights?: string | null; // NVARCHAR(MAX)
+  highlights?: string[]; // rows of places_tourist_highlights, in display order
   place_image?: string | null; // NVARCHAR(MAX)
   google_maps_url?: string | null; // VARCHAR(500)
   visitors_count?: number; // Virtual tracking counter

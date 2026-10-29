@@ -44,7 +44,6 @@ class TourGuide extends Model
         'speaks_italian' => 'boolean',
         'years_of_experience' => 'integer',
         'price_per_day' => 'decimal:2',
-        'total_tours_completed' => 'integer',
     ];
 
     public function dailyTrips()
@@ -84,6 +83,14 @@ class TourGuide extends Model
         foreach (ListInput::dayNames($value) as $day) {
             $this->workingDays()->create(['day_of_week' => $day]);
         }
+    }
+
+    // Replaces the guide's landmarks of expertise in guide_places (unknown place ids are ignored, as the bridge did)
+    public function replacePlaces($value): void
+    {
+        $ids = array_map(fn ($p) => is_array($p) ? ($p['place_id'] ?? $p['id'] ?? '') : $p, (array) $value);
+        $valid = PlaceTourist::whereIn('place_id', ListInput::parse($ids))->pluck('place_id')->all();
+        $this->places()->sync($valid);
     }
 
     public function replaceOperatingRegions($value): void

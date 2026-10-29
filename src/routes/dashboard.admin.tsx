@@ -6,33 +6,41 @@ import {
   getStoredSession, 
   apiGetAdminDashboard, 
   apiVerifyGuide, 
-  apiDeleteGuide,
   apiCreateDailyTrip,
   apiUpdateDailyTrip,
-  apiDeleteDailyTrip,
+  apiCancelDailyTrip,
+  apiGetDailyTrips,
   apiCreateWeeklyTrip,
   apiUpdateWeeklyTrip,
-  apiDeleteWeeklyTrip,
+  apiCancelWeeklyTrip,
+  apiGetWeeklyTrips,
   apiCreateDailyOffer,
-  apiDeleteDailyOffer,
+  apiEndDailyOffer,
   apiCreateWeeklyOffer,
-  apiDeleteWeeklyOffer,
+  apiEndWeeklyOffer,
+  apiGetDailyOffers,
+  apiGetWeeklyOffers,
+  apiReviewPrivateTrip,
   getAllGuides, 
-  updateGuideVerification, 
-  deleteGuideAccount,
   getTransportCompanies,
   saveTransportCompanies,
   addTransportCompany,
   updateTransportCompany,
-  deleteTransportCompany,
   getDrivers,
   getVehicles,
-  sendToSecureBackend,
-  deleteFromSecureBackend
+  apiSetBookingPayment,
+  apiSetBookingAttendance,
+  apiCheckInBooking,
+  apiFindTicket,
+  laravelRequest,
+  apiGetHotels,
+  apiGetPlaces,
+  apiGetRestaurants,
+  apiSaveHotel,
+  apiSaveRestaurant
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
 import { getChatSessions, saveChatSessions, sendAdminReply } from "@/lib/supportChat";
-import { notifyTicketVerified } from "@/lib/notifications";
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -107,6 +115,7 @@ contract_start_date?: string | null;
 };
 
 type Driver = { 
+  current_trip_stage?: string | null; // drivers.current_trip_stage, reported by the driver
   driver_license_number: string; 
   full_name: string; 
   phone_number: string; 
@@ -194,6 +203,7 @@ type DailyTrip = {
 };
 
 type WeeklyTrip = { 
+  guide_approval_status?: string | null; // weekly_trips.guide_approval_status
   id: string; 
   weekly_trip_id?: string;
   title: string; 
@@ -257,7 +267,7 @@ type PrivateTripRequest = {
   transport_company_name?: string;
   transport_company_phone?: string;
   customer_requirements?: string;
-  status_order: "قيد الدراسة" | "بانتظار تأكيد السائح" | "مؤكدة" | "مرفوضة من الأدمن" | "مرفوضة من السائح" | "ملغية" | "ملغاة من السائح" | string; 
+  status_order: "قيد الدراسة" | "بانتظار رد المرشد" | "اعتذر المرشد" | "بانتظار تأكيد السائح" | "مؤكدة" | "مرفوضة من الأدمن" | "مرفوضة من السائح" | "ملغية" | "ملغاة من السائح" | string; 
   tourist_id?: string;
   places?: any[];
   place_ids?: string[];
@@ -266,8 +276,346 @@ type PrivateTripRequest = {
   stations?: any[];
 };
 
+// DelniDB rows (from Laravel) -> the admin view models; every stored field is kept so edit forms see real values
+function mapCompanyRow(c: any) {
+  return {
+    ...c,
+    id: c.contract_number,
+    name: c.company_name,
+    phone: c.phone_number,
+    // The company location is stored in google_maps_url
+    address: c.google_maps_url || "",
+    city: c.city || "طرابلس",
+    email: c.email || "",
+    status: c.verification_status || "موثق",
+    verification_status: c.verification_status || "موثق",
+  };
+}
+
+function mapDriverRow(d: any) {
+  return {
+    ...d,
+    assigned_vehicle_plate: d.assigned_vehicle_plate || "",
+    email: d.email || "",
+    account_status: d.account_status || "نشط",
+    operational_status: d.operational_status || "متاح",
+    company_name: d.company_name || "",
+  };
+}
+
+function mapVehicleRow(v: any) {
+  return {
+    ...v,
+    company_id: v.contract_number,
+    company_name: v.company_name || "",
+    vehicle_type: v.vehicle_type || "حافلة سياحية",
+    capacity: v.seating_capacity,
+    daily_rate: Number(v.daily_rate) || 0,
+    vehicle_status: v.vehicle_status || "جاهزة",
+    status: v.vehicle_status || "جاهزة",
+  };
+}
+
+function mapHotelRow(h: any): Hotel {
+  return {
+    id: h.hotel_id,
+    hotel_id: h.hotel_id,
+    name: h.hotel_name,
+    city: h.city,
+    address: h.address_details || "",
+    phone: h.phone_number || "",
+    whatsapp: h.phone_number || "",
+    stars: Number(h.star_rating) || 4,
+    bookings_count: 0,
+    rating_avg: Number(h.rating_avg) || 0,
+    partnership_status: h.partnership_status || "نشط",
+    property_type: h.property_type || "hotel",
+    discount_percentage: Number(h.discount_percentage) || 0,
+    description: h.description || "",
+    working_hours: h.working_hours || "",
+    google_maps_url: h.google_maps_url || "",
+    amenities: Array.isArray(h.amenities) ? h.amenities : [],
+    contract_start_date: h.contract_start_date || "",
+    contract_end_date: h.contract_end_date || "",
+    hotel_photo_1: h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+    hotel_photo_2: h.hotel_photo_2 || "",
+    hotel_photo_3: h.hotel_photo_3 || "",
+    hotel_photo_4: h.hotel_photo_4 || "",
+    hotel_photo_5: h.hotel_photo_5 || "",
+  };
+}
+
+function mapRestaurantRow(r: any): Restaurant {
+  return {
+    id: r.facility_id,
+    facility_id: r.facility_id,
+    name: r.facility_name,
+    type: r.facility_type || "مطعم",
+    city: r.city,
+    address: r.address_details || "",
+    phone: r.phone_number || "",
+    whatsapp: r.phone_number || "",
+    rating_avg: Number(r.rating_avg) || 0,
+    partnership_status: r.partnership_status || "نشط",
+    discount_percentage: Number(r.discount_percentage) || 0,
+    description: r.description || "",
+    working_hours: r.working_hours || "",
+    google_maps_url: r.google_maps_url || "",
+    features: Array.isArray(r.features) ? r.features : [],
+    contract_start_date: r.contract_start_date || "",
+    contract_end_date: r.contract_end_date || "",
+    facility_image_1: r.facility_image_1 || "/assets/restaurant-libya.jpg",
+    facility_image_2: r.facility_image_2 || "",
+    facility_image_3: r.facility_image_3 || "",
+    facility_image_4: r.facility_image_4 || "",
+    facility_image_5: r.facility_image_5 || "",
+  };
+}
+
+function mapGuideRow(g: any): Guide {
+  return {
+    license_number: g.license_number,
+    full_name: g.full_name,
+    title: g.title || "",
+    avatar: g.avatar || "",
+    phone_number: g.phone_number,
+    years_of_experience: Number(g.years_of_experience) || 2,
+    certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
+    certificate_name: g.certificate_name,
+    digital_certificate_file: g.digital_certificate_file,
+    bio: g.bio || "",
+    speaks_english: Boolean(g.speaks_english),
+    speaks_french: Boolean(g.speaks_french),
+    speaks_italian: Boolean(g.speaks_italian),
+    verification_status: g.verification_status || "قيد المراجعة",
+    email: g.email,
+    daily_rate: Number(g.price_per_day) || 0,
+    price_per_day: Number(g.price_per_day) || 0,
+    primaryRegion: Array.isArray(g.operating_regions) ? (g.operating_regions[0] || "") : (g.operating_regions || ""),
+    operating_regions: g.operating_regions || [],
+    working_days: g.working_days || [],
+    places: g.places || [],
+    place_ids: g.place_ids || [],
+    total_tours_completed: Number(g.total_tours_completed) || 0,
+  } as Guide;
+}
+
+function mapPlaceRow(p: any): Attraction {
+  return {
+    id: p.place_id,
+    place_id: p.place_id,
+    municipality_code: p.place_id,
+    name: p.place_name,
+    place_name: p.place_name,
+    city: p.city,
+    region: p.region || "المنطقة الغربية",
+    category: p.category || "آثار تاريخية",
+    description: p.description || "",
+    place_image: p.place_image || "",
+    visitors_count: 0,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    google_maps_url: p.google_maps_url || "",
+    highlights: Array.isArray(p.highlights) ? p.highlights : [],
+  } as Attraction;
+}
+
+function toPlacePayload(a: any) {
+  return {
+    place_id: String(a.place_id || a.municipality_code || a.id || "").trim(),
+    place_name: a.place_name || a.name,
+    description: a.description,
+    city: a.city,
+    region: a.region,
+    category: a.category,
+    latitude: a.latitude,
+    longitude: a.longitude,
+    place_image: a.place_image,
+    google_maps_url: a.google_maps_url,
+    highlights: a.highlights,
+  };
+}
+
+// DelniDB trip/offer rows (from Laravel) -> admin view models; photos and days are kept so editing never resets them
+function mapDailyTripRow(d: any): any {
+  return {
+    id: d.daily_trip_id,
+    daily_trip_id: d.daily_trip_id,
+    title: d.trip_title,
+    trip_title: d.trip_title,
+    description: d.description || "",
+    price_per_seat: Number(d.price_per_seat) || 0,
+    departure_city: d.departure_city || "طرابلس",
+    destination: d.destination || d.destination_city || "",
+    destination_city: d.destination_city || d.destination || "",
+    destinations: d.destinations || (d.destination ? d.destination.split(' + ') : []),
+    place_ids: d.place_ids || [],
+    places: d.places || [],
+    max_capacity: d.max_capacity || 25,
+    available_seats: d.available_seats || d.max_capacity || 25,
+    bus_capacity: d.max_capacity || 25,
+    bookings_count: Number(d.bookings_count) || 0,
+    rating_avg: Number(d.rating_avg) || 0,
+    recurring_days: d.recurring_days || "السبت,الثلاثاء",
+    guide_license: d.guide_license_number || "",
+    guide_license_number: d.guide_license_number || "",
+    photo: d.photo || "/assets/ai_ruins.jpg",
+    activities: d.activities || "",
+    is_active: d.is_active !== false,
+    vehicle_plate: d.vehicle_plate || "",
+    vehicle_model: d.vehicle_model || "",
+    vehicle_capacity: d.vehicle_capacity || d.max_capacity || 25,
+    transport_company_name: d.transport_company_name || "",
+    driver_name: d.driver_name || "",
+    driver_phone: d.driver_phone || "",
+    driver_license_number: d.driver_license_number || "",
+    restaurant_id: d.restaurant_id || "",
+    restaurant_name: d.restaurant_name || "",
+    restaurant_type: d.restaurant_type || "",
+    restaurant_city: d.restaurant_city || "",
+    restaurant_address: d.restaurant_address || "",
+    restaurant_phone: d.restaurant_phone || "",
+    itinerary_steps: d.itinerary_steps || null,
+    images: Array.isArray(d.images) ? d.images : [],
+  gallery: d.gallery || "",
+  photo_1: d.photo_1, photo_2: d.photo_2, photo_3: d.photo_3, photo_4: d.photo_4, photo_5: d.photo_5,
+  days: Array.isArray(d.days) ? d.days : [],
+  hotel_ids: d.hotel_ids || [],
+  restaurant_ids: d.restaurant_ids || [],
+};
+}
+
+function mapWeeklyTripRow(w: any): any {
+  return {
+    id: w.weekly_trip_id,
+    weekly_trip_id: w.weekly_trip_id,
+    title: w.trip_title,
+    trip_title: w.trip_title,
+    description: w.trip_description || "",
+    trip_description: w.trip_description || "",
+    seat_per_price: Number(w.seat_per_price) || 0,
+    departure_city: w.departure_city || "طرابلس",
+    destination: w.destination || w.destination_region || "",
+    destination_region: w.destination_region || w.destination || "",
+    destinations: w.destinations || (w.destination ? w.destination.split(' + ') : []),
+    place_ids: w.place_ids || [],
+    places: w.places || [],
+    max_capacity: w.max_capacity || 25,
+    available_seats: w.available_seats || w.max_capacity || 25,
+    bus_capacity: w.max_capacity || 25,
+    bookings_count: Number(w.bookings_count) || 0,
+    rating_avg: Number(w.rating_avg) || 0,
+    start_date: w.start_date || "",
+    end_date: w.end_date || "",
+    weekly_day: "الجمعة",
+    guide_license: w.guide_license_number || "",
+    guide_license_number: w.guide_license_number || "",
+    guide_approval_status: w.guide_approval_status || "",
+    photo: w.photo || "/assets/ai_ghadames.jpg",
+    is_active: w.is_active !== false,
+    vehicle_plate: w.vehicle_plate || "",
+    vehicle_model: w.vehicle_model || "",
+    vehicle_capacity: w.vehicle_capacity || w.max_capacity || 25,
+    transport_company_name: w.transport_company_name || "",
+    driver_name: w.driver_name || "",
+    driver_phone: w.driver_phone || "",
+    driver_license_number: w.driver_license_number || "",
+    restaurant_id: w.restaurant_id || "",
+    restaurant_name: w.restaurant_name || "",
+    restaurant_type: w.restaurant_type || "",
+    restaurant_city: w.restaurant_city || "",
+    restaurant_address: w.restaurant_address || "",
+    restaurant_phone: w.restaurant_phone || "",
+    itinerary_steps: w.itinerary_steps || null,
+    images: Array.isArray(w.images) ? w.images : [],
+  gallery: w.gallery || "",
+  photo_1: w.photo_1, photo_2: w.photo_2, photo_3: w.photo_3, photo_4: w.photo_4, photo_5: w.photo_5,
+  days: Array.isArray(w.days) ? w.days : [],
+  hotel_ids: w.hotel_ids || [],
+  restaurant_ids: w.restaurant_ids || [],
+};
+}
+
+function mapDailyOfferRow(o: any): any {
+  return {
+  ...o,
+  id: o.offer_daily_id,
+  date_start: o.start_date,
+  date_end: o.end_date,
+  title_offer: o.offer_title,
+  url_image_offer: o.offer_image_url,
+  percent_discount: Number(o.percent_discount) || 0,
+};
+}
+
+function mapWeeklyOfferRow(o: any): any {
+  return {
+  ...o,
+  id: o.offer_weekly_id,
+  date_start: o.start_date,
+  date_end: o.end_date,
+  title_offer: o.offer_title,
+  offer_title: o.offer_title,
+  percent_discount: Number(o.discount_percentage) || 0,
+  discount_percentage: Number(o.discount_percentage) || 0,
+};
+}
+
+// Admin view models -> the DelniDB column names Laravel validates
+function toHotelPayload(h: any) {
+  return {
+    hotel_id: String(h.hotel_id || h.id || "").trim(),
+    hotel_name: h.name,
+    city: h.city,
+    address_details: h.address,
+    phone_number: h.phone,
+    star_rating: Number(h.stars),
+    partnership_status: h.partnership_status || "نشط",
+    property_type: h.property_type || "hotel",
+    amenities: Array.isArray(h.amenities) ? h.amenities : [],
+    discount_percentage: Number(h.discount_percentage) || 0,
+    working_hours: h.working_hours,
+    description: h.description,
+    google_maps_url: h.google_maps_url,
+    contract_start_date: h.contract_start_date,
+    contract_end_date: h.contract_end_date,
+    hotel_photo_1: h.hotel_photo_1,
+    hotel_photo_2: h.hotel_photo_2,
+    hotel_photo_3: h.hotel_photo_3,
+    hotel_photo_4: h.hotel_photo_4,
+    hotel_photo_5: h.hotel_photo_5,
+  };
+}
+
+function toRestaurantPayload(r: any) {
+  return {
+    facility_id: String(r.facility_id || r.id || "").trim(),
+    facility_name: r.name,
+    facility_type: r.type,
+    city: r.city,
+    address_details: r.address,
+    phone_number: r.phone,
+    description: r.description,
+    working_hours: r.working_hours,
+    features: Array.isArray(r.features) ? r.features : [],
+    google_maps_url: r.google_maps_url,
+    discount_percentage: Number(r.discount_percentage) || 0,
+    partnership_status: r.partnership_status || "نشط",
+    contract_start_date: r.contract_start_date,
+    contract_end_date: r.contract_end_date,
+    facility_image_1: r.facility_image_1,
+    facility_image_2: r.facility_image_2,
+    facility_image_3: r.facility_image_3,
+    facility_image_4: r.facility_image_4,
+    facility_image_5: r.facility_image_5,
+  };
+}
+
 type Hotel = { id: string; hotel_id?: string; name: string; city: string; address: string; phone: string; stars: number; bookings_count: number; rating_avg: number; partnership_status: "نشط" | "معلق" | "موقوف" | string; hotel_photo_1: string; hotel_photo_2: string; hotel_photo_3: string; hotel_photo_4: string; hotel_photo_5: string; description?: string; google_maps_url?: string; working_hours?: string; property_type?: "hotel" | "resort" | "apartment" | "heritage" | string; discount_percentage?: number; whatsapp?: string; amenities?: string[]; contract_start_date?: string; contract_end_date?: string };
 type Restaurant = { id: string; facility_id?: string; name: string; type: string; category?: "seafood" | "traditional" | "fastfood" | "cafe" | string; city: string; address: string; phone: string; rating_avg: number; facility_image_1: string; facility_image_2: string; facility_image_3: string; facility_image_4: string; facility_image_5: string; description?: string; google_maps_url?: string; working_hours?: string; discount_percentage?: number; whatsapp?: string; partnership_status?: "نشط" | "معلق" | "موقوف" | string; contract_start_date?: string; contract_end_date?: string; features?: string | string[] };
+// Names joined by the Laravel bookings list (tourist and trip)
+type BookingNames = { tourist_name?: string; tourist_phone?: string; trip_title?: string };
+
 type Attraction = { 
   id: string; 
   place_id?: string; // رقم البلدية / المفتاح الرئيسي Primary Key
@@ -360,9 +708,9 @@ function AdminDashboard() {
   const [loadingTouristDetail, setLoadingTouristDetail] = useState(false);
 
   /* DelniDB bookings_daily & bookings_weekly */
-  const [dailyBookings, setDailyBookings] = useState<BookingDaily[]>([]);
+  const [dailyBookings, setDailyBookings] = useState<(BookingDaily & BookingNames)[]>([]);
 
-  const [weeklyBookings, setWeeklyBookings] = useState<BookingWeekly[]>([]);
+  const [weeklyBookings, setWeeklyBookings] = useState<(BookingWeekly & BookingNames)[]>([]);
 
   /* DelniDB hotels */
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -428,314 +776,58 @@ function AdminDashboard() {
     setEditingCompany(null);
     return null;
   };
-  const handleDeleteCompany = async (contractNumber: string) => {
-    if (confirm("هل تريد حذف شركة النقل؟")) {
-      if (await deleteTransportCompany(contractNumber)) {
-        setCompanies((prev) => prev.filter(c => c.contract_number !== contractNumber));
-      }
-    }
-  };
   const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
+    const targetGuide = guides.find(g => g.license_number === lic);
+    const res = await apiVerifyGuide(lic, status);
+    if (res.status !== "success") {
+      alert("❌ لم يتم تحديث حالة المرشد في قاعدة البيانات.\n" + res.message);
+      return;
+    }
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
-    updateGuideVerification(lic, status);
-    const targetGuide = guides.find(g => g.license_number === lic);
-    
-    // Live update to DelniDB backend database via dedicated verification endpoint (preserves email, phone, and password)
-    try {
-      const resp = await fetch("http://127.0.0.1:5001/api/db/guides/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          license_number: lic,
-          verification_status: status,
-        }),
-      });
-      const data = await resp.json().catch(() => null);
-      if (resp.ok && data?.success) {
-        if (status === "موثق") {
-          alert(`✅ تم اعتماد وتفعيل حساب المرشد (${targetGuide?.full_name || lic}) بنجاح!\n\nأصبح حسابه مفعلاً الآن، ويمكنه تسجيل الدخول فوراً عبر حسابه ورقم هاتفه/بريده، ودخول لوحة تحكم المرشد السياحي (/dashboard/guide).`);
-        } else {
-          alert(`❌ تم رفض طلب المرشد (${targetGuide?.full_name || lic}) وتحديث حالته بنجاح.`);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to verify guide in SQL bridge:", err);
-    }
-
-    // Live update to Laravel backend database if running
-    try {
-      await fetch(`http://127.0.0.1:8000/api/dashboard/admin/guides/${encodeURIComponent(lic)}/verify`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          verification_status: status,
-          full_name: targetGuide?.full_name,
-          phone_number: targetGuide?.phone_number,
-          email: targetGuide?.email,
-          years_of_experience: targetGuide?.years_of_experience,
-          price_per_day: targetGuide?.price_per_day,
-          bio: targetGuide?.bio,
-          title: targetGuide?.title,
-          certificate: targetGuide?.certificate,
-          certificate_name: targetGuide?.certificate_name,
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to verify guide in Laravel API:", err);
-    }
+    alert(status === "موثق"
+      ? `✅ تم اعتماد وتفعيل حساب المرشد (${targetGuide?.full_name || lic}) بنجاح، ويمكنه الآن تسجيل الدخول ببريده الإلكتروني.`
+      : `❌ تم رفض طلب المرشد (${targetGuide?.full_name || lic}) وتحديث حالته بنجاح.`);
   };
 
-  const handleDeleteGuide = async (lic: string) => {
-    if (!confirm(`هل أنت متأكد من حذف المرشد السياحي (رخصة: ${lic}) نهائياً من قاعدة البيانات؟`)) return;
-    try {
-      setGuides(prev => prev.filter(g => g.license_number !== lic));
-      deleteGuideAccount(lic);
-      deleteFromSecureBackend("guides", "license_number", lic);
-      await apiDeleteGuide(lic);
-      alert("تم حذف المرشد السياحي بنجاح من قاعدة البيانات");
-    } catch (err: any) {
-      alert("حدث خطأ أثناء حذف المرشد: " + (err.message || "فشلت العملية"));
-    }
+  // Transport directory, hotels and restaurants are read from DelniDB through Laravel only
+  const reloadDirectory = async () => {
+    const [comp, veh, drv, hotelRows, restaurantRows, guideRows, touristRows, placeRows] = await Promise.all([
+      laravelRequest<any[]>("GET", "/transport/companies"),
+      laravelRequest<any[]>("GET", "/transport/vehicles"),
+      laravelRequest<any[]>("GET", "/transport/drivers"),
+      apiGetHotels(),
+      apiGetRestaurants(),
+      laravelRequest<any[]>("GET", "/guides"),
+      laravelRequest<any[]>("GET", "/tourists"),
+      apiGetPlaces(),
+    ]);
+    if (comp.ok && Array.isArray(comp.data)) setCompanies(comp.data.map(mapCompanyRow));
+    if (veh.ok && Array.isArray(veh.data)) setVehicles(veh.data.map(mapVehicleRow));
+    if (drv.ok && Array.isArray(drv.data)) setDrivers(drv.data.map(mapDriverRow));
+    setHotels(hotelRows.map(mapHotelRow));
+    setRestaurants(restaurantRows.map(mapRestaurantRow));
+    if (guideRows.ok && Array.isArray(guideRows.data)) setGuides(guideRows.data.map(mapGuideRow));
+    if (touristRows.ok && Array.isArray(touristRows.data)) setTourists(touristRows.data);
+    setAttractions(placeRows.map(mapPlaceRow));
+  };
+
+  // Re-reads all trips (active and cancelled) from DelniDB after a confirmed change
+  const reloadTrips = async () => {
+    const [daily, weekly] = await Promise.all([apiGetDailyTrips(true), apiGetWeeklyTrips(true)]);
+    setDailyTrips(daily.map(mapDailyTripRow));
+    setWeeklyTrips(weekly.map(mapWeeklyTripRow));
   };
 
   // Fetch live guides and admin data from DelniDB
   useEffect(() => {
     async function fetchAdminData() {
+      reloadDirectory();
       const res = await apiGetAdminDashboard();
-      if (!res) {
-        const loadedGuides = getAllGuides();
-        if (loadedGuides.length > 0) {
-          const customLicenses = new Set(loadedGuides.map(g => g.license_number));
-          const mapped: Guide[] = loadedGuides.map((g: any) => ({
-            license_number: g.license_number,
-            full_name: g.full_name,
-            title: g.title || "",
-            avatar: g.avatar || "",
-            phone_number: g.phone_number,
-            years_of_experience: Number(g.years_of_experience) || 2,
-            certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-            certificate_name: g.certificate_name,
-            digital_certificate_file: g.digital_certificate_file,
-            bio: g.bio || "",
-            speaks_english: Boolean(g.speaks_english),
-            speaks_french: Boolean(g.speaks_french),
-            speaks_italian: Boolean(g.speaks_italian),
-            verification_status: g.verification_status || "قيد المراجعة",
-            email: g.email,
-            daily_rate: Number(g.price_per_day) || 150,
-            price_per_day: Number(g.price_per_day) || 150,
-            primaryRegion: g.operating_regions?.includes("tripoli") ? "tripoli" : (g.primaryRegion || "tripoli"),
-            operating_regions: g.operating_regions || "tripoli",
-            working_days: g.working_days || "طوال أيام الأسبوع",
-            places: g.places || [],
-            place_ids: g.place_ids || [],
-            total_tours_completed: Number(g.total_tours_completed) || 0,
-          }));
-          setGuides(prev => [...mapped, ...prev.filter(x => !customLicenses.has(x.license_number))]);
-        }
-        return;
-      }
+      if (!res) return;
 
-      if (res.guides) {
-        const dbGuides: Guide[] = res.guides.map((g: any) => ({
-          license_number: g.license_number,
-          full_name: g.full_name,
-          title: g.title || "",
-          avatar: g.avatar || "",
-          phone_number: g.phone_number,
-          years_of_experience: Number(g.years_of_experience) || 2,
-          certificate: g.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-          certificate_name: g.certificate_name,
-          digital_certificate_file: g.digital_certificate_file,
-          bio: g.bio || "",
-          speaks_english: Boolean(g.speaks_english),
-          speaks_french: Boolean(g.speaks_french),
-          speaks_italian: Boolean(g.speaks_italian),
-          verification_status: g.verification_status || "بانتظار التوثيق",
-          email: g.email,
-          daily_rate: Number(g.price_per_day) || 150,
-          price_per_day: Number(g.price_per_day) || 150,
-          primaryRegion: g.primaryRegion || (typeof g.operating_regions === 'string' ? g.operating_regions : (g.operating_regions?.[0] || "tripoli")),
-          operating_regions: g.operating_regions || "",
-          working_days: g.working_days || "طوال أيام الأسبوع",
-          places: g.places || [],
-          place_ids: g.place_ids || [],
-          total_tours_completed: Number(g.total_tours_completed) || 0,
-        }));
-
-        // Merge SQL Server DelniDB guides with any locally saved guides (fallback resilience)
-        const localGuides = getAllGuides();
-        const dbLicenses = new Set(dbGuides.map(g => g.license_number));
-        const mergedGuides: Guide[] = [...dbGuides];
-        for (const lg of localGuides) {
-          if (!dbLicenses.has(lg.license_number)) {
-            mergedGuides.push({
-              license_number: lg.license_number,
-              full_name: lg.full_name,
-              title: lg.title || "",
-              avatar: lg.avatar || "",
-              phone_number: lg.phone_number,
-              years_of_experience: Number(lg.years_of_experience) || 2,
-              certificate: lg.certificate || "ترخيص رسمي صادر من وزارة السياحة والآثار",
-              certificate_name: lg.certificate_name,
-              digital_certificate_file: lg.digital_certificate_file,
-              bio: lg.bio || "",
-              speaks_english: Boolean(lg.speaks_english),
-              speaks_french: Boolean(lg.speaks_french),
-              speaks_italian: Boolean(lg.speaks_italian),
-              verification_status: lg.verification_status || "بانتظار التوثيق",
-              email: lg.email,
-              daily_rate: Number(lg.price_per_day) || 150,
-              price_per_day: Number(lg.price_per_day) || 150,
-              primaryRegion: lg.operating_regions?.includes("tripoli") ? "tripoli" : (lg.primaryRegion || "tripoli"),
-              operating_regions: lg.operating_regions || "",
-              working_days: lg.working_days || "الأحد,الأربعاء",
-              total_tours_completed: Number(lg.total_tours_completed) || 0,
-            });
-          }
-        }
-        setGuides(mergedGuides);
-      }
-
-      if (res.daily_trips) {
-        const mappedDaily = res.daily_trips.map((d: any) => ({
-          id: d.daily_trip_id,
-          daily_trip_id: d.daily_trip_id,
-          title: d.trip_title,
-          trip_title: d.trip_title,
-          description: d.description || "",
-          price_per_seat: Number(d.price_per_seat) || 0,
-          departure_city: d.departure_city || "طرابلس",
-          destination: d.destination || d.destination_city || "",
-          destination_city: d.destination_city || d.destination || "",
-          destinations: d.destinations || (d.destination ? d.destination.split(' + ') : []),
-          place_ids: d.place_ids || [],
-          places: d.places || [],
-          max_capacity: d.max_capacity || 25,
-          available_seats: d.available_seats || d.max_capacity || 25,
-          bus_capacity: d.max_capacity || 25,
-          bookings_count: 0,
-          rating_avg: 5.0,
-          recurring_days: d.recurring_days || "السبت,الثلاثاء",
-          guide_license: d.guide_license_number || "",
-          guide_license_number: d.guide_license_number || "",
-          photo: d.photo || "/assets/ai_ruins.jpg",
-          activities: d.activities || "",
-          is_active: d.is_active !== false,
-          vehicle_plate: d.vehicle_plate || "",
-          vehicle_model: d.vehicle_model || "",
-          vehicle_capacity: d.vehicle_capacity || d.max_capacity || 25,
-          transport_company_name: d.transport_company_name || "",
-          driver_name: d.driver_name || "",
-          driver_phone: d.driver_phone || "",
-          driver_license_number: d.driver_license_number || "",
-          restaurant_id: d.restaurant_id || "",
-          restaurant_name: d.restaurant_name || "",
-          restaurant_type: d.restaurant_type || "",
-          restaurant_city: d.restaurant_city || "",
-          restaurant_address: d.restaurant_address || "",
-          restaurant_phone: d.restaurant_phone || "",
-          itinerary_steps: d.itinerary_steps || null,
-        }));
-        setDailyTrips(mappedDaily);
-      }
-
-      if (res.weekly_trips) {
-        const mappedWeekly = res.weekly_trips.map((w: any) => ({
-          id: w.weekly_trip_id,
-          weekly_trip_id: w.weekly_trip_id,
-          title: w.trip_title,
-          trip_title: w.trip_title,
-          description: w.trip_description || "",
-          trip_description: w.trip_description || "",
-          seat_per_price: Number(w.seat_per_price) || 0,
-          departure_city: w.departure_city || "طرابلس",
-          destination: w.destination || w.destination_region || "",
-          destination_region: w.destination_region || w.destination || "",
-          destinations: w.destinations || (w.destination ? w.destination.split(' + ') : []),
-          place_ids: w.place_ids || [],
-          places: w.places || [],
-          max_capacity: w.max_capacity || 25,
-          available_seats: w.available_seats || w.max_capacity || 25,
-          bus_capacity: w.max_capacity || 25,
-          bookings_count: 0,
-          rating_avg: 5.0,
-          start_date: w.start_date || "",
-          end_date: w.end_date || "",
-          weekly_day: "الجمعة",
-          guide_license: w.guide_license_number || "",
-          guide_license_number: w.guide_license_number || "",
-          photo: w.photo || "/assets/ai_ghadames.jpg",
-          is_active: w.is_active !== false,
-          vehicle_plate: w.vehicle_plate || "",
-          vehicle_model: w.vehicle_model || "",
-          vehicle_capacity: w.vehicle_capacity || w.max_capacity || 25,
-          transport_company_name: w.transport_company_name || "",
-          driver_name: w.driver_name || "",
-          driver_phone: w.driver_phone || "",
-          driver_license_number: w.driver_license_number || "",
-          restaurant_id: w.restaurant_id || "",
-          restaurant_name: w.restaurant_name || "",
-          restaurant_type: w.restaurant_type || "",
-          restaurant_city: w.restaurant_city || "",
-          restaurant_address: w.restaurant_address || "",
-          restaurant_phone: w.restaurant_phone || "",
-          itinerary_steps: w.itinerary_steps || null,
-        }));
-        setWeeklyTrips(mappedWeekly);
-      }
-
-      if (res.companies && Array.isArray(res.companies)) {
-        // Keep every stored field (google_maps_url, total_vehicles, contract dates) so the table and the edit form see the real values
-        setCompanies(res.companies.map((c: any) => ({
-          ...c,
-          id: c.contract_number,
-          contract_number: c.contract_number,
-          name: c.company_name,
-          company_name: c.company_name,
-          phone: c.phone_number,
-          phone_number: c.phone_number,
-          // The company location is stored in google_maps_url
-          address: c.google_maps_url || c.address || "",
-          city: c.city || "طرابلس",
-          email: c.email || "",
-          status: c.verification_status || "موثق",
-          verification_status: c.verification_status || "موثق",
-        })));
-      }
-
-      if (res.drivers && Array.isArray(res.drivers)) {
-        setDrivers(res.drivers.map((d: any) => ({
-          driver_license_number: d.driver_license_number,
-          full_name: d.full_name,
-          phone_number: d.phone_number,
-          national_id_or_passport: d.national_id || "",
-          license_date_valid: d.license_expiry_date || "",
-          contract_number: d.contract_number,
-          assigned_vehicle_plate: d.assigned_vehicle_plate || "",
-          email: d.email || "",
-          account_status: d.account_status || "نشط",
-          operational_status: d.operational_status || "متاح",
-          experience_years: d.experience_years || 5,
-          company_name: d.company?.company_name || "",
-        })));
-      }
-
-      if (res.vehicles && Array.isArray(res.vehicles)) {
-        setVehicles(res.vehicles.map((v: any) => ({
-          plate_number: v.plate_number,
-          contract_number: v.contract_number,
-          company_id: v.contract_number,
-          company_name: v.company?.company_name || "",
-          vehicle_type: v.model_name || v.vehicle_type || "حافلة سياحية",
-          seating_capacity: v.passenger_capacity || 25,
-          capacity: v.passenger_capacity || 25,
-          daily_rate: Number(v.daily_rental_rate) || 500,
-          vehicle_status: v.vehicle_status || "جاهزة",
-          status: v.vehicle_status || "جاهزة",
-        })));
-      }
+      if (Array.isArray(res.daily_trips)) setDailyTrips(res.daily_trips.map(mapDailyTripRow));
+      if (Array.isArray(res.weekly_trips)) setWeeklyTrips(res.weekly_trips.map(mapWeeklyTripRow));
 
       if (res.private_trips && Array.isArray(res.private_trips)) {
         setPrivateTrips(res.private_trips);
@@ -749,97 +841,9 @@ function AdminDashboard() {
         setWeeklyBookings(res.weekly_bookings);
       }
 
-      if (res.hotels && Array.isArray(res.hotels)) {
-        setHotels(res.hotels.map((h: any) => ({
-          id: h.hotel_id || h.id,
-          name: h.hotel_name || h.name,
-          city: h.city,
-          address: h.address_details || h.address || "",
-          phone: h.phone_number || h.phone || "",
-          stars: Number(h.star_rating) || Number(h.stars) || 4,
-          bookings_count: 0,
-          rating_avg: 5.0,
-          partnership_status: h.partnership_status || "نشط",
-          hotel_photo_1: h.hotel_photo_1 || "/assets/ai_hotel.jpg",
-          hotel_photo_2: h.hotel_photo_2 || "/assets/dest-harbor-coast.jpg",
-          hotel_photo_3: h.hotel_photo_3 || "/assets/cafe-libya.jpg",
-          hotel_photo_4: h.hotel_photo_4 || "",
-          hotel_photo_5: h.hotel_photo_5 || "",
-          google_maps_url: h.google_maps_url || "",
-        })));
-      }
+      if (Array.isArray(res.daily_offers)) setDailyOffers(res.daily_offers.map(mapDailyOfferRow));
+      if (Array.isArray(res.weekly_offers)) setWeeklyOffers(res.weekly_offers.map(mapWeeklyOfferRow));
 
-      if (res.restaurants && Array.isArray(res.restaurants)) {
-        setRestaurants(res.restaurants.map((r: any) => ({
-          id: r.facility_id || r.id,
-          name: r.facility_name || r.name,
-          type: r.facility_type || r.type || "مطعم",
-          city: r.city,
-          address: r.address_details || r.address || "",
-          phone: r.phone_number || r.phone || "",
-          rating_avg: 5.0,
-          facility_image_1: r.facility_image_1 || "/assets/restaurant-libya.jpg",
-          facility_image_2: r.facility_image_2 || "",
-          facility_image_3: r.facility_image_3 || "",
-          facility_image_4: r.facility_image_4 || "",
-          facility_image_5: r.facility_image_5 || "",
-          description: r.description || "",
-          working_hours: r.working_hours || "09:00 ص - 12:00 م",
-          google_maps_url: r.google_maps_url || "",
-        })));
-      }
-
-      if (res.places && Array.isArray(res.places)) {
-        setAttractions(res.places.map((p: any) => ({
-          id: p.place_id || p.id,
-          place_id: p.place_id || p.id,
-          municipality_code: p.place_id || p.id,
-          name: p.place_name || p.name,
-          place_name: p.place_name || p.name,
-          city: p.city,
-          region: p.region || "المنطقة الغربية",
-          category: p.category || "آثار تاريخية",
-          description: p.description || "",
-          place_image: p.place_image || "/assets/dest-leptis-theater.jpg",
-          visitors_count: 0,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          google_maps_url: p.google_maps_url || "",
-          highlights: p.highlights || "",
-        })));
-      }
-
-      if (res.daily_offers && Array.isArray(res.daily_offers)) {
-        setDailyOffers(res.daily_offers.map((o: any) => ({
-          ...o,
-          id: o.offer_daily_id,
-          date_start: o.start_date,
-          date_end: o.end_date,
-          title_offer: o.offer_title,
-          url_image_offer: o.offer_image_url,
-          percent_discount: Number(o.percent_discount) || 0,
-        })));
-      }
-
-      if (res.weekly_offers && Array.isArray(res.weekly_offers)) {
-        setWeeklyOffers(res.weekly_offers.map((o: any) => ({
-          ...o,
-          id: o.offer_weekly_id,
-          date_start: o.start_date,
-          date_end: o.end_date,
-          title_offer: o.offer_title,
-          offer_title: o.offer_title,
-          percent_discount: Number(o.discount_percentage) || 0,
-          discount_percentage: Number(o.discount_percentage) || 0,
-        })));
-      }
-
-      try {
-        const touristsRes = await fetch("http://127.0.0.1:5001/api/db/tourists").then(r => r.json());
-        if (touristsRes && Array.isArray(touristsRes.data)) {
-          setTourists(touristsRes.data);
-        }
-      } catch {}
     }
     fetchAdminData();
   }, []);
@@ -878,29 +882,11 @@ function AdminDashboard() {
           itinerary_steps: data.itinerary_steps ? (typeof data.itinerary_steps === 'string' ? data.itinerary_steps : JSON.stringify(data.itinerary_steps)) : null,
         };
         const res = await apiCreateDailyTrip(payload);
-        if (!res || res.status === "error" || res.errors || !res.trip) {
-          const errMsg = res?.message || (res?.errors ? Object.values(res.errors).flat().join(" - ") : "فشل في حفظ الرحلة في قاعدة البيانات");
-          alert("خطأ: " + errMsg);
+        if (res.status === "error") {
+          alert("❌ لم يتم حفظ الرحلة في قاعدة البيانات.\n" + res.message);
           return;
         }
-        const createdTrip = res.trip;
-        setDailyTrips(prev => [
-          {
-            ...createdTrip,
-            id: createdTrip.daily_trip_id,
-            title: createdTrip.trip_title,
-            photo: primary,
-            gallery: galleryStr,
-            images: imgList,
-            bookings_count: 0,
-            rating_avg: 5.0,
-            is_active: true,
-            vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : ""),
-            restaurant_id: data.restaurant_id || "",
-            itinerary_steps: data.itinerary_steps || null,
-          },
-          ...prev,
-        ]);
+        await reloadTrips();
         alert("تم حفظ الرحلة اليومية بنجاح في قاعدة البيانات!");
       } else {
         const imgList = (data.images && data.images.length > 0)
@@ -930,30 +916,12 @@ function AdminDashboard() {
           is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
         };
         const res = await apiCreateWeeklyTrip(payload);
-        if (!res || res.status === "error" || res.errors || !res.trip) {
-          const errMsg = res?.message || (res?.errors ? Object.values(res.errors).flat().join(" - ") : "فشل في حفظ الرحلة في قاعدة البيانات");
-          alert("خطأ: " + errMsg);
+        if (res.status === "error") {
+          alert("❌ لم يتم حفظ الرحلة.\n" + res.message);
           return;
         }
-        const createdTrip = res.trip;
-        setWeeklyTrips(prev => [
-          {
-            ...createdTrip,
-            id: createdTrip.weekly_trip_id,
-            title: createdTrip.trip_title,
-            photo: primary,
-            gallery: galleryStr,
-            images: imgList,
-            bookings_count: 0,
-            rating_avg: 5.0,
-            is_active: true,
-            vehicle_plate: data.vehicle_plate || (Array.isArray(data.vehicle_plates) ? data.vehicle_plates[0] : ""),
-            restaurant_id: data.restaurant_id || "",
-            itinerary_steps: data.itinerary_steps || null,
-          },
-          ...prev,
-        ]);
-        alert("تم حفظ الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
+        await reloadTrips();
+        alert("✅ " + (res.message || "تم حفظ الرحلة الأسبوعية بنجاح"));
       }
       setShowAddTrip(null);
     } catch (err: any) {
@@ -988,27 +956,24 @@ function AdminDashboard() {
         itinerary_steps: (updated as any).itinerary_steps ? (typeof (updated as any).itinerary_steps === 'string' ? (updated as any).itinerary_steps : JSON.stringify((updated as any).itinerary_steps)) : null,
       };
       const res = await apiUpdateDailyTrip(tripId, payload);
-      if (res && res.status === "success") {
-        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...d, ...updated, ...payload, ...res.trip } : d));
-        alert("تم تحديث الرحلة اليومية بنجاح في قاعدة البيانات!");
-      } else {
-        alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
-        setDailyTrips(dailyTrips.map(d => (d.daily_trip_id || d.id) === tripId ? { ...updated, ...payload } : d));
+      if (res.status === "error") {
+        alert("❌ لم يتم حفظ التعديل في قاعدة البيانات.\n" + res.message);
+        return;
       }
+      await reloadTrips();
+      alert("تم تحديث الرحلة اليومية بنجاح في قاعدة البيانات!");
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
+      return;
     }
     setEditingDailyTrip(null);
   };
 
-  const handleDeleteDailyTrip = async (id: string) => {
-    if (!confirm("هل تريد حذف هذه الرحلة اليومية نهائياً من قاعدة البيانات؟")) return;
-    setDailyTrips(prev => prev.filter(d => (d.daily_trip_id || d.id) !== id));
-    try {
-      await apiDeleteDailyTrip(id);
-    } catch (err: any) {
-      console.error(err);
-    }
+  const handleCancelDailyTrip = async (id: string) => {
+    if (!confirm("سيتم إلغاء هذه الرحلة وإيقاف الحجز عليها وإشعار المرشد والسائق والشركة والسياح المحجوزين.\nلن يُحذف أي شيء من قاعدة البيانات. هل تريد المتابعة؟")) return;
+    const res = await apiCancelDailyTrip(id);
+    alert((res.ok ? "✅ " : "❌ ") + res.message);
+    if (res.ok) await reloadTrips();
   };
 
   const handleUpdateWeeklyTrip = async (updated: WeeklyTrip) => {
@@ -1041,27 +1006,24 @@ function AdminDashboard() {
         is_active: (updated as any).is_active !== undefined ? Boolean((updated as any).is_active) : true,
       };
       const res = await apiUpdateWeeklyTrip(tripId, payload);
-      if (res && res.status === "success") {
-        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? ({ ...w, ...updated, ...payload, ...res.trip } as any) : w));
-        alert("تم تحديث الرحلة الأسبوعية بنجاح في قاعدة البيانات!");
-      } else {
-        alert("تنبيه: " + (res?.message || "تعذر حفظ التعديل في السيرفر"));
-        setWeeklyTrips(weeklyTrips.map(w => (w.weekly_trip_id || w.id) === tripId ? ({ ...updated, ...payload } as any) : w));
+      if (res.status === "error") {
+        alert("❌ لم يتم حفظ التعديل في قاعدة البيانات.\n" + res.message);
+        return;
       }
+      await reloadTrips();
+      alert("✅ " + (res.message || "تم تعديل الرحلة الأسبوعية بنجاح"));
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
+      return;
     }
     setEditingWeeklyTrip(null);
   };
 
-  const handleDeleteWeeklyTrip = async (id: string) => {
-    if (!confirm("هل تريد حذف هذه الرحلة الأسبوعية نهائياً من قاعدة البيانات؟")) return;
-    setWeeklyTrips(prev => prev.filter(w => (w.weekly_trip_id || w.id) !== id));
-    try {
-      await apiDeleteWeeklyTrip(id);
-    } catch (err: any) {
-      console.error(err);
-    }
+  const handleCancelWeeklyTrip = async (id: string) => {
+    if (!confirm("سيتم إلغاء هذه الرحلة وإيقاف الحجز عليها وإشعار المرشد والسائق والشركة والسياح المحجوزين.\nلن يُحذف أي شيء من قاعدة البيانات. هل تريد المتابعة؟")) return;
+    const res = await apiCancelWeeklyTrip(id);
+    alert((res.ok ? "✅ " : "❌ ") + res.message);
+    if (res.ok) await reloadTrips();
   };
   const handleSavePrivate = async (
     id: string,
@@ -1090,47 +1052,30 @@ function AdminDashboard() {
       stations: structuredStations || existing?.stations || [],
     };
 
-    setPrivateTrips((prev: any) => prev.map((p: any) => p.private_trip_id === id ? updatedTrip : p));
+    const res = await apiReviewPrivateTrip(id, {
+      status_order: status,
+      quoted_price: updatedTrip.quoted_price,
+      additional_expenses: updatedTrip.additional_expenses,
+      guide_license_number: updatedTrip.guide_license_number || undefined,
+      vehicle_plate: updatedTrip.vehicle_plate || undefined,
+      hotel_ids: updatedTrip.hotel_ids,
+      stations: updatedTrip.stations,
+      admin_notes: plan || undefined,
+    });
+    if (!res.success) {
+      alert("❌ لم يتم حفظ مراجعة الرحلة الخاصة.\n" + res.error);
+      return;
+    }
+    setPrivateTrips((prev: any) => prev.map((p: any) => p.private_trip_id === id ? res.data : p));
     setEvaluatingPrivateTrip(null);
 
-    try {
-      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedTrip),
-      });
-    } catch (e) {
-      console.error("Failed to sync private trip with SQL Server", e);
-    }
-
-    try {
-      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-      const next = local.map((p: any) => p.private_trip_id === id ? updatedTrip : p);
-      if (!local.find((p: any) => p.private_trip_id === id)) next.unshift(updatedTrip);
-      localStorage.setItem("delni_private_trips", JSON.stringify(next));
-      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
-    } catch {}
-
-    if (status === "بانتظار تأكيد السائح") {
-      alert(`✅ تم اعتماد جدول المحطات وتسعيرة الرحلة (${price} د.ل) وإرسال العرض بنجاح إلى السائح.\nحالة الطلب الآن: "بانتظار تأكيد السائح".`);
+    if (res.data?.status_order === "بانتظار رد المرشد") {
+      alert(`✅ تم اعتماد جدول المحطات وتسعيرة الرحلة (${price} د.ل) وإرسالها للمرشد للموافقة عليها.\nبعد موافقة المرشد يصل العرض للسائح تلقائياً، وإذا اعتذر يصلك إشعار لتعيين مرشد آخر.`);
     } else if (status === "مرفوضة من الأدمن") {
       alert(`تم تسجيل رفض طلب الرحلة الخاصة (#${id}).`);
     }
   };
 
-  const handleDeletePrivate = async (id: string) => {
-    if (!confirm("هل تريد حذف طلب الرحلة الخاصة؟")) return;
-    setPrivateTrips(prev => prev.filter(p => p.private_trip_id !== id));
-    try {
-      await fetch(`http://127.0.0.1:5001/api/db/private_trips?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-    } catch {}
-    try {
-      const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-      const next = local.filter((p: any) => p.private_trip_id !== id);
-      localStorage.setItem("delni_private_trips", JSON.stringify(next));
-      localStorage.setItem("dalni_private_trips", JSON.stringify(next));
-    } catch {}
-  };
   useEffect(() => {
     try {
       const storedTickets = JSON.parse(localStorage.getItem("dalni_support_tickets") || "[]");
@@ -1138,22 +1083,6 @@ function AdminDashboard() {
         setTickets((prev) => {
           const ids = new Set(prev.map((t) => t.id));
           return [...storedTickets.filter((t: any) => !ids.has(t.id)), ...prev];
-        });
-      }
-
-      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-      if (Array.isArray(storedRests) && storedRests.length > 0) {
-        setRestaurants((prev) => {
-          const ids = new Set(prev.map((r) => r.id));
-          return [...storedRests.filter((r: any) => !ids.has(r.id)), ...prev];
-        });
-      }
-
-      const storedPrivate = JSON.parse(localStorage.getItem("delni_private_trips") || localStorage.getItem("dalni_private_trips") || "[]");
-      if (Array.isArray(storedPrivate) && storedPrivate.length > 0) {
-        setPrivateTrips((prev) => {
-          const ids = new Set(prev.map((p) => p.private_trip_id));
-          return [...storedPrivate.filter((p: any) => !ids.has(p.private_trip_id)), ...prev];
         });
       }
 
@@ -1188,172 +1117,24 @@ function AdminDashboard() {
     };
   }, []);
 
-  const handleAddHotel = (h: any) => {
-    const hotelId = h.hotel_id || h.id || `HTL-${Date.now().toString().slice(-4)}`;
-    const newHotelObj: Hotel = {
-      id: hotelId,
-      bookings_count: 0,
-      rating_avg: 5.0,
-      property_type: h.property_type || "hotel",
-      discount_percentage: Number(h.discount_percentage) || 15,
-      amenities: h.amenities || ["مسبح", "واي فاي", "موقف"],
-      whatsapp: h.whatsapp || h.phone,
-      ...h,
-    };
-    setHotels((prev) => [newHotelObj, ...prev]);
-    setShowAddHotel(false);
-
-    try {
-      const storedHotels = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
-      localStorage.setItem("dalni_hotels", JSON.stringify([newHotelObj, ...storedHotels]));
-    } catch {}
-
-    sendToSecureBackend("hotels", {
-      hotel_id: hotelId,
-      hotel_name: newHotelObj.name,
-      city: newHotelObj.city,
-      address_details: newHotelObj.address,
-      phone_number: newHotelObj.phone,
-      star_rating: newHotelObj.stars,
-      partnership_status: newHotelObj.partnership_status || "نشط",
-      property_type: newHotelObj.property_type || "hotel",
-      amenities: Array.isArray(newHotelObj.amenities) ? newHotelObj.amenities.join("، ") : (newHotelObj.amenities || ""),
-      discount_percentage: newHotelObj.discount_percentage || 15,
-      working_hours: newHotelObj.working_hours,
-      description: newHotelObj.description,
-      google_maps_url: newHotelObj.google_maps_url,
-      whatsapp: newHotelObj.whatsapp,
-      contract_start_date: newHotelObj.contract_start_date,
-      contract_end_date: newHotelObj.contract_end_date,
-      hotel_photo_1: newHotelObj.hotel_photo_1,
-      hotel_photo_2: newHotelObj.hotel_photo_2,
-      hotel_photo_3: newHotelObj.hotel_photo_3,
-      hotel_photo_4: newHotelObj.hotel_photo_4,
-      hotel_photo_5: newHotelObj.hotel_photo_5,
-      verification_status: "موثق",
-    });
+  // Returns an error message for the form, or null once DelniDB confirmed the save
+  const handleSaveHotel = async (h: any, isNew: boolean): Promise<string | null> => {
+    const res = await apiSaveHotel(toHotelPayload(h), isNew);
+    if (!res.success) return res.error;
+    const row = mapHotelRow(res.data);
+    setHotels((prev) => isNew ? [row, ...prev] : prev.map(x => x.id === row.id ? row : x));
+    if (isNew) setShowAddHotel(false);
+    else setEditingHotel(null);
+    return null;
   };
-  const handleUpdateHotel = (h: Hotel) => {
-    setHotels(hotels.map(x => x.id === h.id ? h : x));
-    setEditingHotel(null);
-    try {
-      const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
-      const updated = stored.map((item: any) => item.id === h.id ? { ...item, ...h } : item);
-      localStorage.setItem("dalni_hotels", JSON.stringify(updated));
-    } catch {}
-
-    sendToSecureBackend("hotels", {
-      hotel_id: h.id,
-      hotel_name: h.name,
-      city: h.city,
-      address_details: h.address,
-      phone_number: h.phone,
-      star_rating: h.stars,
-      partnership_status: h.partnership_status || "نشط",
-      property_type: h.property_type || "hotel",
-      amenities: Array.isArray(h.amenities) ? h.amenities.join("، ") : ((h as any).amenities || ""),
-      discount_percentage: h.discount_percentage || 15,
-      working_hours: h.working_hours,
-      description: h.description,
-      google_maps_url: h.google_maps_url,
-      whatsapp: h.whatsapp,
-      contract_start_date: h.contract_start_date,
-      contract_end_date: h.contract_end_date,
-      hotel_photo_1: h.hotel_photo_1,
-      hotel_photo_2: h.hotel_photo_2,
-      hotel_photo_3: h.hotel_photo_3,
-      hotel_photo_4: h.hotel_photo_4,
-      hotel_photo_5: h.hotel_photo_5,
-      verification_status: "موثق",
-    });
-  };
-  const handleDeleteHotel = (id: string) => {
-    if (confirm("هل تريد حذف الفندق؟")) {
-      setHotels(hotels.filter(h => h.id !== id));
-      try {
-        const stored = JSON.parse(localStorage.getItem("dalni_hotels") || "[]");
-        localStorage.setItem("dalni_hotels", JSON.stringify(stored.filter((item: any) => item.id !== id)));
-      } catch {}
-      deleteFromSecureBackend("hotels", "hotel_id", id);
-    }
-  };
-  const handleAddRestaurant = (r: any) => {
-    const facilityId = r.facility_id || r.id || `R-0${restaurants.length + 1}`;
-    const newRest = { id: facilityId, rating_avg: 5.0, ...r };
-    setRestaurants((prev) => [newRest, ...prev]);
-    setShowAddRestaurant(false);
-
-    try {
-      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-      localStorage.setItem("dalni_restaurants", JSON.stringify([newRest, ...storedRests]));
-    } catch {}
-
-    sendToSecureBackend("restaurants", {
-      facility_id: facilityId,
-      facility_name: newRest.name || newRest.facility_name,
-      facility_type: newRest.type || newRest.facility_type,
-      city: newRest.city,
-      address_details: newRest.address || newRest.address_details,
-      phone_number: newRest.phone || newRest.phone_number,
-      description: newRest.description,
-      facility_image_1: newRest.facility_image_1,
-      facility_image_2: newRest.facility_image_2,
-      facility_image_3: newRest.facility_image_3,
-      facility_image_4: newRest.facility_image_4,
-      facility_image_5: newRest.facility_image_5,
-      verification_status: newRest.verification_status || "موثق",
-      working_hours: newRest.working_hours,
-      features: Array.isArray(newRest.features) ? newRest.features.join("، ") : newRest.features,
-      google_maps_url: newRest.google_maps_url,
-      discount_percentage: newRest.discount_percentage || 20,
-      whatsapp: newRest.whatsapp,
-      partnership_status: newRest.partnership_status || "نشط",
-      contract_start_date: newRest.contract_start_date,
-      contract_end_date: newRest.contract_end_date,
-    });
-  };
-  const handleUpdateRestaurant = (r: Restaurant) => {
-    setRestaurants(restaurants.map(x => x.id === r.id ? r : x));
-    setEditingRestaurant(null);
-    try {
-      const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-      const updated = storedRests.map((item: any) => item.id === r.id ? { ...item, ...r } : item);
-      localStorage.setItem("dalni_restaurants", JSON.stringify(updated));
-    } catch {}
-
-    sendToSecureBackend("restaurants", {
-      facility_id: r.id || (r as any).facility_id,
-      facility_name: r.name || (r as any).facility_name,
-      facility_type: r.type || (r as any).facility_type,
-      city: r.city,
-      address_details: r.address || (r as any).address_details,
-      phone_number: r.phone || (r as any).phone_number,
-      description: r.description,
-      facility_image_1: r.facility_image_1,
-      facility_image_2: r.facility_image_2,
-      facility_image_3: r.facility_image_3,
-      facility_image_4: r.facility_image_4,
-      facility_image_5: r.facility_image_5,
-      verification_status: (r as any).verification_status,
-      working_hours: r.working_hours,
-      features: Array.isArray((r as any).features) ? (r as any).features.join("، ") : (r as any).features,
-      google_maps_url: r.google_maps_url,
-      discount_percentage: (r as any).discount_percentage || 20,
-      whatsapp: (r as any).whatsapp,
-      partnership_status: r.partnership_status || "نشط",
-      contract_start_date: r.contract_start_date,
-      contract_end_date: r.contract_end_date,
-    });
-  };
-  const handleDeleteRestaurant = (id: string) => {
-    if (confirm("هل تريد حذف المطعم؟")) {
-      setRestaurants(restaurants.filter(r => r.id !== id));
-      try {
-        const storedRests = JSON.parse(localStorage.getItem("dalni_restaurants") || "[]");
-        localStorage.setItem("dalni_restaurants", JSON.stringify(storedRests.filter((r: any) => r.id !== id)));
-      } catch {}
-      deleteFromSecureBackend("restaurants", "facility_id", id);
-    }
+  const handleSaveRestaurant = async (r: any, isNew: boolean): Promise<string | null> => {
+    const res = await apiSaveRestaurant(toRestaurantPayload(r), isNew);
+    if (!res.success) return res.error;
+    const row = mapRestaurantRow(res.data);
+    setRestaurants((prev) => isNew ? [row, ...prev] : prev.map(x => x.id === row.id ? row : x));
+    if (isNew) setShowAddRestaurant(false);
+    else setEditingRestaurant(null);
+    return null;
   };
 
   const handleToggleTouristStatus = async (touristId: string, currentStatus: string) => {
@@ -1364,128 +1145,37 @@ function AdminDashboard() {
 
     if (!confirm(`هل أنت متأكد من ${actionText}؟\n(رقم الجواز / المعرف: ${touristId})`)) return;
 
-    try {
-      const res = await fetch("http://127.0.0.1:5001/api/db/tourists", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tourist_id: touristId, account_status: newStatus }),
-      }).then(r => r.json());
-
-      if (res && res.success) {
-        setTourists(prev => prev.map(t => t.tourist_id === touristId ? { ...t, account_status: newStatus } : t));
-        if (selectedTouristDetail && selectedTouristDetail.tourist_id === touristId) {
-          setSelectedTouristDetail((prev: any) => ({ ...prev, account_status: newStatus }));
-        }
-        alert(res.message || `تم تغيير حالة الحساب إلى: ${newStatus}`);
-      } else {
-        alert("خطأ: " + (res?.error || "فشل تحديث حالة السائح في قاعدة البيانات"));
-      }
-    } catch (err: any) {
-      alert("حدث خطأ أثناء الاتصال بالخادم: " + err.message);
+    const res = await laravelRequest("PUT", `/tourists/${encodeURIComponent(touristId)}/status`, { account_status: newStatus });
+    if (!res.ok) {
+      alert("❌ لم يتم تحديث حالة السائح في قاعدة البيانات.\n" + res.error);
+      return;
     }
+    setTourists(prev => prev.map(t => t.tourist_id === touristId ? { ...t, account_status: newStatus } : t));
+    if (selectedTouristDetail && selectedTouristDetail.tourist_id === touristId) {
+      setSelectedTouristDetail((prev: any) => ({ ...prev, account_status: newStatus }));
+    }
+    alert(res.body?.message || `تم تغيير حالة الحساب إلى: ${newStatus}`);
   };
 
   const handleViewTourist = async (t: any) => {
     setSelectedTouristDetail(t);
     setLoadingTouristDetail(true);
-    try {
-      const res = await fetch(`http://127.0.0.1:5001/api/db/tourists?tourist_id=${encodeURIComponent(t.tourist_id)}`).then(r => r.json());
-      if (res && res.success && res.data) {
-        setSelectedTouristDetail(res.data);
-      }
-    } catch (err) {
-      console.warn("Failed to load full tourist profile details:", err);
-    } finally {
-      setLoadingTouristDetail(false);
-    }
+    const res = await laravelRequest("GET", `/tourists/${encodeURIComponent(t.tourist_id)}`);
+    if (res.ok && res.data) setSelectedTouristDetail(res.data);
+    setLoadingTouristDetail(false);
   };
 
-  const handleAddAttraction = async (a: any) => { 
-    const placeId = String(a.place_id || a.municipality_code || a.id || "").trim();
-    if (!placeId) {
-      alert("يرجى إدخال رقم المعلم السياحي (المفتاح الرئيسي ID)!");
+  const handleSaveAttraction = async (a: any, isNew: boolean) => {
+    const res = await laravelRequest("POST", "/places", { ...toPlacePayload(a), isNew });
+    if (!res.ok) {
+      alert("❌ " + (isNew ? "لم تتم إضافة المعلم السياحي." : "لم يتم تعديل بيانات المعلم السياحي.") + "\n" + res.error);
       return;
     }
-    // Check uniqueness (Primary Key must not be duplicated)
-    const exists = attractions.some(x => String(x.place_id || x.id).trim().toLowerCase() === placeId.toLowerCase());
-    if (exists) {
-      alert(`رقم المعلم (${placeId}) مسجل مسبقاً لمعلم آخر! المعرف هو مفتاح رئيسي ولا يمكن تكراره.`);
-      return;
-    }
-    const newPlace: Attraction = { 
-      id: placeId, 
-      place_id: placeId, 
-      municipality_code: placeId,
-      visitors_count: 0, 
-      ...a 
-    };
-    setAttractions([...attractions, newPlace]); 
-    setShowAddAttraction(false); 
-    try {
-      const saved = await sendToSecureBackend("places", {
-        place_id: placeId,
-        municipality_code: placeId,
-        place_name: newPlace.place_name || newPlace.name,
-        name: newPlace.place_name || newPlace.name,
-        description: newPlace.description,
-        city: newPlace.city,
-        region: newPlace.region || "المنطقة الغربية",
-        longitude: newPlace.longitude,
-        latitude: newPlace.latitude,
-        category: newPlace.category,
-        place_image: newPlace.place_image,
-        google_maps_url: newPlace.google_maps_url,
-        highlights: newPlace.highlights,
-        is_new: true,
-        mode: "create",
-      });
-      if (!saved) {
-        setAttractions((prev) => prev.filter((x) => x !== newPlace));
-        return;
-      }
-      alert(`✅ تم توثيق وإضافة المعلم السياحي (${newPlace.place_name || newPlace.name}) بنجاح.`);
-    } catch (err: any) {
-      console.warn("Failed to persist place to backend:", err);
-    }
-  };
-  const handleUpdateAttraction = async (a: Attraction) => { 
-    const placeId = String(a.place_id || a.id).trim();
-    const previousAttractions = attractions;
-    setAttractions(attractions.map(x => (x.id === a.id || x.place_id === placeId) ? { ...x, ...a } : x)); 
-    setEditingAttraction(null); 
-    try {
-      const saved = await sendToSecureBackend("places", {
-        place_id: placeId,
-        municipality_code: placeId,
-        place_name: a.place_name || a.name || (a as any).name,
-        name: a.place_name || a.name || (a as any).name,
-        description: a.description,
-        city: a.city,
-        region: a.region || "المنطقة الغربية",
-        longitude: a.longitude,
-        latitude: a.latitude,
-        category: a.category,
-        place_image: a.place_image,
-        google_maps_url: a.google_maps_url,
-        highlights: (a as any).highlights,
-        mode: "update",
-      });
-      if (!saved) {
-        setAttractions(previousAttractions);
-        return;
-      }
-      alert(`✅ تم حفظ وتحديث بيانات المعلم السياحي (${a.place_name || a.name}) بنجاح في قاعدة البيانات.`);
-    } catch (err: any) {
-      console.warn("Failed to update place in backend:", err);
-      setAttractions(previousAttractions);
-      alert("❌ لم يتم حفظ التعديلات في قاعدة البيانات: " + err.message);
-    }
-  };
-  const handleDeleteAttraction = async (id: string) => { 
-    if (confirm("هل تريد حذف المعلم السياحي؟")) {
-      if (!(await deleteFromSecureBackend("places", "place_id", id))) return;
-      setAttractions((prev) => prev.filter(a => a.id !== id)); 
-    }
+    const row = mapPlaceRow(res.data);
+    setAttractions((prev) => isNew ? [...prev, row] : prev.map(x => x.place_id === row.place_id ? row : x));
+    if (isNew) setShowAddAttraction(false);
+    else setEditingAttraction(null);
+    alert(isNew ? `✅ تمت إضافة المعلم السياحي (${row.place_name}) بنجاح.` : `✅ تم تعديل بيانات المعلم السياحي (${row.place_name}) بنجاح.`);
   };
   const handleReplyTicket = (ticketId: string, reply: string) => {
     const updated = tickets.map(t => t.id === ticketId ? { ...t, reply, status: "تم الرد" as const } : t);
@@ -1495,49 +1185,30 @@ function AdminDashboard() {
     } catch {}
   };
   // Daily Trip Offers (DelniDB offers_daily_trips)
-  const handleAddDailyOffer = async (o: any) => {
-    const res = await apiCreateDailyOffer(o);
-    if (res && res.success && res.offer) {
-      setDailyOffers([res.offer, ...dailyOffers]);
+  const saveOffer = async (kind: "daily" | "weekly", o: any, isNew: boolean) => {
+    const res = kind === "daily" ? await apiCreateDailyOffer(o) : await apiCreateWeeklyOffer(o);
+    if (!res.success) {
+      alert("❌ لم يتم حفظ العرض في قاعدة البيانات.\n" + res.error);
+      return;
+    }
+    if (kind === "daily") {
+      const row = mapDailyOfferRow(res.offer);
+      setDailyOffers(prev => isNew ? [row, ...prev] : prev.map(x => (x.offer_daily_id || x.id) === row.offer_daily_id ? row : x));
+      if (isNew) setShowAddDailyOffer(false); else setEditingDailyOffer(null);
     } else {
-      const newId = `DO-${Date.now().toString().slice(-4)}`;
-      setDailyOffers([{ ...o, offer_daily_id: newId, id: newId }, ...dailyOffers]);
-    }
-    setShowAddDailyOffer(false);
-  };
-  const handleUpdateDailyOffer = async (o: DailyOffer) => {
-    await apiCreateDailyOffer(o);
-    setDailyOffers(dailyOffers.map(x => (x.offer_daily_id || x.id) === (o.offer_daily_id || o.id) ? o : x));
-    setEditingDailyOffer(null);
-  };
-  const handleDeleteDailyOffer = async (id: string) => {
-    if (confirm("هل تريد بالتأكيد حذف هذا العرض اليومي؟")) {
-      await apiDeleteDailyOffer(id);
-      setDailyOffers(dailyOffers.filter(o => (o.offer_daily_id || o.id) !== id));
+      const row = mapWeeklyOfferRow(res.offer);
+      setWeeklyOffers(prev => isNew ? [row, ...prev] : prev.map(x => (x.offer_weekly_id || x.id) === row.offer_weekly_id ? row : x));
+      if (isNew) setShowAddWeeklyOffer(false); else setEditingWeeklyOffer(null);
     }
   };
-
-  // Weekly Trip Offers (DelniDB offers_weekly_trips)
-  const handleAddWeeklyOffer = async (o: any) => {
-    const res = await apiCreateWeeklyOffer(o);
-    if (res && res.success && res.offer) {
-      setWeeklyOffers([res.offer, ...weeklyOffers]);
-    } else {
-      const newId = `WO-${Date.now().toString().slice(-4)}`;
-      setWeeklyOffers([{ ...o, offer_weekly_id: newId, id: newId }, ...weeklyOffers]);
-    }
-    setShowAddWeeklyOffer(false);
-  };
-  const handleUpdateWeeklyOffer = async (o: WeeklyOffer) => {
-    await apiCreateWeeklyOffer(o);
-    setWeeklyOffers(weeklyOffers.map(x => (x.offer_weekly_id || x.id) === (o.offer_weekly_id || o.id) ? o : x));
-    setEditingWeeklyOffer(null);
-  };
-  const handleDeleteWeeklyOffer = async (id: string) => {
-    if (confirm("هل تريد بالتأكيد حذف هذا العرض الأسبوعي؟")) {
-      await apiDeleteWeeklyOffer(id);
-      setWeeklyOffers(weeklyOffers.filter(o => (o.offer_weekly_id || o.id) !== id));
-    }
+  const endOffer = async (kind: "daily" | "weekly", id: string) => {
+    if (!confirm("سيتم إنهاء هذا العرض ولن يظهر للسياح بعد الآن، دون حذفه من قاعدة البيانات. هل تريد المتابعة؟")) return;
+    const res = kind === "daily" ? await apiEndDailyOffer(id) : await apiEndWeeklyOffer(id);
+    alert((res.ok ? "✅ " : "❌ ") + res.message);
+    if (!res.ok) return;
+    const all = kind === "daily" ? await apiGetDailyOffers(true) : await apiGetWeeklyOffers(true);
+    if (kind === "daily") setDailyOffers(all.map(mapDailyOfferRow));
+    else setWeeklyOffers(all.map(mapWeeklyOfferRow));
   };
   // Bot & Live Support Chat Override
   const handleBotSend = () => {
@@ -1548,157 +1219,80 @@ function AdminDashboard() {
   };
 
   /* ---- BOOKINGS HANDLERS (DelniDB bookings_daily & bookings_weekly) ---- */
-  const handleTogglePaymentDaily = (id: string) => {
-    setDailyBookings(prev =>
-      prev.map(b => (b.booking_daily_id === id ? { ...b, payment_status: b.payment_status === "paid" ? "unpaid" : "paid" } : b))
-    );
+  // Payment and attendance are saved in DelniDB; the list changes only after the server confirms
+  const replaceBooking = (kind: "daily" | "weekly", row: any) => {
+    if (kind === "daily") setDailyBookings(prev => prev.map(b => (b.booking_daily_id === row.booking_daily_id ? { ...b, ...row } : b)));
+    else setWeeklyBookings(prev => prev.map(b => (b.booking_weekly_id === row.booking_weekly_id ? { ...b, ...row } : b)));
   };
-
-  const handleToggleAttendedDaily = (id: string) => {
-    setDailyBookings(prev =>
-      prev.map(b => (b.booking_daily_id === id ? { ...b, attended: !b.attended } : b))
-    );
+  const updateBooking = async (kind: "daily" | "weekly", id: string, field: "payment" | "attendance") => {
+    const list: any[] = kind === "daily" ? dailyBookings : weeklyBookings;
+    const current = list.find(b => (kind === "daily" ? b.booking_daily_id : b.booking_weekly_id) === id);
+    if (!current) return;
+    const res = field === "payment"
+      ? await apiSetBookingPayment(kind, id, current.payment_status !== "paid")
+      : await apiSetBookingAttendance(kind, id, !current.attended);
+    if (!res.success) {
+      alert("❌ لم يتم حفظ التعديل في قاعدة البيانات.\n" + res.error);
+      return;
+    }
+    replaceBooking(kind, res.data);
   };
-
-  const handleTogglePaymentWeekly = (id: string) => {
-    setWeeklyBookings(prev =>
-      prev.map(b => (b.booking_weekly_id === id ? { ...b, payment_status: b.payment_status === "paid" ? "unpaid" : "paid" } : b))
-    );
-  };
-
-  const handleToggleAttendedWeekly = (id: string) => {
-    setWeeklyBookings(prev =>
-      prev.map(b => (b.booking_weekly_id === id ? { ...b, attended: !b.attended } : b))
-    );
-  };
+  const handleTogglePaymentDaily = (id: string) => updateBooking("daily", id, "payment");
+  const handleToggleAttendedDaily = (id: string) => updateBooking("daily", id, "attendance");
+  const handleTogglePaymentWeekly = (id: string) => updateBooking("weekly", id, "payment");
+  const handleToggleAttendedWeekly = (id: string) => updateBooking("weekly", id, "attendance");
 
   /* ---- TICKET SCANNER & VERIFICATION (DelniDB e-ticket validation) ---- */
   const [scanCode, setScanCode] = useState("");
   const [scannedTicket, setScannedTicket] = useState<any | null>(null);
   const [scanStatusMsg, setScanStatusMsg] = useState<{ type: "success" | "error" | "info"; msg: string } | null>(null);
 
-  const handleVerifyTicketCode = (codeToSearch: string) => {
+  const handleVerifyTicketCode = async (codeToSearch: string) => {
     const raw = codeToSearch.trim();
     if (!raw) {
       setScanStatusMsg({ type: "error", msg: "يرجى كتابة أو مسح رمز التذكرة والباركود أولاً." });
       return;
     }
-
-    // Match in dailyBookings or weeklyBookings
-    const dailyFound = dailyBookings.find(b =>
-      b.booking_daily_id?.toLowerCase() === raw.toLowerCase() ||
-      raw.toLowerCase().includes(b.booking_daily_id?.toLowerCase() || "")
-    );
-
-    const weeklyFound = weeklyBookings.find(b =>
-      b.booking_weekly_id?.toLowerCase() === raw.toLowerCase() ||
-      raw.toLowerCase().includes(b.booking_weekly_id?.toLowerCase() || "")
-    );
-
-    // Also match in local storage
-    const localDaily = JSON.parse(localStorage.getItem("dalni_bookings_daily") || "[]");
-    const localWeekly = JSON.parse(localStorage.getItem("dalni_bookings_weekly") || "[]");
-    const fallbackDaily = localDaily.find((b: any) =>
-      b.booking_daily_id?.toLowerCase() === raw.toLowerCase() ||
-      raw.toLowerCase().includes(b.booking_daily_id?.toLowerCase() || "")
-    );
-    const fallbackWeekly = localWeekly.find((b: any) =>
-      b.booking_weekly_id?.toLowerCase() === raw.toLowerCase() ||
-      raw.toLowerCase().includes(b.booking_weekly_id?.toLowerCase() || "")
-    );
-
-    const matched = dailyFound || weeklyFound || fallbackDaily || fallbackWeekly;
-    if (matched) {
-      const isDaily = !!(dailyFound || fallbackDaily || matched.booking_daily_id);
-      const tripObj = isDaily
-        ? dailyTrips.find(t => (t.daily_trip_id || t.id) === (matched.daily_trip_id || matched.id))
-        : weeklyTrips.find(t => (t.weekly_trip_id || t.id) === (matched.weekly_trip_id || matched.id));
-
-      const parsedTicket = {
-        code: matched.booking_daily_id || matched.booking_weekly_id || raw,
-        isDaily,
-        touristName: matched.tourist_name || matched.tourist_id || "سائح",
-        touristId: matched.tourist_id || "",
-        tripTitle: tripObj?.title || tripObj?.trip_title || matched.trip_title || (isDaily ? "رحلة يومية" : "رحلة أسبوعية"),
-        seats: Number(matched.number_of_seats) || 1,
-        totalPrice: matched.total_price || (isDaily ? (matched.price_per_seat || 180) * (matched.number_of_seats || 1) : 1200),
-        paymentStatus: matched.payment_status || "unpaid",
-        attended: !!matched.attended,
-        bookingStatus: matched.booking_status || "بانتظار التأكيد",
-        date: matched.booking_date ? new Date(matched.booking_date).toLocaleDateString('ar-LY') : "اليوم 08:30 ص",
-        guideName: (tripObj as any)?.guide?.name || (tripObj as any)?.guide_license || "مرشد سياحي معتمد",
-        rawBooking: matched,
-      };
-
-      setScannedTicket(parsedTicket);
-      setScanStatusMsg({ type: "success", msg: "✅ تم العثور على التذكرة ومطابقتها بنجاح في قاعدة بيانات منصة دلّني!" });
-    } else {
-      // Dynamic fallback for generated tickets
-      setScannedTicket({
-        code: raw,
-        isDaily: true,
-        touristName: "سائح معتمد (حجز مباشر)",
-        touristId: "T-LIBYA-2026",
-        tripTitle: "جولة سياحية يومية - طرابلس ولبدة الكبرى",
-        seats: 2,
-        totalPrice: 200,
-        paymentStatus: "unpaid",
-        attended: false,
-        bookingStatus: "بانتظار التأكيد",
-        date: "الموعد القادم 08:30 ص",
-        guideName: "مرشد سياحي معتمد",
-        rawBooking: null,
-      });
-      setScanStatusMsg({ type: "info", msg: `تم قراءة رمز التذكرة (${raw}) بنجاح. يمكنك تأكيد التسجيل واستلام المبلغ أدناه.` });
+    const res = await apiFindTicket(raw);
+    if (!res.success) {
+      setScannedTicket(null);
+      setScanStatusMsg({ type: "error", msg: `❌ ${res.error} (${raw})` });
+      return;
     }
+    const b = res.data;
+    const isDaily = res.kind === "daily";
+    setScannedTicket({
+      code: isDaily ? b.booking_daily_id : b.booking_weekly_id,
+      isDaily,
+      touristName: b.tourist_name || b.tourist_id,
+      touristId: b.tourist_id,
+      tripTitle: b.trip_title || (isDaily ? "رحلة يومية" : "رحلة أسبوعية"),
+      seats: Number(b.number_of_seats) || 1,
+      totalPrice: Number(b.total_price) || 0,
+      paymentStatus: b.payment_status || "unpaid",
+      attended: !!b.attended,
+      bookingStatus: b.booking_status || "",
+      date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "",
+      guideName: b.guide_name || "—",
+      rawBooking: b,
+    });
+    setScanStatusMsg({ type: "success", msg: "✅ تم العثور على التذكرة ومطابقتها بنجاح في قاعدة بيانات منصة دلّني!" });
   };
 
+  // Cash received and tourist checked in, saved in DelniDB (the server notifies the tourist)
   const handleConfirmAndPayTicket = async () => {
     if (!scannedTicket) return;
-    const ticketCode = scannedTicket.code;
-
-    // Update in daily/weekly bookings state
-    if (scannedTicket.isDaily) {
-      setDailyBookings(prev => prev.map(b => b.booking_daily_id === ticketCode ? { ...b, payment_status: "paid", attended: true, booking_status: "مؤكدة" } : b));
-    } else {
-      setWeeklyBookings(prev => prev.map(b => b.booking_weekly_id === ticketCode ? { ...b, payment_status: "paid", attended: true, booking_status: "مؤكدة" } : b));
+    const kind = scannedTicket.isDaily ? "daily" : "weekly";
+    const res = await apiCheckInBooking(kind, scannedTicket.code);
+    if (!res.success) {
+      setScanStatusMsg({ type: "error", msg: "❌ لم يتم تأكيد التذكرة في قاعدة البيانات: " + res.error });
+      return;
     }
-
-    // Update in local storage
-    try {
-      const storeKey = scannedTicket.isDaily ? "dalni_bookings_daily" : "dalni_bookings_weekly";
-      const idKey = scannedTicket.isDaily ? "booking_daily_id" : "booking_weekly_id";
-      const list = JSON.parse(localStorage.getItem(storeKey) || "[]");
-      const updatedList = list.map((b: any) => b[idKey] === ticketCode ? { ...b, payment_status: "paid", attended: true, booking_status: "مؤكدة" } : b);
-      localStorage.setItem(storeKey, JSON.stringify(updatedList));
-    } catch {}
-
-    // Send API update to backend SQL Server
-    try {
-      const endpoint = scannedTicket.isDaily ? "bookings_daily" : "bookings_weekly";
-      const idParam = scannedTicket.isDaily ? "booking_daily_id" : "booking_weekly_id";
-      await fetch(`http://127.0.0.1:5001/api/db/${endpoint}?${idParam}=${encodeURIComponent(ticketCode)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment_status: "paid", booking_status: "مؤكدة", attended: 1 }),
-      });
-    } catch {}
-
-    // Dispatch real-time notification to tourist
-    try {
-      notifyTicketVerified(ticketCode, scannedTicket.tripTitle, scannedTicket.touristName, scannedTicket.seats, scannedTicket.touristId);
-    } catch {}
-
-    setScannedTicket((prev: any) => ({
-      ...prev,
-      paymentStatus: "paid",
-      attended: true,
-      bookingStatus: "مؤكد ومسدد",
-    }));
-
+    replaceBooking(kind, res.data);
+    setScannedTicket((prev: any) => ({ ...prev, paymentStatus: "paid", attended: true, bookingStatus: res.data.booking_status }));
     setScanStatusMsg({
       type: "success",
-      msg: `🎉 ممتاز! تم تأكيد تسجيل السائح (${scannedTicket.touristName}) وسداد التذكرة (${ticketCode}) لعدد (${scannedTicket.seats}) مقاعد بنجاح، وتم إرسال إشعار فوري للسائح!`
+      msg: `🎉 ممتاز! تم تأكيد تسجيل السائح (${scannedTicket.touristName}) وسداد التذكرة (${scannedTicket.code}) لعدد (${scannedTicket.seats}) مقاعد بنجاح، وتم إرسال إشعار فوري للسائح!`
     });
   };
 
@@ -1890,17 +1484,6 @@ function AdminDashboard() {
                     </button>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const sample = "DL-68835";
-                    setScanCode(sample);
-                    handleVerifyTicketCode(sample);
-                  }}
-                  className="px-3 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-mono text-xs font-bold transition border border-amber-200 cursor-pointer"
-                >
-                  DL-68835 (تذكرة تجريبية)
-                </button>
               </div>
 
               {/* Status Message */}
@@ -2066,7 +1649,6 @@ function AdminDashboard() {
                     <td className="py-3"><Badge tone={c.status === "موثق" || c.verification_status === "موثق" ? "green" : "sun"}>{c.status || c.verification_status || "موثق"}</Badge></td>
                     <td className="py-3 flex gap-2">
                       <button onClick={() => setEditingCompany(c)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل</button>
-                      <button onClick={() => handleDeleteCompany(c.contract_number || c.id || "")} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-black rounded-lg">حذف</button>
                     </td>
                   </tr>
                 ))}
@@ -2092,7 +1674,10 @@ function AdminDashboard() {
                     <td className="py-3 font-mono text-xs font-bold">{d.driver_license_number}</td>
                     <td className="py-3 text-muted-foreground">{d.phone_number}</td>
                     <td className="py-3 font-bold text-primary text-xs">{d.contract_number}</td>
-                    <td className="py-3 text-muted-foreground font-bold">{d.assigned_vehicle_plate}</td>
+                    <td className="py-3 text-muted-foreground font-bold">
+                      {d.assigned_vehicle_plate}
+                      {d.current_trip_stage && <div className="text-[10px] font-bold text-primary mt-0.5">🧭 {d.current_trip_stage}</div>}
+                    </td>
                     <td className="py-3"><Badge tone={d.account_status === "نشط" ? "green" : "red"}>{d.account_status}</Badge></td>
                   </tr>
                 ))}
@@ -2272,13 +1857,6 @@ function AdminDashboard() {
                               <span>🧭</span>
                             </button>
                           )}
-                          <button
-                            onClick={() => handleDeleteGuide(g.license_number)}
-                            className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-black transition cursor-pointer"
-                            title="حذف المرشد نهائياً"
-                          >
-                            حذف
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -2491,7 +2069,7 @@ function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => setEditingDailyTrip(d)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين الحافلة</button>
-                    <button onClick={() => handleDeleteDailyTrip(d.daily_trip_id || d.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                    {d.is_active !== false ? <button onClick={() => handleCancelDailyTrip(d.daily_trip_id || d.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">إلغاء الرحلة</button> : <span className="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-black">ملغاة</span>}
                   </div>
                 </div>
               ))}
@@ -2508,6 +2086,9 @@ function AdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-black text-foreground text-sm">{w.title}</h4>
                       <Badge tone={w.is_active ? "green" : "muted"}>{w.is_active ? "نشطة" : "موقوفة"}</Badge>
+                      {w.guide_approval_status === "بانتظار رد المرشد" && <Badge tone="sun">⏳ بانتظار موافقة المرشد (غير منشورة)</Badge>}
+                      {w.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
+                      {w.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
                       <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black">
                         🗓️ كل {w.weekly_day || "جمعة"} (يوم في الأسبوع)
                       </span>
@@ -2539,7 +2120,7 @@ function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => setEditingWeeklyTrip(w)} className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-black">تعديل وتعيين الحافلة</button>
-                    <button onClick={() => handleDeleteWeeklyTrip(w.weekly_trip_id || w.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">حذف</button>
+                    {w.is_active !== false ? <button onClick={() => handleCancelWeeklyTrip(w.weekly_trip_id || w.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-black">إلغاء الرحلة</button> : <span className="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-black">ملغاة</span>}
                   </div>
                 </div>
               ))}
@@ -2774,7 +2355,7 @@ function AdminDashboard() {
                         </div>
                         <div className="flex gap-2 pt-3 border-t border-slate-100">
                           <button onClick={() => setEditingDailyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
-                          <button onClick={() => handleDeleteDailyOffer(o.offer_daily_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
+                          <button onClick={() => endOffer("daily", o.offer_daily_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">إنهاء العرض</button>
                         </div>
                       </div>
                     </div>
@@ -2821,7 +2402,7 @@ function AdminDashboard() {
                         </div>
                         <div className="flex gap-2 pt-3 border-t border-slate-100">
                           <button onClick={() => setEditingWeeklyOffer(o)} className="flex-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
-                          <button onClick={() => handleDeleteWeeklyOffer(o.offer_weekly_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
+                          <button onClick={() => endOffer("weekly", o.offer_weekly_id || o.id || "")} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">إنهاء العرض</button>
                         </div>
                       </div>
                     </div>
@@ -3035,19 +2616,19 @@ function AdminDashboard() {
                             <span>⛔</span>
                             <span>هذه الرحلة ملغاة من قبل السائح — تم إغلاق الطلب ولا يمكن جدولتها أو تعديل تسعيرتها.</span>
                           </div>
+                        ) : pt.status_order === "اعتذر المرشد" ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl">
+                            <span>⚠️</span>
+                            <span>اعتذر المرشد عن هذه الرحلة — يرجى تعيين مرشد آخر وإعادة الإرسال.</span>
+                          </div>
+                        ) : pt.status_order === "بانتظار رد المرشد" ? (
+                          <span className="text-[11px] text-slate-500 font-bold">⏳ أُرسلت الرحلة للمرشد وبانتظار رده، وبعد موافقته تصل للسائح.</span>
                         ) : (
-                          <span className="text-[11px] text-slate-400">يمكنك إعداد جدول المحطات واحتساب التسعيرة ثم إرسالها للسائح</span>
+                          <span className="text-[11px] text-slate-400">يمكنك إعداد جدول المحطات واحتساب التسعيرة ثم إرسالها للمرشد للموافقة، وبعد موافقته تصل للسائح</span>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2 mr-auto">
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePrivate(pt.private_trip_id)}
-                          className="px-4 py-1.5 border border-red-200 text-red-600 rounded-xl text-xs font-black hover:bg-red-50 cursor-pointer"
-                        >
-                          حذف
-                        </button>
                         {!isCancelled && (
                           <button
                             type="button"
@@ -3110,7 +2691,7 @@ function AdminDashboard() {
                             {propTypeLabel}
                           </span>
                           <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
-                            🏷️ خصم {h.discount_percentage || 15}% دلّني
+                            🏷️ خصم {h.discount_percentage ?? 0}% دلّني
                           </span>
                         </div>
                         <h4 className="font-black text-[#003580] text-base">{h.name}</h4>
@@ -3184,7 +2765,6 @@ function AdminDashboard() {
                     <span className="font-bold text-foreground">📞 {h.phone}</span>
                     <div className="flex gap-2">
                       <button onClick={() => setEditingHotel(h)} className="px-3.5 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
-                      <button onClick={() => handleDeleteHotel(h.id)} className="px-3.5 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
                     </div>
                   </div>
                 </div>
@@ -3269,7 +2849,6 @@ function AdminDashboard() {
                     <span className="font-bold text-foreground">📞 {r.phone}</span>
                     <div className="flex gap-2">
                       <button onClick={() => setEditingRestaurant(r)} className="px-3.5 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
-                      <button onClick={() => handleDeleteRestaurant(r.id)} className="px-3.5 py-1.5 bg-red-50 text-red-600 text-xs font-black rounded-lg hover:bg-red-100 transition">حذف</button>
                     </div>
                   </div>
                 </div>
@@ -3305,14 +2884,8 @@ function AdminDashboard() {
                     </div>
 
                     {/* Historical snippet or Highlights */}
-                    {(a.history_snippet || a.highlights) && (
+                    {Array.isArray(a.highlights) && a.highlights.length > 0 && (
                       <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 leading-snug space-y-1.5">
-                        {a.history_snippet && (
-                          <div>
-                            <strong className="text-slate-900 font-bold">📜 نبذة تاريخية: </strong>
-                            <span>{a.history_snippet}</span>
-                          </div>
-                        )}
                         {a.highlights && (
                           <div>
                             <strong className="text-[#003580] font-bold">✨ أبرز المحطات: </strong>
@@ -3339,7 +2912,6 @@ function AdminDashboard() {
                       <span className="text-[11px] text-slate-400 font-medium">👥 {a.visitors_count || 0} استعلام وزيارة</span>
                       <div className="flex gap-2">
                         <button onClick={() => setEditingAttraction(a)} className="px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black rounded-lg transition cursor-pointer">تعديل</button>
-                        <button onClick={() => handleDeleteAttraction(munId || "")} className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black rounded-lg transition cursor-pointer">حذف</button>
                       </div>
                     </div>
                   </div>
@@ -3601,16 +3173,16 @@ function AdminDashboard() {
       {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
       {evaluatingPrivateTrip && <EvaluatePrivateTripModal trip={evaluatingPrivateTrip} guides={guides} vehicles={vehicles} hotels={hotels} onClose={() => setEvaluatingPrivateTrip(null)} onSave={handleSavePrivate} />}
       {selectedVehicleForModal && <VehicleDetailsModal vehicle={selectedVehicleForModal} onClose={() => setSelectedVehicleForModal(null)} />}
-      {showAddHotel && <HotelModal title="إضافة فندق جديد" existingHotels={hotels} onClose={() => setShowAddHotel(false)} onSave={handleAddHotel} />}
-      {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} existingHotels={hotels} onClose={() => setEditingHotel(null)} onSave={handleUpdateHotel} />}
-      {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" existingRestaurants={restaurants} onClose={() => setShowAddRestaurant(false)} onSave={handleAddRestaurant} />}
-      {editingRestaurant && <RestaurantModal title={`تعديل: ${editingRestaurant.name}`} restaurant={editingRestaurant} existingRestaurants={restaurants} onClose={() => setEditingRestaurant(null)} onSave={handleUpdateRestaurant} />}
-      {showAddAttraction && <AttractionModal title="إضافة وتوثيق معلم سياحي جديد (برقم البلدية ID)" existingAttractions={attractions} onClose={() => setShowAddAttraction(false)} onSave={handleAddAttraction} />}
-      {editingAttraction && <AttractionModal title={`تعديل المعلم: ${editingAttraction.name}`} attraction={editingAttraction} existingAttractions={attractions} onClose={() => setEditingAttraction(null)} onSave={handleUpdateAttraction} />}
-      {showAddDailyOffer && <DailyOfferModal title="إضافة عرض رحلة يومية" dailyTrips={dailyTrips} onClose={() => setShowAddDailyOffer(false)} onSave={handleAddDailyOffer} />}
-      {editingDailyOffer && <DailyOfferModal title="تعديل العرض اليومي" offer={editingDailyOffer} dailyTrips={dailyTrips} onClose={() => setEditingDailyOffer(null)} onSave={handleUpdateDailyOffer} />}
-      {showAddWeeklyOffer && <WeeklyOfferModal title="إضافة عرض رحلة أسبوعية" weeklyTrips={weeklyTrips} onClose={() => setShowAddWeeklyOffer(false)} onSave={handleAddWeeklyOffer} />}
-      {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={handleUpdateWeeklyOffer} />}
+      {showAddHotel && <HotelModal title="إضافة فندق جديد" existingHotels={hotels} onClose={() => setShowAddHotel(false)} onSave={(h) => handleSaveHotel(h, true)} />}
+      {editingHotel && <HotelModal title={`تعديل: ${editingHotel.name}`} hotel={editingHotel} existingHotels={hotels} onClose={() => setEditingHotel(null)} onSave={(h) => handleSaveHotel(h, false)} />}
+      {showAddRestaurant && <RestaurantModal title="إضافة مطعم/مقهى جديد" existingRestaurants={restaurants} onClose={() => setShowAddRestaurant(false)} onSave={(r) => handleSaveRestaurant(r, true)} />}
+      {editingRestaurant && <RestaurantModal title={`تعديل: ${editingRestaurant.name}`} restaurant={editingRestaurant} existingRestaurants={restaurants} onClose={() => setEditingRestaurant(null)} onSave={(r) => handleSaveRestaurant(r, false)} />}
+      {showAddAttraction && <AttractionModal title="إضافة معلم سياحي جديد" existingAttractions={attractions} onClose={() => setShowAddAttraction(false)} onSave={(a: any) => handleSaveAttraction(a, true)} />}
+      {editingAttraction && <AttractionModal title={`تعديل المعلم: ${editingAttraction.name}`} attraction={editingAttraction} existingAttractions={attractions} onClose={() => setEditingAttraction(null)} onSave={(a: any) => handleSaveAttraction(a, false)} />}
+      {showAddDailyOffer && <DailyOfferModal title="إضافة عرض رحلة يومية" dailyTrips={dailyTrips} onClose={() => setShowAddDailyOffer(false)} onSave={(o: any) => saveOffer("daily", o, true)} />}
+      {editingDailyOffer && <DailyOfferModal title="تعديل العرض اليومي" offer={editingDailyOffer} dailyTrips={dailyTrips} onClose={() => setEditingDailyOffer(null)} onSave={(o: any) => saveOffer("daily", o, false)} />}
+      {showAddWeeklyOffer && <WeeklyOfferModal title="إضافة عرض رحلة أسبوعية" weeklyTrips={weeklyTrips} onClose={() => setShowAddWeeklyOffer(false)} onSave={(o: any) => saveOffer("weekly", o, true)} />}
+      {editingWeeklyOffer && <WeeklyOfferModal title="تعديل العرض الأسبوعي" offer={editingWeeklyOffer} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyOffer(null)} onSave={(o: any) => saveOffer("weekly", o, false)} />}
       {selectedTouristDetail && (
         <TouristDetailsModal
           tourist={selectedTouristDetail}
@@ -5670,7 +5242,7 @@ function TripRestaurantSelector({
                   {r.type || (isCafe ? "كافيه ومقهى" : "مطعم مأكولات")} · <span className="text-orange-700 font-black">مدينة {r.city}</span>
                 </div>
                 <div className="text-[10px] text-slate-500 font-medium truncate">
-                  📍 {r.address || "ليبيا"} | خصم {r.discount_percentage || 15}%
+                  📍 {r.address || "ليبيا"} | خصم {r.discount_percentage ?? 0}%
                 </div>
               </div>
             </div>
@@ -7527,9 +7099,9 @@ function EvaluatePrivateTripModal({
                   setInspectVehicle({
                     plate_number: selectedVehicle.plate_number,
                     vehicle_type: selectedVehicle.vehicle_type,
-                    capacity: selectedVehicle.capacity,
-                    daily_rate: selectedVehicle.daily_rate,
-                    company_name: selectedVehicle.company_name,
+                    capacity: selectedVehicle.capacity ?? undefined,
+                    daily_rate: selectedVehicle.daily_rate ?? undefined,
+                    company_name: selectedVehicle.company_name ?? undefined,
                     vehicle_status: selectedVehicle.status || "جاهزة",
                   });
                 }}
@@ -7702,7 +7274,7 @@ function HotelModal({
   title: string;
   hotel?: Hotel;
   onClose: () => void;
-  onSave: (h: any) => void;
+  onSave: (h: any) => Promise<string | null>;
   existingHotels?: Hotel[];
 }) {
   const isNew = !hotel;
@@ -7714,16 +7286,18 @@ function HotelModal({
   const [phone, setPhone] = useState(hotel?.phone || "");
   const [stars, setStars] = useState(hotel?.stars ? Number(hotel.stars) : 4);
   const [status, setStatus] = useState<"نشط" | "موقوف">(hotel?.partnership_status === "موقوف" ? "موقوف" : "نشط");
-  const [discountPct, setDiscountPct] = useState(hotel?.discount_percentage || 15);
+  const [discountPct, setDiscountPct] = useState(hotel?.discount_percentage ?? 15);
   const [description, setDescription] = useState(hotel?.description || "");
   const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
   const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "خدمة استقبال 24/7 (تسجيل وصول 14:00 - مغادرة 12:00)");
   const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || ["مسبح", "واي فاي", "موقف"]);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Local (Libya) date, not UTC
+  const todayStr = new Date().toLocaleDateString("en-CA");
   const [contractStartDate] = useState(hotel?.contract_start_date || todayStr);
   const [contractEndDate, setContractEndDate] = useState(hotel?.contract_end_date || "");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_hotel.jpg");
   const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/hotel_resort.jpg");
@@ -7775,7 +7349,7 @@ function HotelModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
@@ -7833,7 +7407,8 @@ function HotelModal({
       return;
     }
 
-    onSave({
+    setSaving(true);
+    const saveError = await onSave({
       id: cleanId,
       hotel_id: cleanId,
       name: name.trim(),
@@ -7846,7 +7421,7 @@ function HotelModal({
       partnership_status: status,
       contract_start_date: contractStartDate,
       contract_end_date: contractEndDate,
-      discount_percentage: Number(discountPct) || 15,
+      discount_percentage: Number(discountPct),
       description: description.trim(),
       google_maps_url: mapsUrl.trim(),
       working_hours: workingHours.trim(),
@@ -7858,6 +7433,8 @@ function HotelModal({
       hotel_photo_5: p5 || p1,
       isNew,
     });
+    setSaving(false);
+    if (saveError) setErrorMsg("لم يتم الحفظ في قاعدة البيانات: " + saveError);
   };
 
   return (
@@ -8182,9 +7759,10 @@ function HotelModal({
           </button>
           <button
             type="submit"
-            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md shadow-blue-950/20 cursor-pointer transition flex items-center gap-1.5"
+            disabled={saving}
+            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md shadow-blue-950/20 cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
-            <span>حفظ مكان الإقامة بالدليل ✓</span>
+            <span>{saving ? "جارٍ الحفظ في قاعدة البيانات..." : "حفظ مكان الإقامة بالدليل ✓"}</span>
           </button>
         </div>
       </form>
@@ -8202,7 +7780,7 @@ function RestaurantModal({
   title: string;
   restaurant?: Restaurant;
   onClose: () => void;
-  onSave: (r: any) => void;
+  onSave: (r: any) => Promise<string | null>;
   existingRestaurants?: Restaurant[];
 }) {
   const isNew = !restaurant;
@@ -8213,15 +7791,17 @@ function RestaurantModal({
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
   const [status, setStatus] = useState<"نشط" | "موقوف">(restaurant?.partnership_status === "موقوف" ? "موقوف" : "نشط");
-  const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage || 20);
+  const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage ?? 20);
   const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "11:00 ص – 11:30 م");
   const [description, setDescription] = useState(restaurant?.description || "");
   const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Local (Libya) date, not UTC
+  const todayStr = new Date().toLocaleDateString("en-CA");
   const [contractStartDate] = useState(restaurant?.contract_start_date || todayStr);
   const [contractEndDate, setContractEndDate] = useState(restaurant?.contract_end_date || "");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const categoryTypeMap: Record<string, string> = {
     traditional: "مأكولات شعبية وتراثية",
@@ -8284,7 +7864,7 @@ function RestaurantModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
@@ -8342,7 +7922,8 @@ function RestaurantModal({
       return;
     }
 
-    onSave({
+    setSaving(true);
+    const saveError = await onSave({
       id: cleanId,
       facility_id: cleanId,
       name: name.trim(),
@@ -8352,7 +7933,7 @@ function RestaurantModal({
       address: address.trim(),
       phone: phone.trim(),
       whatsapp: phone.trim(),
-      discount_percentage: Number(discountPct) || 20,
+      discount_percentage: Number(discountPct),
       working_hours: workingHours.trim(),
       features,
       partnership_status: status,
@@ -8367,6 +7948,8 @@ function RestaurantModal({
       facility_image_5: i5 || i1,
       isNew,
     });
+    setSaving(false);
+    if (saveError) setErrorMsg("لم يتم الحفظ في قاعدة البيانات: " + saveError);
   };
 
   return (
@@ -8677,15 +8260,22 @@ function RestaurantModal({
           </button>
           <button
             type="submit"
-            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md shadow-amber-900/20 cursor-pointer transition flex items-center gap-1.5"
+            disabled={saving}
+            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md shadow-amber-900/20 cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
-            <span>حفظ المطعم/المقهى بالدليل ✓</span>
+            <span>{saving ? "جارٍ الحفظ في قاعدة البيانات..." : "حفظ المطعم/المقهى بالدليل ✓"}</span>
           </button>
         </div>
       </form>
     </ModalShell>
   );
 }
+
+const LANDMARK_REGIONS = [
+  "المنطقة الغربية (ساحل البحر المتوسط)",
+  "المنطقة الشرقية (الجبل الأخضر والساحل)",
+  "المنطقة الجنوبية (الصحراء الكبرى والواحات)",
+];
 
 function AttractionModal({
   title,
@@ -8704,14 +8294,11 @@ function AttractionModal({
   const [municipalityId, setMunicipalityId] = useState(
     attraction?.place_id || attraction?.municipality_code || attraction?.id || ""
   );
-  const [placeName, setPlaceName] = useState(
-    attraction?.place_name || attraction?.name || ""
-  );
   const [cityName, setCityName] = useState(
     attraction?.city || ""
   );
-  const [region, setRegion] = useState(attraction?.region || "المنطقة الغربية (ساحل البحر المتوسط)");
-  const [category, setCategory] = useState(attraction?.category || "آثار تاريخية ورومانية");
+  const [region, setRegion] = useState(LANDMARK_REGIONS.includes(attraction?.region || "") ? attraction!.region! : "");
+  const [category, setCategory] = useState(attraction?.category || "");
   const [desc, setDesc] = useState(attraction?.description || "");
   const [highlights, setHighlights] = useState(
     Array.isArray(attraction?.highlights)
@@ -8723,129 +8310,98 @@ function AttractionModal({
   const [lng, setLng] = useState(attraction?.longitude ? String(attraction.longitude) : "");
   const [mapsUrl, setMapsUrl] = useState(attraction?.google_maps_url || "");
 
-  // Main photo
-  const [imgMain, setImgMain] = useState(
-    attraction?.place_image || (attraction as any)?.photo || "/assets/dest-leptis-theater.jpg"
-  );
+  // Main photo (no default image: it must be chosen)
+  const [imgMain, setImgMain] = useState(attraction?.place_image || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanMunId = String(municipalityId || "").trim();
-    if (!cleanMunId) {
-      return alert("⚠️ يرجى إدخال رقم المعلم السياحي (المفتاح الرئيسي ID)!");
+    if (!cleanMunId) return alert("⚠️ يرجى إدخال رمز المعلم.");
+    if (!isEditing && existingAttractions?.some((a) => String(a.place_id || a.id).trim().toLowerCase() === cleanMunId.toLowerCase())) {
+      return alert(`⚠️ رمز المعلم (${cleanMunId}) مستخدم لمعلم آخر، يرجى اختيار رمز مختلف.`);
     }
-
-    // Strict duplicate check: Primary key cannot be duplicated
-    if (!isEditing && existingAttractions) {
-      const isDuplicate = existingAttractions.some(
-        (a) => String(a.place_id || a.id).trim().toLowerCase() === cleanMunId.toLowerCase()
-      );
-      if (isDuplicate) {
-        return alert(`⚠️ رقم المعلم (${cleanMunId}) مسجل مسبقاً! المفتاح الرئيسي لا يقبل التكرار.`);
-      }
+    // Every field is required; nothing is filled with default text, images or coordinates
+    const highlightList = highlights.split(/[،,\n]+/).map((h) => h.trim()).filter(Boolean);
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (!cityName.trim()) return alert("⚠️ يرجى إدخال اسم المدينة السياحية.");
+    if (!region) return alert("⚠️ يرجى اختيار المنطقة الجغرافية.");
+    if (!category) return alert("⚠️ يرجى اختيار التصنيف السياحي.");
+    if (highlightList.length === 0) return alert("⚠️ يرجى إدخال أبرز المحطات والمعالم في المدينة (محطة واحدة على الأقل).");
+    if (desc.trim().length < 20) return alert("⚠️ يرجى كتابة وصف للمعلم لا يقل عن 20 حرفاً.");
+    if (!lat.trim() || !lng.trim() || isNaN(latNum) || isNaN(lngNum) || Math.abs(latNum) > 90 || Math.abs(lngNum) > 180) {
+      return alert("⚠️ يرجى إدخال خط العرض وخط الطول بأرقام صحيحة.");
     }
-
-    if (!placeName.trim()) return alert("⚠️ يرجى إدخال اسم المعلم السياحي (مثال: لبدة الكبرى، المسرح الروماني...)");
-    if (!cityName.trim()) return alert("⚠️ يرجى إدخال اسم المدينة التابع لها المعلم (مثال: الخمس، صبراتة، طرابلس...)");
+    if (!imgMain) return alert("⚠️ يرجى اختيار صورة المعلم السياحي.");
 
     onSave({
       id: cleanMunId,
       place_id: cleanMunId,
-      municipality_code: cleanMunId,
-      name: placeName.trim(),
-      place_name: placeName.trim(),
       city: cityName.trim(),
-      region: region.trim(),
-      category: category.trim(),
-      description: desc.trim() || `معلم ${placeName.trim()} السياحي الواقع في مدينة ${cityName.trim()}، وأبرز محطاته الأثرية والتاريخية.`,
-      highlights: highlights.trim(),
+      region,
+      category,
+      description: desc.trim(),
+      highlights: highlightList,
       place_image: imgMain,
-      latitude: lat ? parseFloat(lat) : undefined,
-      longitude: lng ? parseFloat(lng) : undefined,
-      google_maps_url: (lat && lng) ? `https://maps.google.com/?q=${lat},${lng}` : (mapsUrl || undefined),
-      is_new: !isEditing,
-      mode: isEditing ? "update" : "create",
+      latitude: latNum,
+      longitude: lngNum,
     });
   };
 
   return (
     <ModalShell title={title} onClose={onClose} maxWidth="max-w-4xl">
       <form className="space-y-4 text-right max-h-[82vh] overflow-y-auto px-2" onSubmit={handleSubmit}>
-        {/* 1. Landmark ID (Primary Key) */}
-        <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
-              <span>🏛️</span>
-              <span>معرّف المعلم السياحي الفريد (Primary Key ID)</span>
-            </span>
-            <span className="text-[10px] text-blue-700 font-bold">
-              {isEditing ? "معرّف مؤكد ومحمي 🔒" : "مفتاح رئيسي فريد"}
-            </span>
-          </div>
+        {/* 1. Landmark code */}
+        <div>
+          <label className="text-xs font-bold mb-1 block text-foreground">رمز المعلم *</label>
           <input
             type="text"
             value={municipalityId}
             onChange={(e) => setMunicipalityId(e.target.value)}
-            placeholder="مثال: KHO-001 (ثلاثة أحرف من المدينة ثم رقم المعلم)"
+            placeholder="مثال: KHO-001"
             disabled={isEditing}
-            className={`w-full h-10 px-3.5 rounded-xl border text-sm font-bold text-right outline-none transition ${
-              isEditing
-                ? "bg-slate-100 text-slate-500 border-slate-300 cursor-not-allowed"
-                : "bg-white text-slate-900 border-blue-300 focus:border-blue-600 shadow-2xs"
+            className={`w-full h-10 px-3 rounded-xl border text-sm font-bold text-right outline-none transition ${
+              isEditing ? "bg-slate-100 text-slate-500 border-slate-300 cursor-not-allowed" : "bg-white border-border focus:border-primary"
             }`}
             required
           />
-          <p className="text-[10px] text-blue-800/80 font-medium">
-            💡 معرّف المعلم في قاعدة البيانات (مثل: <strong>TIP-001</strong>، <strong>BEN-001</strong>، <strong>KHO-001</strong>).
-          </p>
         </div>
 
-        {/* 2. Landmark Name and City (Separate Fields) */}
+        {/* 2. Tourist city */}
         <div className="space-y-3 pt-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Field
-                label="اسم المعلم السياحي *"
-                value={placeName}
-                onChange={setPlaceName}
-                placeholder="مثال: لبدة الكبرى (أو: المسرح الروماني، قوس ماركوس...)"
-                required
-              />
-            </div>
-            <div>
-              <Field
-                label="المدينة التابع لها المعلم *"
-                value={cityName}
-                onChange={setCityName}
-                placeholder="مثال: الخمس (أو: صبراتة، طرابلس، شحات، غدامس...)"
-                required
-              />
-            </div>
-          </div>
+          <Field
+            label="المدينة السياحية *"
+            value={cityName}
+            onChange={setCityName}
+            placeholder="مثال: الخمس، صبراتة، طرابلس، شحات، غدامس"
+            required
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold mb-1 block text-foreground">المنطقة الجغرافية / الإقليم</label>
+              <label className="text-xs font-bold mb-1 block text-foreground">المنطقة الجغرافية *</label>
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
+                required
                 className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
               >
-                <option value="المنطقة الغربية (ساحل البحر المتوسط)">المنطقة الغربية (ساحل البحر المتوسط)</option>
-                <option value="المنطقة الشرقية (الجبل الأخضر والساحل)">المنطقة الشرقية (الجبل الأخضر والساحل)</option>
-                <option value="المنطقة الجنوبية (الصحراء الكبرى والواحات)">المنطقة الجنوبية (الصحراء الكبرى والواحات)</option>
-                <option value="جبل نفوسة والمدن التاريخية">جبل نفوسة والمدن التاريخية</option>
-                <option value="المنطقة الوسطى وسرت">المنطقة الوسطى وسرت</option>
+                <option value="">اختر المنطقة</option>
+                {LANDMARK_REGIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="text-xs font-bold mb-1 block text-foreground">التصنيف السياحي</label>
+              <label className="text-xs font-bold mb-1 block text-foreground">التصنيف السياحي *</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                required
                 className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
               >
+                <option value="">اختر التصنيف</option>
                 <option value="آثار تاريخية ورومانية">🏛️ آثار تاريخية ورومانية</option>
                 <option value="واحات صحراوية">🏜️ واحات وكثبان صحراوية</option>
                 <option value="مدن قديمة وقلاع">🏰 مدن قديمة وتراث عريق</option>
@@ -8858,12 +8414,13 @@ function AttractionModal({
 
           <div>
             <label className="text-xs font-bold mb-1 block text-foreground">
-              أبرز محطات وتجارب المعلم (مفصولة بفواصل)
+              أبرز المحطات والمعالم في المدينة * (افصل بينها بفاصلة)
             </label>
             <input
               type="text"
               value={highlights}
               onChange={(e) => setHighlights(e.target.value)}
+              required
               placeholder="مثال: المسرح الروماني الكبير، قوس سيبتيموس سيفيروس، الحمامات الأثرية"
               className="w-full h-10 px-3 rounded-xl border border-border text-xs font-semibold text-right outline-none focus:border-primary"
             />
@@ -8871,7 +8428,7 @@ function AttractionModal({
 
           <div>
             <label className="text-xs font-bold mb-1 block text-foreground">
-              الوصف التفصيلي للمعلم (يظهر في دليل المعالم وتفاصيل الجولات)
+              وصف المعلم * (20 حرفاً على الأقل)
             </label>
             <textarea
               value={desc}
@@ -8886,7 +8443,7 @@ function AttractionModal({
         {/* 3. Coordinates & Google Maps */}
         <div className="pt-3 border-t border-border space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-foreground block">📍 الإحداثيات الجغرافية (خط الطول وخط العرض)</label>
+            <label className="text-xs font-black text-foreground block">📍 الإحداثيات الجغرافية *</label>
             <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
               ✓ يُولّد رابط الخريطة تلقائياً
             </span>
@@ -8918,7 +8475,7 @@ function AttractionModal({
 
         {/* 4. Photo */}
         <div className="pt-3 border-t border-border space-y-3">
-          <label className="text-xs font-black text-foreground block">📸 صورة المعلم السياحي</label>
+          <label className="text-xs font-black text-foreground block">📸 صورة المعلم السياحي *</label>
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
             <ImageFilePicker label="🌟 الصورة الرئيسية للمعلم السياحي" value={imgMain} onChange={setImgMain} />
           </div>
@@ -8938,7 +8495,7 @@ function AttractionModal({
             className="px-6 h-11 rounded-xl bg-gradient-sea hover:opacity-95 text-white font-black text-xs shadow-glow transition cursor-pointer flex items-center gap-2"
           >
             <span>💾</span>
-            <span>{isEditing ? "حفظ تعديلات المعلم" : "توثيق وحفظ المعلم السياحي"}</span>
+            <span>{isEditing ? "حفظ التعديلات" : "إضافة المعلم السياحي"}</span>
           </button>
         </div>
       </form>

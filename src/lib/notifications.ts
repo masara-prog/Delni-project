@@ -5,7 +5,7 @@
  * Handles notifications for Super Admin, Transport Companies, Drivers, Guides, and Tourists
  */
 
-import { getStoredSession } from "./api";
+import { getStoredSession, LARAVEL_API_URL } from "./api";
 
 export type NotificationType =
   | "chat"
@@ -32,7 +32,21 @@ export type NotificationItem = {
 
 const STORAGE_KEY = "dalni_notifications";
 export const NOTIF_EVENT = "dalni_notification_event";
-const API_BASE = "http://127.0.0.1:5001/api/db";
+const API_BASE = LARAVEL_API_URL;
+
+// The id notifications are addressed to, by account type
+export function recipientIdFor(session: ReturnType<typeof getStoredSession>): string | undefined {
+  const u = session.user || {};
+  const byRole: Record<string, unknown> = {
+    tourist: u.tourist_id,
+    guide: u.license_number,
+    driver: u.driver_license_number,
+    transport: u.contract_number,
+    admin: u.id,
+  };
+  const id = byRole[session.role || ""];
+  return id === undefined || id === null || id === "" ? undefined : String(id);
+}
 
 /**
  * Format timestamp to friendly Arabic relative time
@@ -84,17 +98,13 @@ export function getUserNotifications(): NotificationItem[] {
   const all = getAllNotifications();
   const session = getStoredSession();
   const currentRole = session.role || "guest";
-  const currentUserId =
-    session.user?.tourist_id ||
-    session.user?.passport ||
-    session.user?.license_number ||
-    session.user?.contract_number ||
-    session.user?.id;
+  const currentUserId = recipientIdFor(session);
 
   return all.filter((n) => {
     // If targeted to a specific user
     if (n.recipientId) {
-      return currentUserId && String(n.recipientId).trim() === String(currentUserId).trim();
+      const roleMatches = n.recipientRole === currentRole || (currentRole === "transport" && n.recipientRole === "company");
+      return roleMatches && currentUserId && String(n.recipientId).trim() === String(currentUserId).trim();
     }
     // If targeted to all
     if (!n.recipientRole || n.recipientRole === "all") return true;
@@ -105,23 +115,17 @@ export function getUserNotifications(): NotificationItem[] {
 }
 
 /**
- * Fetch fresh notifications from the DelniDB SQL Server Bridge (with strict user isolation)
+ * Fetch fresh notifications from DelniDB through Laravel (with strict user isolation)
  */
 export async function fetchUserNotifications(): Promise<NotificationItem[]> {
   const session = getStoredSession();
   const currentRole = session.role || "guest";
-  const currentUserId =
-    session.user?.tourist_id ||
-    session.user?.passport ||
-    session.user?.license_number ||
-    session.user?.contract_number ||
-    session.user?.id ||
-    "";
+  const currentUserId = recipientIdFor(session) || "";
 
   try {
     const url = `${API_BASE}/notifications?role=${encodeURIComponent(currentRole)}&user_id=${encodeURIComponent(currentUserId)}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    if (!res.ok) throw new Error("Failed to fetch notifications from bridge");
+    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error("Failed to fetch notifications from the server");
     const json = await res.json();
 
     if (json.success && Array.isArray(json.data)) {
@@ -155,17 +159,11 @@ export async function fetchUserNotifications(): Promise<NotificationItem[]> {
 export async function fetchUnreadCount(): Promise<number> {
   const session = getStoredSession();
   const currentRole = session.role || "guest";
-  const currentUserId =
-    session.user?.tourist_id ||
-    session.user?.passport ||
-    session.user?.license_number ||
-    session.user?.contract_number ||
-    session.user?.id ||
-    "";
+  const currentUserId = recipientIdFor(session) || "";
 
   try {
-    const url = `${API_BASE}/notifications/unread_count?role=${encodeURIComponent(currentRole)}&user_id=${encodeURIComponent(currentUserId)}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const url = `${API_BASE}/notifications/unread-count?role=${encodeURIComponent(currentRole)}&user_id=${encodeURIComponent(currentUserId)}`;
+    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       const json = await res.json();
       if (typeof json.count === "number") return json.count;
@@ -206,11 +204,11 @@ export function addNotification(notif: {
   const updated = [newItem, ...all.slice(0, 59)]; // keep latest 60
   saveAllNotifications(updated);
 
-  // Sync to DelniDB SQL Server Bridge
+  // Save in DelniDB through Laravel
   if (typeof window !== "undefined") {
     fetch(`${API_BASE}/notifications`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         id: newItem.id,
         type: newItem.type,
@@ -228,6 +226,66 @@ export function addNotification(notif: {
   return newItem;
 }
 
+const ROLE_DASHBOARD: Record<string, string> = {
+  tourist: "/dashboard/tourist",
+  guide: "/dashboard/guide",
+  driver: "/dashboard/driver",
+  transport: "/dashboard/transport",
+  admin: "/dashboard/admin",
+};
+
+// The dashboard section that shows a notification's content, for notifications whose link names no section
+function sectionFor(path: string, n: NotificationItem): string | undefined {
+  const t = n.title || "";
+  switch (path) {
+    case "/dashboard/admin":
+      if (n.type === "chat") return "inquiries_chat";
+      if (n.type === "private_trip") return "private_trips";
+      if (n.type === "booking") return "bookings";
+      if (n.type === "offer") return "offers";
+      if (t.includes("شركة نقل")) return "companies";
+      if (t.includes("مرشد")) return "guides";
+      if (t.includes("سائح")) return "tourists";
+      if ((n.type as string) === "contract") return "entities";
+      if (n.type === "trip" || n.type === "assignment") return "trips";
+      return undefined;
+    case "/dashboard/tourist":
+      if (n.type === "chat") return "support";
+      if (n.type === "private_trip") return "private_trips";
+      if (n.type === "booking" || n.type === "trip") return "bookings";
+      return undefined;
+    case "/dashboard/guide":
+      if (n.type === "chat") return "support";
+      if (n.type === "booking") return "active_tourists";
+      if (n.type === "trip" || n.type === "assignment" || n.type === "private_trip") return "assigned_trips";
+      return undefined;
+    case "/dashboard/driver":
+      if (n.type === "chat") return "support";
+      if (n.type === "assignment" && t.includes("مركبة")) return "vehicle";
+      if (n.type === "assignment" || n.type === "trip") return "live_trip";
+      return "notifications";
+    case "/dashboard/transport":
+      if (n.type === "chat") return "support";
+      if (n.type === "assignment" || n.type === "trip") return "trips";
+      return undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Where clicking a notification leads: its page, with ?tab= naming the dashboard section that shows its content
+ * (DashboardShell opens that section; "support" opens the support chat).
+ */
+export function notificationTarget(n: NotificationItem): { to: string; search?: Record<string, string> } | null {
+  const [linkPath, linkQuery = ""] = (n.link || "").split("?");
+  const path = linkPath || ROLE_DASHBOARD[getStoredSession().role || ""] || "";
+  if (!path) return null;
+  if (!path.startsWith("/dashboard/")) return { to: path };
+  const tab = new URLSearchParams(linkQuery).get("tab") || sectionFor(path, n);
+  // "n" makes a second click on the same notification open the section again
+  return { to: path, search: tab ? { tab, n: n.id } : { n: n.id } };
+}
+
 /**
  * Mark a single notification as read
  */
@@ -239,7 +297,7 @@ export function markNotificationRead(id: string): void {
   if (typeof window !== "undefined") {
     fetch(`${API_BASE}/notifications/read`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ id }),
       signal: AbortSignal.timeout(2000),
     }).catch(() => { });
@@ -252,12 +310,7 @@ export function markNotificationRead(id: string): void {
 export function markAllNotificationsRead(): void {
   const session = getStoredSession();
   const currentRole = session.role || "guest";
-  const currentUserId =
-    session.user?.tourist_id ||
-    session.user?.passport ||
-    session.user?.license_number ||
-    session.user?.contract_number ||
-    session.user?.id;
+  const currentUserId = recipientIdFor(session);
 
   const all = getAllNotifications();
   const updated = all.map((n) => {
@@ -276,7 +329,7 @@ export function markAllNotificationsRead(): void {
   if (typeof window !== "undefined") {
     fetch(`${API_BASE}/notifications/read`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ all: true, role: currentRole, user_id: currentUserId }),
       signal: AbortSignal.timeout(2000),
     }).catch(() => { });
@@ -295,14 +348,23 @@ export function notifyChatbotUserMessage(userName: string, userRole: string, tex
   });
 }
 
-export function notifyAdminChatReply(userName: string, replyText: string, recipientId?: string) {
+const DASHBOARD_BY_ROLE: Record<string, string> = {
+  tourist: "/dashboard/tourist",
+  guide: "/dashboard/guide",
+  driver: "/dashboard/driver",
+  company: "/dashboard/transport",
+  admin: "/dashboard/admin",
+};
+
+// The admin's reply reaches the account that wrote, whatever its type (tourist, guide, driver or transport company)
+export function notifyAdminChatReply(replyText: string, recipientRole: NonNullable<NotificationItem["recipientRole"]>, recipientId: string) {
   addNotification({
     type: "chat",
     title: "💬 رد جديد من إدارة منصة دلّني",
-    body: `رد المشرف الإداري: "${replyText.slice(0, 50)}${replyText.length > 50 ? "..." : ""}"`,
-    recipientRole: "tourist",
+    body: `رد المشرف الإداري: "${replyText}"`,
+    recipientRole,
     recipientId,
-    link: "/dashboard/tourist",
+    link: `${DASHBOARD_BY_ROLE[recipientRole] || "/"}?tab=support`,
   });
 }
 

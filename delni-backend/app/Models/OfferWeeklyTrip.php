@@ -26,8 +26,8 @@ class OfferWeeklyTrip extends Model
 
     protected $casts = [
         'discount_percentage' => 'decimal:2',
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'start_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
     ];
 
     public function weeklyTrip()

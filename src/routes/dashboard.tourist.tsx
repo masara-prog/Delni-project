@@ -7,7 +7,7 @@ import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldC
 import QRCode from "qrcode";
 import type { PrivateTrip } from "@/lib/dbSchema";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
-import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile } from "@/lib/api";
+import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiGetPrivateTrips, apiDecidePrivateTrip } from "@/lib/api";
 import { submitTripReview } from "@/lib/reviews";
 import { useFavorites } from "@/lib/favorites";
 import { Star, Heart } from "lucide-react";
@@ -258,25 +258,7 @@ function TouristDashboard() {
               });
             }
             setBookings(loaded);
-            fetch("http://127.0.0.1:5001/api/db/private_trips")
-              .then((r) => r.json())
-              .then((dbData) => {
-                if (dbData?.data && Array.isArray(dbData.data)) {
-                  const filtered = dbData.data.filter((pt: any) => !tid || pt.tourist_id === tid || pt.customer_phone === u.phone_number);
-                  if (filtered.length > 0) {
-                    setPrivateTrips(filtered);
-                    return;
-                  }
-                }
-                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-                if (local.length > 0) setPrivateTrips(local);
-                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
-              })
-              .catch(() => {
-                const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-                if (local.length > 0) setPrivateTrips(local);
-                else if (res.privateTrips && Array.isArray(res.privateTrips)) setPrivateTrips(res.privateTrips);
-              });
+            if (tid) apiGetPrivateTrips(tid).then(setPrivateTrips);
           }
         });
       }
@@ -284,40 +266,16 @@ function TouristDashboard() {
   }, [navigate]);
 
   const handleTouristDecision = async (tripId: string, decision: "مؤكدة" | "ملغاة من السائح") => {
-    try {
-      const trip = privateTrips.find((t) => t.private_trip_id === tripId);
-      if (!trip) return;
-
-      const updated = {
-        ...trip,
-        status_order: decision,
-      };
-
-      await fetch("http://127.0.0.1:5001/api/db/private_trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-
-      setPrivateTrips((prev) =>
-        prev.map((t) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t))
-      );
-
-      try {
-        const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-        const next = local.map((t: any) => (t.private_trip_id === tripId ? { ...t, status_order: decision } : t));
-        localStorage.setItem("delni_private_trips", JSON.stringify(next));
-      } catch {}
-
-      if (decision === "مؤكدة") {
-        alert("🎉 مبارك! تم إتمام وتأكيد رحلتك الخاصة بنجاح وسيتواصل معك المرشد والسائق.");
-      } else {
-        alert("تم إلغاء الرحلة الخاصة بنجاح.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("حدث خطأ أثناء حفظ القرار، يرجى المحاولة لاحقاً");
+    const u = getStoredSession().user || {};
+    const res = await apiDecidePrivateTrip(tripId, u.tourist_id || u.id || "", decision);
+    if (!res.success) {
+      alert("❌ لم يتم حفظ قرارك في قاعدة البيانات.\n" + res.error);
+      return;
     }
+    setPrivateTrips((prev) => prev.map((t) => (t.private_trip_id === tripId ? res.data : t)));
+    alert(decision === "مؤكدة"
+      ? "🎉 مبارك! تم إتمام وتأكيد رحلتك الخاصة بنجاح وسيتواصل معك المرشد والسائق."
+      : "تم إلغاء الرحلة الخاصة بنجاح.");
   };
 
   const nav: NavItem[] = [
@@ -335,26 +293,18 @@ function TouristDashboard() {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
       return;
     }
-    try {
-      const res = await apiUpdateTouristProfile({
-        tourist_id: touristInfo.tourist_id,
-        full_name: touristInfo.full_name,
-        email: touristInfo.email,
-        phone_number: touristInfo.phone_number,
-        password: touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
-      });
-      if (res && res.status === "success") {
-        alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
-        const session = getStoredSession();
-        if (session.user) {
-          localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...res.user }));
-        }
-      } else {
-        alert(res?.message || "تم حفظ التعديلات بنجاح ✓");
-      }
-    } catch {
-      alert("تم حفظ بيانات الملف الشخصي بنجاح ✓");
+    const res = await apiUpdateTouristProfile({
+      tourist_id: touristInfo.tourist_id,
+      full_name: touristInfo.full_name,
+      email: touristInfo.email,
+      phone_number: touristInfo.phone_number,
+      password: touristInfo.password && touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
+    });
+    if (res.status !== "success") {
+      alert("❌ لم يتم حفظ التعديلات في قاعدة البيانات.\n" + res.message);
+      return;
     }
+    alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
   };
 
   return (
@@ -697,13 +647,13 @@ function TouristDashboard() {
                             <button
                               type="button"
                               onClick={() => setSelectedVehicleForModal({
-                                plate_number: p.assigned_vehicle,
-                                vehicle_type: p.vehicle_model,
-                                seating_capacity: p.vehicle_capacity,
-                                company_name: p.transport_company_name,
-                                company_phone: p.transport_company_phone,
-                                vehicle_image: p.vehicle_image,
-                                daily_rate: p.vehicle_daily_rate,
+                                plate_number: p.assigned_vehicle ?? undefined,
+                                vehicle_type: p.vehicle_model ?? undefined,
+                                seating_capacity: p.vehicle_capacity ?? undefined,
+                                company_name: p.transport_company_name ?? undefined,
+                                transport_company_phone: p.transport_company_phone ?? undefined,
+                                vehicle_image: p.vehicle_image ?? undefined,
+                                daily_rate: p.vehicle_daily_rate ?? undefined,
                                 vehicle_status: p.vehicle_status || "معتمدة",
                               })}
                               className="inline-flex items-center gap-1.5 text-emerald-800 font-bold hover:text-emerald-950 hover:underline cursor-pointer bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 transition"
@@ -747,13 +697,13 @@ function TouristDashboard() {
                               <button
                                 type="button"
                                 onClick={() => setSelectedVehicleForModal({
-                                  plate_number: p.assigned_vehicle,
-                                  vehicle_type: p.vehicle_model,
-                                  seating_capacity: p.vehicle_capacity,
-                                  company_name: p.transport_company_name,
-                                  company_phone: p.transport_company_phone,
-                                  vehicle_image: p.vehicle_image,
-                                  daily_rate: p.vehicle_daily_rate,
+                                  plate_number: p.assigned_vehicle ?? undefined,
+                                  vehicle_type: p.vehicle_model ?? undefined,
+                                  seating_capacity: p.vehicle_capacity ?? undefined,
+                                  company_name: p.transport_company_name ?? undefined,
+                                  transport_company_phone: p.transport_company_phone ?? undefined,
+                                  vehicle_image: p.vehicle_image ?? undefined,
+                                  daily_rate: p.vehicle_daily_rate ?? undefined,
                                   vehicle_status: p.vehicle_status || "معتمدة",
                                 })}
                                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] shadow-2xs transition cursor-pointer"
@@ -897,26 +847,10 @@ function TouristDashboard() {
         open={privateModalOpen}
         onClose={() => {
           setPrivateModalOpen(false);
-          // Refresh private trips from DB / localStorage
-          fetch("http://127.0.0.1:5001/api/db/private_trips")
-            .then((r) => r.json())
-            .then((dbData) => {
-              if (dbData?.data && Array.isArray(dbData.data)) {
-                const u = getStoredSession().user || {};
-                const tid = u.tourist_id || u.id || "";
-                const filtered = dbData.data.filter((pt: any) => !tid || pt.tourist_id === tid || pt.customer_phone === u.phone_number);
-                if (filtered.length > 0) {
-                  setPrivateTrips(filtered);
-                  return;
-                }
-              }
-              const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-              if (local.length > 0) setPrivateTrips(local);
-            })
-            .catch(() => {
-              const local = JSON.parse(localStorage.getItem("delni_private_trips") || "[]");
-              if (local.length > 0) setPrivateTrips(local);
-            });
+          // Refresh this tourist's private trips from DelniDB
+          const u = getStoredSession().user || {};
+          const tid = u.tourist_id || u.id || "";
+          if (tid) apiGetPrivateTrips(tid).then(setPrivateTrips);
         }}
       />
 

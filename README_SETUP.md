@@ -10,7 +10,6 @@
 - **`src/`**: الواجهة الأمامية الحديثة (React 19 + TanStack Start + Vite + TailwindCSS).
 - **`delni-backend/`**: الخادم الخلفي المتكامل (PHP Laravel 12) مع كافة النماذج الـ 28 والمتحكمات.
 - **`delniDatabase/delni_database.sql`**: سكربت قاعدة البيانات الكامل لمنصة دلني (Microsoft SQL Server).
-- **`delni-ai-service/`**: محرك الذكاء الاصطناعي السياحي وخبير المعالم والرحلات في ليبيا.
 
 ---
 
@@ -76,27 +75,6 @@ php artisan serve --port=8000
 وسيعطيكِ استجابة سريعة:
 ```json
 {"status":"online","service":"Delni Laravel API","database":"sqlsrv"}
-```
-
----
-
-## 🤖 4. تشغيل خدمة الذكاء الاصطناعي (Python AI Service) — (اختياري)
-
-المنصة تحتوي على بديل ذاتي ذكي مدمج في الواجهة وخادم لارفيل لا يتوقف أبداً، ولكن لتشغيل الخادم الأصلي المستقل:
-
-1. انتقلي إلى مجلد خدمة الذكاء الاصطناعي:
-```bash
-cd delni-ai-service
-```
-
-2. تثبيت الحزم المطلوبة:
-```bash
-pip install -r requirements.txt
-```
-
-3. تشغيل خادم FastAPI:
-```bash
-uvicorn main:app --reload --port 8001
 ```
 
 ---

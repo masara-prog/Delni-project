@@ -11,7 +11,7 @@ import destTripoli from "@/assets/dest-tripoli.jpg";
 import { BackHome } from "@/components/BackHome";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin, Award, FileText, Check, Camera, DollarSign, X, Trash2, Plus, User, Phone, Mail, Lock, Shield, Sparkles, UploadCloud, ChevronLeft, ChevronRight, Compass } from "lucide-react";
-import { apiRegisterTourist, apiRegisterGuide } from "@/lib/api";
+import { apiRegisterTourist, apiRegisterGuide, LARAVEL_API_URL } from "@/lib/api";
 
 export const Route = createFileRoute("/auth/signup")({
   head: () => ({
@@ -33,19 +33,6 @@ const LANDMARK_SLIDES = [
   { img: destGhadames, titleAr: "غدامس — لؤلؤة الصحراء والتراث", locationAr: "غدامس" },
   { img: destUbari, titleAr: "بحيرات أوباري — واحة الرمال الذهبية", locationAr: "أوباري" },
   { img: destTripoli, titleAr: "السراي الحمراء والمدينة القديمة", locationAr: "طرابلس" },
-];
-
-const REGIONS_LIST = [
-  { id: "tripoli", nameAr: "طرابلس وضواحيها" },
-  { id: "leptis", nameAr: "لبدة الكبرى والخمس" },
-  { id: "sabratha", nameAr: "صبراتة والساحل الغربي" },
-  { id: "cyrene", nameAr: "شحات وقورينا (الجبل الأخضر)" },
-  { id: "benghazi", nameAr: "بنغازي والمنطقة الشرقية" },
-  { id: "ghadames", nameAr: "غدامس والواحات" },
-  { id: "ubari", nameAr: "أوباري وفزان والبحيرات" },
-  { id: "acacus", nameAr: "جبال تدرارت أكاكوس وغات" },
-  { id: "sousa", nameAr: "سوسة وأبولونيا الأثرية" },
-  { id: "tobruk", nameAr: "طبرق والمعالم التاريخية" },
 ];
 
 const WEEKDAYS = [
@@ -79,21 +66,14 @@ function SignupPage() {
   const initialTouristState = { fullName: "", phone: "", passport: "", email: "", password: "" };
   const [tourist, setTourist] = useState(initialTouristState);
 
-  const [attractionsList, setAttractionsList] = useState<any[]>([
-    { place_id: "A-01", place_name: "لبدة الكبرى والمسرح الروماني", city: "الخمس" },
-    { place_id: "A-02", place_name: "بحيرات ورمال أوباري (قبرعون)", city: "أوباري" },
-    { place_id: "att-tripoli-castle", place_name: "قلعة طرابلس والسراي الحمراء", city: "طرابلس" },
-    { place_id: "att-villa-silin", place_name: "فيلا سيلين الأثرية", city: "الخمس" },
-    { place_id: "att-nalut-ksar", place_name: "قصر نالوت الأثري", city: "نالوت" },
-    { place_id: "att-gharyan-caves", place_name: "بيوت الحفر التقليدية ومتحف الفخار", city: "غريان" },
-  ]);
+  // Landmarks registered on the platform (the guide's workplaces are chosen from these only)
+  const [attractionsList, setAttractionsList] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5001/api/db/attractions")
-      .catch(() => fetch("/api/db/attractions"))
+    fetch(`${LARAVEL_API_URL}/places`, { headers: { Accept: "application/json" } })
       .then((r) => r.json())
       .then((res) => {
-        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        if (res && res.success && Array.isArray(res.data)) {
           setAttractionsList(res.data);
         }
       })
@@ -104,7 +84,6 @@ function SignupPage() {
   const initialGuideState = {
     licenseNumber: "",
     fullName: "",
-    title: "",
     gender: "male" as "male" | "female",
     avatar: "",
     phone: "",
@@ -113,8 +92,7 @@ function SignupPage() {
     email: "",
     password: "",
     bio: "",
-    placeIds: ["A-01", "att-tripoli-castle"] as string[],
-    operatingRegions: ["tripoli", "leptis"] as string[],
+    placeIds: [] as string[],
     workingDays: ["sat", "sun", "mon", "tue", "wed", "thu"] as string[],
     speaksEnglish: true,
     speaksFrench: false,
@@ -131,28 +109,6 @@ function SignupPage() {
       return {
         ...g,
         placeIds: exists ? g.placeIds.filter((p) => p !== pid) : [...g.placeIds, pid],
-      };
-    });
-  };
-
-  const toggleRegion = (regId: string) => {
-    setGuide((g) => {
-      const exists = g.operatingRegions.includes(regId);
-      return {
-        ...g,
-        operatingRegions: exists
-          ? g.operatingRegions.filter((r) => r !== regId)
-          : [...g.operatingRegions, regId],
-      };
-    });
-  };
-
-  const toggleAllRegions = () => {
-    setGuide((g) => {
-      const allSelected = g.operatingRegions.length === REGIONS_LIST.length;
-      return {
-        ...g,
-        operatingRegions: allSelected ? [] : REGIONS_LIST.map((r) => r.id),
       };
     });
   };
@@ -229,10 +185,6 @@ function SignupPage() {
     }
     if (!guide.fullName.trim() || guide.fullName.trim().length < 3) {
       setErrorMsg("يرجى إدخال الاسم بالكامل للمرشد (٣ أحرف على الأقل).");
-      return false;
-    }
-    if (!guide.title.trim()) {
-      setErrorMsg("يرجى إدخال المسمى المهني واللقب للمرشد.");
       return false;
     }
     if (!guide.licenseNumber.trim() || guide.licenseNumber.trim().length < 3) {
@@ -803,27 +755,15 @@ function SignupPage() {
                     </div>
                   </div>
 
-                  {/* 2-Column: Full Name + Professional Title */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field
-                      label="الاسم بالكامل للمرشد"
-                      value={guide.fullName}
-                      onChange={(v) => setGuide({ ...guide, fullName: v })}
-                      onKeyDown={handleEnterKeyNext}
-                      placeholder="أحمد محمد"
-                      required
-                      icon={User}
-                    />
-                    <Field
-                      label="المسمى المهني واللقب"
-                      value={guide.title}
-                      onChange={(v) => setGuide({ ...guide, title: v })}
-                      onKeyDown={handleEnterKeyNext}
-                      placeholder="مثال: خبير الآثار والتراث الروماني"
-                      required
-                      icon={Award}
-                    />
-                  </div>
+                  <Field
+                    label="الاسم بالكامل للمرشد"
+                    value={guide.fullName}
+                    onChange={(v) => setGuide({ ...guide, fullName: v })}
+                    onKeyDown={handleEnterKeyNext}
+                    placeholder="أحمد محمد"
+                    required
+                    icon={User}
+                  />
 
                   {/* 2-Column: License Number + Phone Number */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -947,7 +887,6 @@ function SignupPage() {
                       const res = await apiRegisterGuide({
                         license_number: guide.licenseNumber,
                         full_name: guide.fullName,
-                        title: guide.title || undefined,
                         avatar: guide.avatar || undefined,
                         phone_number: guide.phone,
                         years_of_experience: Number(guide.years) || 2,
@@ -957,7 +896,6 @@ function SignupPage() {
                         price_per_day: Number(guide.pricePerDay) || 150,
                         bio: guide.bio,
                         place_ids: guide.placeIds,
-                        operating_regions: JSON.stringify(guide.operatingRegions),
                         working_days: JSON.stringify(guide.workingDays),
                         speaks_english: guide.speaksEnglish,
                         speaks_french: guide.speaksFrench,
@@ -991,7 +929,12 @@ function SignupPage() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-white rounded-2xl border border-[#E2E8F0] max-h-44 overflow-y-auto shadow-2xs">
+                    {attractionsList.length === 0 && (
+                      <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-800">
+                        لا توجد معالم سياحية مسجلة في المنصة حالياً، لذلك لا يمكن إكمال تسجيل المرشد الآن. تضيف إدارة المنصة المعالم أولاً.
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-white rounded-2xl border border-[#E2E8F0] max-h-44 overflow-y-auto shadow-2xs empty:hidden">
                       {attractionsList.map((attr) => {
                         const pid = attr.place_id || attr.id;
                         const pname = attr.place_name || attr.name;

@@ -10,18 +10,17 @@ import {
   ShieldAlert,
   Sparkles,
   Bus,
-  ArrowRight,
-  ChevronLeft,
 } from "lucide-react";
 import {
   getUserNotifications,
   fetchUserNotifications,
+  notificationTarget,
   markNotificationRead,
   markAllNotificationsRead,
   NOTIF_EVENT,
   type NotificationItem,
 } from "@/lib/notifications";
-import { useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useLanguage } from "@/lib/i18n";
 
 export function NotificationBell() {
@@ -92,9 +91,10 @@ export function NotificationBell() {
   const handleItemClick = (notif: NotificationItem) => {
     markNotificationRead(notif.id);
     setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)));
-    if (notif.link) {
+    const target = notificationTarget(notif);
+    if (target) {
       setIsOpen(false);
-      navigate({ to: notif.link as any });
+      navigate({ to: target.to as any, search: target.search as any });
     }
   };
 
@@ -241,17 +241,8 @@ export function NotificationBell() {
             )}
           </div>
 
-          {/* Footer with link to Full Notifications Page */}
-          <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-medium">
-            <Link
-              to="/notifications"
-              onClick={() => setIsOpen(false)}
-              className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark font-black hover:underline"
-            >
-              <span>{isAr ? "عرض سجل الإشعارات بالكامل" : "View all notifications"}</span>
-              {isAr ? <ChevronLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
-            </Link>
-
+          {/* Footer: unread count */}
+          <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end text-[11px] text-slate-600 font-medium">
             {unreadCount > 0 ? (
               <span className="font-bold text-amber-700 text-[10px] bg-amber-100/80 px-2 py-0.5 rounded-full">
                 {isAr ? `${unreadCount} غير مقروء` : `${unreadCount} unread`}

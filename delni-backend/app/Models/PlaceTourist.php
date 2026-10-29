@@ -23,8 +23,8 @@ class PlaceTourist extends Model
         'place_image',
         'google_maps_url',
         'region',
-        'highlights',
     ];
+    // Highlights are rows of places_tourist_highlights (highlightItems)
 
     protected $casts = [
         'longitude' => 'decimal:6',

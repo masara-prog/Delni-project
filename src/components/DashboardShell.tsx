@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { type ReactNode, useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/lib/i18n";
@@ -30,6 +30,17 @@ export function DashboardShell({
   const [showSupportChat, setShowSupportChat] = useState(false);
   const { dir, language } = useLanguage();
   const isAr = language === 'ar';
+
+  // ?tab=<section> (from a clicked notification) opens that section; "support" opens the support chat
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  useEffect(() => {
+    const tab = new URLSearchParams(searchStr).get("tab");
+    if (!tab) return;
+    if (tab === "support") setShowSupportChat(true);
+    else if (nav.some((item) => item.id === tab)) onNavigate(tab);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchStr]);
 
   return (
     <div className="min-h-screen bg-gradient-sand" dir={dir}>

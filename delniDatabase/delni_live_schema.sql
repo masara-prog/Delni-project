@@ -138,7 +138,8 @@ BEGIN
         [email] VARCHAR(100) NOT NULL,
         [account_status] NVARCHAR(50) NULL,
         [password] VARCHAR(255) NOT NULL,
-        [operational_status] NVARCHAR(50) NULL
+        [operational_status] NVARCHAR(50) NULL,
+        [current_trip_stage] NVARCHAR(50) NULL
     );
 END;
 GO
@@ -369,8 +370,7 @@ BEGIN
         [category] NVARCHAR(100) NOT NULL,
         [place_image] NVARCHAR(MAX) NULL,
         [google_maps_url] NVARCHAR(MAX) NULL,
-        [region] NVARCHAR(100) NULL,
-        [highlights] NVARCHAR(MAX) NULL
+        [region] NVARCHAR(100) NULL
     );
 END;
 GO
@@ -385,8 +385,7 @@ BEGIN
         [highlight_id] VARCHAR(50) NOT NULL,
         [place_id] VARCHAR(50) NOT NULL,
         [highlight_name] NVARCHAR(250) NOT NULL,
-        [display_order] INT NOT NULL DEFAULT ((1)),
-        [created_at] DATETIME NULL DEFAULT (getdate())
+        [display_order] INT NOT NULL DEFAULT ((1))
     );
 END;
 GO
@@ -736,7 +735,9 @@ BEGIN
         [photo_2] NVARCHAR(500) NULL,
         [photo_3] NVARCHAR(500) NULL,
         [photo_4] NVARCHAR(500) NULL,
-        [photo_5] NVARCHAR(500) NULL
+        [photo_5] NVARCHAR(500) NULL,
+        [trip_description] NVARCHAR(MAX) NULL,
+        [guide_approval_status] NVARCHAR(30) NULL
     );
 END;
 GO

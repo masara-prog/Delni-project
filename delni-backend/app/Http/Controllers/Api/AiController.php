@@ -74,23 +74,7 @@ class AiController extends Controller
             ]);
         }
 
-        // Try proxying to Python microservice first if running
-        try {
-            $pyResponse = Http::timeout(2)->post('http://127.0.0.1:8001/api/ai/chat', [
-                'message' => $message,
-                'user_type' => $request->input('user_type', 'tourist'),
-            ]);
-
-            if ($pyResponse->successful()) {
-                $data = $pyResponse->json();
-                $data['source'] = 'python_fastapi';
-                return response()->json($data);
-            }
-        } catch (\Throwable $e) {
-            // Python service offline, fall back to native intelligent engine
-        }
-
-        // Native Intelligent Libyan Assistant
+        // Native Intelligent Libyan Assistant (Laravel is the only server; the separate Python service was removed)
         $lower = mb_strtolower($message, 'UTF-8');
         $suggestedPlaces = [];
         $suggestedTrips = [];
