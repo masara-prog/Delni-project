@@ -494,7 +494,7 @@ function TransportDashboard() {
                 </div>
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
-                    <div className="text-xs text-muted-foreground font-bold">نوع وموديل السيارة (vehicle_type):</div>
+                    <div className="text-xs text-muted-foreground font-bold">نوع وموديل السيارة:</div>
                     <h4 className="font-black text-foreground text-base mt-0.5">{v.vehicle_type}</h4>
                     <div className="flex items-center justify-between text-xs mt-1">
                       <span className="font-bold text-primary">👥 عدد المقاعد: {v.seating_capacity} مقعد</span>
@@ -504,7 +504,7 @@ function TransportDashboard() {
                     </div>
                     
                     <div className="mt-3 p-3 rounded-xl bg-muted/30 border border-border/60 text-xs space-y-1">
-                      <div className="font-black text-foreground">🛡️ تفاصيل التأمين (insurance_details):</div>
+                      <div className="font-black text-foreground">🛡️ تفاصيل التأمين:</div>
                       <p className="text-muted-foreground">{v.insurance_details}</p>
                       {v.insurance_image && (
                         <div className="mt-1 flex items-center gap-1.5 text-primary text-[11px] font-bold">

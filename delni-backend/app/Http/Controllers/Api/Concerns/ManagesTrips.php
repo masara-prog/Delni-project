@@ -99,17 +99,17 @@ trait ManagesTrips
         if ($guide !== null) {
             $status = DB::table('tour_guides')->where('license_number', $guide)->value('verification_status');
             if ($status === null) {
-                return 'المرشد السياحي المحدد غير موجود في قاعدة البيانات';
+                return 'المرشد السياحي المحدد غير موجود';
             }
             if ($status !== 'موثق') {
                 return 'لا يمكن إسناد الرحلة لمرشد غير معتمد من الإدارة';
             }
         }
         if ($plate !== null && !DB::table('vehicles')->where('plate_number', $plate)->exists()) {
-            return 'المركبة المحددة غير موجودة في قاعدة البيانات';
+            return 'المركبة المحددة غير موجودة';
         }
         if ($restaurant !== null && !DB::table('restaurants_cafes')->where('facility_id', $restaurant)->exists()) {
-            return 'المطعم/المقهى المحدد غير موجود في قاعدة البيانات';
+            return 'المطعم/المقهى المحدد غير موجود';
         }
         return null;
     }

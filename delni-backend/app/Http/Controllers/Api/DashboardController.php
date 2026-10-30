@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
         if (!$guide) {
             return response()->json([
-                'error' => 'لا توجد بيانات مرشد سياحي مسجلة في قاعدة البيانات لهذا الحساب',
+                'error' => 'لا توجد بيانات مرشد سياحي مسجلة لهذا الحساب',
             ], 404);
         }
 
@@ -146,7 +146,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'تم حفظ وتحديث ملف المرشد في قاعدة البيانات بنجاح',
+            'message' => 'تم حفظ وتحديث ملف المرشد بنجاح',
             'guide' => $guide->fresh(),
         ]);
     }

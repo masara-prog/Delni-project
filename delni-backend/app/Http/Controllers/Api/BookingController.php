@@ -204,7 +204,7 @@ class BookingController extends Controller
                 return response()->json(['success' => true, 'kind' => $kind, 'data' => $row]);
             }
         }
-        return $this->error('رمز التذكرة غير موجود في قاعدة البيانات', 404);
+        return $this->error('رمز التذكرة غير موجود', 404);
     }
 
     private function updateBooking(string $kind, string $bookingId, array $values, string $message): JsonResponse

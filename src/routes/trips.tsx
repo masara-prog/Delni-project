@@ -2195,11 +2195,16 @@ function TripsPage() {
       <div className="relative h-80 sm:h-96 overflow-hidden bg-[#0F172A]">
         <HeroSlideshow
           images={[
-            heroImg,
-            destCyrene,
-            destGhadames,
-            destUbari,
-            destTripoli,
+            // Trips use their own photos (the landmarks page uses different ones)
+            "/assets/libya/ubari-lake-dunes.jpg",
+            "/assets/libya/sabratha-turquoise-sea.jpg",
+            "/assets/libya/acacus-pillar.jpg",
+            "/assets/libya/ghadames-spring.jpg",
+            "/assets/libya/ubari-palm-lake.jpg",
+            "/assets/libya/nalut-red-sky.jpg",
+            "/assets/libya/sabratha-bay.jpg",
+            "/assets/libya/ubari-oasis-dunes.jpg",
+            "/assets/libya/leptis-aerial-green.jpg",
           ]}
           alt="الرحلات السياحية في ليبيا"
           brightness="brightness-95"

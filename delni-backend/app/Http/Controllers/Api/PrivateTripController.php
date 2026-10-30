@@ -216,7 +216,7 @@ class PrivateTripController extends Controller
         }
         $plate = $data['vehicle_plate'] ?? null;
         if ($plate && !DB::table('vehicles')->where('plate_number', $plate)->exists()) {
-            return $this->error('المركبة المحددة غير موجودة في قاعدة البيانات', 422);
+            return $this->error('المركبة المحددة غير موجودة', 422);
         }
 
         $status = $data['status_order'];

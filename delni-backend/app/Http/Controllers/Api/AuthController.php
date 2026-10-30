@@ -236,7 +236,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'تم تحديث بيانات ملف السائح في قاعدة البيانات بنجاح',
+            'message' => 'تم تحديث بيانات ملف السائح بنجاح',
             'user' => $tourist->fresh(),
         ]);
     }

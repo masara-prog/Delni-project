@@ -270,6 +270,9 @@ export function FloatingChat() {
     }, 800);
   };
 
+  // No support / AI buttons on the login and signup screens or in the admin dashboard
+  if (/^\/(auth\/)?(login|signup)\b/.test(path) || path.startsWith("/dashboard/admin")) return null;
+
   return (
     <>
       {/* زر مركز الدعم */}

@@ -1,3 +1,4 @@
+import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
@@ -40,7 +41,10 @@ import {
   apiSaveRestaurant
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
-import { getChatSessions, saveChatSessions, sendAdminReply } from "@/lib/supportChat";
+import { getChatSessions as getAllChatSessions, saveChatSessions, sendAdminReply } from "@/lib/supportChat";
+
+// Conversations opened by platform users (the admin's own test conversations are not shown)
+const getChatSessions = () => getAllChatSessions().filter((s) => !s.id.startsWith("session-admin-") && s.recipient_role !== "admin");
 import type {
   TransportationCompany,
   Driver as DbDriver,
@@ -780,7 +784,7 @@ function AdminDashboard() {
     const targetGuide = guides.find(g => g.license_number === lic);
     const res = await apiVerifyGuide(lic, status);
     if (res.status !== "success") {
-      alert("❌ لم يتم تحديث حالة المرشد في قاعدة البيانات.\n" + res.message);
+      alert("❌ لم يتم تحديث حالة المرشد.\n" + res.message);
       return;
     }
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
@@ -883,11 +887,11 @@ function AdminDashboard() {
         };
         const res = await apiCreateDailyTrip(payload);
         if (res.status === "error") {
-          alert("❌ لم يتم حفظ الرحلة في قاعدة البيانات.\n" + res.message);
+          alert("❌ لم يتم حفظ الرحلة.\n" + res.message);
           return;
         }
         await reloadTrips();
-        alert("تم حفظ الرحلة اليومية بنجاح في قاعدة البيانات!");
+        alert("تم حفظ الرحلة اليومية بنجاح!");
       } else {
         const imgList = (data.images && data.images.length > 0)
           ? data.images
@@ -957,11 +961,11 @@ function AdminDashboard() {
       };
       const res = await apiUpdateDailyTrip(tripId, payload);
       if (res.status === "error") {
-        alert("❌ لم يتم حفظ التعديل في قاعدة البيانات.\n" + res.message);
+        alert("❌ لم يتم حفظ التعديل.\n" + res.message);
         return;
       }
       await reloadTrips();
-      alert("تم تحديث الرحلة اليومية بنجاح في قاعدة البيانات!");
+      alert("تم تحديث الرحلة اليومية بنجاح!");
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
       return;
@@ -970,7 +974,7 @@ function AdminDashboard() {
   };
 
   const handleCancelDailyTrip = async (id: string) => {
-    if (!confirm("سيتم إلغاء هذه الرحلة وإيقاف الحجز عليها وإشعار المرشد والسائق والشركة والسياح المحجوزين.\nلن يُحذف أي شيء من قاعدة البيانات. هل تريد المتابعة؟")) return;
+    if (!await platformConfirm("سيتم إلغاء هذه الرحلة وإيقاف الحجز عليها وإشعار المرشد والسائق والشركة والسياح المحجوزين.\nلن يُحذف أي شيء. هل تريد المتابعة؟")) return;
     const res = await apiCancelDailyTrip(id);
     alert((res.ok ? "✅ " : "❌ ") + res.message);
     if (res.ok) await reloadTrips();
@@ -1007,7 +1011,7 @@ function AdminDashboard() {
       };
       const res = await apiUpdateWeeklyTrip(tripId, payload);
       if (res.status === "error") {
-        alert("❌ لم يتم حفظ التعديل في قاعدة البيانات.\n" + res.message);
+        alert("❌ لم يتم حفظ التعديل.\n" + res.message);
         return;
       }
       await reloadTrips();
@@ -1020,7 +1024,7 @@ function AdminDashboard() {
   };
 
   const handleCancelWeeklyTrip = async (id: string) => {
-    if (!confirm("سيتم إلغاء هذه الرحلة وإيقاف الحجز عليها وإشعار المرشد والسائق والشركة والسياح المحجوزين.\nلن يُحذف أي شيء من قاعدة البيانات. هل تريد المتابعة؟")) return;
+    if (!await platformConfirm("سيتم إلغاء هذه الرحلة وإيقاف الحجز عليها وإشعار المرشد والسائق والشركة والسياح المحجوزين.\nلن يُحذف أي شيء. هل تريد المتابعة؟")) return;
     const res = await apiCancelWeeklyTrip(id);
     alert((res.ok ? "✅ " : "❌ ") + res.message);
     if (res.ok) await reloadTrips();
@@ -1096,7 +1100,7 @@ function AdminDashboard() {
 
     const handleChatSync = (e: any) => {
       const all = e?.detail || getChatSessions();
-      setChatSessions([...all]);
+      setChatSessions(all.filter((s: ChatSession) => !s.id.startsWith("session-admin-") && (s as any).recipient_role !== "admin"));
     };
     const handleStorageSync = (e: StorageEvent) => {
       if (e.key === "dalni_chat_sessions") {
@@ -1125,6 +1129,7 @@ function AdminDashboard() {
     setHotels((prev) => isNew ? [row, ...prev] : prev.map(x => x.id === row.id ? row : x));
     if (isNew) setShowAddHotel(false);
     else setEditingHotel(null);
+    alert(isNew ? "✅ تمت إضافة مكان الإقامة بنجاح" : "✅ تم تعديل بيانات مكان الإقامة بنجاح");
     return null;
   };
   const handleSaveRestaurant = async (r: any, isNew: boolean): Promise<string | null> => {
@@ -1143,11 +1148,11 @@ function AdminDashboard() {
       ? "تقييد حساب هذا السائح ومنعه من حجز أي رحلات جديدة على المنصة"
       : "إلغاء التقييد وتنشيط حساب السائح للسماح له بالحجز مجدداً";
 
-    if (!confirm(`هل أنت متأكد من ${actionText}؟\n(رقم الجواز / المعرف: ${touristId})`)) return;
+    if (!await platformConfirm(`هل أنت متأكد من ${actionText}؟\n(رقم الجواز / المعرف: ${touristId})`)) return;
 
     const res = await laravelRequest("PUT", `/tourists/${encodeURIComponent(touristId)}/status`, { account_status: newStatus });
     if (!res.ok) {
-      alert("❌ لم يتم تحديث حالة السائح في قاعدة البيانات.\n" + res.error);
+      alert("❌ لم يتم تحديث حالة السائح.\n" + res.error);
       return;
     }
     setTourists(prev => prev.map(t => t.tourist_id === touristId ? { ...t, account_status: newStatus } : t));
@@ -1188,7 +1193,7 @@ function AdminDashboard() {
   const saveOffer = async (kind: "daily" | "weekly", o: any, isNew: boolean) => {
     const res = kind === "daily" ? await apiCreateDailyOffer(o) : await apiCreateWeeklyOffer(o);
     if (!res.success) {
-      alert("❌ لم يتم حفظ العرض في قاعدة البيانات.\n" + res.error);
+      alert("❌ لم يتم حفظ العرض.\n" + res.error);
       return;
     }
     if (kind === "daily") {
@@ -1202,7 +1207,7 @@ function AdminDashboard() {
     }
   };
   const endOffer = async (kind: "daily" | "weekly", id: string) => {
-    if (!confirm("سيتم إنهاء هذا العرض ولن يظهر للسياح بعد الآن، دون حذفه من قاعدة البيانات. هل تريد المتابعة؟")) return;
+    if (!await platformConfirm("سيتم إنهاء هذا العرض ولن يظهر للسياح بعد الآن، دون حذفه. هل تريد المتابعة؟")) return;
     const res = kind === "daily" ? await apiEndDailyOffer(id) : await apiEndWeeklyOffer(id);
     alert((res.ok ? "✅ " : "❌ ") + res.message);
     if (!res.ok) return;
@@ -1232,7 +1237,7 @@ function AdminDashboard() {
       ? await apiSetBookingPayment(kind, id, current.payment_status !== "paid")
       : await apiSetBookingAttendance(kind, id, !current.attended);
     if (!res.success) {
-      alert("❌ لم يتم حفظ التعديل في قاعدة البيانات.\n" + res.error);
+      alert("❌ لم يتم حفظ التعديل.\n" + res.error);
       return;
     }
     replaceBooking(kind, res.data);
@@ -1285,7 +1290,7 @@ function AdminDashboard() {
     const kind = scannedTicket.isDaily ? "daily" : "weekly";
     const res = await apiCheckInBooking(kind, scannedTicket.code);
     if (!res.success) {
-      setScanStatusMsg({ type: "error", msg: "❌ لم يتم تأكيد التذكرة في قاعدة البيانات: " + res.error });
+      setScanStatusMsg({ type: "error", msg: "❌ لم يتم تأكيد التذكرة: " + res.error });
       return;
     }
     replaceBooking(kind, res.data);
@@ -1424,7 +1429,7 @@ function AdminDashboard() {
                   <h2 className="text-xl font-black">محطة مسح الباركود وتأكيد التذاكر الإلكترونية</h2>
                 </div>
                 <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium leading-relaxed">
-                  عند حضور السائح لمقر الشركة أو نقطة الانطلاق، امسح رمز الـ QR من شاشة هاتف السائح بواسطة قارئ الباركود أو كاميرا الهاتف، أو أدخل رقم التذكرة لمطابقة بيانات الحجز وتأكيد الدفع والتسجيل فورياً في قاعدة البيانات.
+                  عند حضور السائح لمقر الشركة أو نقطة الانطلاق، امسح رمز الـ QR من شاشة هاتف السائح بواسطة قارئ الباركود أو كاميرا الهاتف، أو أدخل رقم التذكرة لمطابقة بيانات الحجز وتأكيد الدفع والتسجيل فورياً.
                 </p>
               </div>
               <div className="shrink-0 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-center">
@@ -1581,7 +1586,7 @@ function AdminDashboard() {
                     {scannedTicket.paymentStatus === "paid" && scannedTicket.attended ? (
                       <span className="text-emerald-700 font-bold flex items-center gap-1.5">
                         <span>✅</span>
-                        <span>هذه التذكرة مؤكدة ومسددة ومسجلة في قاعدة البيانات بالفعل.</span>
+                        <span>هذه التذكرة مؤكدة ومسددة ومسجلة بالفعل.</span>
                       </span>
                     ) : (
                       <span className="text-slate-700 font-bold flex items-center gap-1.5">
@@ -1708,7 +1713,7 @@ function AdminDashboard() {
 
           {guides.length === 0 ? (
             <div className="p-10 text-center bg-white rounded-2xl border border-border text-muted-foreground text-xs font-bold">
-              لا يوجد مرشدين مسجلين في قاعدة البيانات حالياً.
+              لا يوجد مرشدين مسجلين حالياً.
             </div>
           ) : (
             <div className="overflow-x-auto text-right">
@@ -2319,7 +2324,7 @@ function AdminDashboard() {
           </div>
 
           {/* Daily Offers */}
-          <SectionCard title="🎯 عروض الرحلات اليومية (offers_daily_trips)" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-soft">+ إضافة عرض يومي</button>}>
+          <SectionCard title="🎯 عروض الرحلات اليومية" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-soft">+ إضافة عرض يومي</button>}>
             {dailyOffers.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground text-sm font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                 لا توجد عروض رحلات يومية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة يومية الآن.
@@ -2366,7 +2371,7 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Offers */}
-          <SectionCard title="🎁 عروض الرحلات الأسبوعية (offers_weekly_trips)" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black shadow-soft">+ إضافة عرض أسبوعي</button>}>
+          <SectionCard title="🎁 عروض الرحلات الأسبوعية" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black shadow-soft">+ إضافة عرض أسبوعي</button>}>
             {weeklyOffers.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground text-sm font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                 لا توجد عروض رحلات أسبوعية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة أسبوعية الآن.
@@ -2867,7 +2872,6 @@ function AdminDashboard() {
                         <span className="px-2.5 py-0.5 rounded-lg bg-blue-100/80 text-blue-900 font-mono text-xs font-black border border-blue-200">
                           🏛️ رقم البلدية: {munId}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-bold">(المفتاح الرئيسي ID)</span>
                       </div>
                       <Badge tone="sea">{a.category || "مدينة سياحية"}</Badge>
                     </div>
@@ -3752,7 +3756,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       verification_status: companyStatus,
     });
     setSaving(false);
-    if (saveError) setErrorMsg("لم يتم حفظ الشركة في قاعدة البيانات: " + saveError);
+    if (saveError) setErrorMsg("لم يتم حفظ الشركة: " + saveError);
   };
 
   return (
@@ -3920,7 +3924,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
               disabled={saving}
               className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
             >
-              <span>{saving ? "جاري الحفظ في قاعدة البيانات..." : "حفظ واعتماد الشركة في المنظومة"}</span>
+              <span>{saving ? "جاري الحفظ..." : "حفظ واعتماد الشركة في المنظومة"}</span>
               <span>✓</span>
             </button>
           </div>
@@ -4018,7 +4022,7 @@ available_cars: totalV,
       status: status,
     });
     setSaving(false);
-    if (saveError) setErrorMsg("لم يتم حفظ التعديلات في قاعدة البيانات: " + saveError);
+    if (saveError) setErrorMsg("لم يتم حفظ التعديلات: " + saveError);
   };
 
   return (
@@ -4171,7 +4175,7 @@ available_cars: totalV,
               disabled={saving}
               className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
             >
-              <span>{saving ? "جاري الحفظ في قاعدة البيانات..." : "حفظ وتحديث في قاعدة البيانات"}</span>
+              <span>{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</span>
               <span>✓</span>
             </button>
           </div>
@@ -6763,7 +6767,7 @@ function WeeklyTripEditModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-700 py-3 font-bold bg-amber-100/50 rounded-xl">
-                لا يوجد مرشدين حقيقيين متاحين في قاعدة البيانات.
+                لا يوجد مرشدين حقيقيين متاحين.
               </div>
             )}
             {filteredGuidesList.map((g) => (
@@ -7240,8 +7244,8 @@ function EvaluatePrivateTripModal({
         <div className="flex gap-2 justify-end pt-3 border-t border-border">
           <button
             type="button"
-            onClick={() => {
-              if (confirm("هل تريد بالتأكيد رفض طلب هذه الرحلة الخاصة؟")) {
+            onClick={async () => {
+              if (await platformConfirm("هل تريد بالتأكيد رفض طلب هذه الرحلة الخاصة؟")) {
                 onSave(trip.private_trip_id, "مرفوضة من الأدمن");
               }
             }}
@@ -7281,16 +7285,17 @@ function HotelModal({
   const [hotelIdInput, setHotelIdInput] = useState(hotel?.hotel_id || hotel?.id || "");
   const [propertyType, setPropertyType] = useState<string>(hotel?.property_type || "hotel");
   const [name, setName] = useState(hotel?.name || "");
-  const [city, setCity] = useState(hotel?.city || "طرابلس");
+  const [city, setCity] = useState(hotel?.city || "");
   const [address, setAddress] = useState(hotel?.address || "");
   const [phone, setPhone] = useState(hotel?.phone || "");
-  const [stars, setStars] = useState(hotel?.stars ? Number(hotel.stars) : 4);
+  const [stars, setStars] = useState(hotel?.stars ? Number(hotel.stars) : 0);
   const [status, setStatus] = useState<"نشط" | "موقوف">(hotel?.partnership_status === "موقوف" ? "موقوف" : "نشط");
-  const [discountPct, setDiscountPct] = useState(hotel?.discount_percentage ?? 15);
+  const [discountPct, setDiscountPct] = useState<number | "">(hotel?.discount_percentage ?? "");
   const [description, setDescription] = useState(hotel?.description || "");
   const [mapsUrl, setMapsUrl] = useState(hotel?.google_maps_url || "");
+  // A ready-made text the admin edits (hours, check-in/out)
   const [workingHours, setWorkingHours] = useState(hotel?.working_hours || "خدمة استقبال 24/7 (تسجيل وصول 14:00 - مغادرة 12:00)");
-  const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || ["مسبح", "واي فاي", "موقف"]);
+  const [amenities, setAmenities] = useState<string[]>(hotel?.amenities || []);
 
   // Local (Libya) date, not UTC
   const todayStr = new Date().toLocaleDateString("en-CA");
@@ -7299,11 +7304,12 @@ function HotelModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [p1, setP1] = useState(hotel?.hotel_photo_1 || "/assets/ai_hotel.jpg");
-  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "/assets/hotel_resort.jpg");
-  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "/assets/dest-tripoli.jpg");
-  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "/assets/dest-harbor-coast.jpg");
-  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "/assets/dest-ghadames-alleys.jpg");
+  // No default photos: the admin uploads the hotel's own
+  const [p1, setP1] = useState(hotel?.hotel_photo_1 || "");
+  const [p2, setP2] = useState(hotel?.hotel_photo_2 || "");
+  const [p3, setP3] = useState(hotel?.hotel_photo_3 || "");
+  const [p4, setP4] = useState(hotel?.hotel_photo_4 || "");
+  const [p5, setP5] = useState(hotel?.hotel_photo_5 || "");
 
   const propertyOptions = [
     { id: "hotel", label: "🏨 فندق فاخر", desc: "فنادق مصنفة وضيافة راقية ومتميزة" },
@@ -7355,7 +7361,7 @@ function HotelModal({
 
     const cleanId = hotelIdInput.trim();
     if (!cleanId) {
-      setErrorMsg("يرجى إدخال ترقيم البلدية / رقم القيد البلدي (المفتاح الأساسي ID) لمنع التكرار");
+      setErrorMsg("يرجى إدخال رقم القيد البلدي لمنع التكرار");
       return;
     }
 
@@ -7373,8 +7379,16 @@ function HotelModal({
       setErrorMsg("يرجى إدخال اسم مكان الإقامة الرسمي بدقة (3 أحرف على الأقل)");
       return;
     }
-    if (!city.trim() || !address.trim() || address.trim().length < 4) {
-      setErrorMsg("يرجى إدخال المدينة والعنوان التفصيلي بدقة");
+    if (!city.trim()) {
+      setErrorMsg("يرجى اختيار المدينة");
+      return;
+    }
+    if (!stars) {
+      setErrorMsg("يرجى اختيار التصنيف الفندقي (عدد النجوم)");
+      return;
+    }
+    if (!address.trim() || address.trim().length < 4) {
+      setErrorMsg("يرجى إدخال العنوان التفصيلي بدقة");
       return;
     }
     const digitsOnly = phone.replace(/\D/g, "");
@@ -7398,7 +7412,7 @@ function HotelModal({
       setErrorMsg("يرجى تحديد أوقات العمل والاستقبال");
       return;
     }
-    if (Number(discountPct) < 0 || Number(discountPct) > 100) {
+    if (discountPct === "" || Number(discountPct) < 0 || Number(discountPct) > 100) {
       setErrorMsg("نسبة الخصم يجب أن تكون بين 0% و 100%");
       return;
     }
@@ -7434,7 +7448,7 @@ function HotelModal({
       isNew,
     });
     setSaving(false);
-    if (saveError) setErrorMsg("لم يتم الحفظ في قاعدة البيانات: " + saveError);
+    if (saveError) setErrorMsg("لم يتم الحفظ: " + saveError);
   };
 
   return (
@@ -7465,9 +7479,11 @@ function HotelModal({
               يبدأ العقد تلقائياً من يوم التسجيل، مع التحقق الإلزامي من كافة المتطلبات وترقيم البلدية الفريد.
             </p>
           </div>
-          <span className="px-2.5 py-1 rounded-xl bg-[#003580] text-white text-[11px] font-black shrink-0">
-            خصم {discountPct}% معتمد
-          </span>
+          {discountPct !== "" && (
+            <span className="px-2.5 py-1 rounded-xl bg-[#003580] text-white text-[11px] font-black shrink-0">
+              خصم {discountPct}% معتمد
+            </span>
+          )}
         </div>
 
         {/* Municipal ID (Primary Key) */}
@@ -7475,9 +7491,8 @@ function HotelModal({
           <div className="flex items-center justify-between">
             <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
               <span>🏛️</span>
-              <span>رقم القيد البلدي / ترقيم البلدية (المفتاح الأساسي ID) *</span>
+              <span>رقم القيد البلدي *</span>
             </label>
-            <span className="text-[10px] font-black text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-lg">إلزامي لمنع التكرار</span>
           </div>
           <input
             type="text"
@@ -7496,8 +7511,8 @@ function HotelModal({
           />
           <p className="text-[10px] text-amber-800 font-bold">
             {isNew
-              ? "⚠️ يتم إدخال ترقيم البلدية يدوياً بواسطة الإدارة ويمثل المفتاح الأساسي لمنع التكرار نهائياً في قاعدة البيانات."
-              : "🔒 ترقيم البلدية مسجل كمفتاح أساسي فريد غير قابل للتعديل بعد التثبيت."}
+              ? "⚠️ يُدخل رقم القيد البلدي يدوياً، ولا يمكن تكراره لمنشأة أخرى."
+              : "🔒 رقم القيد البلدي لا يمكن تعديله بعد الحفظ."}
           </p>
         </div>
 
@@ -7618,16 +7633,18 @@ function HotelModal({
               onChange={e => setCity(e.target.value)}
               className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
             >
+              <option value="">اختر المدينة</option>
               {libyanCities.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div className="sm:col-span-3">
-            <label className="text-xs font-bold text-foreground mb-1 block">التصنيف الفندقي</label>
+            <label className="text-xs font-bold text-foreground mb-1 block">التصنيف الفندقي *</label>
             <select
               value={stars}
               onChange={e => setStars(Number(e.target.value))}
               className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
             >
+              <option value={0}>اختر التصنيف</option>
               <option value={5}>⭐⭐⭐⭐⭐ 5 نجوم (فاخر)</option>
               <option value={4}>⭐⭐⭐⭐ 4 نجوم (ممتاز)</option>
               <option value={3}>⭐⭐⭐ 3 نجوم (جيد جداً)</option>
@@ -7651,7 +7668,8 @@ function HotelModal({
                 min={0}
                 max={100}
                 value={discountPct}
-                onChange={e => setDiscountPct(Number(e.target.value))}
+                placeholder="مثال: 10"
+                onChange={e => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
               />
               <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
@@ -7762,7 +7780,7 @@ function HotelModal({
             disabled={saving}
             className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md shadow-blue-950/20 cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
-            <span>{saving ? "جارٍ الحفظ في قاعدة البيانات..." : "حفظ مكان الإقامة بالدليل ✓"}</span>
+            <span>{saving ? "جارٍ الحفظ..." : "حفظ مكان الإقامة بالدليل ✓"}</span>
           </button>
         </div>
       </form>
@@ -7870,7 +7888,7 @@ function RestaurantModal({
 
     const cleanId = facilityIdInput.trim();
     if (!cleanId) {
-      setErrorMsg("يرجى إدخال ترقيم البلدية / رقم القيد البلدي (المفتاح الأساسي ID) لمنع التكرار");
+      setErrorMsg("يرجى إدخال رقم القيد البلدي لمنع التكرار");
       return;
     }
 
@@ -7949,7 +7967,7 @@ function RestaurantModal({
       isNew,
     });
     setSaving(false);
-    if (saveError) setErrorMsg("لم يتم الحفظ في قاعدة البيانات: " + saveError);
+    if (saveError) setErrorMsg("لم يتم الحفظ: " + saveError);
   };
 
   return (
@@ -7990,7 +8008,7 @@ function RestaurantModal({
           <div className="flex items-center justify-between">
             <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
               <span>🏛️</span>
-              <span>رقم القيد البلدي / ترقيم البلدية (المفتاح الأساسي ID) *</span>
+              <span>رقم القيد البلدي *</span>
             </label>
             <span className="text-[10px] font-black text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-lg">إلزامي لمنع التكرار</span>
           </div>
@@ -8011,8 +8029,8 @@ function RestaurantModal({
           />
           <p className="text-[10px] text-amber-800 font-bold">
             {isNew
-              ? "⚠️ يتم إدخال ترقيم البلدية يدوياً بواسطة الإدارة ويمثل المفتاح الأساسي لمنع التكرار نهائياً في قاعدة البيانات."
-              : "🔒 ترقيم البلدية مسجل كمفتاح أساسي فريد غير قابل للتعديل بعد التثبيت."}
+              ? "⚠️ يُدخل رقم القيد البلدي يدوياً، ولا يمكن تكراره لمنشأة أخرى."
+              : "🔒 رقم القيد البلدي لا يمكن تعديله بعد الحفظ."}
           </p>
         </div>
 
@@ -8263,7 +8281,7 @@ function RestaurantModal({
             disabled={saving}
             className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md shadow-amber-900/20 cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
-            <span>{saving ? "جارٍ الحفظ في قاعدة البيانات..." : "حفظ المطعم/المقهى بالدليل ✓"}</span>
+            <span>{saving ? "جارٍ الحفظ..." : "حفظ المطعم/المقهى بالدليل ✓"}</span>
           </button>
         </div>
       </form>
@@ -8569,7 +8587,7 @@ function TouristDetailsModal({
 
           {isLoading ? (
             <div className="p-8 text-center text-xs font-bold text-slate-500">
-              جاري تحميل سجل الحجوزات والتقييمات من قاعدة البيانات...
+              جاري تحميل سجل الحجوزات والتقييمات...
             </div>
           ) : totalBookings === 0 ? (
             <div className="p-6 rounded-2xl border border-dashed border-slate-200 text-center text-xs font-bold text-slate-400">

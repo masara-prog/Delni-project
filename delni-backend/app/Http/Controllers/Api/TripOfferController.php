@@ -75,7 +75,7 @@ class TripOfferController extends Controller
         $tripId = $data[$tripKey] ?? $existing->{$tripKey};
         $trip = DB::table($tripTable)->where($tripKey, $tripId)->first();
         if (!$trip) {
-            return $this->error("الرحلة {$label} المحددة غير موجودة في قاعدة البيانات", 404);
+            return $this->error("الرحلة {$label} المحددة غير موجودة", 404);
         }
         $start = substr((string) ($data['start_date'] ?? $existing->start_date), 0, 10);
         $end = substr((string) ($data['end_date'] ?? $existing->end_date), 0, 10);
@@ -107,7 +107,7 @@ class TripOfferController extends Controller
             : DB::table($table)->insert($values + [$key => $id]);
 
         $offer = collect($this->index(Request::create('/', 'GET', ['all' => 1]), $kind)->getData(true)['data'])->firstWhere($key, $id);
-        return response()->json(['success' => true, 'message' => "تم حفظ عرض الرحلة {$label} في قاعدة البيانات بنجاح",
+        return response()->json(['success' => true, 'message' => "تم حفظ عرض الرحلة {$label} بنجاح",
             'offer_id' => $id, 'offer' => $offer, 'data' => $offer], 201);
     }
 

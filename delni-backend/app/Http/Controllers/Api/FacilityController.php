@@ -40,7 +40,7 @@ class FacilityController extends Controller
         $existing = Hotel::find(trim((string) $request->input('hotel_id')));
         $isNew = $request->boolean('isNew');
         if ($existing && $isNew) {
-            return $this->error('رقم القيد البلدي مسجل مسبقاً لمكان إقامة آخر في قاعدة البيانات', 409);
+            return $this->error('رقم القيد البلدي مسجل مسبقاً لمكان إقامة آخر', 409);
         }
 
         // On update, fields that are not sent keep their stored values
@@ -55,13 +55,13 @@ class FacilityController extends Controller
             'partnership_status' => 'nullable|string|max:100',
             'property_type' => 'nullable|string|max:100',
             'google_maps_url' => 'nullable|string|max:500',
-            'description' => 'nullable|string',
-            'working_hours' => 'nullable|string|max:150',
-            'discount_percentage' => 'nullable|integer|between:0,100',
+            'description' => "{$required}|string",
+            'working_hours' => "{$required}|string|max:150",
+            'discount_percentage' => "{$required}|integer|between:0,100",
             'contract_start_date' => 'nullable|date',
             'contract_end_date' => "{$required}|date|after_or_equal:" . $this->startDateFor($request, $existing),
             'amenities' => 'nullable',
-        ] + $this->photoRules('hotel_photo_'), $this->attributes('مكان الإقامة'));
+        ] + $this->photoRules('hotel_photo_') + ['hotel_photo_1' => "{$required}|string"], $this->attributes('مكان الإقامة'));
         if ($data instanceof JsonResponse) {
             return $data;
         }
@@ -76,7 +76,6 @@ class FacilityController extends Controller
             $values += [
                 'partnership_status' => 'نشط',
                 'property_type' => 'hotel',
-                'discount_percentage' => 0,
                 'contract_start_date' => $data['contract_start_date'] ?? now('Africa/Tripoli')->toDateString(),
             ];
         }
@@ -88,7 +87,7 @@ class FacilityController extends Controller
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'تم حفظ مكان الإقامة في قاعدة البيانات بنجاح',
+        return response()->json(['success' => true, 'message' => $existing ? 'تم تعديل بيانات مكان الإقامة بنجاح' : 'تمت إضافة مكان الإقامة بنجاح',
             'data' => $this->withList(Hotel::with('amenities')->find($id), 'amenities', 'amenity')], 201);
     }
 
@@ -112,7 +111,7 @@ class FacilityController extends Controller
         $existing = RestaurantCafe::find(trim((string) $request->input('facility_id')));
         $isNew = $request->boolean('isNew');
         if ($existing && $isNew) {
-            return $this->error('رقم القيد البلدي مسجل مسبقاً لمطعم أو مقهى آخر في قاعدة البيانات', 409);
+            return $this->error('رقم القيد البلدي مسجل مسبقاً لمطعم أو مقهى آخر', 409);
         }
 
         $required = $existing ? 'sometimes|required' : 'required';
@@ -157,7 +156,7 @@ class FacilityController extends Controller
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'تم حفظ المطعم/المقهى في قاعدة البيانات بنجاح',
+        return response()->json(['success' => true, 'message' => 'تم حفظ المطعم/المقهى بنجاح',
             'data' => $this->withList(RestaurantCafe::with('features')->find($id), 'features', 'feature')], 201);
     }
 

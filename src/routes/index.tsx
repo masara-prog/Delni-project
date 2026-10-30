@@ -1,3 +1,4 @@
+import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import heroImg from "@/assets/hero-leptis.jpg";
@@ -182,8 +183,8 @@ function Navbar() {
     return () => window.removeEventListener("storage", checkAuth);
   }, []);
 
-  const handleLogout = () => {
-    if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+  const handleLogout = async () => {
+    if (await platformConfirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
       clearStoredSession();
       setSession(null);
       window.location.href = "/";
@@ -262,15 +263,12 @@ function Hero() {
   const { language, t } = useLanguage();
 
   const heroLandmarks = [
-    { img: heroImg, titleAr: "لبدة الكبرى — تحفة البحر المتوسط الرومانية", titleEn: "Leptis Magna Roman Ruins" },
-    { img: destSabratah, titleAr: "مسرح صبراتة الروماني الساحلي الأيقوني", titleEn: "Sabratha Coastal Roman Theatre" },
-    { img: destUbariGaberoun, titleAr: "بحيرات أوباري وقبرعون — واحة الرمال الذهبية", titleEn: "Ubari Lakes & Gaberoun Oasis" },
-    { img: destJabalAkhdarPanorama, titleAr: "الجبل الأخضر وقورينا — بانوراما الطبيعة الخلابة والبحر", titleEn: "Green Mountain & Cyrene Coastal Panorama" },
-    { img: destAcacusArch, titleAr: "جبال تدرارت أكاكوس — قوس تكهوري والنقوش الصخرية", titleEn: "Tadrart Acacus & Takarkori Rock Arch" },
-    { img: destTripoli, titleAr: "قوس ماركوس أوريليوس والمدينة القديمة بطرابلس", titleEn: "Marcus Aurelius Arch & Old Tripoli" },
-    { img: destJabalAkhdarBridge, titleAr: "الجبل الأخضر — جسر وادي الكوف والغابات الشاهقة", titleEn: "Wadi Al-Kuf Canyon Bridge & Green Mountain Forests" },
-    { img: destGhadames, titleAr: "غدامس — لؤلؤة الصحراء والتراث العالمي", titleEn: "Old Town of Ghadames Oasis" },
-    { img: destGharyanCave, titleAr: "بيوت الحفر التراثية وعمارة جبل نفوسة", titleEn: "Gharyan Troglodyte Cave Houses" },
+    { img: "/assets/libya/sabratha-theatre.jpg", titleAr: "مسرح صبراتة الروماني على ساحل المتوسط", titleEn: "Sabratha Roman Theatre" },
+    { img: "/assets/libya/leptis-severus-arch.jpg", titleAr: "قوس سيبتيموس سيفيروس — لبدة الكبرى", titleEn: "Arch of Septimius Severus, Leptis Magna" },
+    { img: "/assets/libya/ubari-palm-lake.jpg", titleAr: "بحيرات أوباري — واحة وسط الرمال", titleEn: "Ubari Lakes Oasis" },
+    { img: "/assets/libya/ghadames-mosque.jpg", titleAr: "غدامس — لؤلؤة الصحراء والتراث العالمي", titleEn: "Ghadames, Pearl of the Desert" },
+    { img: "/assets/libya/acacus-pillar.jpg", titleAr: "جبال أكاكوس وتكويناتها الصخرية", titleEn: "Tadrart Acacus Rock Formations" },
+    { img: "/assets/libya/sabratha-turquoise-sea.jpg", titleAr: "مياه الساحل الليبي الفيروزية", titleEn: "Libya's Turquoise Coast" },
   ];
 
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -292,7 +290,7 @@ function Hero() {
           key={item.img}
           src={item.img}
           alt={language === 'ar' ? item.titleAr : item.titleEn}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out brightness-105 contrast-[1.02] ${
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
             index === currentIdx ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
           }`}
         />
@@ -593,13 +591,13 @@ function WhyUs() {
         <Reveal>
           <div className="relative">
             <div className="relative rounded-[2.5rem] overflow-hidden shadow-card aspect-[4/5]">
-              <img src={destAcacus} alt={language === 'ar' ? "جبال تدرارت أكاكوس" : "Acacus Mountains"} className="w-full h-full object-cover" />
+              <img src="/assets/libya/sabratha-temple-sea.jpg" alt={language === 'ar' ? "معبد صبراتة على البحر" : "Sabratha temple by the sea"} className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-6 -left-6 hidden md:block w-56 rounded-3xl overflow-hidden shadow-card rotate-[-4deg] hover:rotate-0 transition-transform">
-              <img src={destUbariGaberoun} alt={language === 'ar' ? "بحيرة قبرعون بأوباري" : "Gaberoun Lake, Ubari"} className="w-full h-40 object-cover" />
+              <img src="/assets/libya/ubari-oasis-dunes.jpg" alt={language === 'ar' ? "واحات أوباري" : "Ubari oases"} className="w-full h-40 object-cover" />
               <div className="p-3 bg-white">
                 <div className="text-xs text-muted-foreground">{language === 'ar' ? "الأكثر شعبية" : "Most Popular"}</div>
-                <div className="font-black text-sm">{language === 'ar' ? "بحيرات أوباري وقبرعون" : "Ubari Lakes"}</div>
+                <div className="font-black text-sm">{language === 'ar' ? "واحات أوباري" : "Ubari Oases"}</div>
               </div>
             </div>
             <div className="absolute -top-6 -right-4 hidden md:flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-card animate-float-slow">
@@ -799,7 +797,7 @@ function CTABanner() {
     <section className="py-10 md:py-12">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-[2.5rem] shadow-card">
-          <img src={destHarborCoast} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <img src="/assets/libya/sabratha-bay.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/50 backdrop-contrast-[1.02]" />
           <div className="relative p-10 md:p-16 text-white text-center">
             <Reveal>

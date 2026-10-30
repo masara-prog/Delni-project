@@ -73,7 +73,7 @@ class GuideController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $status === 'موثق' ? 'تم اعتماد وتفعيل حساب المرشد السياحي بنجاح' : 'تم تحديث حالة المرشد في قاعدة البيانات بنجاح',
+            'message' => $status === 'موثق' ? 'تم اعتماد وتفعيل حساب المرشد السياحي بنجاح' : 'تم تحديث حالة المرشد بنجاح',
             'data' => $this->withDetails(collect([$guide->fresh()]))[0],
         ]);
     }

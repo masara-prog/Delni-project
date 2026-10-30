@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Logo } from "@/components/Logo";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destSabratah from "@/assets/dest-sabratah.png";
@@ -25,14 +25,9 @@ export const Route = createFileRoute("/auth/signup")({
 
 type Role = "tourist" | "guide";
 
+// One fixed photo beside the login and signup forms
 const LANDMARK_SLIDES = [
-  { img: destAcacus, titleAr: "جبال تدرارت أكاكوس — سحر الصحراء", locationAr: "غات" },
-  { img: heroImg, titleAr: "لبدة الكبرى — تحفة البحر المتوسط", locationAr: "الخمس" },
-  { img: destSabratah, titleAr: "مسرح وآثار صبراتة الرومانية", locationAr: "صبراتة" },
-  { img: destCyrene, titleAr: "قورينا وشحات — عبق الجبل الأخضر", locationAr: "شحات" },
-  { img: destGhadames, titleAr: "غدامس — لؤلؤة الصحراء والتراث", locationAr: "غدامس" },
-  { img: destUbari, titleAr: "بحيرات أوباري — واحة الرمال الذهبية", locationAr: "أوباري" },
-  { img: destTripoli, titleAr: "السراي الحمراء والمدينة القديمة", locationAr: "طرابلس" },
+  { img: "/assets/libya/sabratha-theatre.jpg", titleAr: "مسرح صبراتة الروماني على ساحل المتوسط", locationAr: "صبراتة" },
 ];
 
 const WEEKDAYS = [
@@ -51,14 +46,8 @@ function SignupPage() {
   const [guideStep, setGuideStep] = useState<1 | 2>(1);
   const [submitted, setSubmitted] = useState<null | "tourist" | "guide">(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [slideIdx, setSlideIdx] = useState(0);
+  const slideIdx = 0;
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSlideIdx((prev) => (prev + 1) % LANDMARK_SLIDES.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
 
   const currentSlide = LANDMARK_SLIDES[slideIdx];
 
@@ -102,6 +91,20 @@ function SignupPage() {
     approvalStatus: "بانتظار الاعتماد والتوثيق من الإدارة",
   };
   const [guide, setGuide] = useState(initialGuideState);
+
+  // Landmark picker: search, grouped by region
+  const [placeSearch, setPlaceSearch] = useState("");
+  const placeGroups = useMemo(() => {
+    const q = placeSearch.trim();
+    const groups = new Map<string, any[]>();
+    attractionsList
+      .filter((a) => !q || String(a.city || a.place_name || "").includes(q))
+      .forEach((a) => {
+        const region = a.region || "معالم أخرى";
+        groups.set(region, [...(groups.get(region) || []), a]);
+      });
+    return Array.from(groups.entries());
+  }, [attractionsList, placeSearch]);
 
   const togglePlaceId = (pid: string) => {
     setGuide((g) => {
@@ -311,9 +314,7 @@ function SignupPage() {
               <img
                 src={slide.img}
                 alt={slide.titleAr}
-                className={`w-full h-full object-cover brightness-[1.05] contrast-[1.03] transition-transform duration-[6000ms] ease-out ${
-                  idx === slideIdx ? "scale-105" : "scale-100"
-                }`}
+                className="w-full h-full object-cover"
               />
             </div>
           ))}
@@ -355,21 +356,7 @@ function SignupPage() {
                 ))}
               </ul>
 
-              {/* Slideshow Indicator Dots */}
-              <div className="flex items-center gap-1.5 pt-1">
-                {LANDMARK_SLIDES.map((slide, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setSlideIdx(i)}
-                    className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                      i === slideIdx ? "w-6 bg-[#D96B27]" : "w-1.5 bg-white/40 hover:bg-white/70"
-                    }`}
-                    title={slide.titleAr}
-                    aria-label={`Slide ${i + 1}`}
-                  />
-                ))}
-              </div>
+
             </div>
           </div>
         </div>
@@ -395,40 +382,6 @@ function SignupPage() {
               <p className="text-[#64748B] text-xs sm:text-sm font-semibold mt-1 text-right">
                 اختر نوع الحساب واملأ بياناتك بسهولة لبدء تجربتك السياحية الرائعة.
               </p>
-            </div>
-
-            {/* Interactive Top Destination Showcase Bar */}
-            <div className="mb-5 p-3 rounded-2xl bg-gradient-to-r from-[#1B5A78] via-[#13445C] to-[#0F172A] text-white shadow-md relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#D96B27]/25 rounded-full blur-2xl pointer-events-none" />
-              <div className="relative z-1 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D96B27] to-[#EA580C] grid place-items-center text-white shrink-0 shadow-sm">
-                    <Compass className="w-5 h-5 animate-spin" style={{ animationDuration: "12s" }} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
-                      <span>وجهة سياحية مميزة</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D96B27] animate-ping" />
-                    </div>
-                    <div className="text-xs sm:text-sm font-black text-white truncate">
-                      {currentSlide.titleAr}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {LANDMARK_SLIDES.map((s, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setSlideIdx(i)}
-                      className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                        i === slideIdx ? "w-6 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/80"
-                      }`}
-                      title={s.titleAr}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Account Role Selector */}
@@ -488,7 +441,7 @@ function SignupPage() {
                       تم إرسال طلب انضمام المرشد السياحي بنجاح!
                     </h2>
                     <p className="text-xs sm:text-sm text-[#64748B] font-semibold leading-relaxed max-w-md mx-auto">
-                      تم تفريغ الحقول وحفظ وثائقك وبياناتك بنجاح في قاعدة البيانات. بمجرد مراجعة واعتماد حسابك من قبل إدارة منصة دَلّني، سيتم تفعيل حسابك فوراً بالبريد الإلكتروني ورقم الهاتف المسجل لتتمكن من تسجيل الدخول إلى لوحة تحكم المرشد الخاصة بك، وسيتم إضافة ملفك تلقائياً إلى واجهة المرشدين السياحيين.
+                      تم تفريغ الحقول وحفظ وثائقك وبياناتك بنجاح. بمجرد مراجعة واعتماد حسابك من قبل إدارة منصة دَلّني، سيتم تفعيل حسابك فوراً بالبريد الإلكتروني ورقم الهاتف المسجل لتتمكن من تسجيل الدخول إلى لوحة تحكم المرشد الخاصة بك، وسيتم إضافة ملفك تلقائياً إلى واجهة المرشدين السياحيين.
                     </p>
                     <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-right space-y-2.5 text-xs font-bold text-[#0F172A]">
                       <div className="flex items-center justify-between border-b border-[#E8E2D6] pb-2">
@@ -608,7 +561,7 @@ function SignupPage() {
                 value={tourist.email}
                 onChange={(v) => setTourist({ ...tourist, email: v })}
                 onKeyDown={handleEnterKeyNext}
-                placeholder="example@dalni.ly"
+                placeholder="example@gmail.com"
                 required
                 icon={Mail}
               />
@@ -812,6 +765,7 @@ function SignupPage() {
                       required
                       suffix="سنوات"
                       icon={Award}
+                      error={guide.years !== "" && !(Number(guide.years) >= 2) ? "سنوات الخبرة يجب أن تكون سنتين أو أكثر؛ لا يقبل النظام أقل من ذلك." : undefined}
                     />
                   </div>
 
@@ -918,45 +872,79 @@ function SignupPage() {
                 >
                   {/* Registered Tourist Landmarks of Expertise */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
                       <label className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
-                        <span>المعالم السياحية والآثار المعتمدة لخبرتك (اختر معلماً أو أكثر من المعالم المسجلة):</span>
+                        <span>أماكن عملك من المعالم المسجلة في المنصة</span>
                         <span className="text-red-500 font-black">*</span>
                       </label>
-                      <span className="text-[11px] font-black text-[#D96B27]">
-                        {guide.placeIds.length} معالم مختارة
+                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${guide.placeIds.length ? "bg-[#D96B27] text-white" : "bg-slate-100 text-slate-500"}`}>
+                        {guide.placeIds.length ? `${guide.placeIds.length} مختارة` : "لم تختر بعد"}
                       </span>
                     </div>
 
-                    {attractionsList.length === 0 && (
+                    {attractionsList.length === 0 ? (
                       <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-800">
                         لا توجد معالم سياحية مسجلة في المنصة حالياً، لذلك لا يمكن إكمال تسجيل المرشد الآن. تضيف إدارة المنصة المعالم أولاً.
                       </div>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-white rounded-2xl border border-[#E2E8F0] max-h-44 overflow-y-auto shadow-2xs empty:hidden">
-                      {attractionsList.map((attr) => {
-                        const pid = attr.place_id || attr.id;
-                        const pname = attr.place_name || attr.name;
-                        const isChecked = guide.placeIds.includes(pid);
-                        return (
-                          <div
-                            key={pid}
-                            onClick={() => togglePlaceId(pid)}
-                            className={`flex items-center gap-2 p-2 rounded-xl border text-right transition-all cursor-pointer select-none text-[11px] font-bold ${
-                              isChecked
-                                ? "border-[#D96B27] bg-[#D96B27]/10 text-[#D96B27] shadow-xs"
-                                : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#D96B27]/40"
-                            }`}
+                    ) : (
+                      <div className="p-2.5 bg-white rounded-2xl border border-[#E2E8F0] shadow-2xs space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={placeSearch}
+                            onChange={(e) => setPlaceSearch(e.target.value)}
+                            placeholder="ابحث عن مدينة..."
+                            className="flex-1 h-9 px-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-xs font-semibold text-right outline-none focus:border-[#D96B27]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setGuide((g) => ({
+                              ...g,
+                              placeIds: g.placeIds.length === attractionsList.length ? [] : attractionsList.map((a) => a.place_id),
+                            }))}
+                            className="h-9 px-3 rounded-xl border border-[#D96B27]/40 text-[#D96B27] text-[11px] font-black hover:bg-[#D96B27]/10 transition cursor-pointer whitespace-nowrap"
                           >
-                            <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 text-[10px] font-black ${isChecked ? "bg-[#D96B27] border-[#D96B27] text-white" : "border-[#CBD5E0]"}`}>
-                              {isChecked && "✓"}
+                            {guide.placeIds.length === attractionsList.length ? "إلغاء الكل" : "اختيار الكل"}
+                          </button>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto space-y-3 pl-1">
+                          {placeGroups.map(([region, places]) => (
+                            <div key={region}>
+                              <div className="text-[10px] font-black text-slate-500 mb-1.5">{region}</div>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {places.map((attr) => {
+                                  const pid = attr.place_id;
+                                  const isChecked = guide.placeIds.includes(pid);
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={pid}
+                                      onClick={() => togglePlaceId(pid)}
+                                      className={`relative h-20 rounded-xl overflow-hidden border-2 text-right transition-all cursor-pointer group ${
+                                        isChecked ? "border-[#D96B27] ring-2 ring-[#D96B27]/30" : "border-transparent hover:border-[#D96B27]/40"
+                                      }`}
+                                    >
+                                      {attr.place_image ? (
+                                        <img src={attr.place_image} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                      ) : (
+                                        <div className="absolute inset-0 bg-gradient-to-br from-[#1B5A78] to-[#0F172A]" />
+                                      )}
+                                      <div className={`absolute inset-0 ${isChecked ? "bg-[#D96B27]/45" : "bg-black/35"}`} />
+                                      <span className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full grid place-items-center text-[10px] font-black ${isChecked ? "bg-white text-[#D96B27]" : "bg-white/30 text-transparent border border-white/70"}`}>✓</span>
+                                      <span className="absolute bottom-1.5 right-2 left-2 text-white text-xs font-black truncate drop-shadow">{attr.city || attr.place_name}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                            <span className="truncate flex-1">🏛️ {pname} {attr.city ? `(${attr.city})` : ""}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          ))}
+                          {placeGroups.length === 0 && (
+                            <div className="text-center text-[11px] text-slate-500 py-3">لا توجد مدينة بهذا الاسم</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Working Days */}
@@ -1242,6 +1230,7 @@ function Field({
   suffix,
   min,
   icon: Icon,
+  error,
 }: {
   label: string;
   type?: string;
@@ -1253,6 +1242,7 @@ function Field({
   suffix?: string;
   min?: number | string;
   icon?: React.ComponentType<{ className?: string }>;
+  error?: string;
 }) {
   const isNumber = type === "number";
 
@@ -1271,7 +1261,7 @@ function Field({
         <span>{label}</span>
         {required && <span className="text-red-500 font-black">*</span>}
       </label>
-      <div className="flex items-stretch rounded-xl border border-[#E2E8F0] bg-white focus-within:border-[#1B5A78] focus-within:ring-2 focus-within:ring-[#1B5A78]/15 transition overflow-hidden shadow-xs">
+      <div className={`flex items-stretch rounded-xl border bg-white focus-within:ring-2 transition overflow-hidden shadow-xs ${error ? "border-red-400 focus-within:ring-red-200" : "border-[#E2E8F0] focus-within:border-[#1B5A78] focus-within:ring-[#1B5A78]/15"}`}>
         {/* Left Side (Addon): Unit Suffix Badge & Dedicated Stepper Buttons */}
         {(suffix || isNumber) && (
           <div className="flex items-center bg-[#F8FAFC] border-l border-[#E2E8F0] shrink-0 select-none">
@@ -1317,6 +1307,7 @@ function Field({
           className="flex-1 h-10 sm:h-11 px-3.5 bg-transparent outline-none text-xs sm:text-sm font-semibold text-[#0F172A] text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </div>
+      {error && <div className="text-[10px] text-red-600 font-bold mt-1">{error}</div>}
     </div>
   );
 }

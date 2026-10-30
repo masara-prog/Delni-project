@@ -284,7 +284,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 }
               } catch (err: any) {
                 console.error("Booking API error:", err);
-                setBookingError(err?.message || (isAr ? "حدث خطأ أثناء الاتصال بقاعدة البيانات" : "Database error"));
+                setBookingError(err?.message || (isAr ? "حدث خطأ أثناء الاتصال بالخادم" : "Database error"));
                 return;
               }
 
@@ -1579,7 +1579,7 @@ export function TripScheduleModal({
                   ? await apiBookWeeklyTrip({ tourist_id: touristId, weekly_trip_id: targetTripId, number_of_seats: n })
                   : await apiBookDailyTrip({ tourist_id: touristId, daily_trip_id: targetTripId, number_of_seats: n });
                 if (res.status !== "success") {
-                  alert("❌ لم يتم تسجيل الحجز في قاعدة البيانات.\n" + (res.message || ""));
+                  alert("❌ لم يتم تسجيل الحجز.\n" + (res.message || ""));
                   return;
                 }
                 // The ticket number is the booking id stored in DelniDB
@@ -1846,7 +1846,7 @@ export function PrivateTripModal({
         if (res?.success && Array.isArray(res.data)) {
           setDbPlaces(res.data);
         } else {
-          throw new Error("لم يتم العثور على معالم مسجلة بقاعدة البيانات");
+          throw new Error("لم يتم العثور على معالم مسجلة");
         }
       })
       .catch((err) => {
@@ -2282,7 +2282,7 @@ export function PrivateTripModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* ══════════════════════════════════════════════════════════════════════
-                قسم 1: اختيار المعالم السياحية من قاعدة البيانات (Dynamic MySQL/SQL Server)
+                قسم 1: اختيار المعالم السياحية
             ══════════════════════════════════════════════════════════════════════ */}
             <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -2292,7 +2292,7 @@ export function PrivateTripModal({
                   </span>
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                      {isAr ? "اختيار المعالم والوجهات السياحية من قاعدة البيانات" : "Select Destinations from Database"}
+                      {isAr ? "اختيار المعالم والوجهات السياحية" : "Select Destinations from Database"}
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       {isAr

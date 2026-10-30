@@ -16,9 +16,8 @@ class NotificationController extends Controller
     {
         $role = $request->query('role', 'all');
         $userId = $request->query('user_id');
-        if ($role === 'admin') {
-            \App\Support\ContractExpiryAlerts::runHourly();
-        }
+        // Expiry alerts (contracts, drivers' licenses) are checked at most once an hour, whoever loads notifications
+        \App\Support\ContractExpiryAlerts::runHourly();
 
         $query = Notification::query();
 
