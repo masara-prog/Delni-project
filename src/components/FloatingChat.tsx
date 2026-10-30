@@ -145,8 +145,8 @@ export function FloatingChat() {
     supportScrollRef.current?.scrollTo({ top: supportScrollRef.current.scrollHeight, behavior: "smooth" });
   }, [supportSession?.messages, supportOpen]);
 
-  // Hide in /dashboard/admin and /support completely
-  if (path.startsWith("/support") || path.startsWith("/dashboard/admin") || path.includes("/dashboard/admin")) {
+  // The AI assistant shows on the public pages only: not on sign-in/sign-up nor in the dashboards (they have their own support window)
+  if (path.startsWith("/support") || path.startsWith("/auth") || path.startsWith("/dashboard")) {
     return null;
   }
 
@@ -272,76 +272,6 @@ export function FloatingChat() {
 
   return (
     <>
-      {/* زر مركز الدعم */}
-      <button
-        onClick={() => setSupportOpen((prev) => !prev)}
-        aria-label="مركز الدعم"
-        className={`fixed bottom-24 ${language === 'ar' ? 'left-6' : 'right-6'} z-[89] h-[52px] w-[155px] justify-center rounded-full bg-gradient-to-r from-[#003580] via-[#1B5A78] to-[#D96B27] text-white font-black shadow-2xl shadow-[#003580]/40 hover:scale-105 hover:shadow-[#003580]/60 transition-all flex items-center gap-2 border-2 border-white/60 cursor-pointer`}
-      >
-        <span className="relative flex items-center justify-center shrink-0 w-6 h-6">
-          <span className="absolute inset-0 rounded-full bg-white/30 animate-ping" />
-          <BotMessageSquare className="w-5 h-5 text-amber-300 animate-pulse" />
-        </span>
-        <span className="text-xs font-black text-white drop-shadow text-center">
-          {language === 'ar' ? 'دعم دلّني' : 'Dallani Support'}
-        </span>
-        <span className="w-2 h-2 shrink-0 rounded-full bg-emerald-400 animate-pulse" />
-      </button>
-
-      {supportOpen && (
-        <div className={`fixed bottom-40 ${language === 'ar' ? 'left-6' : 'right-6'} z-[95] w-80 h-[400px] bg-white text-[#0B132B] rounded-2xl shadow-2xl border border-[#E6E1D6] flex flex-col overflow-hidden animate-fade-up`} dir={dir}>
-          <div className="bg-gradient-to-r from-[#003580] to-[#1B5A78] p-3 flex items-center justify-between text-white shadow-md z-10">
-            <div className="flex items-center gap-3">
-              <BotMessageSquare className="w-6 h-6 text-amber-300" />
-              <div>
-                <div className="font-bold text-sm drop-shadow-sm">
-                  {language === 'ar' ? 'مركز دعم دلّني الذكي' : 'Dallani Smart Support'}
-                </div>
-                <div className="text-[10px] text-white/80 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {language === 'ar' ? 'متصل الآن' : 'Online Now'}
-                </div>
-              </div>
-            </div>
-            <button onClick={() => setSupportOpen(false)} className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center text-sm transition-colors border-none bg-transparent text-white cursor-pointer outline-none font-bold">✕</button>
-          </div>
-          
-          <div ref={supportScrollRef} className="flex-1 p-4 bg-[#FAFAF8] overflow-y-auto space-y-3">
-            {(supportSession?.messages || []).map((m, idx) => (
-              <div key={m.id || idx} className={`flex ${m.from === "user" ? "justify-start" : "justify-end"}`}>
-                <div className={`max-w-[85%] p-3 text-xs md:text-sm rounded-2xl shadow-xs ${
-                  m.from === "user"
-                    ? "bg-[#003580] text-white font-bold rounded-bl-none"
-                    : "bg-white border border-[#E6E1D6] text-[#0B132B] rounded-br-none font-semibold"
-                }`}>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[10px] font-black opacity-80">
-                      {m.from === "user" ? "أنت" : "فريق الإدارة والدعم 👑"}
-                    </span>
-                    <span className={`text-[9px] ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</span>
-                  </div>
-                  <div className="leading-relaxed whitespace-pre-wrap">{m.text}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <form onSubmit={handleSupportSend} className="p-3 bg-white border-t border-[#E6E1D6] flex gap-2">
-            <input 
-              value={supportInput}
-              onChange={(e) => setSupportInput(e.target.value)}
-              placeholder={language === 'ar' ? 'اكتب رسالتك هنا...' : 'Type your message...'} 
-              className="flex-1 h-9 px-3 rounded-xl bg-[#F4F1EA] border border-[#E6E1D6] focus:bg-white focus:border-[#D96B27] text-xs outline-none transition-all text-[#0B132B]" 
-            />
-            <button type="submit" className="w-9 h-9 rounded-xl bg-[#D96B27] hover:bg-[#b0531c] flex items-center justify-center text-white shadow-soft transition-colors border-none cursor-pointer outline-none">
-              <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 pl-0.5" stroke="currentColor" strokeWidth="2">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" strokeLinejoin="round" strokeLinecap="round" />
-              </svg>
-            </button>
-          </form>
-        </div>
-      )}
-
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="مساعد الذكاء الاصطناعي"

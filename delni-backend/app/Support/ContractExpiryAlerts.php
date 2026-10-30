@@ -46,13 +46,51 @@ class ContractExpiryAlerts
                     continue;
                 }
                 Notification::create([
-                    'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(100, 999),
+                    'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999),
                     'type' => 'contract',
                     'title' => "⏰ عقد شراكة ينتهي خلال أسبوع: {$row->name}",
                     'body' => "ينتهي عقد الشراكة مع {$label} ({$row->name}) بتاريخ {$row->end_date}. يرجى التواصل معهم لتجديد العقد قبل انتهائه.",
                     'recipient_role' => 'admin',
                     'recipient_id' => null,
                     'link' => '/dashboard/admin',
+                    'is_read' => false,
+                    'created_at' => now('Africa/Tripoli'),
+                    'dedupe_key' => $key,
+                ]);
+                $created++;
+            }
+        }
+        return $created + self::guideLicences($today);
+    }
+
+    // A guide's licence ending within LICENCE_DAYS_BEFORE days: the admin and the guide are told once per expiry date
+    private const LICENCE_DAYS_BEFORE = 30;
+
+    private static function guideLicences(string $today): int
+    {
+        $lastDay = now('Africa/Tripoli')->addDays(self::LICENCE_DAYS_BEFORE)->toDateString();
+        $guides = DB::table('tour_guides')->where('verification_status', 'موثق')->whereNotNull('license_expiry_date')
+            ->whereBetween('license_expiry_date', [$today, $lastDay])
+            ->get(['license_number', 'full_name', DB::raw('CONVERT(VARCHAR(10), license_expiry_date, 23) as end_date')]);
+        $created = 0;
+        foreach ($guides as $g) {
+            foreach ([['admin', null, '/dashboard/admin', "⏰ ترخيص المرشد ({$g->full_name}) ينتهي قريباً",
+                        "ينتهي ترخيص الإرشاد للمرشد ({$g->full_name}) برقم ({$g->license_number}) بتاريخ {$g->end_date}. لن تُسند إليه رحلات تنتهي بعد هذا التاريخ."],
+                      ['guide', $g->license_number, '/dashboard/guide?tab=profile', '⏰ ترخيص الإرشاد الخاص بك ينتهي قريباً',
+                        "ينتهي ترخيص الإرشاد الخاص بك بتاريخ {$g->end_date}. يرجى تجديده وتحديث تاريخ الانتهاء ووثيقة الترخيص في ملفك الشخصي."]]
+                     as [$role, $recipient, $link, $title, $body]) {
+                $key = "licence-end-{$role}-{$g->license_number}-{$g->end_date}";
+                if (Notification::where('dedupe_key', $key)->exists()) {
+                    continue;
+                }
+                Notification::create([
+                    'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999),
+                    'type' => 'contract',
+                    'title' => $title,
+                    'body' => $body,
+                    'recipient_role' => $role,
+                    'recipient_id' => $recipient,
+                    'link' => $link,
                     'is_read' => false,
                     'created_at' => now('Africa/Tripoli'),
                     'dedupe_key' => $key,

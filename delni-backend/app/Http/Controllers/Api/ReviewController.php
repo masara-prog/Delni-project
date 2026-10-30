@@ -87,12 +87,12 @@ class ReviewController extends Controller
         $match = ['tourist_id' => $data['tourist_id'], $itemColumn => $data['item_id']];
         DB::table($table)->where($match)->exists()
             ? DB::table($table)->where($match)->update($values)
-            : DB::table($table)->insert($match + $values + [$reviewId => $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(100, 999)]);
+            : DB::table($table)->insert($match + $values + [$reviewId => $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999)]);
 
         return response()->json(['success' => true, 'message' => "شكراً لك! تم تسجيل تقييمك لـ{$label} بنجاح في منصة دلني."], 201);
     }
 
-    // Only tourists with a booking that wasn't cancelled; weekly trips only after their end date
+    // Only tourists who attended (their ticket was checked in at the office); weekly trips only after their end date
     private function tripReviewError(string $type, string $touristId, string $tripId): ?string
     {
         if (!in_array($type, ['daily', 'weekly'], true)) {
@@ -100,10 +100,10 @@ class ReviewController extends Controller
         }
         $bookings = $type === 'daily' ? 'bookings_daily' : 'bookings_weekly';
         $tripKey = $type === 'daily' ? 'daily_trip_id' : 'weekly_trip_id';
-        $booked = DB::table($bookings)->where('tourist_id', $touristId)->where($tripKey, $tripId)
-            ->where('booking_status', 'not like', 'ملغ%')->exists();
-        if (!$booked) {
-            return 'عذراً، لا يمكنك تقييم هذه الرحلة لأنك لم تحجز أو تشارك فيها بالفعل.';
+        $attended = DB::table($bookings)->where('tourist_id', $touristId)->where($tripKey, $tripId)
+            ->where('booking_status', 'not like', 'ملغ%')->where('attended', true)->exists();
+        if (!$attended) {
+            return 'عذراً، يمكن تقييم الرحلة فقط بعد المشاركة فيها فعلياً (تأكيد حضورك من مكتب التذاكر).';
         }
         if ($type === 'weekly') {
             $end = (string) DB::table('weekly_trips')->where('weekly_trip_id', $tripId)->value('end_date');

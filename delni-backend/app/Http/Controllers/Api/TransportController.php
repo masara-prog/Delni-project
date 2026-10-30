@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use App\Support\Actor;
+use App\Support\Passwords;
 
 /**
  * Transport module (companies, vehicles, drivers) stored through Laravel.
@@ -26,6 +28,10 @@ class TransportController extends Controller
     // Placeholder the forms send when a password was not changed
     private const MASKED_PASSWORD = '••••••••';
     public const VEHICLE_CATEGORIES = ['حافلة سياحية', 'ميني باص', 'باص VIP'];
+    private const PUBLIC_DRIVER_FIELDS = ['driver_license_number', 'full_name', 'contract_number', 'company_name',
+        'assigned_vehicle_plate', 'operational_status', 'current_trip_stage'];
+    // What a driver may change in their own record; the company keeps the rest
+    private const DRIVER_SELF_FIELDS = ['full_name', 'phone_number', 'email', 'operational_status'];
 
     /* ===================== Companies ===================== */
 
@@ -60,6 +66,10 @@ class TransportController extends Controller
         $existing = TransportationCompany::find($contract);
         if ($existing && !empty($data['isNew'])) {
             return $this->error('رقم عقد شركة النقل مسجل مسبقاً لشركة أخرى', 409);
+        }
+        $oldEnd = $existing?->contract_end_date ? (string) $existing->contract_end_date : null;
+        if ($error = $this->pastDateError($data['contract_end_date'] ?? null, $oldEnd, 'تاريخ نهاية التعاقد')) {
+            return $this->error($error, 422);
         }
         if ($this->taken(TransportationCompany::class, 'phone_number', $data['phone_number'], 'contract_number', $contract)) {
             return $this->error('رقم هاتف الشركة مسجل مسبقاً لشركة أخرى', 409);
@@ -156,7 +166,9 @@ class TransportController extends Controller
         if ($request->filled('contract_number')) {
             $query->where('vehicles.contract_number', $request->input('contract_number'));
         }
-        return response()->json(['success' => true, 'data' => $query->get()]);
+        // The insurance document is shown only to the admin and the owning company
+        $data = $query->get()->map(fn (Vehicle $v) => $this->seesPrivate($v->contract_number) ? $v->toArray() : collect($v->toArray())->except('insurance_image')->all());
+        return response()->json(['success' => true, 'data' => $data]);
     }
 
     public function saveVehicle(Request $request): JsonResponse
@@ -185,6 +197,13 @@ class TransportController extends Controller
         $existing = Vehicle::find($plate);
         if ($existing && !empty($data['isNew'])) {
             return $this->error('رقم لوحة المركبة مسجل مسبقاً لمركبة أخرى', 409);
+        }
+        if ($existing && $existing->contract_number !== $data['contract_number']) {
+            return $this->error('هذه المركبة مسجلة لدى شركة نقل أخرى', 403);
+        }
+        $linkedDriver = $data['driverInfo']['licenseNumber'] ?? null;
+        if ($linkedDriver && Driver::where('driver_license_number', $linkedDriver)->value('contract_number') !== $data['contract_number']) {
+            return $this->error('السائق المختار غير مسجل لدى هذه الشركة', 403);
         }
         $company = TransportationCompany::find($data['contract_number']);
         if (!$company) {
@@ -259,7 +278,10 @@ class TransportController extends Controller
         if ($request->filled('contract_number')) {
             $query->where('drivers.contract_number', $request->input('contract_number'));
         }
-        return response()->json(['success' => true, 'data' => $query->get()]);
+        // Visitors see who drives which vehicle; contact and identity details stay with the admin and the company
+        $data = $query->get()->map(fn (Driver $d) => $this->seesPrivate($d->contract_number) ? $d->toArray()
+            : collect($d->toArray())->only(self::PUBLIC_DRIVER_FIELDS)->all());
+        return response()->json(['success' => true, 'data' => $data]);
     }
 
     public function saveDriver(Request $request): JsonResponse
@@ -267,6 +289,12 @@ class TransportController extends Controller
         $input = $request->all();
         $license = trim((string) ($input['driver_license_number'] ?? ''));
         $existing = $license !== '' ? Driver::find($license) : null;
+        if (Actor::role() === 'driver') {
+            if (!$existing) {
+                return $this->error('حساب السائق غير موجود', 404);
+            }
+            $input = array_merge($existing->toArray(), array_intersect_key($input, array_flip(self::DRIVER_SELF_FIELDS)), ['isNew' => false]);
+        }
         if ($existing && !empty($input['isNew'])) {
             return $this->error('رقم رخصة القيادة مسجل مسبقاً لسائق آخر', 409);
         }
@@ -329,6 +357,14 @@ class TransportController extends Controller
         if (!$existingLicense && !$this->newPassword($d['password'] ?? null)) {
             return 'كلمة المرور مطلوبة لحساب السائق الجديد (6 خانات على الأقل)';
         }
+        // The driving licence must be valid: required for a new driver, and a newly entered expiry date must lie in the future
+        $oldValid = $existingLicense ? Driver::find($existingLicense)?->license_date_valid?->format('Y-m-d') : null;
+        if (!$existingLicense && empty($d['license_date_valid'])) {
+            return 'تاريخ صلاحية رخصة القيادة مطلوب';
+        }
+        if ($error = $this->pastDateError($d['license_date_valid'] ?? null, $oldValid, 'تاريخ صلاحية رخصة القيادة')) {
+            return $error;
+        }
         if (!$existingLicense && Driver::find($license)) {
             return 'رقم رخصة القيادة مسجل مسبقاً لسائق آخر';
         }
@@ -355,8 +391,8 @@ class TransportController extends Controller
             'operational_status' => $d['operational_status'] ?? 'متاح',
         ];
         if (empty($values['license_date_valid'])) {
-            // Column is NOT NULL; keep the stored date on update, otherwise the forms' default
-            $values['license_date_valid'] = Driver::find($values['driver_license_number'])->license_date_valid ?? '2029-12-31';
+            // Column is NOT NULL; an update without a date keeps the stored one (a new driver must give it, see validateDriverFields)
+            $values['license_date_valid'] = Driver::find($values['driver_license_number'])?->license_date_valid;
         }
         // The password is set once by the company when the driver is created; afterwards only the driver changes it
         if ($isNew) {
@@ -373,7 +409,7 @@ class TransportController extends Controller
         }
         $current = (string) $request->input('current_password', '');
         $new = trim((string) $request->input('new_password', ''));
-        if (!$this->hashMatches($current, $account->password)) {
+        if (!Passwords::matches($current, $account->password)) {
             return $this->error('كلمة المرور الحالية غير صحيحة', 403);
         }
         if (mb_strlen($new) < 6) {
@@ -381,15 +417,6 @@ class TransportController extends Controller
         }
         $account->forceFill(['password' => Hash::make($new)])->save();
         return response()->json(['success' => true, 'message' => 'تم تغيير كلمة المرور بنجاح']);
-    }
-
-    private function hashMatches(string $plain, ?string $hash): bool
-    {
-        try {
-            return $plain !== '' && !empty($hash) && Hash::check($plain, $hash);
-        } catch (\Throwable) {
-            return false; // not a bcrypt hash
-        }
     }
 
     // Bcrypt hash of a newly entered password, or null when unchanged / too short
@@ -400,6 +427,11 @@ class TransportController extends Controller
             return null;
         }
         return Hash::make($raw);
+    }
+
+    private function seesPrivate(?string $contractNumber): bool
+    {
+        return Actor::isAdmin() || (Actor::role() === 'transport' && Actor::id() === $contractNumber);
     }
 
     private function taken(string $model, string $column, string $value, string $keyColumn, string $key): bool

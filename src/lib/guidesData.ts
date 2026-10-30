@@ -18,6 +18,7 @@ export type TourGuide = {
   totalToursCompleted: number;
   specialties: string[];
   workingDays: string[];
+  onLeave?: boolean; // tour_guides.availability_status = إجازة
 };
 
 export const TOUR_GUIDES_DATA: TourGuide[] = [];

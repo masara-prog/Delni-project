@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Http\Controllers\Controller;
+use App\Support\Actor;
 use App\Support\Base64Image;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,9 @@ use Illuminate\Support\Facades\DB;
 class TripOfferController extends Controller
 {
     use JsonApiResponses;
+
+    // A trip is never offered for free
+    private const MAX_DISCOUNT = 90;
 
     // kind => [offers table, offer id, trip table, trip id, discount column, trip price column, id prefix, label]
     private const KINDS = [
@@ -34,7 +38,7 @@ class TripOfferController extends Controller
                 DB::raw('CONVERT(VARCHAR(10), o.end_date, 120) as end_date'),
                 't.trip_title', "t.{$price}", 't.departure_city', 't.photo_1 as trip_photo', 't.is_active as trip_is_active')
             ->orderByDesc("o.{$key}");
-        if (!$request->boolean('all')) {
+        if (!($request->boolean('all') && Actor::isAdmin())) {
             $query->where('o.end_date', '>=', now('Africa/Tripoli')->toDateString())->where('t.is_active', true);
         }
         return response()->json(['success' => true, 'data' => $this->typed($query->get()->all())]);
@@ -59,7 +63,7 @@ class TripOfferController extends Controller
             $tripKey => "{$required}|string|max:50",
             'offer_title' => "{$required}|string|max:250",
             'description' => 'nullable|string',
-            'discount' => "{$required}|numeric|between:1,100",
+            'discount' => "{$required}|numeric|between:1," . self::MAX_DISCOUNT,
             'start_date' => "{$required}|date",
             'end_date' => "{$required}|date",
             'offer_image_url' => 'nullable|string',
@@ -82,8 +86,20 @@ class TripOfferController extends Controller
         if ($end < $start) {
             return $this->error('تاريخ نهاية العرض لا يمكن أن يكون قبل تاريخ بدايته', 422);
         }
+        if (!$existing && $end < now('Africa/Tripoli')->toDateString()) {
+            return $this->error('لا يمكن إنشاء عرض انتهت مدته', 422);
+        }
+        if (!$trip->is_active) {
+            return $this->error("لا يمكن إضافة عرض على رحلة {$label} ملغاة", 422);
+        }
+        // One running offer per trip at a time (the booking price takes a single discount)
+        $overlap = DB::table($table)->where($tripKey, $tripId)->where('start_date', '<=', $end)->where('end_date', '>=', $start)
+            ->when($existing, fn ($q) => $q->where($key, '<>', $existing->{$key}))->value('offer_title');
+        if ($overlap !== null) {
+            return $this->error("يوجد عرض آخر ({$overlap}) على نفس الرحلة في نفس الفترة. يرجى إنهاؤه أو اختيار فترة أخرى.", 422);
+        }
 
-        $id = $id !== '' ? $id : $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(10, 99);
+        $id = $id !== '' ? $id : $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
         $values = [$tripKey => $tripId, 'start_date' => $start, 'end_date' => $end];
         foreach (['offer_title', 'description', 'badge'] as $column) {
             if (isset($data[$column])) {

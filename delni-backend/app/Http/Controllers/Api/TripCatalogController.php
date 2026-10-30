@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Http\Controllers\Api\Concerns\ManagesTrips;
 use App\Http\Controllers\Controller;
+use App\Models\DailyTrip;
 use App\Models\WeeklyTrip;
+use App\Support\Actor;
 use App\Support\ListInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,18 +45,24 @@ class TripCatalogController extends Controller
                 'r.city as restaurant_city', 'r.address_details as restaurant_address', 'r.phone_number as restaurant_phone',
                 'r.facility_image_1 as restaurant_image')
             ->orderByDesc('dt.daily_trip_id');
-        if (!$request->boolean('all')) {
-            $query->where('dt.is_active', true);
+        // Visitors see active trips their guide has accepted
+        if (!($request->boolean('all') && Actor::isAdmin())) {
+            $query->where('dt.is_active', true)
+                ->where(fn ($q) => $q->whereNull('dt.guide_approval_status')->orWhere('dt.guide_approval_status', DailyTrip::GUIDE_APPROVED));
         }
         $trips = $query->get();
         $ids = $trips->pluck('daily_trip_id')->all();
+        // Seats are counted per run date: each trip lists its next bookable dates with the seats left on each
+        $models = DailyTrip::whereIn('daily_trip_id', $ids)->get()->keyBy('daily_trip_id');
 
         $stations = DB::table('daily_trip_stations')->whereIn('daily_trip_id', $ids)->orderBy('station_order')->get()->groupBy('daily_trip_id');
         $days = DB::table('daily_trip_days')->whereIn('daily_trip_id', $ids)->get()->groupBy('daily_trip_id');
         $places = $this->linkedPlaces('places_trip_daily', 'daily_trip_id', $ids);
         $stats = $this->tripStats('reviews_daily_trips', 'bookings_daily', 'daily_trip_id', $ids);
 
-        $data = $trips->map(function ($dt) use ($stations, $days, $places, $stats) {
+        $data = $trips->map(function ($dt) use ($stations, $days, $places, $stats, $models) {
+            $openDates = $models[$dt->daily_trip_id]->openDates();
+            $dt->available_seats = $openDates[0]['seats_left'] ?? 0;
             $tripStations = ($stations[$dt->daily_trip_id] ?? collect())->values();
             // Saturday-first week order (the database returns the rows in no fixed order)
             $tripDays = ($days[$dt->daily_trip_id] ?? collect())->pluck('day_of_week')
@@ -76,10 +84,22 @@ class TripCatalogController extends Controller
                 'place_ids' => array_column($tripPlaces, 'place_id'),
                 'places' => $tripPlaces,
                 'destinations' => array_column($tripPlaces, 'place_name'),
+                'open_dates' => $openDates,
+                'next_trip_date' => $openDates[0]['date'] ?? null,
             ];
         })->values()->all();
 
         return response()->json(['success' => true, 'data' => $this->typed($data)]);
+    }
+
+    // The next bookable run dates of one daily trip and the seats left on each (used by the booking form)
+    public function dailyAvailability(string $tripId): JsonResponse
+    {
+        $trip = DailyTrip::find($tripId);
+        if (!$trip || !$trip->is_active) {
+            return $this->error('الرحلة اليومية غير متاحة للحجز', 404);
+        }
+        return response()->json(['success' => true, 'data' => $trip->openDates(DailyTrip::BOOKING_HORIZON_DAYS)]);
     }
 
     public function saveDaily(Request $request): JsonResponse
@@ -131,10 +151,39 @@ class TripCatalogController extends Controller
             return $this->error('يجب تحديد يوم أو يومين في الأسبوع لانطلاق الرحلة اليومية', 422);
         }
 
+        // The vehicle must seat the whole bus capacity, and the guide / vehicle can't run another trip on the same weekdays
+        $tripPlate = $plate ?? $existing?->vehicle_plate;
+        $capacity = (int) ($data['max_capacity'] ?? $existing?->max_capacity);
+        $runDays = $days ?? ($existing ? DB::table('daily_trip_days')->where('daily_trip_id', $existing->daily_trip_id)->pluck('day_of_week')->all() : []);
+        if ($error = $this->capacityError($tripPlate, $capacity)
+            ?? $this->scheduleConflict($guide, $tripPlate, null, null, $runDays ?: self::WEEK_DAYS, ['daily', $existing?->daily_trip_id])) {
+            return $this->error($error, 422);
+        }
+        // A new guide, or new days for the same guide, must suit the guide (leave, licence, working days)
+        $stations = $this->stationRows($request);
+        $placeIds = $this->placeIds($request);
+        $guideChanged = !$existing || $guide !== $existing->guide_license_number;
+        $warning = null;
+        if ($guide && ($guideChanged || $days !== null)) {
+            $tripPlaces = $placeIds ?? DB::table('places_trip_daily')->where('daily_trip_id', $existing?->daily_trip_id)->pluck('place_id')->all();
+            [$error, $warning] = $this->guideFitness($guide, null, null, $runDays ?: self::WEEK_DAYS, $tripPlaces);
+            if ($error) {
+                return $this->error($error, 422);
+            }
+        }
+        // Like weekly trips: a new trip, or a trip given to another guide, waits for that guide's acceptance before it is published
+        $sentToGuide = $guide && $guideChanged;
+        if (!$sentToGuide && $existing && $existing->guide_approval_status === DailyTrip::GUIDE_DECLINED) {
+            return $this->error('اعتذر المرشد عن هذه الرحلة، يرجى اختيار مرشد آخر لها', 422);
+        }
+
         $id = $id !== '' ? $id : $this->newTripId('DT');
         $values = $this->changed($data, ['trip_title', 'description', 'price_per_seat', 'departure_city']);
         if ($guide) {
             $values['guide_license_number'] = $guide;
+        }
+        if ($sentToGuide) {
+            $values['guide_approval_status'] = DailyTrip::GUIDE_PENDING;
         }
         if (isset($data['max_capacity'])) {
             $values['max_capacity'] = (int) $data['max_capacity'];
@@ -159,9 +208,7 @@ class TripCatalogController extends Controller
             $values += ['departure_city' => 'طرابلس', 'is_active' => true];
         }
 
-        $stations = $this->stationRows($request);
-        $placeIds = $this->placeIds($request);
-        DB::transaction(function () use ($id, $values, $existing, $days, $stations, $placeIds, $plate, $guide) {
+        DB::transaction(function () use ($id, $values, $existing, $days, $stations, $placeIds, $plate, $guide, $sentToGuide) {
             $existing
                 ? DB::table('daily_trips')->where('daily_trip_id', $id)->update($values)
                 : DB::table('daily_trips')->insert($values + ['daily_trip_id' => $id]);
@@ -188,10 +235,19 @@ class TripCatalogController extends Controller
                 DB::table('places_trip_daily')->insert(array_map(fn ($p) => ['daily_trip_id' => $id, 'place_id' => $p], $placeIds));
             }
             $title = $values['trip_title'] ?? $existing->trip_title;
-            $this->notifyAssignment($id, $title, 'رحلة يومية', $guide, $plate, $existing);
+            if ($sentToGuide) {
+                // The driver and the company are told once the guide accepts (dailyGuideResponse)
+                $this->notify("guide-daily-request-{$id}-{$guide}", 'guide', $guide, 'trip',
+                    "🧭 رحلة يومية بانتظار موافقتك ({$title})",
+                    "أسندت إليك الإدارة الرحلة اليومية ({$title}). يرجى مراجعة أيامها وتفاصيلها وقبولها أو الاعتذار عنها من لوحتك؛ لن تُنشر للسياح قبل موافقتك.",
+                    '/dashboard/guide?tab=assigned_trips');
+            } elseif (($existing->guide_approval_status ?? DailyTrip::GUIDE_APPROVED) === DailyTrip::GUIDE_APPROVED) {
+                $this->notifyAssignment($id, $title, 'رحلة يومية', null, $plate, $existing);
+            }
         });
 
-        return response()->json(['success' => true, 'message' => 'تم حفظ الرحلة اليومية ومحطاتها في قاعدة البيانات بنجاح',
+        $message = $sentToGuide ? 'تم حفظ الرحلة اليومية وإرسالها للمرشد؛ تُنشر للسياح بعد موافقته' : 'تم حفظ الرحلة اليومية ومحطاتها في قاعدة البيانات بنجاح';
+        return response()->json(['success' => true, 'message' => $warning ? "{$message}. {$warning}" : $message, 'warning' => $warning,
             'trip_id' => $id, 'data' => $this->findTrip('daily', $id)], 201);
     }
 
@@ -214,8 +270,10 @@ class TripCatalogController extends Controller
                 'tc.company_name as transport_company_name', 'd.full_name as driver_name', 'd.phone_number as driver_phone',
                 'd.driver_license_number')
             ->orderByDesc('wt.weekly_trip_id');
-        if (!$request->boolean('all')) {
+        // Visitors see published trips that have not ended yet
+        if (!($request->boolean('all') && Actor::isAdmin())) {
             $query->where('wt.is_active', true)
+                ->where('wt.end_date', '>=', now('Africa/Tripoli')->toDateString())
                 ->where(fn ($q) => $q->whereNull('wt.guide_approval_status')->orWhere('wt.guide_approval_status', WeeklyTrip::GUIDE_APPROVED));
         }
         $trips = $query->get();
@@ -312,6 +370,22 @@ class TripCatalogController extends Controller
         if ($error = $this->referenceError(isset($data['guide_license_number']) ? $guide : null, $plate)) {
             return $this->error($error, 422);
         }
+        $tripPlate = $plate ?? $existing?->vehicle_plate;
+        $capacity = (int) ($data['max_capacity'] ?? $existing?->max_capacity);
+        if ($error = $this->capacityError($tripPlate, $capacity)
+            ?? $this->scheduleConflict($guide, $tripPlate, substr($start, 0, 10), substr($end, 0, 10), null, ['weekly', $existing?->weekly_trip_id])) {
+            return $this->error($error, 422);
+        }
+        // A new guide, or new dates for the same guide, must suit the guide (leave, licence, working days)
+        $warning = null;
+        $datesChanged = isset($data['start_date']) || isset($data['end_date']);
+        if ($guide && (!$existing || $guide !== $existing->guide_license_number || $datesChanged)) {
+            $tripPlaces = $this->placeIds($request) ?? DB::table('places_trip_weekly')->where('weekly_trip_id', $existing?->weekly_trip_id)->pluck('place_id')->all();
+            [$error, $warning] = $this->guideFitness($guide, substr($start, 0, 10), substr($end, 0, 10), null, $tripPlaces);
+            if ($error) {
+                return $this->error($error, 422);
+            }
+        }
 
         $id = $id !== '' ? $id : $this->newTripId('WT');
         $values = $this->changed($data, ['trip_title', 'trip_description', 'seat_per_price', 'start_date', 'end_date', 'departure_city']);
@@ -392,16 +466,27 @@ class TripCatalogController extends Controller
             }
         });
 
-        return response()->json(['success' => true,
-            'message' => $sentToGuide
-                ? 'تم حفظ الرحلة الأسبوعية وإرسالها للمرشد؛ تُنشر للسياح بعد موافقته'
-                : 'تم حفظ تعديلات الرحلة الأسبوعية بنجاح',
+        $message = $sentToGuide
+            ? 'تم حفظ الرحلة الأسبوعية وإرسالها للمرشد؛ تُنشر للسياح بعد موافقته'
+            : 'تم حفظ تعديلات الرحلة الأسبوعية بنجاح';
+        return response()->json(['success' => true, 'message' => $warning ? "{$message}. {$warning}" : $message, 'warning' => $warning,
             'trip_id' => $id, 'data' => $this->findTrip('weekly', $id)], 201);
     }
 
     // The trip's guide accepts (the trip is published, driver and company notified) or declines (the admin chooses another guide)
+    public function dailyGuideResponse(Request $request, string $tripId): JsonResponse
+    {
+        return $this->guideResponse($request, 'daily', $tripId);
+    }
+
     public function weeklyGuideResponse(Request $request, string $tripId): JsonResponse
     {
+        return $this->guideResponse($request, 'weekly', $tripId);
+    }
+
+    private function guideResponse(Request $request, string $kind, string $tripId): JsonResponse
+    {
+        [$table, $key, $label] = $kind === 'daily' ? ['daily_trips', 'daily_trip_id', 'اليومية'] : ['weekly_trips', 'weekly_trip_id', 'الأسبوعية'];
         $data = $this->validateArabic($request, [
             'license_number' => 'required|string|max:50',
             'decision' => 'required|string|in:accept,decline',
@@ -410,10 +495,10 @@ class TripCatalogController extends Controller
         if ($data instanceof JsonResponse) {
             return $data;
         }
-        $trip = DB::table('weekly_trips as wt')->leftJoin('tour_guides as g', 'wt.guide_license_number', '=', 'g.license_number')
-            ->where('wt.weekly_trip_id', $tripId)->first(['wt.*', 'g.full_name as guide_name']);
+        $trip = DB::table("{$table} as t")->leftJoin('tour_guides as g', 't.guide_license_number', '=', 'g.license_number')
+            ->where("t.{$key}", $tripId)->first(['t.*', 'g.full_name as guide_name']);
         if (!$trip) {
-            return $this->error('الرحلة الأسبوعية غير موجودة', 404);
+            return $this->error("الرحلة {$label} غير موجودة", 404);
         }
         if ($trip->guide_license_number !== $data['license_number']) {
             return $this->error('هذه الرحلة ليست مسندة إليك', 403);
@@ -423,28 +508,28 @@ class TripCatalogController extends Controller
         }
 
         $accepted = $data['decision'] === 'accept';
-        DB::transaction(function () use ($tripId, $trip, $accepted, $data) {
-            DB::table('weekly_trips')->where('weekly_trip_id', $tripId)
+        DB::transaction(function () use ($table, $key, $label, $kind, $tripId, $trip, $accepted, $data) {
+            DB::table($table)->where($key, $tripId)
                 ->update(['guide_approval_status' => $accepted ? WeeklyTrip::GUIDE_APPROVED : WeeklyTrip::GUIDE_DECLINED]);
             $guideName = $trip->guide_name ?: $trip->guide_license_number;
             if ($accepted) {
-                $this->notify("admin-weekly-guide-ok-{$tripId}-{$trip->guide_license_number}", 'admin', null, 'trip',
-                    "✅ وافق المرشد على الرحلة الأسبوعية ({$trip->trip_title})",
-                    "وافق المرشد ({$guideName}) على الرحلة الأسبوعية ({$trip->trip_title})، وأصبحت منشورة ومتاحة للحجز.",
+                $this->notify("admin-{$kind}-guide-ok-{$tripId}-{$trip->guide_license_number}", 'admin', null, 'trip',
+                    "✅ وافق المرشد على الرحلة {$label} ({$trip->trip_title})",
+                    "وافق المرشد ({$guideName}) على الرحلة {$label} ({$trip->trip_title})، وأصبحت منشورة ومتاحة للحجز.",
                     '/dashboard/admin?tab=trips');
-                $this->notifyAssignment($tripId, $trip->trip_title, 'رحلة أسبوعية', null, $trip->vehicle_plate, null);
+                $this->notifyAssignment($tripId, $trip->trip_title, "رحلة {$label}", null, $trip->vehicle_plate, null);
             } else {
                 $reason = trim((string) ($data['reason'] ?? ''));
-                $this->notify("admin-weekly-guide-no-{$tripId}-{$trip->guide_license_number}", 'admin', null, 'trip',
-                    "⚠️ اعتذر المرشد عن الرحلة الأسبوعية ({$trip->trip_title})",
-                    "اعتذر المرشد ({$guideName}) عن الرحلة الأسبوعية ({$trip->trip_title})" . ($reason !== '' ? " — السبب: {$reason}" : '') . '. يرجى تعيين مرشد آخر.',
+                $this->notify("admin-{$kind}-guide-no-{$tripId}-{$trip->guide_license_number}", 'admin', null, 'trip',
+                    "⚠️ اعتذر المرشد عن الرحلة {$label} ({$trip->trip_title})",
+                    "اعتذر المرشد ({$guideName}) عن الرحلة {$label} ({$trip->trip_title})" . ($reason !== '' ? " — السبب: {$reason}" : '') . '. يرجى تعيين مرشد آخر.',
                     '/dashboard/admin?tab=trips');
             }
         });
 
         return response()->json(['success' => true,
             'message' => $accepted ? 'تم قبول الرحلة، وأصبحت منشورة للسياح' : 'تم تسجيل اعتذارك وإبلاغ الإدارة',
-            'data' => $this->findTrip('weekly', $tripId)]);
+            'data' => $this->findTrip($kind, $tripId)]);
     }
 
     public function cancelWeekly(string $tripId): JsonResponse
@@ -460,11 +545,21 @@ class TripCatalogController extends Controller
         if (!$trip) {
             return $this->error("{$label} غير موجودة", 404);
         }
+        if (!$trip->is_active) {
+            return $this->error("{$label} ملغاة مسبقاً", 409);
+        }
         DB::transaction(function () use ($table, $key, $tripId, $trip, $bookingsTable) {
             DB::table($table)->where($key, $tripId)->update(['is_active' => false]);
             $this->notifyCancellation($tripId, $trip, $bookingsTable, $key);
+            // The bookings still ahead are cancelled too (a paid one is refunded at the office: the admin sees it as paid + cancelled)
+            $ahead = DB::table($bookingsTable)->where($key, $tripId)->where('booking_status', 'not like', 'ملغ%');
+            if ($bookingsTable === 'bookings_daily') {
+                $today = now('Africa/Tripoli')->toDateString();
+                $ahead->where(fn ($q) => $q->whereNull('trip_date')->orWhere('trip_date', '>=', $today));
+            }
+            $ahead->update(['booking_status' => BookingController::CANCELLED_BY_ADMIN]);
         });
-        return response()->json(['success' => true, 'message' => "تم إلغاء {$label} وإيقاف الحجز عليها، وإشعار المرشد والسائق والشركة والسياح المحجوزين."]);
+        return response()->json(['success' => true, 'message' => "تم إلغاء {$label} وحجوزاتها القادمة، وإشعار المرشد والسائق والشركة والسياح المحجوزين."]);
     }
 
     private function findTrip(string $kind, string $id): ?array

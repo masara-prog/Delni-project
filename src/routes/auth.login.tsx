@@ -11,7 +11,7 @@ import { BackHome } from "@/components/BackHome";
 import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin } from "lucide-react";
-import { apiLogin } from "@/lib/api";
+import { apiLogin, apiResubmitGuide } from "@/lib/api";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({
@@ -46,6 +46,27 @@ function LoginPage() {
   const { dir } = useLanguage();
 
   const [errorMsg, setErrorMsg] = useState("");
+  // A rejected guide can send a corrected licence document from here (the application goes back to review)
+  const [canResubmit, setCanResubmit] = useState(false);
+  const [resubmitFile, setResubmitFile] = useState<{ name: string; data: string } | null>(null);
+  const [resubmitExpiry, setResubmitExpiry] = useState("");
+  const [resubmitNote, setResubmitNote] = useState("");
+  const [resubmitMsg, setResubmitMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [resubmitting, setResubmitting] = useState(false);
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
+
+  const handleResubmit = async () => {
+    if (!resubmitFile) return setResubmitMsg({ ok: false, text: "يرجى إرفاق وثيقة الترخيص الجديدة." });
+    if (!resubmitExpiry || resubmitExpiry < tomorrow) return setResubmitMsg({ ok: false, text: "تاريخ انتهاء الترخيص يجب أن يكون تاريخاً قادماً." });
+    setResubmitting(true);
+    const res = await apiResubmitGuide({ login: email, password, digital_certificate_file: resubmitFile.data,
+      license_expiry_date: resubmitExpiry, note: resubmitNote.trim() || undefined });
+    setResubmitting(false);
+    if (!res.success) return setResubmitMsg({ ok: false, text: res.error || "تعذر إرسال الطلب" });
+    setCanResubmit(false);
+    setErrorMsg("");
+    setResubmitMsg({ ok: true, text: res.data || "تم إرسال طلبك من جديد وهو قيد المراجعة." });
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -74,6 +95,8 @@ function LoginPage() {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setCanResubmit(false);
+    setResubmitMsg(null);
 
     // Every account type, the admin included, is verified by the server with its email and password
     // Connect to live Laravel API
@@ -97,6 +120,7 @@ function LoginPage() {
         return;
       } else {
         setErrorMsg(res?.message || "بيانات تسجيل الدخول غير صحيحة، يرجى التأكد من صحة البريد وكلمة المرور");
+        setCanResubmit(Boolean(res?.can_resubmit));
         return;
       }
     } catch {
@@ -132,9 +156,6 @@ function LoginPage() {
 
         <div className="relative z-10 h-full flex flex-col justify-between p-10 xl:p-12 text-white">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-3 w-fit group">
-              <Logo size="lg" textColor="light" />
-            </Link>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition-all duration-300">
               <MapPin className="w-4 h-4 text-[#D96B27]" />
               <span>{currentSlide.titleAr}</span>
@@ -247,6 +268,60 @@ function LoginPage() {
           {errorMsg && (
             <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold leading-relaxed text-right animate-shake">
               {errorMsg}
+            </div>
+          )}
+
+          {resubmitMsg && (
+            <div className={`mb-4 p-3.5 rounded-2xl border text-xs font-bold leading-relaxed text-right ${resubmitMsg.ok ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-700"}`}>
+              {resubmitMsg.text}
+            </div>
+          )}
+
+          {canResubmit && (
+            <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3 text-right">
+              <div className="text-xs font-black text-amber-900">إعادة تقديم طلب الاعتماد</div>
+              <div>
+                <label className="text-xs font-bold text-[#0F172A] mb-1 block">وثيقة الترخيص الجديدة (صورة أو PDF) *</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setResubmitFile({ name: file.name, data: String(reader.result) });
+                    reader.readAsDataURL(file);
+                  }}
+                  className="w-full text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-[#0F172A] mb-1 block">تاريخ انتهاء الترخيص *</label>
+                <input
+                  type="date"
+                  min={tomorrow}
+                  value={resubmitExpiry}
+                  onChange={(e) => setResubmitExpiry(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-semibold text-right"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-[#0F172A] mb-1 block">ملاحظة للإدارة (اختياري)</label>
+                <textarea
+                  value={resubmitNote}
+                  onChange={(e) => setResubmitNote(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl border border-[#E8E2D6] bg-white text-xs font-semibold text-right"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={resubmitting}
+                onClick={handleResubmit}
+                className="w-full h-10 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs disabled:opacity-60 cursor-pointer"
+              >
+                {resubmitting ? "جاري الإرسال..." : "إرسال الطلب للمراجعة من جديد"}
+              </button>
             </div>
           )}
 

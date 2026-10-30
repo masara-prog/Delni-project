@@ -32,7 +32,14 @@ class TourGuide extends Model
         'price_per_day',
         'avatar',
         'digital_certificate_file',
+        'license_expiry_date',
+        'rejection_reason',
+        'availability_status',
     ];
+
+    public const AVAILABLE = 'متاح';
+    public const ON_LEAVE = 'إجازة';
+    public const AVAILABILITY = [self::AVAILABLE, self::ON_LEAVE];
 
     protected $hidden = [
         'password',
@@ -44,6 +51,7 @@ class TourGuide extends Model
         'speaks_italian' => 'boolean',
         'years_of_experience' => 'integer',
         'price_per_day' => 'decimal:2',
+        'license_expiry_date' => 'date:Y-m-d',
     ];
 
     public function dailyTrips()

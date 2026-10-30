@@ -190,7 +190,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
   // Determine available seats
   const maxAvailable = typeof item.availableSeats === "number" && item.availableSeats > 0
     ? Math.min(item.availableSeats, busCapacity)
-    : (busCapacity === 50 ? 32 : 18);
+    : busCapacity;
 
   const numSeats = parseInt(seats, 10);
   const isSeatExceeded = !isNaN(numSeats) && numSeats > maxAvailable;
@@ -275,6 +275,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                     tourist_id: touristId,
                     daily_trip_id: item.id || "",
                     number_of_seats: nSeats,
+                    trip_date: date,
                   });
                 }
 
@@ -1181,6 +1182,7 @@ export function useModalPair() {
 export type ScheduledTrip = {
   id: string;
   tripId?: string;
+  tripDate?: string; // daily trips: the run date (Y-m-d) the seats are booked for
   date: string;
   time: string;
   seats: number;
@@ -1284,67 +1286,71 @@ export function TripScheduleModal({
     }
   }, [open, trip, tripId, customTitle, tripTitle]);
 
-  const defaultDaily: ScheduledTrip[] = [
-    { id: "d1", date: isAr ? "يوم السبت" : "Saturday", time: isAr ? "09:00 ص حتى 09:00 م (جولة كاملة)" : "09:00 AM - 09:00 PM", seats: 20, taken: 14, guide: isAr ? "خالد الورفلي" : "Khaled Al-Warfali", price: 180 },
-    { id: "d2", date: isAr ? "يوم الثلاثاء" : "Tuesday", time: isAr ? "09:00 ص حتى 09:00 م (جولة كاملة)" : "09:00 AM - 09:00 PM", seats: 20, taken: 7, guide: isAr ? "سامي العبيدي" : "Sami Al-Obaidi", price: 180 },
-  ];
+  // A daily trip runs every week: its bookable dates and the seats left on each come from the server
+  const isDaily = kind === "daily" || trip?.type === "daily";
+  const dailyTripId: string = trip?.daily_trip_id || trip?.id || tripId || customSchedules?.[0]?.tripId || "";
+  const [dailyDates, setDailyDates] = useState<{ date: string; day: string; seats_left: number }[] | null>(null);
+  useEffect(() => {
+    if (!open || !isDaily || !dailyTripId) return;
+    setDailyDates(null);
+    let cancelled = false;
+    fetch(`${LARAVEL_API_URL}/trips/daily/${encodeURIComponent(dailyTripId)}/availability`, { headers: { Accept: "application/json" } })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((res) => !cancelled && setDailyDates(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => !cancelled && setDailyDates([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isDaily, dailyTripId]);
 
-  const defaultWeekly: ScheduledTrip[] = [
-    { id: "w1", date: isAr ? "الانطلاق: السبت 31 أكتوبر 2026 ⬅ العودة: الجمعة 06 نوفمبر 2026" : "Depart: 2026-10-31 — Return: 2026-11-06", time: isAr ? "انطلاق 07:00 ص — برنامج 7 أيام شامل" : "07:00 AM — 7 Days All-Inclusive", seats: 12, taken: 8, guide: isAr ? "فريق دَلِّني الكامل" : "Dallani Full Team", price: 2400 },
-    { id: "w2", date: isAr ? "الانطلاق: السبت 07 نوفمبر 2026 ⬅ العودة: الجمعة 13 نوفمبر 2026" : "Depart: 2026-11-07 — Return: 2026-11-13", time: isAr ? "انطلاق 07:00 ص — برنامج 7 أيام شامل" : "07:00 AM — 7 Days All-Inclusive", seats: 12, taken: 4, guide: isAr ? "أحمد الفيتوري" : "Ahmed Al-Fitouri", price: 2400 },
-  ];
+  const realPrice = customPrice !== undefined
+    ? customPrice
+    : Number(trip?.type === "daily" ? trip.price : (trip?.seatPrice ?? trip?.price)) || customSchedules?.[0]?.price || 0;
+  const realTitle = customTitle || tripTitle || trip?.title || (isDaily ? "رحلة يومية" : "رحلة أسبوعية");
+  const realGuide = trip?.guide?.name || customSchedules?.[0]?.guide || (isAr ? "مرشد سياحي معتمد" : "Certified guide");
+  const realSeats = Number(trip?.targetPersons || trip?.max_capacity || customSchedules?.[0]?.seats) || 0;
 
   let schedules: ScheduledTrip[];
-  if (customSchedules && customSchedules.length > 0) {
+  if (isDaily) {
+    schedules = (dailyDates ?? []).map((d) => ({
+      id: `${dailyTripId}-${d.date}`,
+      tripId: dailyTripId,
+      tripDate: d.date,
+      date: isAr ? `${d.day} ${d.date}` : d.date,
+      time: isAr ? "رحلة يوم واحد" : "One-day trip",
+      seats: realSeats || d.seats_left,
+      taken: Math.max(0, (realSeats || d.seats_left) - d.seats_left),
+      guide: realGuide,
+      price: realPrice,
+      tripTitle: realTitle,
+      kind: "daily",
+    }));
+  } else if (customSchedules && customSchedules.length > 0) {
     schedules = customSchedules;
-  } else if (trip || tripId || customPrice !== undefined || customTitle || tripTitle) {
-    const realId = trip?.id || trip?.daily_trip_id || trip?.weekly_trip_id || tripId || (kind === "weekly" ? "WT-220" : "DT-366");
-    const realPrice = customPrice !== undefined
-      ? customPrice
-      : (trip?.type === "daily" ? trip.price : (trip?.seatPrice ?? (trip?.price ?? (kind === "weekly" ? 1200 : 120))));
-    const realTitle = customTitle || tripTitle || trip?.title || (kind === "daily" ? "رحلة يومية" : "رحلة أسبوعية");
-    const realGuide = trip?.guide?.name || "مرشد سياحي معتمد";
-    const realSeats = trip?.targetPersons || trip?.max_capacity || 25;
-    const realAvail = trip?.availableSeats !== undefined ? trip.availableSeats : (trip?.available_seats !== undefined ? trip.available_seats : realSeats);
-
-    if (kind === "daily" || trip?.type === "daily") {
-      const recurringStr = trip?.daysOfWeek || trip?.recurring_days || "السبت, الثلاثاء";
-      const rawDays = String(recurringStr).replace(/أيام:\s*/, "").split(/[,،]+/).map((d: string) => d.trim()).filter(Boolean);
-      const daysList = rawDays.length > 0 ? rawDays : ["السبت", "الثلاثاء"];
-
-      schedules = daysList.map((day: string, idx: number) => ({
-        id: `${realId}-day-${idx}`,
+  } else if (trip?.startDate && trip?.endDate) {
+    const realId = trip?.weekly_trip_id || trip?.id || tripId || "";
+    const start = String(trip.startDate).split("T")[0];
+    const end = String(trip.endDate).split("T")[0];
+    const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1;
+    const realAvail = trip?.availableSeats ?? trip?.available_seats ?? realSeats;
+    schedules = [
+      {
+        id: realId,
         tripId: realId,
-        date: isAr ? `يوم ${day.startsWith("يوم") ? day : day}` : `Day: ${day}`,
-        time: isAr ? "09:00 ص حتى 09:00 م (12 ساعة كاملة)" : "09:00 AM - 09:00 PM (Full Day)",
+        date: isAr ? `الانطلاق: ${start} ⬅ العودة: ${end}` : `Depart: ${start} — Return: ${end}`,
+        time: isAr ? `برنامج ${days} أيام` : `${days}-day program`,
         seats: realSeats,
-        taken: Math.max(0, realSeats - realAvail),
+        taken: Math.max(0, realSeats - Number(realAvail)),
         guide: realGuide,
-        price: Number(realPrice) || 120,
+        price: realPrice,
         tripTitle: realTitle,
-        kind: "daily",
-      }));
-    } else {
-      const cleanStart = trip?.startDate ? String(trip.startDate).split("T")[0] : "2026-10-31";
-      const cleanEnd = trip?.endDate ? String(trip.endDate).split("T")[0] : "2026-11-06";
-      schedules = [
-        {
-          id: realId,
-          tripId: realId,
-          date: isAr ? `الانطلاق: ${cleanStart} ⬅ العودة: ${cleanEnd}` : `Depart: ${cleanStart} — Return: ${cleanEnd}`,
-          time: isAr ? "انطلاق 07:00 ص — برنامج 7 أيام شامل" : "07:00 AM — 7 Days All-Inclusive",
-          seats: realSeats,
-          taken: Math.max(0, realSeats - realAvail),
-          guide: realGuide,
-          price: Number(realPrice) || 1200,
-          tripTitle: realTitle,
-          kind: "weekly",
-        }
-      ];
-    }
+        kind: "weekly",
+      },
+    ];
   } else {
-    schedules = kind === "daily" ? defaultDaily : defaultWeekly;
+    schedules = [];
   }
+  const schedulesLoading = isDaily && !!dailyTripId && dailyDates === null;
 
   // Auto-select schedule so the date is instantly active and button enabled if seats available
   const firstAvailSchedule = schedules.find(s => (s.seats - s.taken) > 0);
@@ -1385,10 +1391,20 @@ export function TripScheduleModal({
 
           <div className="p-6 space-y-3">
             <p className="text-sm text-[#526078] mb-4">
-              {kind === "daily"
-                ? (isAr ? "الرحلات اليومية تنطلق في يوم واحد وتعود مساءً (09:00 ص - 09:00 م) — اختر اليوم المناسب لك:" : "Daily trips take place on a single day & return evening — select day:")
-                : (isAr ? "الرحلات الأسبوعية برنامج متكامل 7 أيام شامل الإقامة والنقل — حدد موعد الانطلاق والعودة:" : "Weekly tours are 7 days all-inclusive — select departure & return:")}
+              {isDaily
+                ? (isAr ? "اختر تاريخ الرحلة (يُقفل الحجز الساعة 7 صباحاً من يوم الرحلة):" : "Pick the trip date (booking closes at 7 AM on the day):")
+                : (isAr ? "موعد الانطلاق والعودة:" : "Departure & return:")}
             </p>
+            {schedulesLoading && (
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-500 text-center">
+                {isAr ? "جاري تحميل المواعيد المتاحة..." : "Loading available dates..."}
+              </div>
+            )}
+            {!schedulesLoading && schedules.length === 0 && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 text-center">
+                {isAr ? "لا توجد مواعيد متاحة للحجز في هذه الرحلة حالياً." : "No dates are open for booking on this trip right now."}
+              </div>
+            )}
             {schedules.map((s) => {
               const avail = s.seats - s.taken;
               const full = avail === 0;
@@ -1577,7 +1593,7 @@ export function TripScheduleModal({
 
                 const res = isWeekly
                   ? await apiBookWeeklyTrip({ tourist_id: touristId, weekly_trip_id: targetTripId, number_of_seats: n })
-                  : await apiBookDailyTrip({ tourist_id: touristId, daily_trip_id: targetTripId, number_of_seats: n });
+                  : await apiBookDailyTrip({ tourist_id: touristId, daily_trip_id: targetTripId, number_of_seats: n, trip_date: selectedTrip.tripDate || "" });
                 if (res.status !== "success") {
                   alert("❌ لم يتم تسجيل الحجز في قاعدة البيانات.\n" + (res.message || ""));
                   return;
@@ -1902,7 +1918,8 @@ export function PrivateTripModal({
         .then((r) => r.json())
         .then((res) => {
           if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-            setDbGuides(res.data);
+            // A guide on leave takes no new trips, so they are not offered as the preferred guide
+            setDbGuides(res.data.filter((g: any) => g.availability_status !== "إجازة"));
           }
         })
         .catch(() => {});

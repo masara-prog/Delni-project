@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
+use App\Http\Controllers\Api\Concerns\ManagesTrips;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  */
 class PrivateTripController extends Controller
 {
-    use JsonApiResponses;
+    use JsonApiResponses, ManagesTrips;
 
     public const NEW = 'قيد الدراسة';
     public const GUIDE_PENDING = 'بانتظار رد المرشد';
@@ -29,6 +30,7 @@ class PrivateTripController extends Controller
     public const CANCELLED = 'ملغاة من السائح';
     private const CLOSED = [self::REJECTED, self::CANCELLED, 'مرفوضة من السائح', 'ملغية'];
     private const MIN_DAYS_AHEAD = 10;
+    private const MIN_CANCEL_DAYS = 3;
 
     // ?tourist_id=... returns only that tourist's requests (the bridge sent every customer's data to the browser)
     public function index(Request $request): JsonResponse
@@ -129,11 +131,15 @@ class PrivateTripController extends Controller
             return $this->error('يرجى اختيار معلم سياحي واحد على الأقل من المعالم المسجلة في المنصة', 422);
         }
         $guide = $data['guide_license_number'] ?? null;
-        if ($guide && DB::table('tour_guides')->where('license_number', $guide)->value('verification_status') !== 'موثق') {
+        $preferred = $guide ? DB::table('tour_guides')->where('license_number', $guide)->first(['verification_status', 'availability_status']) : null;
+        if ($guide && $preferred?->verification_status !== 'موثق') {
             return $this->error('المرشد المختار غير معتمد من إدارة المنصة', 422);
         }
+        if ($preferred?->availability_status === 'إجازة') {
+            return $this->error('المرشد المختار في إجازة حالياً، يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة', 422);
+        }
 
-        $id = 'PRV-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(10, 99);
+        $id = 'PRV-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
         DB::transaction(function () use ($id, $data, $tourist, $placeIds, $guide) {
             DB::table('private_trips')->insert([
                 'private_trip_id' => $id,
@@ -218,6 +224,28 @@ class PrivateTripController extends Controller
         if ($plate && !DB::table('vehicles')->where('plate_number', $plate)->exists()) {
             return $this->error('المركبة المحددة غير موجودة في قاعدة البيانات', 422);
         }
+        if ($data['status_order'] === self::GUIDE_PENDING) {
+            $start = substr((string) $trip->preferred_start_date, 0, 10);
+            $end = date('Y-m-d', strtotime($start . ' +' . max(0, (int) $trip->duration_days - 1) . ' days'));
+            if ($start <= now('Africa/Tripoli')->toDateString()) {
+                return $this->error('تاريخ بدء هذه الرحلة قد حلّ أو مضى، فلا يمكن جدولتها. يمكنك رفض الطلب ليرسل السائح طلباً بتاريخ جديد.', 422);
+            }
+            foreach ((array) ($data['stations'] ?? []) as $s) {
+                if ((int) ($s['day_number'] ?? 1) > (int) $trip->duration_days) {
+                    return $this->error("رقم اليوم في المحطة ({$s['station_title']}) أكبر من مدة الرحلة ({$trip->duration_days} أيام)", 422);
+                }
+            }
+            $tripPlate = $plate ?? $trip->vehicle_plate;
+            if ($error = $this->capacityError($tripPlate, (int) $trip->number_of_companions)
+                ?? $this->scheduleConflict($guide, $tripPlate, $start, $end, null, ['private', $tripId])) {
+                return $this->error($error, 422);
+            }
+            [$error, $warning] = $this->guideFitness($guide, $start, $end, null,
+                DB::table('places_trip_private')->where('private_trip_id', $tripId)->pluck('place_id')->all());
+            if ($error) {
+                return $this->error($error, 422);
+            }
+        }
 
         $status = $data['status_order'];
         $values = ['status_order' => $status];
@@ -258,6 +286,14 @@ class PrivateTripController extends Controller
                     ]);
                 }
             }
+            // The guide who was waiting on this request is told when it moves to another guide or is rejected
+            $previousGuide = $trip->status_order === self::GUIDE_PENDING ? $trip->guide_license_number : null;
+            if ($previousGuide && ($status === self::REJECTED || ($values['guide_license_number'] ?? $previousGuide) !== $previousGuide)) {
+                $this->notify("guide-priv-withdrawn-{$tripId}-{$previousGuide}-" . now()->timestamp, 'guide', $previousGuide, 'trip',
+                    "ℹ️ سحب طلب الرحلة الخاصة (#{$tripId})",
+                    "لم تعد الرحلة الخاصة (#{$tripId}) بانتظار ردك؛ " . ($status === self::REJECTED ? 'رفضت الإدارة الطلب.' : 'أسندتها الإدارة لمرشد آخر.'),
+                    '/dashboard/guide');
+            }
             if ($status === self::GUIDE_PENDING) {
                 $guide = $values['guide_license_number'];
                 $this->notify("guide-priv-request-{$tripId}-{$guide}-" . now()->timestamp, 'guide', $guide, 'trip',
@@ -272,7 +308,9 @@ class PrivateTripController extends Controller
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'تم حفظ مراجعة الرحلة الخاصة بنجاح', 'data' => $this->find($tripId)]);
+        $message = 'تم حفظ مراجعة الرحلة الخاصة بنجاح';
+        return response()->json(['success' => true, 'message' => !empty($warning) ? "{$message}. {$warning}" : $message,
+            'warning' => $warning ?? null, 'data' => $this->find($tripId)]);
     }
 
     // The assigned guide accepts (the offer then goes to the tourist) or declines (the admin assigns another guide)
@@ -302,6 +340,9 @@ class PrivateTripController extends Controller
         }
 
         $accepted = $data['decision'] === 'accept';
+        if ($accepted && substr((string) $trip->preferred_start_date, 0, 10) <= now('Africa/Tripoli')->toDateString()) {
+            return $this->error('تاريخ بدء هذه الرحلة قد حلّ أو مضى، ولا يمكن قبولها.', 409);
+        }
         DB::transaction(function () use ($tripId, $trip, $accepted, $data) {
             DB::table('private_trips')->where('private_trip_id', $tripId)
                 ->update(['status_order' => $accepted ? self::QUOTED : self::GUIDE_DECLINED]);
@@ -355,6 +396,16 @@ class PrivateTripController extends Controller
         if ($decision === self::CONFIRMED && $trip->status_order !== self::QUOTED) {
             return $this->error('لا يمكن تأكيد الرحلة قبل أن تُرسل الإدارة البرنامج والتسعيرة', 409);
         }
+        $start = substr((string) $trip->preferred_start_date, 0, 10);
+        $today = now('Africa/Tripoli')->startOfDay();
+        if ($decision === self::CONFIRMED && $start <= $today->toDateString()) {
+            return $this->error('تاريخ بدء الرحلة قد حلّ أو مضى، ولا يمكن تأكيدها. يرجى إرسال طلب جديد بتاريخ آخر.', 409);
+        }
+        // A confirmed trip has a guide and a vehicle booked for it: it can be cancelled only up to MIN_CANCEL_DAYS before it starts
+        if ($decision === self::CANCELLED && $trip->status_order === self::CONFIRMED
+            && $start < $today->copy()->addDays(self::MIN_CANCEL_DAYS)->toDateString()) {
+            return $this->error('لا يمكن إلغاء رحلة مؤكدة قبل موعدها بأقل من ' . self::MIN_CANCEL_DAYS . ' أيام. يرجى التواصل مع الإدارة.', 409);
+        }
 
         DB::transaction(function () use ($tripId, $trip, $decision) {
             DB::table('private_trips')->where('private_trip_id', $tripId)->update(['status_order' => $decision]);
@@ -375,6 +426,12 @@ class PrivateTripController extends Controller
                 $this->notify("admin-priv-cancel-{$tripId}", 'admin', null, 'private_trip',
                     "❌ إلغاء طلب الرحلة الخاصة (#{$tripId})",
                     "ألغى السائح ({$name}) طلب الرحلة الخاصة (#{$tripId}).", '/dashboard/admin');
+                // The guide already accepted (offer sent) or the trip was confirmed: the guide is freed
+                if ($trip->guide_license_number && in_array($trip->status_order, [self::QUOTED, self::CONFIRMED], true)) {
+                    $this->notify("guide-priv-cancel-{$tripId}-{$trip->guide_license_number}", 'guide', $trip->guide_license_number, 'trip',
+                        "❌ إلغاء الرحلة الخاصة (#{$tripId})",
+                        "ألغى السائح الرحلة الخاصة (#{$tripId}) التي كانت مسندة إليك بتاريخ ({$trip->preferred_start_date}).", '/dashboard/guide');
+                }
             }
         });
 
