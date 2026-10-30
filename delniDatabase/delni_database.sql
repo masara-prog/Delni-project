@@ -36,10 +36,11 @@ BEGIN
         [daily_trip_id] VARCHAR(50) NOT NULL,
         [booking_date] DATETIME NOT NULL DEFAULT (getdate()),
         [number_of_seats] INT NOT NULL,
-        [booking_status] NVARCHAR(50) NOT NULL DEFAULT (N'مؤكد'),
+        [booking_status] NVARCHAR(50) NOT NULL DEFAULT (N'مؤكدة'),
         [total_price] DECIMAL(10, 2) NOT NULL,
-        [payment_status] NVARCHAR(50) NOT NULL DEFAULT (N'مدفوع'),
-        [attended] BIT NOT NULL DEFAULT ((0))
+        [payment_status] NVARCHAR(50) NOT NULL DEFAULT ('unpaid'),
+        [attended] BIT NOT NULL DEFAULT ((0)),
+        [trip_date] DATE NULL
     );
 END;
 GO
@@ -57,8 +58,8 @@ BEGIN
         [booking_date] DATETIME NOT NULL DEFAULT (getdate()),
         [number_of_seats] INT NOT NULL,
         [total_price] DECIMAL(10, 2) NOT NULL,
-        [booking_status] NVARCHAR(50) NOT NULL DEFAULT (N'مؤكد'),
-        [payment_status] NVARCHAR(50) NOT NULL DEFAULT (N'مدفوع'),
+        [booking_status] NVARCHAR(50) NOT NULL DEFAULT (N'مؤكدة'),
+        [payment_status] NVARCHAR(50) NOT NULL DEFAULT ('unpaid'),
         [attended] BIT NOT NULL DEFAULT ((0))
     );
 END;
@@ -88,7 +89,7 @@ BEGIN
         [daily_trip_id] VARCHAR(50) NOT NULL,
         [station_order] INT NOT NULL DEFAULT ((1)),
         [station_title] NVARCHAR(150) NOT NULL,
-        [station_time] VARCHAR(30) NOT NULL,
+        [station_time] NVARCHAR(30) NOT NULL,
         [station_desc] NVARCHAR(MAX) NULL
     );
 END;
@@ -116,7 +117,8 @@ BEGIN
         [photo_2] NVARCHAR(500) NULL,
         [photo_3] NVARCHAR(500) NULL,
         [photo_4] NVARCHAR(500) NULL,
-        [photo_5] NVARCHAR(500) NULL
+        [photo_5] NVARCHAR(500) NULL,
+        [guide_approval_status] NVARCHAR(30) NULL
     );
 END;
 GO
@@ -269,7 +271,7 @@ BEGIN
         [link] NVARCHAR(255) NULL,
         [is_read] BIT NULL DEFAULT ((0)),
         [created_at] DATETIME NULL DEFAULT (getdate()),
-        [dedupe_key] VARCHAR(100) NULL
+        [dedupe_key] NVARCHAR(100) NULL
     );
 END;
 GO
@@ -441,7 +443,7 @@ BEGIN
         [day_number] INT NOT NULL DEFAULT ((1)),
         [station_order] INT NOT NULL DEFAULT ((1)),
         [station_title] NVARCHAR(200) NOT NULL,
-        [station_time] VARCHAR(30) NULL,
+        [station_time] NVARCHAR(30) NULL,
         [station_desc] NVARCHAR(MAX) NULL
     );
 END;
@@ -614,7 +616,10 @@ BEGIN
         [gender] NVARCHAR(10) NULL,
         [price_per_day] DECIMAL(10, 2) NULL,
         [avatar] NVARCHAR(MAX) NULL,
-        [digital_certificate_file] NVARCHAR(MAX) NULL
+        [digital_certificate_file] NVARCHAR(MAX) NULL,
+        [license_expiry_date] DATE NULL,
+        [rejection_reason] NVARCHAR(1000) NULL,
+        [availability_status] NVARCHAR(30) NULL DEFAULT (N'متاح')
     );
 END;
 GO
@@ -739,6 +744,10 @@ BEGIN
         [guide_approval_status] NVARCHAR(30) NULL
     );
 END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_bookings_daily_trip_date')
+    CREATE INDEX [IX_bookings_daily_trip_date] ON dbo.[bookings_daily] ([daily_trip_id], [trip_date]);
 GO
 
 -- ----------------------------------------------------------------------------

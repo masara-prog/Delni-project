@@ -22,6 +22,8 @@ class BookingController extends Controller
     public const PAID = 'paid';
     public const UNPAID = 'unpaid';
     public const CONFIRMED = 'مؤكدة';
+    public const CANCELLED_BY_TOURIST = 'ملغاة من السائح';
+    public const CANCELLED_BY_ADMIN = 'ملغاة من الإدارة';
 
     // kind => [bookings table, booking id, trip table, trip id, trip model, price column, offers table, offer discount column, id prefix, label]
     private const KINDS = [
@@ -46,10 +48,13 @@ class BookingController extends Controller
             'tourist_id' => 'required|string|max:50',
             $tripKey => 'required|string|max:50',
             'number_of_seats' => 'required|integer|between:1,50',
-        ], ['tourist_id' => 'حساب السائح', $tripKey => "الرحلة {$label}", 'number_of_seats' => 'عدد المقاعد']);
+            // A daily trip runs every week, so the tourist picks which run date the seats are for
+            'trip_date' => $kind === 'daily' ? 'required|date_format:Y-m-d' : 'prohibited',
+        ], ['tourist_id' => 'حساب السائح', $tripKey => "الرحلة {$label}", 'number_of_seats' => 'عدد المقاعد', 'trip_date' => 'تاريخ الرحلة']);
         if ($data instanceof JsonResponse) {
             return $data;
         }
+        $tripDate = $data['trip_date'] ?? null;
 
         $tourist = DB::table('tourists')->where('tourist_id', $data['tourist_id'])->first();
         if (!$tourist) {
@@ -63,7 +68,7 @@ class BookingController extends Controller
         if (!$trip || !$trip->is_active) {
             return $this->error("الرحلة {$label} المطلوبة غير متاحة للحجز", 404);
         }
-        if ($reason = $trip->bookingClosedReason()) {
+        if ($reason = $tripDate ? $trip->bookingClosedReason($tripDate) : $trip->bookingClosedReason()) {
             return $this->error($reason, 422);
         }
 
@@ -72,11 +77,12 @@ class BookingController extends Controller
         $discount = (float) DB::table($offers)->where($tripKey, $trip->{$tripKey})
             ->where('start_date', '<=', $today)->where('end_date', '>=', $today)->max($discountColumn);
         $total = round((float) $trip->{$priceColumn} * $seats * (1 - $discount / 100), 2);
-        $id = $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(100, 999);
+        $id = $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
 
-        $result = DB::transaction(function () use ($table, $key, $tripTable, $tripKey, $trip, $seats, $total, $id, $tourist, $label) {
-            // Re-read the seats under lock so two bookings can't take the same seats
-            $free = (int) DB::table($tripTable)->where($tripKey, $trip->{$tripKey})->lockForUpdate()->value('available_seats');
+        $result = DB::transaction(function () use ($table, $key, $tripTable, $tripKey, $trip, $seats, $total, $id, $tourist, $label, $tripDate) {
+            // Lock the trip row so two bookings can't take the same seats, then count what is left
+            $locked = DB::table($tripTable)->where($tripKey, $trip->{$tripKey})->lockForUpdate()->first();
+            $free = $tripDate ? $trip->seatsLeft($tripDate) : (int) $locked->available_seats;
             if ($free < $seats) {
                 return $this->error("عذراً، عدد المقاعد المطلوبة ({$seats}) يتجاوز المقاعد المتبقية في هذه الرحلة ({$free}).", 422);
             }
@@ -90,16 +96,19 @@ class BookingController extends Controller
                 'total_price' => $total,
                 'payment_status' => self::UNPAID,
                 'attended' => false,
-            ]);
-            DB::table($tripTable)->where($tripKey, $trip->{$tripKey})->decrement('available_seats', $seats);
+            ] + ($tripDate ? ['trip_date' => $tripDate] : []));
+            if (!$tripDate) {
+                DB::table($tripTable)->where($tripKey, $trip->{$tripKey})->decrement('available_seats', $seats);
+            }
 
+            $when = $tripDate ? " بتاريخ ({$tripDate})" : '';
             $this->notify("booking-created-{$id}", 'tourist', $tourist->tourist_id, 'booking',
                 "🎫 تم استلام وتسجيل حجزك بنجاح ({$id})",
-                "تم تسجيل حجزك في رحلة ({$trip->trip_title}) لعدد ({$seats}) مقاعد برقم التذكرة ({$id}). يُرجى سداد التكلفة ({$total} د.ل) نقداً بمقر الشركة قبل موعد الرحلة.",
+                "تم تسجيل حجزك في رحلة ({$trip->trip_title}){$when} لعدد ({$seats}) مقاعد برقم التذكرة ({$id}). يُرجى سداد التكلفة ({$total} د.ل) نقداً بمقر الشركة قبل موعد الرحلة.",
                 '/dashboard/tourist');
             $this->notify("admin-booking-{$id}", 'admin', null, 'booking',
                 "🎫 حجز مقاعد جديد في رحلة {$label} ({$id})",
-                "سجّل السائح ({$tourist->full_name}) حجزاً برقم التذكرة ({$id}) لعدد ({$seats}) مقاعد في رحلة ({$trip->trip_title}).",
+                "سجّل السائح ({$tourist->full_name}) حجزاً برقم التذكرة ({$id}) لعدد ({$seats}) مقاعد في رحلة ({$trip->trip_title}){$when}.",
                 '/dashboard/admin');
             return null;
         });
@@ -138,12 +147,26 @@ class BookingController extends Controller
         $daily = DB::table('bookings_daily')->where('tourist_id', $touristId)->orderByDesc('booking_date')->get();
         $weekly = DB::table('bookings_weekly')->where('tourist_id', $touristId)->orderByDesc('booking_date')->get();
 
-        $dailyTrips = DailyTrip::with('guide')->whereIn('daily_trip_id', $daily->pluck('daily_trip_id'))->get()->keyBy('daily_trip_id');
-        $weeklyTrips = WeeklyTrip::with('guide')->whereIn('weekly_trip_id', $weekly->pluck('weekly_trip_id'))->get()->keyBy('weekly_trip_id');
+        $with = ['guide', 'vehicle.company', 'vehicle.driver'];
+        $dailyTrips = DailyTrip::with([...$with, 'stations'])->whereIn('daily_trip_id', $daily->pluck('daily_trip_id'))->get()->keyBy('daily_trip_id');
+        $weeklyTrips = WeeklyTrip::with($with)->whereIn('weekly_trip_id', $weekly->pluck('weekly_trip_id'))->get()->keyBy('weekly_trip_id');
         $withTrip = function ($rows, $trips, string $tripKey, string $relation) {
             return $rows->map(function ($b) use ($trips, $tripKey, $relation) {
                 $trip = $trips[$b->{$tripKey}] ?? null;
-                $tripArray = $trip ? $trip->toArray() + ['photo' => $trip->photo_1] : null;
+                $vehicle = $trip?->vehicle;
+                // The ticket shows who drives and in what (no vehicle documents or images)
+                $tripArray = $trip ? collect($trip->toArray())->except(['vehicle'])->all() + [
+                    'photo' => $trip->photo_1,
+                    'first_station_time' => $trip->relationLoaded('stations') ? $trip->stations->first()?->station_time : null,
+                    'transport' => $vehicle ? [
+                        'vehicle_plate' => $vehicle->plate_number,
+                        'vehicle_type' => $vehicle->vehicle_type,
+                        'company_name' => $vehicle->company?->company_name,
+                        'contract_number' => $vehicle->contract_number,
+                        'driver_name' => $vehicle->driver?->full_name,
+                        'driver_phone' => $vehicle->driver?->phone_number,
+                    ] : null,
+                ] : null;
                 return $this->typed((array) $b) + [$relation => $tripArray, 'trip_title' => $trip?->trip_title];
             })->values()->all();
         };
@@ -179,9 +202,57 @@ class BookingController extends Controller
         return $this->updateBooking($kind, $bookingId, ['attended' => (bool) $data['attended']], 'تم تحديث حالة الحضور');
     }
 
+    /**
+     * The tourist cancels their own booking while the trip is still open for booking. The seats go back on sale.
+     * A booking already paid in cash is refunded at the office, so the tourist asks the admin instead.
+     */
+    public function cancel(Request $request, string $kind, string $bookingId): JsonResponse
+    {
+        [$table, $key, $tripTable, $tripKey, $model, , , , , $label] = self::KINDS[$kind];
+        $booking = DB::table($table)->where($key, $bookingId)->first();
+        if (!$booking || $booking->tourist_id !== $request->input('tourist_id')) {
+            return $this->error('الحجز غير موجود', 404);
+        }
+        if (str_starts_with((string) $booking->booking_status, 'ملغ')) {
+            return $this->error('هذا الحجز ملغى مسبقاً', 409);
+        }
+        if ($booking->payment_status === self::PAID) {
+            return $this->error('تم سداد قيمة هذا الحجز، لذا يتم إلغاؤه واسترداد المبلغ عن طريق إدارة المنصة. يرجى التواصل مع الإدارة.', 409);
+        }
+        $trip = $model::find($booking->{$tripKey});
+        $closed = $trip && ($kind === 'daily'
+            ? ($booking->trip_date && $trip->bookingClosedReason(substr((string) $booking->trip_date, 0, 10)))
+            : $trip->bookingClosedReason());
+        if ($closed) {
+            return $this->error('لا يمكن إلغاء الحجز بعد إغلاق باب الحجز على الرحلة. يرجى التواصل مع الإدارة.', 409);
+        }
+
+        DB::transaction(function () use ($table, $key, $tripTable, $tripKey, $booking, $bookingId, $kind, $trip, $label) {
+            DB::table($table)->where($key, $bookingId)->update(['booking_status' => self::CANCELLED_BY_TOURIST]);
+            if ($kind === 'weekly') {
+                DB::table($tripTable)->where($tripKey, $booking->{$tripKey})->increment('available_seats', (int) $booking->number_of_seats);
+            }
+            $this->notify("admin-booking-cancel-{$bookingId}", 'admin', null, 'booking',
+                "↩️ إلغاء حجز في رحلة {$label} ({$bookingId})",
+                "ألغى السائح حجزه رقم ({$bookingId}) لعدد ({$booking->number_of_seats}) مقاعد في رحلة (" . ($trip?->trip_title ?? '') . ').',
+                '/dashboard/admin');
+        });
+
+        return response()->json(['success' => true, 'message' => 'تم إلغاء الحجز وإتاحة المقاعد للحجز من جديد',
+            'data' => $this->bookingRow($kind, $bookingId)]);
+    }
+
     // Admin ticket desk: cash received and tourist checked in, in one step
     public function checkIn(string $kind, string $bookingId): JsonResponse
     {
+        $booking = $this->bookingRow($kind, $bookingId);
+        if ($booking && str_starts_with((string) $booking['booking_status'], 'ملغ')) {
+            return $this->error("هذا الحجز ملغى ({$booking['booking_status']}) ولا يمكن تأكيد حضوره", 409);
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        if ($booking && !empty($booking['trip_date']) && substr($booking['trip_date'], 0, 10) !== $today) {
+            return $this->error('هذه التذكرة لرحلة بتاريخ (' . substr($booking['trip_date'], 0, 10) . ') وليست لرحلة اليوم', 409);
+        }
         $response = $this->updateBooking($kind, $bookingId,
             ['payment_status' => self::PAID, 'attended' => true, 'booking_status' => self::CONFIRMED], 'تم تأكيد الحضور واستلام المبلغ');
         if ($response->getStatusCode() === 200) {

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
  * Expiry alerts, a week ahead so there is time to act (moved from the Node bridge's hourly timer):
  *  - hotel, restaurant/cafe and transport company contracts: the admin, and the transport company itself
  *  - drivers' licenses (drivers.license_date_valid): the driver, the driver's company and the admin
+ *  - guides' licences (tour_guides.license_expiry_date), 30 days ahead: the guide and the admin
  * Each alert is sent once. Runs from the scheduler and, at most once an hour, when notifications are loaded,
  * so it also works when no scheduler process is running.
  */
@@ -78,6 +79,29 @@ class ContractExpiryAlerts
                 "تنتهي صلاحية رخصة قيادة السائق ({$d->name})" . ($d->company_name ? " التابع لشركة ({$d->company_name})" : '') . " بتاريخ {$d->end_date}.",
                 '/dashboard/admin?tab=drivers');
         }
+        return $created + self::guideLicences($today);
+    }
+
+    // A guide's licence ending within LICENCE_DAYS_BEFORE days: the admin and the guide are told once per expiry date
+    private const LICENCE_DAYS_BEFORE = 30;
+
+    private static function guideLicences(string $today): int
+    {
+        $lastDay = now('Africa/Tripoli')->addDays(self::LICENCE_DAYS_BEFORE)->toDateString();
+        $guides = DB::table('tour_guides')->where('verification_status', 'موثق')->whereNotNull('license_expiry_date')
+            ->whereBetween('license_expiry_date', [$today, $lastDay])
+            ->get(['license_number', 'full_name', DB::raw('CONVERT(VARCHAR(10), license_expiry_date, 23) as end_date')]);
+        $created = 0;
+        foreach ($guides as $g) {
+            $created += self::send("licence-end-admin-{$g->license_number}-{$g->end_date}", 'admin', null,
+                "⏰ ترخيص المرشد ({$g->full_name}) ينتهي قريباً",
+                "ينتهي ترخيص الإرشاد للمرشد ({$g->full_name}) برقم ({$g->license_number}) بتاريخ {$g->end_date}. لن تُسند إليه رحلات تنتهي بعد هذا التاريخ.",
+                '/dashboard/admin?tab=guides');
+            $created += self::send("licence-end-guide-{$g->license_number}-{$g->end_date}", 'guide', $g->license_number,
+                '⏰ ترخيص الإرشاد الخاص بك ينتهي قريباً',
+                "ينتهي ترخيص الإرشاد الخاص بك بتاريخ {$g->end_date}. يرجى تجديده وتحديث تاريخ الانتهاء ووثيقة الترخيص في ملفك الشخصي.",
+                '/dashboard/guide?tab=profile');
+        }
         return $created;
     }
 
@@ -88,7 +112,7 @@ class ContractExpiryAlerts
             return 0;
         }
         Notification::create([
-            'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(100, 999),
+            'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999),
             'type' => 'contract',
             'title' => $title,
             'body' => $body,

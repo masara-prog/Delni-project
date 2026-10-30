@@ -77,7 +77,7 @@ function SignupPage() {
     avatar: "",
     phone: "",
     years: "",
-    pricePerDay: "150",
+    pricePerDay: "",
     email: "",
     password: "",
     bio: "",
@@ -87,10 +87,13 @@ function SignupPage() {
     speaksFrench: false,
     speaksItalian: false,
     certs: [] as string[],
+    licenseExpiry: "",
     certDataUrls: [] as string[],
     approvalStatus: "بانتظار الاعتماد والتوثيق من الإدارة",
   };
   const [guide, setGuide] = useState(initialGuideState);
+  // Expiry dates must be in the future: the date pickers start from tomorrow
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
 
   // Landmark picker: search, grouped by region
   const [placeSearch, setPlaceSearch] = useState("");
@@ -209,6 +212,10 @@ function SignupPage() {
       setErrorMsg("سنوات الخبرة السياحية للمرشد يجب أن تكون سنتين على الأقل (2 سنوات فأكثر).");
       return false;
     }
+    if (exp > 40) {
+      setErrorMsg("سنوات الخبرة لا يمكن أن تتجاوز 40 سنة.");
+      return false;
+    }
     if (!guide.bio.trim() || guide.bio.trim().length < 15) {
       setErrorMsg("يرجى كتابة نبذة تعريفية وافية عن خبرتك السياحية (15 حرف على الأقل).");
       return false;
@@ -227,6 +234,11 @@ function SignupPage() {
     }
     if (guide.certs.length === 0) {
       setErrorMsg("يرجى إرفاق صورة أو مستند الترخيص الرسمي / الشهادة.");
+      return false;
+    }
+    // An expired or same-day licence is refused (the server checks the same rule)
+    if (!guide.licenseExpiry || guide.licenseExpiry <= new Date().toLocaleDateString("en-CA")) {
+      setErrorMsg("يرجى إدخال تاريخ انتهاء ترخيص الإرشاد، ويجب أن يكون تاريخاً قادماً.");
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -325,6 +337,9 @@ function SignupPage() {
 
           <div className="relative z-10 h-full flex flex-col justify-between p-8 xl:p-10 text-white">
             <div className="flex items-center justify-between">
+              <Link to="/" className="flex items-center gap-3 w-fit group">
+                <Logo size="lg" textColor="light" />
+              </Link>
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition-all duration-300">
                 <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
                 <span>{currentSlide.titleAr}</span>
@@ -362,7 +377,7 @@ function SignupPage() {
         </div>
 
         {/* Form side - Natural smooth scrolling, Logo & Arrow fully visible with generous top padding */}
-        <div className="w-full min-h-screen flex flex-col justify-start px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+        <div className="w-full min-w-0 min-h-screen flex flex-col justify-start px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
           <div className="w-full max-w-xl mx-auto text-right pb-16">
             {/* Header Row: Clear Prominent Logo on Right, Clear Navigation Arrow on Left */}
             <div className="flex items-center justify-between mb-8 pt-2">
@@ -850,6 +865,7 @@ function SignupPage() {
                         price_per_day: Number(guide.pricePerDay) || 150,
                         bio: guide.bio,
                         place_ids: guide.placeIds,
+                        license_expiry_date: guide.licenseExpiry,
                         working_days: JSON.stringify(guide.workingDays),
                         speaks_english: guide.speaksEnglish,
                         speaks_french: guide.speaksFrench,
@@ -1017,6 +1033,15 @@ function SignupPage() {
                       })}
                     </div>
                   </div>
+
+                  <Field
+                    label="تاريخ انتهاء ترخيص الإرشاد"
+                    type="date"
+                    min={tomorrow}
+                    value={guide.licenseExpiry}
+                    onChange={(v) => setGuide((g) => ({ ...g, licenseExpiry: v }))}
+                    required
+                  />
 
                   {/* Certificate Upload with Cancellation and Replacement */}
                   <div className="space-y-1.5">

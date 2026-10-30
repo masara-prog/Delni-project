@@ -89,6 +89,16 @@ trait JsonApiResponses
         $request->merge($merge);
     }
 
+    // An expiry date (contract end, licence) must lie in the future when it is entered or changed; an unchanged stored date is accepted
+    private function pastDateError(?string $new, ?string $old, string $label): ?string
+    {
+        $new = $new ? substr($new, 0, 10) : null;
+        if (!$new || $new === ($old ? substr($old, 0, 10) : null)) {
+            return null;
+        }
+        return $new <= now('Africa/Tripoli')->toDateString() ? "{$label} يجب أن يكون تاريخاً قادماً (بعد تاريخ اليوم)" : null;
+    }
+
     private function error(string $message, int $status): JsonResponse
     {
         return response()->json(['success' => false, 'error' => $message], $status);
@@ -105,7 +115,7 @@ trait JsonApiResponses
             return;
         }
         Notification::create([
-            'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(100, 999),
+            'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999),
             'type' => $type,
             'title' => $title,
             'body' => $body,

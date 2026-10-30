@@ -10,6 +10,7 @@ import {
   apiUpdateGuideProfile,
   apiGuideRespondPrivateTrip,
   apiGuideRespondWeeklyTrip,
+  apiGuideRespondDailyTrip,
   apiGetPlaces,
   apiLogout,
 } from "@/lib/api";
@@ -87,6 +88,7 @@ function GuideDashboard() {
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
     { id: "assigned_trips", label: isAr ? "الرحلات المسندة إليّ" : "Assigned Tours", icon: "🧭" },
+    { id: "calendar", label: isAr ? "تقويم رحلاتي" : "My Trips Calendar", icon: "📅" },
     { id: "active_tourists", label: isAr ? "كشف سياح الرحلة" : "Active Manifest", icon: "☑️" },
     { id: "profile", label: isAr ? "الملف الشخصي والشهادات" : "Profile & Credentials", icon: "📄" },
   ];
@@ -118,6 +120,8 @@ function GuideDashboard() {
       specialties: u.specialties || "",
       total_tours_completed: Number(u.total_tours_completed) || 0,
       digital_certificate_file: u.digital_certificate_file,
+      license_expiry_date: u.license_expiry_date ? String(u.license_expiry_date).slice(0, 10) : "",
+      availability_status: u.availability_status || "متاح",
     };
   });
 
@@ -170,7 +174,16 @@ function GuideDashboard() {
           specialties: g.specialties || "",
           total_tours_completed: Number(g.total_tours_completed) || 0,
           digital_certificate_file: g.digital_certificate_file,
+          license_expiry_date: g.license_expiry_date ? String(g.license_expiry_date).slice(0, 10) : "",
+          availability_status: g.availability_status || "متاح",
         });
+
+        // Bookings that still count: not cancelled, and for a daily trip (it runs every week) only today's run date
+        const today = new Date().toLocaleDateString("en-CA");
+        const liveBookings = (trip: any, daily: boolean) =>
+          (Array.isArray(trip.bookings) ? trip.bookings : []).filter((b: any) =>
+            !String(b.booking_status || "").startsWith("ملغ") && (!daily || String(b.trip_date || "").slice(0, 10) === today));
+        const seatsOf = (rows: any[]) => rows.reduce((sum, b) => sum + (Number(b.number_of_seats) || 0), 0);
 
         // Map Real Assigned Trips from DelniDB
         const realTrips: AssignedTrip[] = [];
@@ -183,9 +196,10 @@ function GuideDashboard() {
               date: d.recurring_days || "أسبوعياً",
               time_or_duration: "يوم كامل",
               tourist_group_name: d.trip_title || d.title || "رحلة يومية",
-              seats_booked: d.bookings ? d.bookings.length : 0,
-              status: "مقبولة",
-              is_active_now: Boolean(d.is_active),
+              seats_booked: seatsOf(liveBookings(d, true)),
+              // Like weekly trips, a daily trip waits for the guide's answer (empty = trip from before this step)
+              status: d.guide_approval_status === "بانتظار رد المرشد" ? "بانتظار القبول" : d.guide_approval_status === "اعتذر المرشد" ? "مرفوضة" : "مقبولة",
+              is_active_now: Boolean(d.is_active) && (!d.guide_approval_status || d.guide_approval_status === "وافق المرشد"),
               raw: d,
             });
           });
@@ -197,9 +211,11 @@ function GuideDashboard() {
               trip_name: w.trip_title || w.title || "رحلة أسبوعية",
               type: "أسبوعية",
               date: `${w.start_date ? new Date(w.start_date).toLocaleDateString("ar-LY") : ""} - ${w.end_date ? new Date(w.end_date).toLocaleDateString("ar-LY") : ""}`,
-              time_or_duration: "6 أيام",
+              time_or_duration: w.start_date && w.end_date
+                ? `${Math.round((new Date(String(w.end_date).slice(0, 10)).getTime() - new Date(String(w.start_date).slice(0, 10)).getTime()) / 86400000) + 1} أيام`
+                : "",
               tourist_group_name: w.trip_title || w.title || "رحلة أسبوعية",
-              seats_booked: w.bookings ? w.bookings.length : 0,
+              seats_booked: seatsOf(liveBookings(w, false)),
               // guide_approval_status: empty for trips created before the guide's approval step
               status: w.guide_approval_status === "بانتظار رد المرشد" ? "بانتظار القبول" : w.guide_approval_status === "اعتذر المرشد" ? "مرفوضة" : "مقبولة",
               is_active_now: Boolean(w.is_active) && (!w.guide_approval_status || w.guide_approval_status === "وافق المرشد"),
@@ -230,8 +246,8 @@ function GuideDashboard() {
         const realTourists: TouristManifestItem[] = [];
         if (data.daily_trips && Array.isArray(data.daily_trips)) {
           data.daily_trips.forEach((d: any) => {
-            if (d.bookings && Array.isArray(d.bookings)) {
-              d.bookings.forEach((b: any) => {
+            {
+              liveBookings(d, true).forEach((b: any) => {
                 realTourists.push({
                   booking_id: `BK-D-${b.booking_daily_id || b.id}`,
                   tourist_id: b.tourist_id,
@@ -249,8 +265,8 @@ function GuideDashboard() {
         }
         if (data.weekly_trips && Array.isArray(data.weekly_trips)) {
           data.weekly_trips.forEach((w: any) => {
-            if (w.bookings && Array.isArray(w.bookings)) {
-              w.bookings.forEach((b: any) => {
+            {
+              liveBookings(w, false).forEach((b: any) => {
                 realTourists.push({
                   booking_id: `BK-W-${b.booking_weekly_id || b.id}`,
                   tourist_id: b.tourist_id,
@@ -291,7 +307,7 @@ function GuideDashboard() {
       reason = typed.trim() || undefined;
     }
     setRespondingTripId(trip.id);
-    const respond = trip.type === "أسبوعية" ? apiGuideRespondWeeklyTrip : apiGuideRespondPrivateTrip;
+    const respond = trip.type === "يومية" ? apiGuideRespondDailyTrip : trip.type === "أسبوعية" ? apiGuideRespondWeeklyTrip : apiGuideRespondPrivateTrip;
     const res = await respond(guideInfo.license_number, trip.id, decision, reason);
     setRespondingTripId(null);
     if (!res.success) {
@@ -300,13 +316,13 @@ function GuideDashboard() {
     }
     setAssignedTrips((prev) => prev.map((t) => (t.id === trip.id ? { ...t, status: decision === "accept" ? "مقبولة" : "مرفوضة" } : t)));
     alert(decision === "accept"
-      ? (trip.type === "أسبوعية" ? "✅ تم قبول الرحلة، وأصبحت منشورة للسياح." : "✅ تم قبول الرحلة، وأُرسل البرنامج والتسعيرة للسائح.")
+      ? (trip.type === "خاصة VIP" ? "✅ تم قبول الرحلة، وأُرسل البرنامج والتسعيرة للسائح." : "✅ تم قبول الرحلة، وأصبحت منشورة للسياح.")
       : "تم تسجيل اعتذارك عن الرحلة وإبلاغ الإدارة لتعيين مرشد آخر.");
   };
 
-  // Private and weekly trips wait for the guide's answer
+  // Every assigned trip waits for the guide's answer before it is published (private: before it goes to the tourist)
   const tripActions = (t: AssignedTrip) =>
-    t.type !== "يومية" && t.status === "بانتظار القبول" ? (
+    t.status === "بانتظار القبول" ? (
       <div className="flex gap-2">
         <button
           disabled={respondingTripId === t.id}
@@ -326,6 +342,17 @@ function GuideDashboard() {
     ) : null;
 
   const activeTrip = assignedTrips.find((t) => t.is_active_now);
+  // Tours already run: accepted weekly trips past their end date, confirmed private trips past their last day
+  const today = new Date().toISOString().slice(0, 10);
+  const completedTours = assignedTrips.filter((t) => {
+    if (t.type === "أسبوعية") return t.status === "مقبولة" && !!t.raw?.end_date && String(t.raw.end_date).slice(0, 10) < today;
+    if (t.type === "خاصة VIP" && t.raw?.status_order === "مؤكدة" && t.raw?.preferred_start_date) {
+      const end = new Date(String(t.raw.preferred_start_date).slice(0, 10));
+      end.setDate(end.getDate() + (Number(t.raw.duration_days) || 1) - 1);
+      return end.toISOString().slice(0, 10) < today;
+    }
+    return false;
+  }).length;
   const activeTripTourists = tourists.filter((t) => activeTrip && t.trip_name === activeTrip.trip_name);
   const attendedCount = activeTripTourists.filter((t) => t.attended).reduce((acc, curr) => acc + curr.seats_count, 0);
 
@@ -356,6 +383,22 @@ function GuideDashboard() {
     }
   };
 
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
+  const licenceDaysLeft = guideInfo.license_expiry_date
+    ? Math.ceil((new Date(guideInfo.license_expiry_date).getTime() - new Date(new Date().toLocaleDateString("en-CA")).getTime()) / 86400000)
+    : null;
+
+  // متاح / إجازة: a guide on leave gets no new trips; the server refuses leave while trips are still assigned
+  const toggleAvailability = async () => {
+    const next = guideInfo.availability_status === "إجازة" ? "متاح" : "إجازة";
+    const res = await apiUpdateGuideProfile(guideInfo.license_number, { availability_status: next });
+    if (res.status !== "success") {
+      alert("❌ " + res.message);
+      return;
+    }
+    setGuideInfo({ ...guideInfo, availability_status: next });
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guideInfo.phone_number.match(/^09\d{8}$/)) {
@@ -366,9 +409,19 @@ function GuideDashboard() {
       alert("الرجاء تعبئة كافة الحقول المطلوبة.");
       return;
     }
+    if (guideInfo.years_of_experience < 2 || guideInfo.years_of_experience > 40) {
+      alert("سنوات الخبرة يجب أن تكون بين سنتين و40 سنة.");
+      return;
+    }
 
     if (selectedPlaceIds.length === 0) {
       alert("يرجى اختيار معلم سياحي واحد على الأقل من أماكن العمل.");
+      return;
+    }
+    // A changed licence expiry date must be in the future (an unchanged stored one is accepted by the server)
+    const storedExpiry = String(getStoredSession().user?.license_expiry_date || "").slice(0, 10);
+    if (guideInfo.license_expiry_date && guideInfo.license_expiry_date !== storedExpiry && guideInfo.license_expiry_date < tomorrow) {
+      alert("تاريخ انتهاء الترخيص يجب أن يكون تاريخاً قادماً.");
       return;
     }
     const { operating_regions: _regions, ...profile } = guideInfo;
@@ -403,7 +456,7 @@ function GuideDashboard() {
             <p className="mt-1 text-xs text-stone-300 font-medium">
               ترخيص المزاولة:{" "}
               <span className="font-mono text-[#D96B27] font-bold">{guideInfo.license_number || "قيد المراجعة"}</span> · إجمالي
-              الجولات المنفذة: <span className="text-[#D96B27] font-bold">{guideInfo.total_tours_completed || 0}</span> رحلة
+              الجولات المنفذة: <span className="text-[#D96B27] font-bold">{completedTours}</span> رحلة
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="text-[11px] bg-white/10 text-stone-200 px-2.5 py-0.5 rounded-lg font-medium border border-white/10">
@@ -424,6 +477,18 @@ function GuideDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleAvailability}
+              title="المرشد في إجازة لا تُسند إليه رحلات جديدة"
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border cursor-pointer transition ${
+                guideInfo.availability_status === "إجازة"
+                  ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
+                  : "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
+              }`}
+            >
+              {guideInfo.availability_status === "إجازة" ? "🌙 في إجازة — اضغط للعودة متاحاً" : "✅ متاح — اضغط لتفعيل الإجازة"}
+            </button>
             <Badge tone={guideInfo.verification_status === "موثق" ? "green" : "sun"}>{guideInfo.verification_status}</Badge>
             <Badge tone="sea">📜 {guideInfo.years_of_experience || 0} سنوات خبرة</Badge>
           </div>
@@ -452,7 +517,7 @@ function GuideDashboard() {
             <StatCard label="الرحلة النشطة الحالية" value={activeTrip ? activeTrip.trip_name : "لا يوجد رحلة حالياً"} icon="🧭" tone="sea" />
             <StatCard label="الرحلات بانتظار القبول" value={assignedTrips.filter((t) => t.status === "بانتظار القبول").length} icon="📥" tone="sun" />
             <StatCard label="أجر اليوم للرحلات الخاصة" value={guideInfo.price_per_day ? `${guideInfo.price_per_day} د.ل / يوم` : "غير محدد"} icon="💰" tone="green" />
-            <StatCard label="إجمالي الجولات المكتملة" value={`${guideInfo.total_tours_completed || 0} جولة`} icon="🏆" tone="clay" />
+            <StatCard label="إجمالي الجولات المكتملة" value={`${completedTours} جولة`} icon="🏆" tone="clay" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
@@ -621,6 +686,13 @@ function GuideDashboard() {
         </SectionCard>
       )}
 
+      {/* My trips calendar: the trip days ahead and each date's tourists */}
+      {active === "calendar" && (
+        <SectionCard title="تقويم رحلاتي (الثلاثون يوماً القادمة)">
+          <GuideCalendar trips={assignedTrips} onDetails={setDetailsTrip} />
+        </SectionCard>
+      )}
+
       {/* Active Tourists Manifest Tab */}
       {active === "active_tourists" && (
         <SectionCard title={`كشف حضور سياح الرحلة النشطة (${activeTrip ? activeTrip.trip_name : "لا يوجد رحلة جارية"})`}>
@@ -748,6 +820,14 @@ function GuideDashboard() {
                   badge="🔒 معتمد بالسجل"
                 />
               </div>
+              <Field
+                label="تاريخ انتهاء ترخيص الإرشاد"
+                type="date"
+                min={tomorrow}
+                value={guideInfo.license_expiry_date || ""}
+                onChange={(v) => setGuideInfo({ ...guideInfo, license_expiry_date: v })}
+                badge={licenceDaysLeft !== null && licenceDaysLeft <= 30 ? `⏰ ينتهي خلال ${Math.max(licenceDaysLeft, 0)} يوماً` : undefined}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <Field
@@ -1127,6 +1207,7 @@ function Field({
   placeholder,
   disabled = false,
   badge,
+  min,
 }: {
   label: string;
   type?: string;
@@ -1135,6 +1216,7 @@ function Field({
   placeholder?: string;
   disabled?: boolean;
   badge?: string;
+  min?: string;
 }) {
   return (
     <div className="space-y-1">
@@ -1152,6 +1234,7 @@ function Field({
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
+        min={min}
         className={`w-full h-10 px-3 rounded-xl border text-right outline-none text-xs sm:text-sm font-medium transition ${
           disabled
             ? "bg-stone-100/80 border-stone-200 text-stone-500 cursor-not-allowed select-none"
@@ -1163,6 +1246,160 @@ function Field({
 }
 
 /* ---- READ-ONLY TRIP DETAILS (the guide can view everything about an assigned trip but change nothing) ---- */
+/* ============ تقويم رحلاتي: the guide's trip days ahead, with the tourists booked for each date ============ */
+
+const WEEK_DAY_NAMES = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const CALENDAR_DAYS = 30;
+const normalizeDay = (d: string) => String(d || "").trim().replace("إ", "ا");
+const isoDay = (d: Date) => d.toLocaleDateString("en-CA");
+
+type CalendarEntry = { trip: AssignedTrip; passengers: { id: string; name: string; phone: string; seats: number; paid: boolean; attended: boolean }[] };
+
+// Trips the guide has accepted (or were assigned before the approval step) that run on this date
+function tripsOn(date: Date, trips: AssignedTrip[]): CalendarEntry[] {
+  const day = isoDay(date);
+  const weekday = normalizeDay(WEEK_DAY_NAMES[date.getDay()]);
+  const live = (rows: any[], daily: boolean) =>
+    (Array.isArray(rows) ? rows : []).filter(
+      (b: any) => !String(b.booking_status || "").startsWith("ملغ") && (!daily || String(b.trip_date || "").slice(0, 10) === day),
+    );
+  const fromBookings = (rows: any[]) =>
+    rows.map((b: any) => ({
+      id: b.booking_daily_id || b.booking_weekly_id,
+      name: b.tourist?.full_name || b.tourist_id,
+      phone: b.tourist?.phone_number || "",
+      seats: Number(b.number_of_seats) || 0,
+      paid: b.payment_status === "paid",
+      attended: Boolean(b.attended),
+    }));
+
+  const entries: CalendarEntry[] = [];
+  for (const t of trips) {
+    const r = t.raw || {};
+    if (t.status !== "مقبولة") continue;
+    if (t.type === "يومية") {
+      if (!r.is_active) continue;
+      const days: string[] = (Array.isArray(r.days) ? r.days : []).map((d: any) => normalizeDay(d.day_of_week ?? d));
+      if (days.length && !days.includes(weekday)) continue;
+      entries.push({ trip: t, passengers: fromBookings(live(r.bookings, true)) });
+    } else if (t.type === "أسبوعية") {
+      const start = String(r.start_date || "").slice(0, 10);
+      const end = String(r.end_date || "").slice(0, 10);
+      if (!r.is_active || !start || day < start || day > end) continue;
+      entries.push({ trip: t, passengers: fromBookings(live(r.bookings, false)) });
+    } else if (r.status_order === "مؤكدة" && r.preferred_start_date) {
+      const start = String(r.preferred_start_date).slice(0, 10);
+      const last = new Date(start);
+      last.setDate(last.getDate() + (Number(r.duration_days) || 1) - 1);
+      if (day < start || day > isoDay(last)) continue;
+      entries.push({
+        trip: t,
+        passengers: [{ id: r.private_trip_id, name: r.tourist?.full_name || r.tourist_id, phone: r.tourist?.phone_number || "",
+          seats: Number(r.number_of_companions) || 0, paid: true, attended: false }],
+      });
+    }
+  }
+  return entries;
+}
+
+function GuideCalendar({ trips, onDetails }: { trips: AssignedTrip[]; onDetails: (t: AssignedTrip) => void }) {
+  const dates = Array.from({ length: CALENDAR_DAYS }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  const busy = dates.map((d) => ({ date: d, entries: tripsOn(d, trips) })).filter((x) => x.entries.length > 0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const current = busy.find((x) => isoDay(x.date) === selected) || busy[0];
+
+  if (busy.length === 0) {
+    return (
+      <div className="text-center py-10 text-stone-500 text-xs">
+        لا توجد رحلات مقبولة مسندة إليك خلال الثلاثين يوماً القادمة.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 text-right">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {busy.map(({ date, entries }) => {
+          const key = isoDay(date);
+          const on = current && isoDay(current.date) === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSelected(key)}
+              className={`shrink-0 px-3 py-2 rounded-xl border text-center cursor-pointer transition ${
+                on ? "bg-[#1B5A78] text-white border-[#1B5A78]" : "bg-white text-stone-700 border-stone-200 hover:border-[#1B5A78]/50"
+              }`}
+            >
+              <div className="text-[10px] font-bold">{WEEK_DAY_NAMES[date.getDay()]}</div>
+              <div className="text-sm font-black font-mono">{key.slice(5).replace("-", "/")}</div>
+              <div className={`text-[10px] font-bold ${on ? "text-white/80" : "text-[#D96B27]"}`}>{entries.length} رحلة</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {current?.entries.map(({ trip, passengers }) => {
+        const seats = passengers.reduce((sum, p) => sum + p.seats, 0);
+        return (
+          <div key={trip.id} className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+            <div className="p-3 flex flex-wrap items-center justify-between gap-2 bg-stone-50 border-b border-stone-200">
+              <div>
+                <div className="font-bold text-stone-900 text-xs sm:text-sm">{trip.trip_name}</div>
+                <div className="text-[11px] text-stone-500">
+                  رحلة {trip.type} · {trip.type === "خاصة VIP" ? `${seats} مرافق` : `${seats} مقعد محجوز`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onDetails(trip)}
+                className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 cursor-pointer"
+              >
+                التفاصيل
+              </button>
+            </div>
+            {passengers.length === 0 ? (
+              <div className="p-4 text-center text-[11px] text-stone-500">لا توجد حجوزات على هذه الرحلة في هذا التاريخ.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-right">
+                  <thead className="text-stone-600 font-bold border-b border-stone-200">
+                    <tr>
+                      <th className="p-2">رقم الحجز</th>
+                      <th className="p-2">السائح</th>
+                      <th className="p-2">الهاتف</th>
+                      <th className="p-2">المقاعد</th>
+                      <th className="p-2">الدفع</th>
+                      <th className="p-2">الحضور</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {passengers.map((p) => (
+                      <tr key={p.id}>
+                        <td className="p-2 font-mono text-[11px] text-stone-600">{p.id}</td>
+                        <td className="p-2 font-bold text-stone-900">{p.name}</td>
+                        <td className="p-2 font-mono text-[11px] text-stone-600" dir="ltr">{p.phone || "—"}</td>
+                        <td className="p-2 font-bold">{p.seats}</td>
+                        <td className="p-2">{trip.type === "خاصة VIP" ? "—" : p.paid ? "مدفوع" : "نقداً بالفرع"}</td>
+                        <td className="p-2">{trip.type === "خاصة VIP" ? "—" : p.attended ? "✓ حاضر" : "لم يُسجَّل"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () => void }) {
   const r = trip.raw || {};
   const fmtDate = (v?: string) => (v ? new Date(v).toLocaleDateString("ar-LY") : "—");
@@ -1189,9 +1426,11 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
     if (r.tourist) info.push(["العميل", `${r.tourist.full_name || ""} — ${r.tourist.phone_number || ""}`]);
   }
   if (r.departure_city) info.push(["مدينة الانطلاق", r.departure_city]);
-  if (r.max_capacity) info.push(["السعة / المقاعد المتاحة", `${r.max_capacity} / ${r.available_seats ?? "—"}`]);
+  // A daily trip's free seats depend on the run date, so only its capacity is shown
+  if (r.max_capacity) info.push(trip.type === "يومية" ? ["سعة الرحلة", `${r.max_capacity} مقعد`] : ["السعة / المقاعد المتاحة", `${r.max_capacity} / ${r.available_seats ?? "—"}`]);
   if (r.vehicle) info.push(["المركبة", `${r.vehicle.vehicle_type || ""} — لوحة ${r.vehicle.plate_number} (${r.vehicle.seating_capacity || "?"} مقعد)`]);
   else if (r.vehicle_plate) info.push(["المركبة", `لوحة ${r.vehicle_plate}`]);
+  if (r.vehicle?.driver) info.push(["السائق", `${r.vehicle.driver.full_name}${r.vehicle.driver.phone_number ? ` — ${r.vehicle.driver.phone_number}` : ""}`]);
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div className="space-y-1.5">

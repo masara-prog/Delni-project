@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
+use App\Support\Actor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -14,9 +15,8 @@ class NotificationController extends Controller
      */
     public function index(Request $request)
     {
-        $role = $request->query('role', 'all');
-        $userId = $request->query('user_id');
-        // Expiry alerts (contracts, drivers' licenses) are checked at most once an hour, whoever loads notifications
+        [$role, $userId] = $this->recipient();
+        // Expiry alerts (partner contracts, guides' and drivers' licences) are checked at most hourly, whoever loads notifications
         \App\Support\ContractExpiryAlerts::runHourly();
 
         $query = Notification::query();
@@ -58,8 +58,7 @@ class NotificationController extends Controller
      */
     public function unreadCount(Request $request)
     {
-        $role = $request->query('role', 'all');
-        $userId = $request->query('user_id');
+        [$role, $userId] = $this->recipient();
 
         $query = Notification::where('is_read', false);
 
@@ -87,6 +86,13 @@ class NotificationController extends Controller
             'dedupe_key' => 'nullable|string|max:100',
         ]);
 
+        // Only the admin addresses notifications; anyone else (support chat messages) writes to the admin
+        if (!Actor::isAdmin()) {
+            $validated['recipient_role'] = 'admin';
+            $validated['recipient_id'] = null;
+            $validated['link'] = '/dashboard/admin';
+        }
+
         // Deduplication check
         if (!empty($validated['dedupe_key'])) {
             $existing = Notification::where('dedupe_key', $validated['dedupe_key'])->first();
@@ -99,7 +105,7 @@ class NotificationController extends Controller
             }
         }
 
-        $id = 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(100, 999);
+        $id = 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999);
 
         $notification = Notification::create([
             'id' => $id,
@@ -128,8 +134,7 @@ class NotificationController extends Controller
     {
         $all = $request->boolean('all');
         $id = $request->input('id');
-        $role = $request->input('role', 'all');
-        $userId = $request->input('user_id');
+        [$role, $userId] = $this->recipient();
 
         if ($all) {
             $query = Notification::where('is_read', false);
@@ -143,7 +148,9 @@ class NotificationController extends Controller
         }
 
         if ($id) {
-            Notification::where('id', $id)->update(['is_read' => true]);
+            $query = Notification::where('id', $id);
+            $this->forRecipient($query, $role, $userId);
+            $query->update(['is_read' => true]);
             return response()->json([
                 'status' => 'success',
                 'message' => 'تم تحديد الإشعار كمقروء',
@@ -154,6 +161,12 @@ class NotificationController extends Controller
             'status' => 'error',
             'message' => 'مطلوب معرف الإشعار أو خيار تحديد الكل',
         ], 400);
+    }
+
+    // The signed-in account's role and id (visitors see role-wide broadcasts only)
+    private function recipient(): array
+    {
+        return [Actor::role() ?? 'guest', Actor::id()];
     }
 
     // Personal notifications must match both the id and the role (a driver's record also carries its company's

@@ -158,6 +158,9 @@ type Guide = {
   place_ids?: string[];
   total_tours_completed?: number;
   city?: string | null;
+  license_expiry_date?: string | null;
+  availability_status?: string | null;
+  rejection_reason?: string | null;
 };
 
 type Vehicle = { 
@@ -175,7 +178,8 @@ type Vehicle = {
   vehicle_status?: string | null;
 };
 
-type DailyTrip = { 
+type DailyTrip = {
+  guide_approval_status?: string | null; // daily_trips.guide_approval_status 
   id: string; 
   daily_trip_id?: string;
   title: string; 
@@ -401,6 +405,9 @@ function mapGuideRow(g: any): Guide {
     places: g.places || [],
     place_ids: g.place_ids || [],
     total_tours_completed: Number(g.total_tours_completed) || 0,
+    license_expiry_date: g.license_expiry_date ? String(g.license_expiry_date).slice(0, 10) : null,
+    availability_status: g.availability_status || "متاح",
+    rejection_reason: g.rejection_reason || null,
   } as Guide;
 }
 
@@ -463,6 +470,7 @@ function mapDailyTripRow(d: any): any {
     recurring_days: d.recurring_days || "السبت,الثلاثاء",
     guide_license: d.guide_license_number || "",
     guide_license_number: d.guide_license_number || "",
+    guide_approval_status: d.guide_approval_status || "",
     photo: d.photo || "/assets/ai_ruins.jpg",
     activities: d.activities || "",
     is_active: d.is_active !== false,
@@ -891,7 +899,7 @@ function AdminDashboard() {
           return;
         }
         await reloadTrips();
-        alert("تم حفظ الرحلة اليومية بنجاح!");
+        alert("✅ " + (res.message || "تم حفظ الرحلة اليومية بنجاح"));
       } else {
         const imgList = (data.images && data.images.length > 0)
           ? data.images
@@ -965,7 +973,7 @@ function AdminDashboard() {
         return;
       }
       await reloadTrips();
-      alert("تم تحديث الرحلة اليومية بنجاح!");
+      alert("✅ " + (res.message || "تم تحديث الرحلة اليومية بنجاح"));
     } catch (err: any) {
       alert("حدث خطأ أثناء تعديل الرحلة: " + (err.message || "فشل الاتصال"));
       return;
@@ -1074,7 +1082,7 @@ function AdminDashboard() {
     setEvaluatingPrivateTrip(null);
 
     if (res.data?.status_order === "بانتظار رد المرشد") {
-      alert(`✅ تم اعتماد جدول المحطات وتسعيرة الرحلة (${price} د.ل) وإرسالها للمرشد للموافقة عليها.\nبعد موافقة المرشد يصل العرض للسائح تلقائياً، وإذا اعتذر يصلك إشعار لتعيين مرشد آخر.`);
+      alert(`✅ تم اعتماد جدول المحطات وتسعيرة الرحلة (${price} د.ل) وإرسالها للمرشد للموافقة عليها.\nبعد موافقة المرشد يصل العرض للسائح تلقائياً، وإذا اعتذر يصلك إشعار لتعيين مرشد آخر.${res.warning ? "\n\n" + res.warning : ""}`);
     } else if (status === "مرفوضة من الأدمن") {
       alert(`تم تسجيل رفض طلب الرحلة الخاصة (#${id}).`);
     }
@@ -1277,7 +1285,8 @@ function AdminDashboard() {
       paymentStatus: b.payment_status || "unpaid",
       attended: !!b.attended,
       bookingStatus: b.booking_status || "",
-      date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "",
+      // A daily ticket is for one run date; otherwise show when it was booked
+      date: isDaily && b.trip_date ? String(b.trip_date).slice(0, 10) : (b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : ""),
       guideName: b.guide_name || "—",
       rawBooking: b,
     });
@@ -1306,15 +1315,16 @@ function AdminDashboard() {
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "📊" },
-    { id: "scanner", label: isAr ? "مسح الباركود وتأكيد التذاكر" : "QR Ticket Scanner", icon: "📷", badge: isAr ? "فوري" : "Fast" },
-    { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌", badge: 3 },
+    // Badges count only items waiting for the admin (hidden at zero)
+    { id: "scanner", label: isAr ? "مسح الباركود وتأكيد التذاكر" : "QR Ticket Scanner", icon: "📷" },
+    { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌" },
     { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
     { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length || undefined },
-    { id: "tourists", label: isAr ? "إدارة وتقييد السياح" : "Tourists Management", icon: "👥", badge: tourists.length || undefined },
-    { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭" },
-    { id: "bookings", label: isAr ? "سجل الحجوزات والدفع" : "Bookings & Payments", icon: "🎟️", badge: dailyBookings.length + weeklyBookings.length },
+    { id: "tourists", label: isAr ? "إدارة وتقييد السياح" : "Tourists Management", icon: "👥" },
+    { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭", badge: [...weeklyTrips, ...dailyTrips].filter(t => t.guide_approval_status === "اعتذر المرشد").length || undefined },
+    { id: "bookings", label: isAr ? "سجل الحجوزات والدفع" : "Bookings & Payments", icon: "🎟️", badge: [...dailyBookings, ...weeklyBookings].filter(b => b.payment_status !== "paid").length || undefined },
     { id: "offers", label: isAr ? "العروض الترويجية" : "Promotions & Offers", icon: "🎯" },
-    { id: "private_trips", label: isAr ? "الرحلات الخاصة" : "Private Custom Trips", icon: "👑", badge: 2 },
+    { id: "private_trips", label: isAr ? "الرحلات الخاصة" : "Private Custom Trips", icon: "👑", badge: privateTrips.filter(p => p.status_order === "قيد الدراسة" || p.status_order === "اعتذر المرشد").length || undefined },
     { id: "entities", label: isAr ? "المرافق والوجهات" : "Entities & Stays", icon: "🏛️" },
     { id: "reviews", label: isAr ? "التقييمات والمراجعات" : "Reviews & Ratings", icon: "⭐" },
     { id: "analytics", label: isAr ? "إحصائيات الأكثر حجزاً وتقييماً" : "Analytics & Stats", icon: "📈" },
@@ -1789,7 +1799,7 @@ function AdminDashboard() {
                           {g.years_of_experience ? `${g.years_of_experience} سنوات خبرة` : "—"}
                         </div>
                         <div className="text-[11px] font-black text-emerald-700">
-                          {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                          {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                         </div>
                       </td>
 
@@ -1851,7 +1861,6 @@ function AdminDashboard() {
                                 };
                                 localStorage.setItem("dalni_user", JSON.stringify(guideUser));
                                 localStorage.setItem("dalni_role", "guide");
-                                localStorage.setItem("dalni_token", `token-guide-${Date.now()}`);
                                 window.dispatchEvent(new Event("storage"));
                                 window.open("/dashboard/guide", "_blank");
                               }}
@@ -2038,8 +2047,11 @@ function AdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-black text-foreground text-sm">{d.title}</h4>
                       <Badge tone={d.is_active ? "green" : "muted"}>{d.is_active ? "نشطة" : "موقوفة"}</Badge>
+                      {d.guide_approval_status === "بانتظار رد المرشد" && <Badge tone="sun">⏳ بانتظار موافقة المرشد (غير منشورة)</Badge>}
+                      {d.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
+                      {d.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
                       <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-black">
-                        📅 يومان أسبوعياً: {Array.isArray(d.recurring_days) ? d.recurring_days.join(" و ") : (d.recurring_days || "الأحد والأربعاء")}
+                        📅 أيام الانطلاق: {Array.isArray(d.recurring_days) ? d.recurring_days.join(" و ") : (d.recurring_days || "غير محددة")}
                       </span>
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
                         🚌 حافلة {d.bus_capacity || 50} راكب
@@ -2192,7 +2204,11 @@ function AdminDashboard() {
                         <td className="py-3 font-bold text-foreground">
                           <div>{b.tourist_name || b.tourist_id}</div>
                         </td>
-                        <td className="py-3 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.daily_trip_id}</td>
+                        <td className="py-3 text-xs font-bold text-slate-700">
+                          <div>{trip?.trip_title || trip?.title || b.daily_trip_id}</div>
+                          {(b as any).trip_date && <div className="text-[11px] font-medium text-slate-500">📅 {String((b as any).trip_date).slice(0, 10)}</div>}
+                          {String(b.booking_status || "").startsWith("ملغ") && <Badge tone="red">{b.booking_status}</Badge>}
+                        </td>
                         <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
                         <td className="py-3 font-black text-emerald-600">{b.total_price} د.ل</td>
                         <td className="py-3">
@@ -3734,6 +3750,10 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       setErrorMsg("تاريخ انتهاء التعاقد يجب أن يكون بعد تاريخ بداية التعاقد (اليوم).");
       return;
     }
+    if (isNewPastDate(contractEndDate, null)) {
+      setErrorMsg("تاريخ انتهاء التعاقد يجب أن يكون تاريخاً قادماً.");
+      return;
+    }
 
     setSaving(true);
     const saveError = await onAdd({
@@ -3865,49 +3885,32 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
               <span>📊</span>
-              <span>سعة الأسطول وسريان التعاقد والتشغيل</span>
+              <span>الأسطول والتعاقد</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/90 text-right space-y-1">
-              <p className="text-[11px] text-blue-900 font-bold flex items-center gap-1.5">
-                <span>💡</span>
-                <span><b>عدد مركبات الأسطول:</b> إجمالي عدد المركبات المعتمدة رسمياً في العقد (تكون جميعها متاحة للتشغيل).</span>
-              </p>
-            </div>
-
-            <div>
-              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-3">
+              <Field label="عدد مركبات الأسطول *" type="number" min={1} value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
               <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
-                  <span>تاريخ بداية التعاقد (تاريخ اليوم) 🔒</span>
-                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">تلقائي</span>
-                </label>
+                <label className="text-xs font-bold text-foreground mb-1 block">حالة الشركة *</label>
+                <select
+                  value={companyStatus}
+                  onChange={e => setCompanyStatus(e.target.value as any)}
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
+                >
+                  <option value="نشطة">نشطة</option>
+                  <option value="موقوفة">موقوفة</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-foreground mb-1 block">تاريخ بداية التعاقد</label>
                 <input
-                  type="date"
+                  type="text"
                   value={contractStartDate}
-                  disabled
                   readOnly
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed shadow-xs"
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-slate-100 text-slate-600 text-right outline-none text-xs font-semibold font-mono cursor-not-allowed"
                 />
               </div>
-              <div>
-                <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-800 block mb-1.5">حالة التوثيق والتشغيل *</label>
-              <select
-                value={companyStatus}
-                onChange={e => setCompanyStatus(e.target.value as any)}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
-              >
-                <option value="نشطة">نشطة (مفعلة وتعمل بالمنصة)</option>
-                <option value="موقوفة">موقوفة (معطلة مؤقتاً)</option>
-              </select>
+              <Field label="تاريخ انتهاء التعاقد *" type="date" min={minFutureDate(null)} value={contractEndDate} onChange={setContractEndDate} required />
             </div>
           </div>
 
@@ -3999,6 +4002,10 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
     }
     if (contractEndDate <= contractStartDate) {
       setErrorMsg("تاريخ انتهاء التعاقد يجب أن يكون بعد تاريخ بداية التعاقد.");
+      return;
+    }
+    if (isNewPastDate(contractEndDate, company.contract_end_date)) {
+      setErrorMsg("تاريخ انتهاء التعاقد الجديد يجب أن يكون تاريخاً قادماً.");
       return;
     }
 
@@ -4123,42 +4130,32 @@ available_cars: totalV,
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
               <span>📊</span>
-              <span>سعة الأسطول وسريان التعاقد والتشغيل</span>
+              <span>الأسطول والتعاقد</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <Field label="عدد مركبات الأسطول المعتمدة في العقد *" type="number" value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-3">
+              <Field label="عدد مركبات الأسطول *" type="number" min={1} value={String(vehiclesCount)} onChange={v => setVehiclesCount(v)} required />
               <div>
-                <label className="text-xs font-bold text-slate-800 mb-1.5 block">حالة التوثيق والتشغيل *</label>
+                <label className="text-xs font-bold text-foreground mb-1 block">حالة الشركة *</label>
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value as any)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"
                 >
-                  <option value="نشطة">نشطة (مفعلة وتعمل بالمنصة)</option>
-                  <option value="موقوفة">موقوفة (معطلة مؤقتاً)</option>
+                  <option value="نشطة">نشطة</option>
+                  <option value="موقوفة">موقوفة</option>
                 </select>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
               <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
-                  <span>تاريخ بداية التعاقد (تاريخ الإنشاء) 🔒</span>
-                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">غير قابل للتعديل</span>
-                </label>
+                <label className="text-xs font-bold text-foreground mb-1 block">تاريخ بداية التعاقد</label>
                 <input
-                  type="date"
+                  type="text"
                   value={contractStartDate}
-                  disabled
                   readOnly
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed shadow-xs"
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-slate-100 text-slate-600 text-right outline-none text-xs font-semibold font-mono cursor-not-allowed"
                 />
               </div>
-
-              <div>
-                <Field label="تاريخ انتهاء التعاقد *" type="date" value={contractEndDate} onChange={setContractEndDate} required />
-              </div>
+              <Field label="تاريخ انتهاء التعاقد *" type="date" min={minFutureDate(company.contract_end_date)} value={contractEndDate} onChange={setContractEndDate} required />
             </div>
           </div>
 
@@ -4295,8 +4292,27 @@ function GuideVerificationModal({
               <b>سنوات الخبرة:</b> <span className="text-foreground font-bold">{guide.years_of_experience} سنوات</span>
             </div>
             <div>
+              <b>تاريخ انتهاء الترخيص:</b>{" "}
+              {guide.license_expiry_date ? (
+                <span className={`font-bold ${guide.license_expiry_date <= new Date().toLocaleDateString("en-CA") ? "text-red-600" : "text-foreground"}`}>
+                  {guide.license_expiry_date}
+                  {guide.license_expiry_date <= new Date().toLocaleDateString("en-CA") ? " (منتهٍ)" : ""}
+                </span>
+              ) : (
+                <span className="text-amber-700 font-bold">غير مسجل</span>
+              )}
+            </div>
+            <div>
+              <b>حالة التوافر:</b> <span className="text-foreground font-bold">{guide.availability_status || "متاح"}</span>
+            </div>
+            {guide.rejection_reason && (
+              <div className="sm:col-span-2">
+                <b>سبب الرفض السابق:</b> <span className="text-red-700 font-bold">{guide.rejection_reason}</span>
+              </div>
+            )}
+            <div>
               <b>السعر اليومي المقترح:</b>{" "}
-              <span className="text-emerald-700 font-bold">{guide.daily_rate || guide.price_per_day || 150} د.ل / اليوم</span>
+              <span className="text-emerald-700 font-bold">{(guide.daily_rate || guide.price_per_day) ? `${guide.daily_rate || guide.price_per_day} د.ل / اليوم` : "السعر غير محدد"}</span>
             </div>
             <div className="sm:col-span-2 space-y-1">
               <b>المعالم السياحية والآثار المعتمدة لخبرته:</b>
@@ -4457,7 +4473,6 @@ function GuideVerificationModal({
                 };
                 localStorage.setItem("dalni_user", JSON.stringify(guideUser));
                 localStorage.setItem("dalni_role", "guide");
-                localStorage.setItem("dalni_token", `token-guide-${Date.now()}`);
                 window.dispatchEvent(new Event("storage"));
                 window.open("/dashboard/guide", "_blank");
               }}
@@ -5991,7 +6006,7 @@ function CreateTripModal({
                       <span className="text-slate-800 font-black">{daysLabel}</span>
                     </div>
                     <div className="text-[9px] text-emerald-700 font-black mt-0.5">
-                      {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                      {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                     </div>
                     {g.places && g.places.length > 0 && (
                       <div className="text-[9px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
@@ -6420,7 +6435,7 @@ function DailyTripEditModal({
                       <span className="text-slate-800 font-black">{daysLabel}</span>
                     </div>
                     <div className="text-[9px] text-emerald-700 font-black mt-0.5">
-                      {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                      {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                     </div>
                   </div>
                 </div>
@@ -6793,7 +6808,7 @@ function WeeklyTripEditModal({
                     رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
                   </div>
                   <div className="text-[9px] text-emerald-700 font-black">
-                    {g.daily_rate || g.price_per_day || 150} د.ل / اليوم
+                    {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                   </div>
                   {g.places && g.places.length > 0 && (
                     <div className="text-[9px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
@@ -6871,7 +6886,7 @@ function EvaluatePrivateTripModal({
 
   const selectedGuide = guides.find((g) => g.license_number === guide) || guides[0];
   const selectedVehicle = vehicles.find((v) => v.plate_number === vehicle) || vehicles[0];
-  const guideDailyRate = selectedGuide?.daily_rate || 150;
+  const guideDailyRate = Number(selectedGuide?.daily_rate) || 0;
   const vehicleDailyRate = selectedVehicle?.daily_rate || 500;
   const servCost = Number(servicesFee) || 0;
 
@@ -7051,7 +7066,7 @@ function EvaluatePrivateTripModal({
           >
             {guides.map((g) => (
               <option key={g.license_number} value={g.license_number}>
-                {g.full_name} ({g.license_number}) — {g.daily_rate || 150} د.ل / اليوم {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح المفضل)" : ""}
+                {g.full_name} ({g.license_number}) — {g.daily_rate ? `${g.daily_rate} د.ل / اليوم` : "السعر غير محدد"} {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح المفضل)" : ""}
               </option>
             ))}
           </select>
@@ -7361,7 +7376,7 @@ function HotelModal({
 
     const cleanId = hotelIdInput.trim();
     if (!cleanId) {
-      setErrorMsg("يرجى إدخال رقم القيد البلدي لمنع التكرار");
+      setErrorMsg("يرجى إدخال رقم البلدية");
       return;
     }
 
@@ -7370,7 +7385,7 @@ function HotelModal({
       h => (String(h.hotel_id || h.id).trim() === cleanId) && h.id !== hotel?.id
     );
     if (isDup) {
-      setErrorMsg(`رقم القيد البلدي (${cleanId}) مسجل مسبقاً لمنشأة إقامة أخرى. ترقيم البلدية فريد وغير مكرر نهائياً.`);
+      setErrorMsg(`رقم البلدية (${cleanId}) مسجل مسبقاً لفندق آخر`);
       return;
     }
 
@@ -7402,6 +7417,10 @@ function HotelModal({
     }
     if (contractEndDate < contractStartDate) {
       setErrorMsg("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ بداية العقد");
+      return;
+    }
+    if (isNewPastDate(contractEndDate, hotel?.contract_end_date)) {
+      setErrorMsg("تاريخ نهاية العقد يجب أن يكون تاريخاً قادماً.");
       return;
     }
     if (!description.trim() || description.trim().length < 5) {
@@ -7476,7 +7495,7 @@ function HotelModal({
           <div className="space-y-0.5">
             <span className="font-black text-sm block">🏨 إدارة عقد وبيانات مكان الإقامة:</span>
             <p className="text-[11px] text-blue-900/90 font-medium">
-              يبدأ العقد تلقائياً من يوم التسجيل، مع التحقق الإلزامي من كافة المتطلبات وترقيم البلدية الفريد.
+              يبدأ العقد تلقائياً من يوم التسجيل.
             </p>
           </div>
           {discountPct !== "" && (
@@ -7486,14 +7505,9 @@ function HotelModal({
           )}
         </div>
 
-        {/* Municipal ID (Primary Key) */}
-        <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-300 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-              <span>🏛️</span>
-              <span>رقم القيد البلدي *</span>
-            </label>
-          </div>
+        {/* Municipal ID (primary key) */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-black text-slate-800 block">رقم البلدية *</label>
           <input
             type="text"
             value={hotelIdInput}
@@ -7502,18 +7516,12 @@ function HotelModal({
               setErrorMsg(null);
             }}
             disabled={!isNew}
-            placeholder="مثال: HTL-TRP-2026 أو 10452..."
-            className={`w-full h-11 px-3.5 rounded-xl border text-xs font-black text-right transition ${
+            className={`w-full h-11 px-3.5 rounded-xl border text-xs font-bold text-right transition ${
               !isNew
                 ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
-                : "bg-white text-slate-900 border-amber-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
+                : "bg-white text-slate-900 border-slate-200 focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/10"
             }`}
           />
-          <p className="text-[10px] text-amber-800 font-bold">
-            {isNew
-              ? "⚠️ يُدخل رقم القيد البلدي يدوياً، ولا يمكن تكراره لمنشأة أخرى."
-              : "🔒 رقم القيد البلدي لا يمكن تعديله بعد الحفظ."}
-          </p>
         </div>
 
         {/* Contract Dates & Activity Status */}
@@ -7556,7 +7564,7 @@ function HotelModal({
                   setContractEndDate(e.target.value);
                   setErrorMsg(null);
                 }}
-                min={contractStartDate}
+                min={minFutureDate(hotel?.contract_end_date)}
                 className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-[#003580] font-mono focus:ring-1 focus:ring-[#003580]"
               />
             </div>
@@ -7888,7 +7896,7 @@ function RestaurantModal({
 
     const cleanId = facilityIdInput.trim();
     if (!cleanId) {
-      setErrorMsg("يرجى إدخال رقم القيد البلدي لمنع التكرار");
+      setErrorMsg("يرجى إدخال رقم البلدية");
       return;
     }
 
@@ -7897,7 +7905,7 @@ function RestaurantModal({
       r => (String(r.facility_id || r.id).trim() === cleanId) && r.id !== restaurant?.id
     );
     if (isDup) {
-      setErrorMsg(`رقم القيد البلدي (${cleanId}) مسجل مسبقاً لمنشأة أخرى. ترقيم البلدية فريد وغير مكرر نهائياً.`);
+      setErrorMsg(`رقم البلدية (${cleanId}) مسجل مسبقاً لمنشأة أخرى`);
       return;
     }
 
@@ -7921,6 +7929,10 @@ function RestaurantModal({
     }
     if (contractEndDate < contractStartDate) {
       setErrorMsg("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ بداية العقد");
+      return;
+    }
+    if (isNewPastDate(contractEndDate, restaurant?.contract_end_date)) {
+      setErrorMsg("تاريخ نهاية العقد يجب أن يكون تاريخاً قادماً.");
       return;
     }
     if (!description.trim() || description.trim().length < 5) {
@@ -7995,7 +8007,7 @@ function RestaurantModal({
           <div className="space-y-0.5">
             <span className="font-black text-sm block">🍽️ إدارة عقد وبيانات المطاعم والمقاهي بالدليل:</span>
             <p className="text-[11px] text-amber-900/90 font-medium">
-              يبدأ العقد تلقائياً من يوم التسجيل، مع التحقق الإلزامي من كافة المتطلبات وترقيم البلدية الفريد.
+              يبدأ العقد تلقائياً من يوم التسجيل.
             </p>
           </div>
           <span className="px-2.5 py-1 rounded-xl bg-amber-800 text-white text-[11px] font-black shrink-0">
@@ -8003,15 +8015,9 @@ function RestaurantModal({
           </span>
         </div>
 
-        {/* Municipal ID (Primary Key) */}
-        <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-300 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-              <span>🏛️</span>
-              <span>رقم القيد البلدي *</span>
-            </label>
-            <span className="text-[10px] font-black text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-lg">إلزامي لمنع التكرار</span>
-          </div>
+        {/* Municipal ID (primary key) */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-black text-slate-800 block">رقم البلدية *</label>
           <input
             type="text"
             value={facilityIdInput}
@@ -8020,18 +8026,12 @@ function RestaurantModal({
               setErrorMsg(null);
             }}
             disabled={!isNew}
-            placeholder="مثال: RST-TRP-2026 أو 20381..."
-            className={`w-full h-11 px-3.5 rounded-xl border text-xs font-black text-right transition ${
+            className={`w-full h-11 px-3.5 rounded-xl border text-xs font-bold text-right transition ${
               !isNew
                 ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
-                : "bg-white text-slate-900 border-amber-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
+                : "bg-white text-slate-900 border-slate-200 focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/10"
             }`}
           />
-          <p className="text-[10px] text-amber-800 font-bold">
-            {isNew
-              ? "⚠️ يُدخل رقم القيد البلدي يدوياً، ولا يمكن تكراره لمنشأة أخرى."
-              : "🔒 رقم القيد البلدي لا يمكن تعديله بعد الحفظ."}
-          </p>
         </div>
 
         {/* Contract Dates & Activity Status */}
@@ -8074,7 +8074,7 @@ function RestaurantModal({
                   setContractEndDate(e.target.value);
                   setErrorMsg(null);
                 }}
-                min={contractStartDate}
+                min={minFutureDate(restaurant?.contract_end_date)}
                 className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-amber-600 font-mono focus:ring-1 focus:ring-amber-600"
               />
             </div>
@@ -9465,6 +9465,16 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
       {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
+}
+
+// Expiry dates (contract end, licence) must be in the future when entered or changed; an unchanged stored date stays allowed
+const tomorrowIso = () => new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
+function minFutureDate(original?: string | null): string {
+  const stored = original ? String(original).slice(0, 10) : "";
+  return stored && stored < tomorrowIso() ? stored : tomorrowIso();
+}
+function isNewPastDate(value: string, original?: string | null): boolean {
+  return !!value && value !== (original ? String(original).slice(0, 10) : "") && value < tomorrowIso();
 }
 
 function Field({

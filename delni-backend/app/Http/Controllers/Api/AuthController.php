@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Support\Base64Image;
+use App\Support\Passwords;
 
 class AuthController extends Controller
 {
@@ -22,38 +23,6 @@ class AuthController extends Controller
     /**
      * Unified Login for all 5 roles: tourist, guide, transport, driver, admin
      */
-    private function passwordMatches(string $password, ?string $hash): bool
-    {
-        if (empty($hash)) {
-            return false;
-        }
-
-        // 1. Standard Bcrypt
-        if (str_starts_with($hash, '$2y$') || str_starts_with($hash, '$2a$') || str_starts_with($hash, '$2b$')) {
-            try {
-                if (Hash::check($password, $hash)) {
-                    return true;
-                }
-            } catch (\Throwable $e) { }
-        }
-
-        // 2. PBKDF2 (salt:hash)
-        if (str_contains($hash, ':')) {
-            $parts = explode(':', $hash, 2);
-            if (count($parts) === 2) {
-                [$salt, $originalHash] = $parts;
-                // The Node bridge stores 64 bytes as hex (128 chars); PHP's length is in hex chars, so match the stored length
-                $computed = hash_pbkdf2('sha256', $password, $salt, 1000, strlen($originalHash));
-                if (hash_equals($originalHash, $computed)) {
-                    return true;
-                }
-            }
-        }
-
-        // 3. Plaintext fallback
-        return hash_equals($hash, $password);
-    }
-
     public function login(Request $request)
     {
         $validated = $request->validate([
@@ -73,7 +42,7 @@ class AuthController extends Controller
             case 'tourist':
                 $user = Tourist::where('email', $login)->first();
 
-                if ($user && $this->passwordMatches($password, $user->password)) {
+                if ($user && Passwords::matches($password, $user->password)) {
                     $token = $user->createToken('tourist-token', ['role:tourist'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -87,14 +56,20 @@ class AuthController extends Controller
             case 'guide':
                 $user = TourGuide::where('email', $login)->first();
 
-                if ($user && $this->passwordMatches($password, $user->password)) {
+                if ($user && Passwords::matches($password, $user->password)) {
                     // Only guides approved by the admin can sign in
                     if ($user->verification_status !== 'موثق') {
+                        // A rejected guide sees the admin's reason here and can resubmit (POST /auth/guide/resubmit)
+                        $rejected = $user->verification_status === 'مرفوض';
                         return response()->json([
                             'status' => 'error',
-                            'message' => $user->verification_status === 'مرفوض'
-                                ? 'تم رفض طلب اعتماد حسابك كمرشد سياحي. يرجى التواصل مع إدارة المنصة.'
+                            'message' => $rejected
+                                ? 'تم رفض طلب اعتماد حسابك كمرشد سياحي.' . ($user->rejection_reason ? " السبب: {$user->rejection_reason}." : '')
+                                    . ' يمكنك تصحيح وثيقة الترخيص وإعادة تقديم الطلب.'
                                 : 'الحساب قيد المراجعة: لم تعتمد إدارة المنصة حسابك كمرشد سياحي بعد، ولا يمكنك الدخول إلى لوحتك قبل الاعتماد. سيتم إشعارك فور اعتماده.',
+                            'verification_status' => $user->verification_status,
+                            'rejection_reason' => $rejected ? $user->rejection_reason : null,
+                            'can_resubmit' => $rejected,
                         ], 403);
                     }
                     $token = $user->createToken('guide-token', ['role:guide'])->plainTextToken;
@@ -110,7 +85,7 @@ class AuthController extends Controller
             case 'transport':
                 $user = TransportationCompany::where('email', $login)->first();
 
-                if ($user && $this->passwordMatches($password, $user->password)) {
+                if ($user && Passwords::matches($password, $user->password)) {
                     $token = $user->createToken('transport-token', ['role:transport'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -124,7 +99,7 @@ class AuthController extends Controller
             case 'driver':
                 $user = Driver::where('email', $login)->first();
 
-                if ($user && $this->passwordMatches($password, $user->password)) {
+                if ($user && Passwords::matches($password, $user->password)) {
                     $token = $user->createToken('driver-token', ['role:driver'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -137,7 +112,7 @@ class AuthController extends Controller
 
             case 'admin':
                 $user = User::where('email', $login)->first();
-                if ($user && $this->passwordMatches($password, $user->password)) {
+                if ($user && Passwords::matches($password, $user->password)) {
                     $token = $user->createToken('admin-token', ['role:admin'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -250,7 +225,7 @@ class AuthController extends Controller
             'license_number' => 'required|string|max:50|unique:tour_guides,license_number',
             'full_name' => 'required|string|max:150',
             'phone_number' => 'required|string|max:20|unique:tour_guides,phone_number',
-            'years_of_experience' => 'required|integer|min:2',
+            'years_of_experience' => 'required|integer|min:2|max:40',
             'digital_certificate_file' => 'nullable|string',
             'bio' => 'nullable|string',
             'speaks_english' => 'boolean',
@@ -259,6 +234,7 @@ class AuthController extends Controller
             'email' => 'required|email|max:100|unique:tour_guides,email',
             'password' => 'required|string|min:6',
             'gender' => 'nullable|string|max:10',
+            'license_expiry_date' => 'required|date_format:Y-m-d|after:today',
             'working_days' => 'nullable',
             'place_ids' => 'required|array|min:1',
             'place_ids.*' => 'string|max:50|exists:places_tourist,place_id',
@@ -275,11 +251,15 @@ class AuthController extends Controller
             'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً لمرشد آخر',
             'years_of_experience.required' => 'سنوات الخبرة مطلوبة',
             'years_of_experience.min' => 'سنوات الخبرة السياحية للمرشد يجب أن تكون سنتين على الأقل',
+            'years_of_experience.max' => 'سنوات الخبرة لا يمكن أن تتجاوز 40 سنة',
             'email.required' => 'البريد الإلكتروني مطلوب',
             'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
             'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لمرشد آخر',
             'password.required' => 'كلمة المرور مطلوبة',
             'password.min' => 'كلمة المرور يجب أن لا تقل عن 6 أحرف',
+            'license_expiry_date.required' => 'تاريخ انتهاء ترخيص الإرشاد مطلوب',
+            'license_expiry_date.date_format' => 'تاريخ انتهاء الترخيص غير صحيح',
+            'license_expiry_date.after' => 'تاريخ انتهاء الترخيص يجب أن يكون تاريخاً قادماً؛ الترخيص المنتهي لا يُقبل',
         ]);
 
         // Working days and workplaces (landmarks registered on the platform) live in guide_working_days / guide_places
@@ -300,6 +280,8 @@ class AuthController extends Controller
                 'email' => strtolower(trim($validated['email'])),
                 'gender' => $validated['gender'] ?? null,
                 'price_per_day' => $validated['price_per_day'] ?? null,
+                'license_expiry_date' => $validated['license_expiry_date'],
+                'availability_status' => TourGuide::AVAILABLE,
                 'avatar' => Base64Image::store($validated['avatar'] ?? null, "guide-{$lic}", 'guides'),
             ]);
             $guide->replaceWorkingDays($validated['working_days'] ?? null);
@@ -317,5 +299,49 @@ class AuthController extends Controller
             'message' => 'تم إرسال طلب تسجيلك كمرشد سياحي بنجاح، وهو الآن قيد مراجعة وتدقيق الإدارة',
             'user' => $guide->fresh(),
         ], 201);
+    }
+
+    /**
+     * A rejected guide sends a corrected licence document (and its expiry date) with their sign-in credentials;
+     * the application goes back to «قيد المراجعة» and the admin is told. No token is issued.
+     */
+    public function resubmitGuide(Request $request)
+    {
+        $data = $this->validateArabic($request, [
+            'login' => 'required|email',
+            'password' => 'required|string',
+            'digital_certificate_file' => 'required|string',
+            'license_expiry_date' => 'required|date_format:Y-m-d|after:today',
+            'note' => 'nullable|string|max:1000',
+        ], ['login' => 'البريد الإلكتروني', 'password' => 'كلمة المرور', 'digital_certificate_file' => 'وثيقة الترخيص',
+            'license_expiry_date' => 'تاريخ انتهاء الترخيص', 'note' => 'الملاحظة']);
+        if ($data instanceof \Illuminate\Http\JsonResponse) {
+            return $data;
+        }
+        $guide = TourGuide::where('email', $data['login'])->first();
+        if (!$guide || !Passwords::matches($data['password'], $guide->password)) {
+            return $this->error('بيانات تسجيل الدخول غير صحيحة', 401);
+        }
+        if ($guide->verification_status !== 'مرفوض') {
+            return $this->error('إعادة تقديم الطلب متاحة للطلبات المرفوضة فقط', 409);
+        }
+
+        DB::transaction(function () use ($guide, $data) {
+            $guide->update([
+                'digital_certificate_file' => $data['digital_certificate_file'],
+                'license_expiry_date' => $data['license_expiry_date'],
+                'verification_status' => 'قيد المراجعة',
+                'rejection_reason' => null,
+            ]);
+            $note = trim((string) ($data['note'] ?? ''));
+            $this->notify("guide_resubmit_{$guide->license_number}_" . now('Africa/Tripoli')->format('YmdHis'), 'admin', null, 'system',
+                "🔁 أعاد المرشد ({$guide->full_name}) تقديم طلب الاعتماد",
+                "حدّث المرشد ({$guide->full_name}) برقم ترخيص ({$guide->license_number}) وثيقة الترخيص بعد رفض طلبه، والطلب الآن بانتظار المراجعة."
+                    . ($note !== '' ? " ملاحظة المرشد: {$note}" : ''),
+                '/dashboard/admin');
+        });
+
+        return response()->json(['success' => true, 'status' => 'success',
+            'message' => 'تم إرسال طلبك من جديد، وهو الآن قيد مراجعة الإدارة. سيتم إشعارك فور اتخاذ القرار.']);
     }
 }

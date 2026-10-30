@@ -33,6 +33,9 @@ export interface TourGuide {
   price_per_day?: number | null; // DECIMAL(10,2)
   avatar?: string | null; // NVARCHAR(MAX)
   digital_certificate_file?: string | null; // NVARCHAR(MAX)
+  license_expiry_date?: string | null; // DATE: guiding licence expiry
+  availability_status?: "متاح" | "إجازة" | string | null; // NVARCHAR(30) DEFAULT متاح
+  rejection_reason?: string | null; // NVARCHAR(1000)
   total_tours_completed?: number; // INT DEFAULT 0
   // Deprecated/Virtual helpers:
   title?: string | null;

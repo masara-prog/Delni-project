@@ -15,7 +15,7 @@ trait ManagesTrips
     // A readable unique id such as DT-261029143015-42 (the bridge used 4 timestamp digits, which could collide)
     private function newTripId(string $prefix): string
     {
-        return $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(10, 99);
+        return $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
     }
 
     /**
@@ -112,6 +112,160 @@ trait ManagesTrips
             return 'المطعم/المقهى المحدد غير موجود';
         }
         return null;
+    }
+
+    // Arabic error when the trip carries more people than the vehicle has seats
+    private function capacityError(?string $plate, int $people): ?string
+    {
+        if ($plate === null) {
+            return null;
+        }
+        $seats = (int) DB::table('vehicles')->where('plate_number', $plate)->value('seating_capacity');
+        return $seats > 0 && $people > $seats
+            ? "عدد ركاب الرحلة ({$people}) أكبر من عدد مقاعد المركبة ({$plate}) وهو ({$seats}) مقعداً. يرجى اختيار مركبة أكبر أو تقليل السعة."
+            : null;
+    }
+
+    /**
+     * Arabic error when the guide or the vehicle is already busy on another trip at the same time, else null.
+     * A trip occupies either a date range (weekly / private: $start..$end) or, for a daily trip, its weekdays every week ($weekdays).
+     * $exclude = ['daily'|'weekly'|'private', id] leaves out the trip being edited.
+     */
+    private function scheduleConflict(?string $guide, ?string $plate, ?string $start, ?string $end, ?array $weekdays, array $exclude): ?string
+    {
+        if ($guide === null && $plate === null) {
+            return null;
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        $who = function (object $row) use ($guide, $plate): string {
+            return $guide !== null && $row->guide_license_number === $guide ? 'المرشد المختار' : "المركبة ({$plate})";
+        };
+        $sameResources = function ($q, string $guideColumn = 'guide_license_number', string $plateColumn = 'vehicle_plate') use ($guide, $plate) {
+            $q->where(function ($w) use ($guide, $plate, $guideColumn, $plateColumn) {
+                if ($guide !== null) {
+                    $w->orWhere($guideColumn, $guide);
+                }
+                if ($plate !== null) {
+                    $w->orWhere($plateColumn, $plate);
+                }
+            });
+        };
+        // A range trip occupies the weekdays it covers; a daily trip occupies its own weekdays
+        $days = $weekdays !== null ? array_map([$this, 'normalizeDayName'], $weekdays) : $this->weekdaysBetween($start, $end);
+
+        // Weekly trips (not ended, not declined by their guide)
+        $weekly = DB::table('weekly_trips')->where('is_active', true)->where('end_date', '>=', $today)
+            ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', '<>', 'اعتذر المرشد'))
+            ->where(fn ($q) => $sameResources($q));
+        if ($exclude[0] === 'weekly') {
+            $weekly->where('weekly_trip_id', '<>', $exclude[1]);
+        }
+        if ($weekdays === null) {
+            $weekly->where('start_date', '<=', $end)->where('end_date', '>=', $start);
+        }
+        foreach ($weekly->get(['weekly_trip_id', 'trip_title', 'guide_license_number', 'vehicle_plate', 'start_date', 'end_date']) as $t) {
+            if ($weekdays === null || array_intersect($days, $this->weekdaysBetween((string) $t->start_date, (string) $t->end_date))) {
+                return "{$who($t)} مسند لرحلة أسبوعية أخرى ({$t->trip_title}) من " . substr($t->start_date, 0, 10) . ' إلى ' . substr($t->end_date, 0, 10) . ' في نفس الفترة.';
+            }
+        }
+
+        // Private trips the guide was asked for, quoted or confirmed (still running or ahead)
+        $private = DB::table('private_trips')
+            ->whereIn('status_order', ['بانتظار رد المرشد', 'بانتظار تأكيد السائح', 'مؤكدة'])
+            ->whereRaw('DATEADD(day, duration_days - 1, preferred_start_date) >= ?', [$today])
+            ->where(fn ($q) => $sameResources($q));
+        if ($exclude[0] === 'private') {
+            $private->where('private_trip_id', '<>', $exclude[1]);
+        }
+        if ($weekdays === null) {
+            $private->where('preferred_start_date', '<=', $end)->whereRaw('DATEADD(day, duration_days - 1, preferred_start_date) >= ?', [$start]);
+        }
+        foreach ($private->get(['private_trip_id', 'guide_license_number', 'vehicle_plate', 'preferred_start_date', 'duration_days']) as $t) {
+            $tStart = substr((string) $t->preferred_start_date, 0, 10);
+            $tEnd = date('Y-m-d', strtotime($tStart . ' +' . max(0, (int) $t->duration_days - 1) . ' days'));
+            if ($weekdays === null || array_intersect($days, $this->weekdaysBetween($tStart, $tEnd))) {
+                return "{$who($t)} مسند لرحلة خاصة أخرى (#{$t->private_trip_id}) من {$tStart} إلى {$tEnd} في نفس الفترة.";
+            }
+        }
+
+        // Active daily trips that run on one of the same weekdays
+        $daily = DB::table('daily_trips')->where('is_active', true)->where(fn ($q) => $sameResources($q))
+            ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', '<>', 'اعتذر المرشد'));
+        if ($exclude[0] === 'daily') {
+            $daily->where('daily_trip_id', '<>', $exclude[1]);
+        }
+        $daily = $daily->get(['daily_trip_id', 'trip_title', 'guide_license_number', 'vehicle_plate']);
+        $runDays = DB::table('daily_trip_days')->whereIn('daily_trip_id', $daily->pluck('daily_trip_id'))->get()->groupBy('daily_trip_id');
+        foreach ($daily as $t) {
+            $tDays = ($runDays[$t->daily_trip_id] ?? collect())->pluck('day_of_week')->map([$this, 'normalizeDayName'])->all();
+            $shared = $tDays ? array_intersect($days, $tDays) : $days; // no stored days = every day
+            if ($shared) {
+                return "{$who($t)} مسند لرحلة يومية أخرى ({$t->trip_title}) تنطلق يوم " . implode(' و', array_values($shared)) . '.';
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Whether the guide can take a trip: [error, warning]. The error blocks the assignment (on leave, licence expired before the
+     * trip ends, a trip day outside the guide's working days); the warning only informs the admin (landmarks outside their expertise).
+     * A range trip gives $start..$end; a daily trip gives its weekdays (it runs every week, so its end is open).
+     */
+    private function guideFitness(string $guide, ?string $start, ?string $end, ?array $weekdays, ?array $placeIds): array
+    {
+        $g = DB::table('tour_guides')->where('license_number', $guide)
+            ->first(['full_name', 'availability_status', DB::raw('CONVERT(VARCHAR(10), license_expiry_date, 23) as license_expiry_date')]);
+        if (!$g) {
+            return [null, null];
+        }
+        if ($g->availability_status === 'إجازة') {
+            return ["المرشد ({$g->full_name}) في إجازة حالياً ولا يستقبل رحلات جديدة. يرجى اختيار مرشد آخر.", null];
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        $lastDay = $end ? substr($end, 0, 10) : $today;
+        if ($g->license_expiry_date && $g->license_expiry_date < max($lastDay, $today)) {
+            return ["ترخيص المرشد ({$g->full_name}) ينتهي بتاريخ {$g->license_expiry_date} قبل انتهاء الرحلة. لا يمكن إسناد الرحلة إليه قبل تجديد الترخيص.", null];
+        }
+
+        $workDays = DB::table('guide_working_days')->where('license_number', $guide)->pluck('day_of_week')->map([$this, 'normalizeDayName'])->all();
+        $tripDays = $weekdays !== null ? array_map([$this, 'normalizeDayName'], $weekdays) : $this->weekdaysBetween($start, $end);
+        $outside = $workDays ? array_values(array_diff($tripDays, $workDays)) : [];
+        if ($outside) {
+            return ["المرشد ({$g->full_name}) لا يعمل يوم " . implode(' و', $outside) . '، وهو من أيام الرحلة. يرجى اختيار مرشد آخر أو تعديل أيام الرحلة.', null];
+        }
+
+        $warning = null;
+        if ($placeIds) {
+            $known = DB::table('guide_places')->where('license_number', $guide)->pluck('place_id')->all();
+            $unknown = array_values(array_diff($placeIds, $known));
+            if ($known && $unknown) {
+                $names = DB::table('places_tourist')->whereIn('place_id', $unknown)->pluck('city')->all();
+                $warning = "تنبيه: المعالم (" . implode('، ', $names) . ") ليست ضمن معالم خبرة المرشد ({$g->full_name}).";
+            }
+        }
+        return [null, $warning];
+    }
+
+    private const WEEKDAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+    public function normalizeDayName(?string $day): string
+    {
+        return str_replace('إ', 'ا', trim((string) $day));
+    }
+
+    // The weekday names a date range covers (all seven once it lasts a week)
+    private function weekdaysBetween(?string $start, ?string $end): array
+    {
+        $from = strtotime(substr((string) $start, 0, 10));
+        $to = strtotime(substr((string) $end, 0, 10));
+        if (!$from || !$to || $to < $from) {
+            return [];
+        }
+        $days = [];
+        for ($d = $from, $i = 0; $d <= $to && $i < 7; $d = strtotime('+1 day', $d), $i++) {
+            $days[] = $this->normalizeDayName(self::WEEKDAY_NAMES[(int) date('w', $d)]);
+        }
+        return $days;
     }
 
     // Changing the capacity moves the free seats by the same amount, so seats already booked stay booked

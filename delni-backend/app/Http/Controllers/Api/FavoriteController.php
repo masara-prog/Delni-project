@@ -48,7 +48,7 @@ class FavoriteController extends Controller
                 return false;
             }
             DB::table('tourist_favorites')->insert($match + [
-                'favorite_id' => 'FAV-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(100, 999),
+                'favorite_id' => 'FAV-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999),
                 'created_at' => now('Africa/Tripoli'),
             ]);
             return true;

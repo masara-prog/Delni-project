@@ -8,7 +8,7 @@ import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldC
 import QRCode from "qrcode";
 import type { PrivateTrip } from "@/lib/dbSchema";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
-import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiGetPrivateTrips, apiDecidePrivateTrip } from "@/lib/api";
+import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiGetPrivateTrips, apiDecidePrivateTrip, apiCancelBooking } from "@/lib/api";
 import { submitTripReview } from "@/lib/reviews";
 import { useFavorites } from "@/lib/favorites";
 import { Star, Heart } from "lucide-react";
@@ -68,6 +68,11 @@ export type Ticket = {
   vehiclePlate: string;
   insuranceInfo: string;
   status: "مؤكدة" | "بانتظار التأكيد" | "ملغية";
+  statusLabel?: string; // the stored booking_status (e.g. ملغاة من الإدارة)
+  kind?: "daily" | "weekly";
+  tripDate?: string; // Y-m-d: the run date (daily) or the start date (weekly)
+  endDate?: string;
+  attended?: boolean;
   payment_status: "paid" | "unpaid" | "cash_at_office";
   price: string;
   tripImage?: string;
@@ -198,66 +203,50 @@ function TouristDashboard() {
         apiGetTouristBookings(tid).then((res) => {
           if (res) {
             const loaded: Ticket[] = [];
-            if (res.daily && Array.isArray(res.daily)) {
-              res.daily.forEach((b: any) => {
-                const trip = b.daily_trip || {};
-                const guide = trip.guide || {};
-                loaded.push({
-                  code: b.booking_daily_id || `BKD-${b.id}`,
-                  tripId: b.daily_trip_id || "DT-101",
-                  tripName: trip.trip_title || trip.title || "جولة سياحية يومية",
-                  type: "رحلة يومية",
-                  date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "تاريخ محدد",
-                  time: "08:30 ص",
-                  pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "مقر ومكتب شركة النقل المعتمد",
-                  seats: b.number_of_seats || 1,
-                  passengers: u.full_name || "سائح",
-                  guideName: guide.full_name || "مرشد سياحي معتمد",
-                  guideLicense: guide.license_number || "G-9901",
-                  companyName: "شركة النقل السياحي المعتمدة",
-                  contractNo: trip.contract_number || b.contract_number || "",
-                  driverName: "سائق سياحي مرخص",
-                  driverLicense: "DL-901",
-                  vehicleModel: "حافلة سياحية مكيفة",
-                  vehiclePlate: "ليبيا",
-                  insuranceInfo: "تأمين شامل لكافة الركاب",
-                  status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
-                  payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                  price: `${b.total_price || 120} د.ل`,
-                  tripImage: trip.photo || "/assets/dest-leptis.jpg",
-                });
-              });
-            }
-            if (res.weekly && Array.isArray(res.weekly)) {
-              res.weekly.forEach((b: any) => {
-                const trip = b.weekly_trip || {};
-                const guide = trip.guide || {};
-                loaded.push({
-                  code: b.booking_weekly_id || `BKW-${b.id}`,
-                  tripId: b.weekly_trip_id || "WT-201",
-                  tripName: trip.trip_title || "مغامرة سياحية أسبوعية",
-                  type: "رحلة أسبوعية",
-                  date: b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : "تاريخ الرحلة",
-                  time: "07:30 ص",
-                  pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "مقر شركة النقل المعتمد",
-                  seats: b.number_of_seats || 1,
-                  passengers: u.full_name || "سائح",
-                  guideName: guide.full_name || "مرشد سياحي معتمد",
-                  guideLicense: guide.license_number || "G-9901",
-                  companyName: "شركة النقل السياحي المعتمدة",
-                  contractNo: trip.contract_number || b.contract_number || "",
-                  driverName: "سائق صحراوي محترف",
-                  driverLicense: "DL-901",
-                  vehicleModel: "مركبة دفع رباعي مجهزة",
-                  vehiclePlate: "ليبيا",
-                  insuranceInfo: "تأمين معتمد لمسارات الصحراء",
-                  status: b.booking_status?.includes("مؤكدة") ? "مؤكدة" : "بانتظار التأكيد",
-                  payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                  price: `${b.total_price || 1850} د.ل`,
-                  tripImage: trip.photo,
-                });
-              });
-            }
+            // Real trip, guide, vehicle and driver details only; anything missing shows as «غير محدد»
+            const toTicket = (b: any, kind: "daily" | "weekly"): Ticket => {
+              const trip = (kind === "daily" ? b.daily_trip : b.weekly_trip) || {};
+              const guide = trip.guide || {};
+              const transport = trip.transport || {};
+              const tripDate = kind === "daily"
+                ? String(b.trip_date || "").slice(0, 10)
+                : String(trip.start_date || "").slice(0, 10);
+              const endDate = kind === "daily" ? tripDate : String(trip.end_date || "").slice(0, 10);
+              const status = String(b.booking_status || "");
+              return {
+                code: kind === "daily" ? b.booking_daily_id : b.booking_weekly_id,
+                kind,
+                tripId: kind === "daily" ? b.daily_trip_id : b.weekly_trip_id,
+                tripName: trip.trip_title || b.trip_title || "رحلة",
+                type: kind === "daily" ? "رحلة يومية" : "رحلة أسبوعية",
+                date: kind === "daily"
+                  ? (tripDate || "غير محدد")
+                  : (tripDate && endDate ? `${tripDate} إلى ${endDate}` : "غير محدد"),
+                tripDate,
+                endDate,
+                time: kind === "daily" ? (trip.first_station_time || "") : "",
+                pickup: trip.departure_city ? `نقطة الانطلاق: ${trip.departure_city}` : "غير محدد",
+                seats: Number(b.number_of_seats) || 0,
+                passengers: u.full_name || "",
+                guideName: guide.full_name || "غير محدد",
+                guideLicense: guide.license_number || "",
+                companyName: transport.company_name || "غير محدد",
+                contractNo: transport.contract_number || "",
+                driverName: transport.driver_name || "غير محدد",
+                driverLicense: "",
+                vehicleModel: transport.vehicle_type || "غير محدد",
+                vehiclePlate: transport.vehicle_plate || "غير محدد",
+                insuranceInfo: "",
+                status: status.startsWith("ملغ") ? "ملغية" : "مؤكدة",
+                statusLabel: status || "مؤكدة",
+                payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
+                attended: Boolean(b.attended),
+                price: `${Number(b.total_price) || 0} د.ل`,
+                tripImage: trip.photo,
+              };
+            };
+            (Array.isArray(res.daily) ? res.daily : []).forEach((b: any) => loaded.push(toTicket(b, "daily")));
+            (Array.isArray(res.weekly) ? res.weekly : []).forEach((b: any) => loaded.push(toTicket(b, "weekly")));
             setBookings(loaded);
             if (tid) apiGetPrivateTrips(tid).then(setPrivateTrips);
           }
@@ -357,7 +346,7 @@ function TouristDashboard() {
             <StatCard label="التذاكر والحجوزات المؤكدة" value={bookings.length} icon="🎟️" tone="green" />
             <StatCard label="طلبات الرحلات الخاصة VIP" value={privateTrips.length} icon="👑" tone="sea" />
             <StatCard label="طريقة سداد الحجز" value="نقداً بمقر الشركة" hint="قبل موعد الانطلاق" icon="🏢" tone="sun" />
-            <StatCard label="حالة حساب السائح" value="حساب مفعل نشط" icon="🛡️" tone="clay" />
+            <StatCard label="حالة حساب السائح" value={getStoredSession().user?.account_status === "مقيّد" ? "حساب مقيّد" : "حساب نشط"} icon="🛡️" tone="clay" />
           </div>
 
           <div className="space-y-6 text-right">
@@ -402,7 +391,7 @@ function TouristDashboard() {
                         <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
                           <div className="font-bold text-foreground text-sm">{b.tripName}</div>
                           <div className="flex items-center gap-1.5">
-                            <Badge tone={b.status === "مؤكدة" ? "green" : "sun"}>{b.status}</Badge>
+                            <Badge tone={b.status === "مؤكدة" ? "green" : b.status === "ملغية" ? "red" : "sun"}>{b.statusLabel || b.status}</Badge>
                             <span className="text-[10px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
                               {b.payment_status === "cash_at_office" ? "سداد نقدي بالفرع" : "مدفوع"}
                             </span>
@@ -410,16 +399,16 @@ function TouristDashboard() {
                         </div>
 
                         <div className="text-xs font-normal text-muted-foreground space-y-1">
-                          <div>📅 <b>الموعد:</b> {b.date} ({b.time})</div>
+                          <div>📅 <b>الموعد:</b> {b.date}{b.time ? ` (${b.time})` : ""}</div>
                           <div>👥 <b>المقاعد المحجوزة:</b> {b.seats} مقاعد · المرافقون: {b.passengers}</div>
                           <div>📍 <b>نقطة الانطلاق:</b> {b.pickup}</div>
-                          <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName} ({b.guideLicense})</div>
+                          <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName}{b.guideLicense ? ` (${b.guideLicense})` : ""}</div>
                         </div>
 
                         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                           <div className="font-bold text-[#1B5A78] text-xs">التكلفة الإجمالية: {b.price}</div>
                           <div className="flex items-center gap-2">
-                            {isTripCompleted(b.date) ? (
+                            {b.attended && isTripCompleted(b.endDate || "") ? (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -502,7 +491,7 @@ function TouristDashboard() {
                     <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
                       <div className="font-bold text-foreground text-sm">{b.tripName}</div>
                       <div className="flex items-center gap-1.5">
-                        <Badge tone={b.status === "مؤكدة" ? "green" : "sun"}>{b.status}</Badge>
+                        <Badge tone={b.status === "مؤكدة" ? "green" : b.status === "ملغية" ? "red" : "sun"}>{b.statusLabel || b.status}</Badge>
                         <span className="text-[10px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
                           {b.payment_status === "cash_at_office" ? "سداد نقدي بالفرع" : "مدفوع"}
                         </span>
@@ -510,16 +499,16 @@ function TouristDashboard() {
                     </div>
 
                     <div className="text-xs font-normal text-muted-foreground space-y-1">
-                      <div>📅 <b>الموعد:</b> {b.date} ({b.time})</div>
+                      <div>📅 <b>الموعد:</b> {b.date}{b.time ? ` (${b.time})` : ""}</div>
                       <div>👥 <b>المقاعد:</b> {b.seats} مقاعد · المرافقون: {b.passengers}</div>
                       <div>📍 <b>نقطة الانطلاق:</b> {b.pickup}</div>
-                      <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName} ({b.guideLicense})</div>
+                      <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName}{b.guideLicense ? ` (${b.guideLicense})` : ""}</div>
                     </div>
 
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                       <div className="font-bold text-[#1B5A78] text-xs">التكلفة: {b.price}</div>
                       <div className="flex items-center gap-2">
-                        {isTripCompleted(b.date) ? (
+                        {b.attended && isTripCompleted(b.endDate || "") ? (
                           <button
                             type="button"
                             onClick={() => {
@@ -540,6 +529,23 @@ function TouristDashboard() {
                           >
                             <span>⏳</span> التقييم متاح بعد انتهاء الرحلة
                           </span>
+                        )}
+                        {b.status === "مؤكدة" && b.payment_status !== "paid" && !isTripCompleted(b.tripDate || "") && b.kind && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm(`هل تريد إلغاء الحجز (${b.code})؟ ستُتاح المقاعد للحجز من جديد.`)) return;
+                              const res = await apiCancelBooking(b.kind!, b.code);
+                              if (!res.success) {
+                                alert("❌ لم يتم إلغاء الحجز.\n" + res.error);
+                                return;
+                              }
+                              setBookings((prev) => prev.map((x) => (x.code === b.code ? { ...x, status: "ملغية", statusLabel: "ملغاة من السائح" } : x)));
+                            }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 transition cursor-pointer"
+                          >
+                            إلغاء الحجز
+                          </button>
                         )}
                         <button
                           onClick={() => setTicketModal(b)}
@@ -1098,7 +1104,7 @@ function TouristDashboard() {
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <div className="text-[10px] text-slate-400 font-bold">🗓️ التاريخ والوقت</div>
-                      <div className="font-bold text-slate-800">{ticketModal.date} ({ticketModal.time})</div>
+                      <div className="font-bold text-slate-800">{ticketModal.date}{ticketModal.time ? ` (${ticketModal.time})` : ""}</div>
                     </div>
                     <div>
                       <div className="text-[10px] text-slate-400 font-bold">📍 نقطة الانطلاق</div>
@@ -1182,8 +1188,8 @@ function TouristDashboard() {
 
             {/* Trip summary metadata */}
             <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 space-y-1">
-              <div>📅 <b>تاريخ الرحلة:</b> {reviewModalTicket.date} ({reviewModalTicket.time})</div>
-              <div>👨‍✈️ <b>المرشد السياحي:</b> {reviewModalTicket.guideName} ({reviewModalTicket.guideLicense})</div>
+              <div>📅 <b>تاريخ الرحلة:</b> {reviewModalTicket.date}{reviewModalTicket.time ? ` (${reviewModalTicket.time})` : ""}</div>
+              <div>👨‍✈️ <b>المرشد السياحي:</b> {reviewModalTicket.guideName}{reviewModalTicket.guideLicense ? ` (${reviewModalTicket.guideLicense})` : ""}</div>
               <div>🎫 <b>رقم التذكرة:</b> <span className="font-mono font-bold text-[#1B5A78]">{reviewModalTicket.code}</span></div>
             </div>
 

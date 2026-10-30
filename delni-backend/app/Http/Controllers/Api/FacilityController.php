@@ -65,6 +65,9 @@ class FacilityController extends Controller
         if ($data instanceof JsonResponse) {
             return $data;
         }
+        if ($error = $this->pastDateError($data['contract_end_date'] ?? null, $existing->contract_end_date ?? null, 'تاريخ نهاية العقد')) {
+            return $this->error($error, 422);
+        }
 
         $id = trim($data['hotel_id']);
         $values = $this->changedValues($data, [
@@ -133,6 +136,9 @@ class FacilityController extends Controller
         ] + $this->photoRules('facility_image_'), $this->attributes('المطعم/المقهى'));
         if ($data instanceof JsonResponse) {
             return $data;
+        }
+        if ($error = $this->pastDateError($data['contract_end_date'] ?? null, $existing->contract_end_date ?? null, 'تاريخ نهاية العقد')) {
+            return $this->error($error, 422);
         }
 
         $id = trim($data['facility_id']);

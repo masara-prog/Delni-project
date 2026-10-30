@@ -61,7 +61,7 @@ function TransportDashboard() {
         address: data.address || "",
         city: data.city || "طرابلس",
         total_vehicles: Number(data.total_vehicles) || 0,
-        verification_status: data.verification_status || data.status || "موثق",
+        verification_status: data.verification_status || data.status || "",
         contract_start_date: data.contract_start_date || "",
         contract_end_date: data.contract_end_date || "",
         email: data.email || "",
@@ -277,7 +277,7 @@ function TransportDashboard() {
             <StatCard label="عدد السائقين" value={drivers.length} icon="🧑‍✈️" tone="sea" />
             <StatCard label="حجم الأسطول" value={`${vehicles.length} / ${companyInfo.total_vehicles}`} hint={`${vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} جاهزة · ${vehicles.filter(v => v.vehicle_status === "صيانة" || v.status === "صيانة").length} صيانة`} icon="🚌" tone="clay" />
             <StatCard label="السيارات المتاحة" value={vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} icon="🚗" tone="green" />
-            <StatCard label="حالة توثيق العقد" value={companyInfo.verification_status || "موثق"} icon="📜" tone="sun" />
+            <StatCard label="حالة توثيق العقد" value={companyInfo.verification_status || "غير محدد"} icon="📜" tone="sun" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 text-right">
@@ -878,7 +878,11 @@ function DriverModal({
   const [lic, setLic] = useState(driver?.driver_license_number || "");
   const [name, setName] = useState(driver?.full_name || "");
   const [phone, setPhone] = useState(driver?.phone_number || "");
-  const [expire, setExpire] = useState(driver?.license_date_valid || "2029-12-31");
+  const [expire, setExpire] = useState(driver?.license_date_valid ? String(driver.license_date_valid).slice(0, 10) : "");
+  // The licence expiry must be in the future when entered or changed (an unchanged stored date stays allowed)
+  const storedExpire = driver?.license_date_valid ? String(driver.license_date_valid).slice(0, 10) : "";
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
+  const minExpire = storedExpire && storedExpire < tomorrow ? storedExpire : tomorrow;
   const [nid, setNid] = useState(driver?.national_id_or_passport || "");
   const [email, setEmail] = useState(driver?.email || "");
   // Set only when the driver is created; afterwards only the driver can change it
@@ -910,6 +914,12 @@ function DriverModal({
 
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       return alert(isAr ? "يرجى إدخال بريد إلكتروني صحيح" : "Please enter a valid email address");
+    }
+    if (!expire) {
+      return alert(isAr ? "تاريخ صلاحية رخصة القيادة مطلوب" : "License expiry date is required");
+    }
+    if (expire !== storedExpire && expire < tomorrow) {
+      return alert(isAr ? "تاريخ صلاحية رخصة القيادة يجب أن يكون تاريخاً قادماً" : "License expiry date must be in the future");
     }
     if (!driver && pass.trim().length < 6) {
       return alert(isAr ? "كلمة مرور السائق مطلوبة (6 خانات على الأقل)" : "Driver password is required (at least 6 characters)");
@@ -960,7 +970,7 @@ function DriverModal({
               className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
             />
           </div>
-          <Field label={isAr ? "تاريخ صلاحية الرخصة *" : "License Expiry Date *"} type="date" value={expire} onChange={setExpire} required />
+          <Field label={isAr ? "تاريخ صلاحية الرخصة *" : "License Expiry Date *"} type="date" min={minExpire} value={expire} onChange={setExpire} required />
         </div>
         <div>
           <label className="text-xs font-bold text-foreground mb-1 block">
@@ -1450,7 +1460,7 @@ function LibyanPhoneField({ label, value, onChange, onKeyDown, inputRef }: { lab
   );
 }
 
-function Field({ label, type = "text", value, onChange, placeholder, required, onKeyDown, inputRef }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void; inputRef?: React.Ref<HTMLInputElement> }) {
+function Field({ label, type = "text", value, onChange, placeholder, required, onKeyDown, inputRef, min }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void; inputRef?: React.Ref<HTMLInputElement>; min?: string }) {
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
@@ -1460,6 +1470,7 @@ function Field({ label, type = "text", value, onChange, placeholder, required, o
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        min={min}
         placeholder={placeholder}
         required={required}
         className="w-full h-10 px-3 rounded-xl border border-border bg-white text-right focus:border-primary outline-none text-xs font-semibold"

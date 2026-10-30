@@ -44,12 +44,12 @@ class DashboardController extends Controller
 
         // Full trip details for the guide's read-only view (itinerary, places, lodging, food, vehicle, passengers)
         $lic = $guide->license_number;
-        $dailyTrips = DailyTrip::with(['bookings.tourist', 'days', 'stations', 'places', 'restaurant', 'vehicle', 'offers'])
+        $dailyTrips = DailyTrip::with(['bookings.tourist', 'days', 'stations', 'places', 'restaurant', 'vehicle.driver', 'offers'])
             ->where('guide_license_number', $lic)->get();
-        $weeklyTrips = WeeklyTrip::with(['bookings.tourist', 'stations', 'places', 'hotels', 'restaurants', 'vehicle', 'offers'])
+        $weeklyTrips = WeeklyTrip::with(['bookings.tourist', 'stations', 'places', 'hotels', 'restaurants', 'vehicle.driver', 'offers'])
             ->where('guide_license_number', $lic)->get();
         // Private trips reach the guide once the admin sends the schedule (a tourist's preferred guide alone is not an assignment)
-        $privateTrips = PrivateTrip::with(['tourist', 'stations', 'places', 'hotels', 'vehicle'])
+        $privateTrips = PrivateTrip::with(['tourist', 'stations', 'places', 'hotels', 'vehicle.driver'])
             ->where('guide_license_number', $lic)
             ->whereIn('status_order', [PrivateTripController::GUIDE_PENDING, PrivateTripController::GUIDE_DECLINED,
                 PrivateTripController::QUOTED, PrivateTripController::CONFIRMED])
@@ -82,7 +82,7 @@ class DashboardController extends Controller
                 'phone_number' => ['nullable', 'string', 'max:20', Rule::unique('tour_guides', 'phone_number')->ignore($guide->license_number, 'license_number')],
                 'email' => ['nullable', 'email', 'max:100', Rule::unique('tour_guides', 'email')->ignore($guide->license_number, 'license_number')],
                 'password' => 'nullable|string',
-                'years_of_experience' => 'nullable|integer|min:2',
+                'years_of_experience' => 'nullable|integer|min:2|max:40',
                 'bio' => 'nullable|string',
                 'price_per_day' => 'nullable|numeric|min:0',
                 'operating_regions' => 'nullable',
@@ -94,15 +94,40 @@ class DashboardController extends Controller
                 'digital_certificate_file' => 'nullable|string',
                 'gender' => 'nullable|string|max:10',
                 'avatar' => 'nullable|string',
+                'license_expiry_date' => 'nullable|date_format:Y-m-d',
+                'availability_status' => 'nullable|string|in:' . implode(',', TourGuide::AVAILABILITY),
             ], [
                 'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً لمرشد آخر',
                 'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لمرشد آخر',
                 'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
                 'years_of_experience.min' => 'سنوات الخبرة السياحية للمرشد يجب أن تكون سنتين على الأقل',
+                'years_of_experience.max' => 'سنوات الخبرة لا يمكن أن تتجاوز 40 سنة',
                 'price_per_day.min' => 'سعر اليوم لا يمكن أن يكون سالباً',
+                'availability_status.in' => 'حالة التوافر يجب أن تكون: متاح أو إجازة',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['status' => 'error', 'message' => collect($e->errors())->flatten()->first()], 422);
+        }
+
+        // A new licence expiry date must be in the future (an unchanged one is kept as it is)
+        $expiry = $validated['license_expiry_date'] ?? null;
+        $oldExpiry = $guide->license_expiry_date?->format('Y-m-d');
+        if ($expiry && $expiry !== $oldExpiry && $expiry <= now('Africa/Tripoli')->toDateString()) {
+            return response()->json(['status' => 'error', 'message' => 'تاريخ انتهاء الترخيص يجب أن يكون تاريخاً قادماً'], 422);
+        }
+        // Going on leave is refused while the guide still has trips ahead (the admin must reassign them first)
+        if (($validated['availability_status'] ?? null) === TourGuide::ON_LEAVE && $guide->availability_status !== TourGuide::ON_LEAVE) {
+            $ahead = DB::table('daily_trips')->where('guide_license_number', $guide->license_number)->where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', WeeklyTrip::GUIDE_APPROVED))->count()
+                + DB::table('weekly_trips')->where('guide_license_number', $guide->license_number)->where('is_active', true)
+                ->where('end_date', '>=', now('Africa/Tripoli')->toDateString())
+                ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', WeeklyTrip::GUIDE_APPROVED))->count()
+                + DB::table('private_trips')->where('guide_license_number', $guide->license_number)
+                    ->whereIn('status_order', [PrivateTripController::QUOTED, PrivateTripController::CONFIRMED])
+                    ->where('preferred_start_date', '>=', now('Africa/Tripoli')->toDateString())->count();
+            if ($ahead > 0) {
+                return response()->json(['status' => 'error', 'message' => "لديك ({$ahead}) رحلات مسندة قادمة أو مستمرة؛ يرجى التواصل مع الإدارة لإسنادها لمرشد آخر قبل تفعيل الإجازة"], 422);
+            }
         }
 
         // A verified guide's identity (name, gender, email) is locked
@@ -168,10 +193,12 @@ class DashboardController extends Controller
         $plate = $driver->assigned_vehicle_plate;
         if ($plate) {
             $today = now('Africa/Tripoli')->toDateString();
+            // A daily trip shows its next run date and the passengers booked on that date
             foreach (DailyTrip::with('days')->where('vehicle_plate', $plate)->where('is_active', true)->get() as $t) {
+                $next = $t->openDates(1)[0] ?? null;
                 $trips[] = ['kind' => 'يومية', 'id' => $t->daily_trip_id, 'title' => $t->trip_title,
-                    'schedule' => $t->days->pluck('day_of_week')->implode('، ') ?: 'حسب الجدول',
-                    'departure_city' => $t->departure_city, 'passengers' => $t->max_capacity - $t->available_seats];
+                    'schedule' => ($t->days->pluck('day_of_week')->implode('، ') ?: 'يومياً') . ($next ? " — الرحلة القادمة {$next['date']}" : ''),
+                    'departure_city' => $t->departure_city, 'passengers' => $next ? $t->max_capacity - $next['seats_left'] : 0];
             }
             foreach (WeeklyTrip::where('vehicle_plate', $plate)->where('is_active', true)->where('end_date', '>=', $today)
                 ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', WeeklyTrip::GUIDE_APPROVED))->orderBy('start_date')->get() as $t) {

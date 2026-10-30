@@ -101,7 +101,7 @@ function GuidesPage() {
             experienceYears: Number(g.years_of_experience) || 0,
             rating: Number(g.rating_avg) || 0,
             reviewsCount: Number(g.reviews_count) || 0,
-            pricePerDay: Number(g.price_per_day) || 150,
+            pricePerDay: Number(g.price_per_day) || 0,
             primaryRegion: g.primaryRegion || (opRegions[0] || "tripoli"),
             operatingRegions: opRegions.length > 0 ? opRegions : ["tripoli"],
             languages: langs,
@@ -109,6 +109,7 @@ function GuidesPage() {
             phone: g.phone_number || "",
             verified: g.verification_status === "موثق" || g.verification_status === "verified",
             totalToursCompleted: Number(g.total_tours_completed) || 0,
+            onLeave: g.availability_status === "إجازة",
             specialties: Array.isArray(g.places) && g.places.length > 0
               ? g.places.map((p: any) => p.place_name || p.name)
               : (Array.isArray(g.specialties) ? g.specialties : []),
@@ -515,6 +516,11 @@ function GuidesPage() {
                       <h3 className="font-black text-lg text-[#0F172A] leading-snug group-hover:text-[#1B5A78] transition-colors truncate">
                         {guide.name}
                       </h3>
+                      {guide.onLeave && (
+                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200">
+                          🌙 في إجازة حالياً
+                        </span>
+                      )}
 
                       {/* Title / Specialty */}
                       <p className="text-[11px] text-stone-500 font-medium truncate mt-0.5">
@@ -550,7 +556,7 @@ function GuidesPage() {
                         </span>
                         <span className="text-stone-300">•</span>
                         <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          {guide.pricePerDay || 150} د.ل/اليوم
+                          {guide.pricePerDay ? `${guide.pricePerDay} د.ل/اليوم` : "السعر غير محدد"}
                         </span>
                       </div>
 

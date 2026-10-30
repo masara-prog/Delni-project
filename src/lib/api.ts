@@ -38,8 +38,41 @@ if (typeof window !== "undefined") {
  * - Tourists & Bookings
  */
 
-export const LARAVEL_API_URL = "http://127.0.0.1:8000/api";
-export const AI_SERVICE_URL = "http://127.0.0.1:8000/api/ai";
+// VITE_API_URL points the site at another server (hosting); otherwise the Laravel server on port 8000 of the machine serving the page
+function apiBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_URL as string | undefined;
+  if (configured) return configured.replace(/\/+$/, "");
+  if (typeof window === "undefined" || ["localhost", "127.0.0.1"].includes(window.location.hostname)) return "http://127.0.0.1:8000/api";
+  return `${window.location.protocol}//${window.location.hostname}:8000/api`;
+}
+
+export const LARAVEL_API_URL = apiBaseUrl();
+export const AI_SERVICE_URL = `${LARAVEL_API_URL}/ai`;
+
+/*
+ * Every request to the Laravel API carries the signed-in account's token (Authorization: Bearer ...):
+ * the server decides who the caller is from it, never from ids in the request body.
+ * When the server no longer accepts the token (expired / signed out elsewhere), the session is cleared and the user signs in again.
+ */
+if (typeof window !== "undefined" && !(window as any).__dalniAuthFetch) {
+  (window as any).__dalniAuthFetch = true;
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const token = localStorage.getItem("dalni_token");
+    if (!url.startsWith(LARAVEL_API_URL) || !token) return nativeFetch(input, init);
+
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+    const res = await nativeFetch(input, { ...init, headers });
+    if (res.status === 401 && !url.includes("/auth/login")) {
+      ["dalni_token", "dalni_role", "dalni_user"].forEach((k) => localStorage.removeItem(k));
+      window.dispatchEvent(new Event("storage"));
+      if (!window.location.pathname.startsWith("/auth/")) window.location.href = "/auth/login";
+    }
+    return res;
+  };
+}
 
 export interface ApiResponse<T = any> {
   status: "success" | "error" | "online";
@@ -344,7 +377,7 @@ export function saveVehicles(vehicles: VehicleRecord[]) {
 }
 
 export type DriverAssignment = { licenseNumber?: string; newDriver?: any };
-export type SaveResult<T> = { success: true; data: T } | { success: false; error: string };
+export type SaveResult<T> = { success: true; data: T; warning?: string } | { success: false; error: string };
 
 const isRealPlate = (plate: unknown) => {
   const p = plate ? String(plate).trim() : "";
@@ -589,9 +622,12 @@ export async function apiLogin(params: {
         token: data.token,
       };
     } else if (data?.message) {
+      // A rejected guide gets the admin's reason and may resubmit the application (apiResubmitGuide)
       return {
         status: "error",
         message: data.message,
+        can_resubmit: Boolean(data.can_resubmit),
+        rejection_reason: data.rejection_reason || null,
       };
     }
   } catch (laravelErr) {
@@ -752,6 +788,7 @@ export async function apiBookDailyTrip(params: {
   tourist_id: string;
   daily_trip_id: string;
   number_of_seats: number;
+  trip_date: string; // the run date (Y-m-d): a daily trip runs every week on its days
 }): Promise<ApiResponse> {
   return bookTrip("daily", params);
 }
@@ -774,12 +811,19 @@ async function bookTrip(kind: "daily" | "weekly", params: Record<string, any>): 
     tourist_id: params.tourist_id,
     [key]: params[key],
     number_of_seats: params.number_of_seats,
+    ...(kind === "daily" ? { trip_date: params.trip_date } : {}),
   });
   if (!res.ok) return { status: "error", message: res.error };
   return { status: "success", message: res.body?.message || "تم تسجيل الحجز بنجاح", booking_id: res.body?.booking_id, booking: res.data };
 }
 
 type BookingKind = "daily" | "weekly";
+
+// The tourist cancels their own unpaid booking (before booking closes); the seats go back on sale
+export async function apiCancelBooking(kind: BookingKind, id: string): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/bookings/${kind}/${encodeURIComponent(id)}/cancel`, {});
+  return res.ok ? { success: true, data: res.data } : { success: false, error: res.error };
+}
 
 export async function apiSetBookingPayment(kind: BookingKind, id: string, paid: boolean): Promise<SaveResult<any>> {
   const res = await laravelRequest("POST", `/bookings/${kind}/${encodeURIComponent(id)}/payment`, { payment_status: paid ? "paid" : "unpaid" });
@@ -827,6 +871,7 @@ export async function apiRegisterGuide(params: {
   title?: string;
   avatar?: string;
   place_ids?: string[];
+  license_expiry_date: string; // Y-m-d, must be in the future
 }): Promise<ApiResponse> {
   const newGuide: GuideRecord = {
     license_number: params.license_number,
@@ -846,7 +891,7 @@ export async function apiRegisterGuide(params: {
     gender: params.gender || "male",
     working_days: params.working_days,
     operating_regions: params.operating_regions,
-    price_per_day: params.price_per_day || 150,
+    price_per_day: params.price_per_day || 0,
     verification_status: "قيد المراجعة",
     assigned_trips: [],
     registered_at: new Date().toISOString(),
@@ -871,6 +916,7 @@ export async function apiRegisterGuide(params: {
     speaks_french: Boolean(params.speaks_french),
     speaks_italian: Boolean(params.speaks_italian),
     place_ids: params.place_ids || [],
+    license_expiry_date: params.license_expiry_date,
   });
   if (!saved.ok) {
     return { status: "error", message: saved.error };
@@ -1030,7 +1076,7 @@ export async function apiRequestPrivateTrip(payload: any): Promise<SaveResult<an
 
 export async function apiReviewPrivateTrip(id: string, payload: any): Promise<SaveResult<any>> {
   const saved = await laravelRequest("POST", `/private-trips/${encodeURIComponent(id)}/review`, payload);
-  return saved.ok ? { success: true, data: saved.data } : { success: false, error: saved.error };
+  return saved.ok ? { success: true, data: saved.data, warning: saved.body?.warning || undefined } : { success: false, error: saved.error };
 }
 
 export async function apiDecidePrivateTrip(id: string, touristId: string, decision: "مؤكدة" | "ملغاة من السائح"): Promise<SaveResult<any>> {
@@ -1164,6 +1210,21 @@ export async function apiGuideRespondWeeklyTrip(licenseNumber: string, tripId: s
     decision,
     reason: reason || undefined,
   });
+  return res.ok ? { success: true, data: res.body?.message } : { success: false, error: res.error };
+}
+
+export async function apiGuideRespondDailyTrip(licenseNumber: string, tripId: string, decision: "accept" | "decline", reason?: string): Promise<SaveResult<any>> {
+  const res = await laravelRequest("POST", `/trips/daily/${encodeURIComponent(tripId)}/guide-response`, {
+    license_number: licenseNumber,
+    decision,
+    reason: reason || undefined,
+  });
+  return res.ok ? { success: true, data: res.body?.message } : { success: false, error: res.error };
+}
+
+// A rejected guide sends a corrected licence document; the application goes back to «قيد المراجعة»
+export async function apiResubmitGuide(params: { login: string; password: string; digital_certificate_file: string; license_expiry_date: string; note?: string }): Promise<SaveResult<string>> {
+  const res = await laravelRequest("POST", "/auth/guide/resubmit", params);
   return res.ok ? { success: true, data: res.body?.message } : { success: false, error: res.error };
 }
 
