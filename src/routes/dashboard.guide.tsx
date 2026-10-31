@@ -602,7 +602,6 @@ function GuideDashboard() {
                   <p className="text-stone-600">
                     رقم الترخيص: <span className="font-mono font-bold text-stone-900">{guideInfo.license_number || "قيد المراجعة"}</span>
                   </p>
-                  <p className="text-stone-600 text-[11px]">{guideInfo.certificate || "لا يوجد وصف إضافي مسجل للترخيص"}</p>
 
                   {guideInfo.digital_certificate_file && (
                     <button
@@ -1001,19 +1000,7 @@ function GuideDashboard() {
               </div>
             </div>
 
-            {/* Section 6: Certificate Notes */}
-            <div>
-              <label className="text-xs font-semibold text-stone-700 mb-1 block">بيانات الشهادة والترخيص:</label>
-              <textarea
-                value={guideInfo.certificate}
-                onChange={(e) => setGuideInfo({ ...guideInfo, certificate: e.target.value })}
-                rows={2}
-                placeholder="تفاصيل جهة الإصدار وتاريخ الصلاحية..."
-                className="w-full p-2.5 rounded-xl border border-stone-200 bg-white text-xs font-medium text-stone-800 text-right outline-none focus:border-[#1B5A78]"
-              />
-            </div>
-
-            {/* Section 7: Dedicated Certificate Preview & Upload Widget */}
+            {/* Section 6: Dedicated Certificate Preview & Upload Widget */}
             <div className="p-4 rounded-xl border border-stone-200 bg-stone-50/60 space-y-3 text-right">
               <div className="flex items-center justify-between">
                 <div>
@@ -1117,7 +1104,7 @@ function GuideDashboard() {
               )}
             </div>
 
-            {/* Section 8: Bio */}
+            {/* Section 7: Bio */}
             <div>
               <label className="text-xs font-semibold text-stone-700 mb-1 block">النبذة التعريفية عن خبراتك وجولاتك:</label>
               <textarea
