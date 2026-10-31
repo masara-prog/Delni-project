@@ -37,6 +37,9 @@ class RequireRole
         if ($role === 'guide' && $user->verification_status !== 'موثق') {
             return $this->forbidden('حسابك كمرشد غير معتمد من إدارة المنصة');
         }
+        if ($role === 'transport' && $user->verification_status === 'موقوفة') {
+            return $this->forbidden('حساب شركة النقل موقوف من قبل إدارة المنصة');
+        }
 
         $id = Actor::id();
         foreach (self::ROUTE_IDS as $param) {

@@ -128,6 +128,13 @@ class AuthController extends Controller
                 $user = TransportationCompany::where('email', $login)->first();
 
                 if ($user && Passwords::matches($password, $user->password)) {
+                    // A company the admin suspended keeps its records but cannot use the platform
+                    if ($user->verification_status === 'موقوفة') {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'حساب شركة النقل موقوف من قبل إدارة المنصة. يرجى التواصل مع الإدارة.',
+                        ], 403);
+                    }
                     $token = $user->createToken('transport-token', ['role:transport'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',

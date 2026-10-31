@@ -1,6 +1,7 @@
 import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
+import { BedDouble, Bus, CalendarDays, Compass, Gift, Landmark, Tag, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import { 
@@ -1413,14 +1414,14 @@ function AdminDashboard() {
           <div className="space-y-6">
             <SectionCard title="إجراءات سريعة للأدمن">
               <div className="grid grid-cols-2 gap-2">
-                <QuickAction icon="🚌" label="إضافة شركة نقل" onClick={() => setShowAddCompany(true)} />
-                <QuickAction icon="🧭" label="رحلة يومية" onClick={() => setShowAddTrip("daily")} />
-                <QuickAction icon="🗓️" label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
-                <QuickAction icon="🏨" label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
-                <QuickAction icon="🍽️" label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
-                <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
-                <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
-                <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
+                <QuickAction icon={Bus} label="إضافة شركة نقل" onClick={() => setShowAddCompany(true)} />
+                <QuickAction icon={Compass} label="رحلة يومية" onClick={() => setShowAddTrip("daily")} />
+                <QuickAction icon={CalendarDays} label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
+                <QuickAction icon={BedDouble} label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
+                <QuickAction icon={UtensilsCrossed} label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
+                <QuickAction icon={Landmark} label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
+                <QuickAction icon={Tag} label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
+                <QuickAction icon={Gift} label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
               </div>
             </SectionCard>
           </div>
@@ -1431,7 +1432,7 @@ function AdminDashboard() {
       {active === "scanner" && (
         <div className="space-y-6 text-right animate-in fade-in duration-200">
           {/* Header Explanation Banner */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-[#003580] to-indigo-900 text-white shadow-md relative overflow-hidden">
+          <div className="p-5 rounded-2xl bg-blue-900 text-white shadow-md relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
@@ -1609,7 +1610,7 @@ function AdminDashboard() {
                   <button
                     type="button"
                     onClick={handleConfirmAndPayTicket}
-                    className="w-full sm:w-auto px-8 h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                    className="w-full sm:w-auto px-8 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer shrink-0"
                   >
                     <span>✅ تأكيد سداد الحجز وتثبيت الحضور في النظام</span>
                   </button>
@@ -3043,7 +3044,7 @@ function AdminDashboard() {
                       setChatSessions(updated);
                       saveChatSessions(updated);
                     }}
-                    className={`w-full text-right p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    className={`w-full text-right p-3.5 rounded-xl border transition cursor-pointer ${
                       activeChatId === s.id
                         ? "border-primary bg-primary/10 shadow-xs"
                         : s.unread
@@ -3216,11 +3217,11 @@ function AdminDashboard() {
 }
 
 /* ============ QUICK ACTION ============ */
-function QuickAction({ icon, label, onClick }: { icon: string; label: string; onClick?: () => void }) {
+function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick?: () => void }) {
   return (
-    <button onClick={onClick} className="p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all text-right w-full group">
-      <div className="text-xl group-hover:scale-110 transition-transform">{icon}</div>
-      <div className="text-[11px] font-black text-foreground mt-1 leading-tight">{label}</div>
+    <button onClick={onClick} className="p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition text-right w-full group">
+      <Icon className="w-5 h-5 text-primary" strokeWidth={1.75} aria-hidden="true" />
+      <div className="text-xs font-bold text-foreground mt-2 leading-tight">{label}</div>
     </button>
   );
 }
@@ -3240,12 +3241,12 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
             key={v.plate_number}
             type="button"
             onClick={() => toggle(v.plate_number)}
-            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition-all ${
+            className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-right transition ${
               selected.includes(v.plate_number) ? "border-primary bg-primary/5 shadow-xs" : "border-border hover:bg-muted/30"
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition-all ${
+              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition ${
                 selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
               }`}>
                 {selected.includes(v.plate_number) && "✓"}
@@ -7001,7 +7002,7 @@ function EvaluatePrivateTripModal({
     <ModalShell maxWidth="max-w-4xl sm:max-w-5xl" title={`دراسة وجدولة طلب الرحلة الخاصة: ${trip.private_trip_id}`} onClose={onClose}>
       <div className="space-y-5 text-right p-1 sm:p-2">
         {/* Tourist Request Details Card */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 text-xs space-y-3 border border-slate-200 shadow-2xs">
+        <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 text-xs space-y-3 border border-slate-200 shadow-2xs">
           <div className="flex justify-between items-center flex-wrap gap-2 pb-2.5 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <span className="font-black text-sm text-foreground">
@@ -7615,7 +7616,7 @@ function HotelModal({
                 <div
                   key={opt.id}
                   onClick={() => setPropertyType(opt.id)}
-                  className={`p-3 rounded-2xl border cursor-pointer transition-all text-center space-y-1 select-none ${
+                  className={`p-3 rounded-2xl border cursor-pointer transition text-center space-y-1 select-none ${
                     isSelected
                       ? "border-2 border-[#003580] bg-blue-50/80 shadow-sm"
                       : "border-slate-200 bg-white hover:border-slate-300"
@@ -7725,7 +7726,7 @@ function HotelModal({
                   type="button"
                   key={am.id}
                   onClick={() => toggleAmenity(am.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
                     isChecked
                       ? "bg-[#003580] text-white border-[#003580] shadow-xs"
                       : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
@@ -7786,7 +7787,7 @@ function HotelModal({
           <button
             type="submit"
             disabled={saving}
-            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md shadow-blue-950/20 cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
+            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
             <span>{saving ? "جارٍ الحفظ..." : "حفظ مكان الإقامة بالدليل ✓"}</span>
           </button>
@@ -8125,7 +8126,7 @@ function RestaurantModal({
                 <div
                   key={opt.id}
                   onClick={() => setCategory(opt.id)}
-                  className={`p-3 rounded-2xl border cursor-pointer transition-all text-center space-y-1 select-none ${
+                  className={`p-3 rounded-2xl border cursor-pointer transition text-center space-y-1 select-none ${
                     isSelected
                       ? "border-2 border-amber-600 bg-amber-50/80 shadow-sm"
                       : "border-slate-200 bg-white hover:border-slate-300"
@@ -8218,7 +8219,7 @@ function RestaurantModal({
                   type="button"
                   key={f.id}
                   onClick={() => toggleFeature(f.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
                     isChecked
                       ? "bg-amber-700 text-white border-amber-700 shadow-xs"
                       : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
@@ -8279,7 +8280,7 @@ function RestaurantModal({
           <button
             type="submit"
             disabled={saving}
-            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md shadow-amber-900/20 cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
+            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
             <span>{saving ? "جارٍ الحفظ..." : "حفظ المطعم/المقهى بالدليل ✓"}</span>
           </button>
@@ -9440,8 +9441,8 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
 
 function ModalShell({ title, children, onClose, maxWidth = "max-w-lg" }: { title: string; children: React.ReactNode; onClose: () => void; maxWidth?: string }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto">
-      <div className={`w-full ${maxWidth} bg-white rounded-3xl shadow-glow overflow-hidden my-6`}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto animate-overlay-in">
+      <div className={`w-full ${maxWidth} bg-white rounded-3xl shadow-glow overflow-hidden my-6 animate-dialog-in`}>
         <div className="p-4 bg-gradient-sea text-white flex justify-between items-center">
           <h3 className="text-base font-black">{title}</h3>
           <button type="button" onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 grid place-items-center text-xs transition">✕</button>

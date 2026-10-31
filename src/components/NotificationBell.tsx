@@ -154,7 +154,7 @@ export function NotificationBell() {
           dir={isAr ? "rtl" : "ltr"}
         >
           {/* Header */}
-          <div className="p-3.5 bg-gradient-to-r from-slate-900 to-[#1B5A78] text-white flex items-center justify-between gap-2 shadow-sm">
+          <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between gap-2 shadow-sm">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-base shrink-0">🔔</span>
               <div className="min-w-0">

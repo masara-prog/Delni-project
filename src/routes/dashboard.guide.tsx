@@ -448,7 +448,7 @@ function GuideDashboard() {
     >
       {/* Calm, Eye-Friendly Executive Welcome Banner */}
       <div className="rounded-3xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-sm mb-6 relative overflow-hidden text-right">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#D96B27]/15 to-[#1B5A78]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#D96B27]/15 rounded-full blur-3xl pointer-events-none" />
         <div className="relative flex flex-wrap items-center gap-4 justify-between">
           <div>
             <div className="text-xs text-stone-400 font-medium">مرحباً بك 👋</div>
@@ -497,7 +497,7 @@ function GuideDashboard() {
 
       {/* Verification Status Banner if pending */}
       {!isVerified && (
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-orange-50/90 via-amber-50/70 to-orange-50/90 border border-orange-200/80 text-right flex items-start gap-3.5 text-stone-900 shadow-xs animate-in fade-in">
+        <div className="mb-6 p-4 rounded-2xl bg-orange-50/90 border border-orange-200/80 text-right flex items-start gap-3.5 text-stone-900 shadow-xs animate-in fade-in">
           <div className="w-9 h-9 rounded-xl bg-[#D96B27]/15 text-[#D96B27] grid place-items-center text-lg shrink-0 mt-0.5 shadow-2xs">
             ⏳
           </div>
@@ -1141,8 +1141,8 @@ function GuideDashboard() {
 
       {/* Certificate Lightbox Inspection Modal */}
       {previewCertificateModal && guideInfo.digital_certificate_file && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-2xl border border-stone-200 text-right">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs grid place-items-center p-4 animate-overlay-in">
+          <div className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-2xl border border-stone-200 text-right animate-dialog-in">
             <div className="p-3.5 border-b border-stone-200 flex items-center justify-between bg-stone-50">
               <button
                 type="button"
@@ -1440,9 +1440,9 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-center p-4 animate-overlay-in" onClick={onClose}>
       <div
-        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-2xl p-5 space-y-4 shadow-xl text-right border border-stone-200"
+        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-2xl p-5 space-y-4 shadow-xl text-right border border-stone-200 animate-dialog-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-start gap-3">

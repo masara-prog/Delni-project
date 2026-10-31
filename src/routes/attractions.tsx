@@ -474,10 +474,10 @@ function AttractionsPage() {
         {/* ── UNESCO World Heritage Showcase (Vibrant Pro, No Prev/Next Buttons, 5s Auto-Rotation, Expanded Width) ── */}
         {unescoSites.length > 0 && activeUnescoSite && (
         <div className="max-w-6xl mx-auto">
-          <section className="relative rounded-3xl bg-gradient-to-br from-white via-[#F8FAFC] to-blue-50/30 border border-blue-900/15 p-6 sm:p-9 shadow-[0_20px_50px_-12px_rgba(0,53,128,0.15)] overflow-hidden text-[#0F172A]">
+          <section className="relative rounded-3xl bg-white border border-blue-900/15 p-6 sm:p-9 shadow-lg overflow-hidden text-[#0F172A]">
             {/* Dynamic Ambient Royal Blue & Vibrant Orange Glows */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-blue-500/10 via-indigo-500/5 to-transparent rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-orange-500/10 via-amber-500/5 to-transparent rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
+            <div className="absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+            <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
 
             {/* Header Banner - Royal Blue & Vibrant Orange Vibrancy */}
             <div className="text-center mb-7 relative z-10">
@@ -506,9 +506,9 @@ function AttractionsPage() {
                       key={site.id}
                       type="button"
                       onClick={() => setUnescoIndex(idx)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition duration-300 cursor-pointer flex items-center gap-1.5 ${
                         isActive
-                          ? "bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#C2410C] text-white shadow-md shadow-orange-500/30 scale-105 font-black ring-2 ring-orange-300/50"
+                          ? "bg-[#D96B27] text-white shadow-md scale-105 font-black ring-2 ring-orange-300/50"
                           : "bg-white hover:bg-blue-50/70 text-[#003580] border border-blue-900/15 shadow-2xs hover:border-[#003580]/40 font-bold"
                       }`}
                     >
@@ -614,7 +614,7 @@ function AttractionsPage() {
                   key={activeUnescoSite.id}
                   src={activeUnescoSite.img}
                   alt={isAr ? activeUnescoSite.name : activeUnescoSite.nameEn}
-                  className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
+                  className="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
@@ -659,9 +659,9 @@ function AttractionsPage() {
                       key={site.id}
                       type="button"
                       onClick={() => setUnescoIndex(i)}
-                      className={`h-2 rounded-full transition-all duration-500 cursor-pointer ${
+                      className={`h-2 rounded-full transition duration-500 cursor-pointer ${
                         isActive
-                          ? "w-8 bg-gradient-to-r from-[#D96B27] to-[#EA580C] shadow-sm shadow-orange-500/30"
+                          ? "w-8 bg-[#D96B27] shadow-sm"
                           : "w-2 bg-blue-200 hover:bg-[#EA580C]/50"
                       }`}
                       title={site.name}
@@ -679,7 +679,7 @@ function AttractionsPage() {
         )}
 
         {/* ── Custom Private Trips System Notice ── */}
-        <section className="bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">
+        <section className="bg-amber-50/80 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-[#D96B27]/10 text-[#D96B27] text-2xl font-black grid place-items-center shrink-0 border border-[#D96B27]/20 shadow-xs">
               🧭
@@ -702,7 +702,7 @@ function AttractionsPage() {
           <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
             <button
               onClick={() => setPrivateTripModalOpen(true)}
-              className="w-full md:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black text-xs sm:text-sm shadow-soft transition flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              className="w-full md:w-auto px-6 py-3 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-xs sm:text-sm shadow-soft transition flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
             >
               <span>🧭</span>
               <span>{isAr ? "إنشاء رحلة خاصة الآن" : "Create Private Tour Now"}</span>
@@ -734,7 +734,7 @@ function AttractionsPage() {
                 <button
                   type="button"
                   onClick={scrollCityCarouselLeft}
-                  className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition-all cursor-pointer border-none"
+                  className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition cursor-pointer border-none"
                   aria-label={isAr ? "السابق" : "Previous"}
                   title={isAr ? "تحريك لليمين" : "Scroll Right"}
                 >
@@ -743,7 +743,7 @@ function AttractionsPage() {
                 <button
                   type="button"
                   onClick={scrollCityCarouselRight}
-                  className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition-all cursor-pointer border-none"
+                  className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition cursor-pointer border-none"
                   aria-label={isAr ? "التالي" : "Next"}
                   title={isAr ? "تحريك لليسار" : "Scroll Left"}
                 >
@@ -780,7 +780,7 @@ function AttractionsPage() {
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
-                  className="min-w-[280px] sm:min-w-[310px] max-w-[330px] h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition-all duration-300 group shrink-0 select-none bg-stone-900"
+                  className="min-w-[280px] sm:min-w-[310px] max-w-[330px] h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition duration-300 group shrink-0 select-none bg-stone-900"
                 >
                   {/* Full Background Photo */}
                   <img
@@ -847,7 +847,7 @@ function AttractionsPage() {
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
-                  className="w-full h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition-all duration-300 group select-none bg-stone-900"
+                  className="w-full h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition duration-300 group select-none bg-stone-900"
                 >
                   {/* Full Background Photo */}
                   <img
@@ -915,7 +915,7 @@ function AttractionsPage() {
             <button
               type="button"
               onClick={() => setCityViewMode((prev) => (prev === "carousel" ? "grid" : "carousel"))}
-              className="px-8 py-3.5 rounded-full bg-white hover:bg-[#003580] text-[#003580] hover:text-white border-2 border-[#003580] font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition-all duration-300 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              className="px-8 py-3.5 rounded-full bg-white hover:bg-[#003580] text-[#003580] hover:text-white border-2 border-[#003580] font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition duration-300 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
             >
               <span className="text-base">{cityViewMode === "carousel" ? "✨" : "🔄"}</span>
               <span>
@@ -1078,7 +1078,7 @@ function LandmarkDetailsModal({
           <img
             src={photo}
             alt={city.name}
-            className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
+            className="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/25 pointer-events-none" />
 
@@ -1161,7 +1161,7 @@ function LandmarkDetailsModal({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveModalTab(tab.id as any)}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                   activeModalTab === tab.id
                     ? "bg-[#003580] text-white shadow-md"
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
@@ -1188,7 +1188,7 @@ function LandmarkDetailsModal({
 
               {/* VIP Offer Card */}
               {showPromo && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-100/50 border border-amber-300 shadow-xs flex items-center justify-between gap-3 text-xs relative">
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 shadow-xs flex items-center justify-between gap-3 text-xs relative">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-[#D96B27] text-white flex items-center justify-center font-black text-lg shrink-0 shadow-xs">
                       🎁
@@ -1234,7 +1234,7 @@ function LandmarkDetailsModal({
                   return (
                     <div
                       key={idx}
-                      className="group relative p-4 rounded-2xl bg-white hover:bg-blue-50/40 border-2 border-slate-100 hover:border-blue-200 shadow-xs transition-all duration-300 flex items-center gap-3.5"
+                      className="group relative p-4 rounded-2xl bg-white hover:bg-blue-50/40 border-2 border-slate-100 hover:border-blue-200 shadow-xs transition duration-300 flex items-center gap-3.5"
                     >
                       <div className="w-10 h-10 rounded-xl bg-[#003580] text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                         <span>{icons[idx % icons.length]}</span>
@@ -1261,7 +1261,7 @@ function LandmarkDetailsModal({
           {activeModalTab === "reviews" && (
             <div className="space-y-5 animate-in fade-in duration-200">
               {/* Summary Rating Box */}
-              <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border border-amber-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
+              <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h4 className="text-sm sm:text-base font-black text-[#003580] flex items-center gap-2">
                     <span>⭐</span>
@@ -1359,7 +1359,7 @@ function LandmarkDetailsModal({
                           key={star}
                           type="button"
                           onClick={() => setNewRating(star)}
-                          className={`text-xl transition-all cursor-pointer ${
+                          className={`text-xl transition cursor-pointer ${
                             star <= newRating ? "text-amber-500 scale-110" : "text-slate-300 hover:text-amber-300"
                           }`}
                         >
@@ -1413,7 +1413,7 @@ function LandmarkDetailsModal({
           {/* Tab 4: Custom Private Tours (ONLY if not UNESCO) */}
           {!isUnescoSite && activeModalTab === "trips" && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/60 via-white to-amber-50/40 border border-blue-200/80 space-y-3 shadow-xs">
+              <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3 shadow-xs">
                 <div className="flex items-center gap-2">
                   <span className="px-3 py-1 rounded-full bg-[#003580] text-white font-black text-xs shadow-xs">
                     🧭 {isAr ? "رحلات خاصة مخصصة بالكامل" : "Custom Private Tours"}
@@ -1446,7 +1446,7 @@ function LandmarkDetailsModal({
             <button
               type="button"
               onClick={onBookPrivate}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-900/15 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
             >
               <span>🧭</span>
               <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>

@@ -103,7 +103,7 @@ export function Header({ active }: HeaderProps) {
               <Link
                 key={item.key}
                 to={item.to}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap transition-all duration-200 ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap transition duration-200 ${
                   isActive
                     ? "bg-white/25 text-white border border-white/50 shadow-sm font-black scale-105"
                     : "text-white/80 hover:text-white hover:bg-white/15 hover:border-white/30 border border-transparent"
@@ -123,15 +123,15 @@ export function Header({ active }: HeaderProps) {
             <div className="flex items-center gap-1.5 p-1 bg-black/35 hover:bg-black/45 backdrop-blur-xl rounded-full border border-white/20 shadow-md">
               <Link
                 to={currentRole ? currentRole.path : "/trips"}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:brightness-110 text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-sm hover:scale-105 transition-all border border-white/20 antialiased whitespace-nowrap"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-sm hover:scale-105 transition border border-white/20 antialiased whitespace-nowrap"
                 title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-[0_0_6px_rgba(110,231,183,0.9)]" />
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-lg" />
                 <span className="leading-tight drop-shadow-sm max-w-[130px] truncate">{accountName}</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-red-500 text-white/90 hover:text-white grid place-items-center transition-all border border-white/15 hover:border-red-400 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-red-500 text-white/90 hover:text-white grid place-items-center transition border border-white/15 hover:border-red-400 cursor-pointer"
                 title={language === 'ar' ? 'تسجيل الخروج من المنصة' : 'Logout'}
                 aria-label="تسجيل الخروج"
               >
@@ -143,7 +143,7 @@ export function Header({ active }: HeaderProps) {
           ) : (
             <Link
               to="/auth/login"
-              className="h-9 px-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-soft hover:scale-105 transition-all whitespace-nowrap shrink-0"
+              className="h-9 px-4 inline-flex items-center justify-center rounded-full bg-[#D96B27] hover:bg-[#C25B1E] text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-soft hover:scale-105 transition whitespace-nowrap shrink-0"
             >
               {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
             </Link>
@@ -187,7 +187,7 @@ export function Header({ active }: HeaderProps) {
               <Link
                 to="/auth/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full mb-2 h-11 flex items-center justify-center rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black text-sm shadow-soft"
+                className="w-full mb-2 h-11 flex items-center justify-center rounded-xl bg-[#D96B27] text-white font-black text-sm shadow-soft"
               >
                 {language === 'ar' ? 'تسجيل الدخول للمنصة' : 'Sign In'}
               </Link>

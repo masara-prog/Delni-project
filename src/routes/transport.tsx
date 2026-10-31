@@ -493,9 +493,9 @@ function TransportPage() {
             <button
               type="button"
               onClick={() => setIsViewAll(!isViewAll)}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-xs ${
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer shadow-xs ${
                 isViewAll
-                  ? "bg-[#D96B27] text-white shadow-orange-500/20"
+                  ? "bg-[#D96B27] text-white"
                   : "bg-white hover:bg-slate-50 text-[#003580] border-2 border-blue-200"
               }`}
             >
@@ -574,7 +574,7 @@ function TransportPage() {
                   <div
                     key={v.id}
                     onClick={() => openVehicleModal(v, "specs")}
-                    className="w-[320px] sm:w-[350px] shrink-0 snap-start group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#003580] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                    className="w-[320px] sm:w-[350px] shrink-0 snap-start group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#003580] shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                   >
                     {/* Photo Container */}
                     <div className="relative h-52 bg-slate-800 overflow-hidden">
@@ -587,7 +587,7 @@ function TransportPage() {
 
                       {/* Category Badge */}
                       <div className="absolute top-3.5 right-3.5 z-10">
-                        <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-[10px] font-black shadow-md flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-full bg-[#D96B27] text-white text-[10px] font-black shadow-md flex items-center gap-1">
                           <Sparkles className="w-3 h-3" />
                           {isAr ? v.categoryLabelAr : v.categoryLabelEn}
                         </span>
@@ -711,7 +711,7 @@ function TransportPage() {
                 <div
                   key={v.id}
                   onClick={() => openVehicleModal(v, "specs")}
-                  className="group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#003580] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                  className="group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#003580] shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                 >
                   {/* Photo Container */}
                   <div className="relative h-56 bg-slate-800 overflow-hidden">
@@ -723,7 +723,7 @@ function TransportPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/20" />
 
                     <div className="absolute top-3.5 right-3.5 z-10">
-                      <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-[10px] font-black shadow-md flex items-center gap-1">
+                      <span className="px-2.5 py-1 rounded-full bg-[#D96B27] text-white text-[10px] font-black shadow-md flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
                         {isAr ? v.categoryLabelAr : v.categoryLabelEn}
                       </span>
@@ -835,7 +835,7 @@ function TransportPage() {
 
       {/* ── 4. VERIFIED TRANSPORT PARTNERS ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="bg-gradient-to-br from-[#0B1E38] via-[#00224F] to-[#003580] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="bg-[#0B1E38] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
@@ -864,7 +864,7 @@ function TransportPage() {
               return (
                 <div
                   key={c.contract_number || name}
-                  className="p-4 rounded-2xl bg-white/5 border border-white/15 hover:border-white/30 transition-all flex items-center justify-between gap-3"
+                  className="p-4 rounded-2xl bg-white/5 border border-white/15 hover:border-white/30 transition flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shrink-0">

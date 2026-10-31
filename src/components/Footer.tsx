@@ -44,7 +44,7 @@ export function Footer() {
           key={item.img}
           src={item.img}
           alt={isAr ? item.titleAr : item.titleEn}
-          className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-1000 ease-in-out brightness-105 ${
+          className={`absolute inset-0 w-full h-full object-cover object-center transition duration-1000 ease-in-out brightness-105 ${
             index === currentIdx ? "opacity-100 scale-100" : "opacity-0 scale-105"
           }`}
         />

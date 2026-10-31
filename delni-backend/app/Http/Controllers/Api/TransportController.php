@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Support\Actor;
+use App\Support\Base64Image;
 use App\Support\Passwords;
 
 /**
@@ -28,6 +29,8 @@ class TransportController extends Controller
     // Placeholder the forms send when a password was not changed
     private const MASKED_PASSWORD = '••••••••';
     public const VEHICLE_CATEGORIES = ['حافلة سياحية', 'ميني باص', 'باص VIP'];
+    public const SEAT_OPTIONS = [15, 25, 50];
+    public const VEHICLE_STATUSES = ['جاهزة', 'في رحلة', 'صيانة', 'خارج الخدمة'];
     private const PUBLIC_DRIVER_FIELDS = ['driver_license_number', 'full_name', 'contract_number', 'company_name',
         'assigned_vehicle_plate', 'operational_status', 'current_trip_stage'];
     // What a driver may change in their own record; the company keeps the rest
@@ -185,20 +188,28 @@ class TransportController extends Controller
     {
         try {
             $data = $request->validate([
-                'plate_number' => 'required|string|max:30',
+                'plate_number' => ['required', 'string', 'max:30', 'regex:/^\d+$/'],
                 'contract_number' => 'required|string|max:50',
                 'vehicle_type' => 'required|string|max:100',
-                'seating_capacity' => 'nullable|integer|min:1',
-                'daily_rate' => 'nullable|numeric|min:0',
+                'seating_capacity' => 'required|integer|in:' . implode(',', self::SEAT_OPTIONS),
+                'daily_rate' => 'required|numeric|min:1',
                 'category' => 'nullable|string|in:' . implode(',', self::VEHICLE_CATEGORIES),
-                'vehicle_status' => 'nullable|string|max:50',
+                'vehicle_status' => 'nullable|string|in:' . implode(',', self::VEHICLE_STATUSES),
                 'insurance_image' => 'nullable|string',
                 'vehicle_image' => 'nullable|string',
                 'isNew' => 'nullable|boolean',
                 'driverInfo' => 'nullable|array',
                 'driverInfo.licenseNumber' => 'nullable|string|max:50',
                 'driverInfo.newDriver' => 'nullable|array',
-            ], ['category.in' => 'فئة المركبة يجب أن تكون: حافلة سياحية أو ميني باص أو باص VIP']);
+            ], [
+                'category.in' => 'فئة المركبة يجب أن تكون: حافلة سياحية أو ميني باص أو باص VIP',
+                'plate_number.regex' => 'رقم لوحة المركبة يجب أن يتكون من أرقام فقط',
+                'seating_capacity.required' => 'عدد مقاعد المركبة مطلوب',
+                'seating_capacity.in' => 'عدد مقاعد المركبة يجب أن يكون 15 أو 25 أو 50',
+                'daily_rate.required' => 'سعر اليوم الواحد للمركبة مطلوب',
+                'daily_rate.min' => 'سعر اليوم الواحد يجب أن يكون أكبر من صفر',
+                'vehicle_status.in' => 'حالة المركبة يجب أن تكون: جاهزة أو في رحلة أو صيانة أو خارج الخدمة',
+            ]);
         } catch (ValidationException $e) {
             return $this->validationError($e);
         }
@@ -232,10 +243,10 @@ class TransportController extends Controller
             'category' => $data['category'] ?? ($existing->category ?? null),
             'vehicle_status' => $data['vehicle_status'] ?? ($existing->vehicle_status ?? 'جاهزة'),
         ];
-        // Keep the stored image when the form sends none
+        // Keep the stored image when the form sends none; a new one is saved as a file (supported images only)
         foreach (['insurance_image', 'vehicle_image'] as $image) {
             if (!empty($data[$image])) {
-                $values[$image] = $data[$image];
+                $values[$image] = Base64Image::store($data[$image], "{$image}-{$plate}", 'vehicles');
             }
         }
 

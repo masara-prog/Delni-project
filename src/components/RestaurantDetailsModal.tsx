@@ -130,7 +130,7 @@ export function RestaurantDetailsModal({
     <>
       {/* ── BACKDROP OVERLAY WITH BLUR ── */}
       <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto bg-black/75 backdrop-blur-md transition-all duration-300 animate-in fade-in"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto bg-black/75 backdrop-blur-md transition duration-300 animate-in fade-in"
         dir={dir}
         onClick={onClose}
       >
@@ -140,7 +140,7 @@ export function RestaurantDetailsModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Top Decorative Perk Strip */}
-          <div className="bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-amber-600 text-white px-4 py-2 text-xs font-black flex items-center justify-between shadow-xs">
+          <div className="bg-[#D96B27] text-white px-4 py-2 text-xs font-black flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${partnershipStatus === "غير نشط" ? "bg-slate-400" : "bg-emerald-400 animate-ping"}`} />
               <span>🍽️ {isAr ? `مطعم ومقهى سياحي معتمد (${partnershipStatus})` : `Verified Partner (${partnershipStatus})`}</span>
@@ -187,7 +187,7 @@ export function RestaurantDetailsModal({
               <img
                 src={photos[activePhoto]}
                 alt=""
-                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition-all duration-700"
+                className="w-full h-full object-cover blur-2xl opacity-40 scale-110 transition duration-700"
                 aria-hidden="true"
               />
             </div>
@@ -196,7 +196,7 @@ export function RestaurantDetailsModal({
             <img
               src={photos[activePhoto]}
               alt={restaurant.name}
-              className="relative z-10 w-full h-full object-cover object-center transition-all duration-500 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
+              className="relative z-10 w-full h-full object-cover object-center transition duration-500 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
               onClick={() => setLightboxOpen(true)}
             />
 
@@ -232,7 +232,7 @@ export function RestaurantDetailsModal({
                   {photos.map((_, idx) => (
                     <span
                       key={idx}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                      className={`h-1.5 rounded-full transition duration-300 ${
                         activePhoto === idx ? "w-4 bg-amber-400" : "w-1.5 bg-white/40"
                       }`}
                     />
@@ -255,7 +255,7 @@ export function RestaurantDetailsModal({
             {/* Hours & Location Cards Grid (Primary View: ساعات العمل هيا الواجهة الأولى) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {/* Working Hours */}
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-800/60 border border-amber-100 dark:border-slate-700 flex items-center gap-2.5">
+              <div className="p-3 rounded-2xl bg-amber-50 dark:from-slate-800 dark:to-slate-800/60 border border-amber-100 dark:border-slate-700 flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#D96B27] text-white flex items-center justify-center text-base shrink-0 shadow-sm">
                   ⏱️
                 </div>
@@ -273,7 +273,7 @@ export function RestaurantDetailsModal({
               </div>
 
               {/* Cuisine & Specialty */}
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700 flex items-center gap-2.5">
+              <div className="p-3 rounded-2xl bg-blue-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700 flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm">
                   🍲
                 </div>
@@ -291,7 +291,7 @@ export function RestaurantDetailsModal({
               </div>
 
               {/* Location & City */}
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-100 dark:border-slate-700 flex items-center gap-2.5">
+              <div className="p-3 rounded-2xl bg-emerald-50 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-100 dark:border-slate-700 flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm">
                   📍
                 </div>
@@ -374,7 +374,7 @@ export function RestaurantDetailsModal({
               {/* Direct phone call */}
               <a
                 href={`tel:${restaurant.phone}`}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
+                className="px-4 py-2 rounded-xl bg-[#D96B27] hover:opacity-95 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
               >
                 <span>📞</span>
                 <span>{restaurant.phone || (isAr ? "اتصال" : "Call")}</span>
@@ -444,7 +444,7 @@ export function RestaurantDetailsModal({
                 key={idx}
                 type="button"
                 onClick={() => setActivePhoto(idx)}
-                className={`w-16 h-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                className={`w-16 h-12 rounded-lg overflow-hidden border-2 transition cursor-pointer shrink-0 ${
                   activePhoto === idx ? "border-amber-400 scale-105" : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >

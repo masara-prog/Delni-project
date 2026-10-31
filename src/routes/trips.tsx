@@ -74,7 +74,7 @@ import {
   apiGetDailyOffers, 
   apiGetWeeklyOffers 
 } from "@/lib/api";
-import { UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Clock, Flag, MapPin, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FloatingNearbyPromo } from "@/components/FloatingNearbyPromo";
 import { fetchTripReviews, type TripReview } from "@/lib/reviews";
@@ -609,11 +609,60 @@ function TripDetailsView({
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
+  // Dates read as "28 أكتوبر 2026": an ISO date inside Arabic text is shown reversed by the bidi algorithm
+  const formatTripDate = (raw?: string) => {
+    const s = String(raw || "").split("T")[0];
+    const d = new Date(`${s}T00:00:00`);
+    return isNaN(d.getTime()) ? s : d.toLocaleDateString(isAr ? "ar-LY-u-nu-latn" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
+  };
+  // The length of a weekly trip comes from its own dates (it was a fixed "7 days")
+  const tripDays = (() => {
+    if (trip.type !== "weekly") return 0;
+    const start = new Date(`${String((trip as any).startDate || "").split("T")[0]}T00:00:00`);
+    const end = new Date(`${String((trip as any).endDate || "").split("T")[0]}T00:00:00`);
+    const n = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  })();
+  const daysLabel = (n: number) =>
+    isAr ? (n === 1 ? "يوم واحد" : n === 2 ? "يومان" : n <= 10 ? `${n} أيام` : `${n} يوماً`) : `${n} day${n === 1 ? "" : "s"}`;
+  const tripKindLabel = trip.type === "daily"
+    ? (isAr ? "رحلة يومية" : "Day tour")
+    : trip.type === "weekly"
+    ? (isAr ? "رحلة أسبوعية" : "Multi-day tour")
+    : (isAr ? "رحلة خاصة" : "Private tour");
+  const seatsFact = {
+    icon: Users,
+    label: isAr ? "المقاعد المتبقية" : "Seats left",
+    value: info.availableSeats <= 0
+      ? (isAr ? "مكتملة الحجز" : "Fully booked")
+      : (isAr ? `${info.availableSeats} من ${info.totalSeats}` : `${info.availableSeats} of ${info.totalSeats}`),
+    tone: info.availableSeats <= 0 ? "text-red-700" : undefined,
+    bar: info.totalSeats > 0 ? Math.round((Math.max(0, info.availableSeats) / info.totalSeats) * 100) : 0,
+  };
+  const tripFacts: { icon: LucideIcon; label: string; value: string; tone?: string; bar?: number }[] =
+    trip.type === "weekly"
+      ? [
+          { icon: CalendarDays, label: isAr ? "الانطلاق" : "Departs", value: formatTripDate((trip as any).startDate) },
+          { icon: Flag, label: isAr ? "العودة" : "Returns", value: formatTripDate((trip as any).endDate) },
+          { icon: Clock, label: isAr ? "المدة" : "Duration", value: tripDays ? daysLabel(tripDays) : "—" },
+          seatsFact,
+        ]
+      : trip.type === "daily"
+      ? [
+          { icon: MapPin, label: isAr ? "نقطة الانطلاق" : "Departure", value: info.departurePoint || "—" },
+          { icon: CalendarDays, label: isAr ? "أيام الانطلاق" : "Runs on", value: String((trip as any).daysOfWeek || "—") },
+          { icon: Clock, label: isAr ? "التوقيت" : "Hours", value: isAr ? "9:00 ص – 9:00 م" : "9:00 AM – 9:00 PM" },
+          seatsFact,
+        ]
+      : [
+          { icon: MapPin, label: isAr ? "نقطة الانطلاق" : "Departure", value: info.departurePoint || "—" },
+          seatsFact,
+        ];
+
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#0F172A] pb-20 relative" dir={dir}>
-      {/* 1. Sleek Full-Width Panoramic Image Slideshow Banner with Elegant Ken Burns Motion */}
-      <div className="w-full relative h-[360px] sm:h-[460px] lg:h-[540px] bg-slate-950 overflow-hidden shadow-lg group">
-        {/* Stacked animated city images with crossfade & elegant Ken Burns motion */}
+      {/* 1. Hero: the trip's photographs full width, the title set over their lower edge */}
+      <header className="relative w-full h-[440px] sm:h-[520px] lg:h-[600px] bg-slate-950 overflow-hidden group">
         {cityImages.map((imgSrc, idx) => (
           <div
             key={idx}
@@ -623,9 +672,7 @@ function TripDetailsView({
             <img
               src={imgSrc}
               alt={`${trip.title} - ${idx + 1}`}
-              className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
-                idx === activeSlide ? KB_CLASSES[idx % KB_CLASSES.length] : "scale-100"
-              }`}
+              className={`w-full h-full object-cover ${idx === activeSlide ? KB_CLASSES[idx % KB_CLASSES.length] : ""}`}
               onError={(e) => {
                 const target = e.currentTarget;
                 if (target.src !== heroImg) {
@@ -636,273 +683,156 @@ function TripDetailsView({
           </div>
         ))}
 
-        {/* Clean subtle bottom gradient for text contrast only */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent z-10 pointer-events-none" />
+        {/* Neutral scrims: darker at the foot for the title, lightly at the top for the controls */}
+        <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-t from-black/85 via-black/25 to-black/35" />
 
-        {/* Prev / Next Manual Navigation Arrows on Banner ONLY if multiple images */}
-        {cityImages.length > 1 && (
-          <>
+        {/* Controls over the photograph: back and favourite only */}
+        <div className="absolute top-0 inset-x-0 z-30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex items-center justify-between">
             <button
               type="button"
-              onClick={() => setActiveSlide((prev) => (prev - 1 + cityImages.length) % cityImages.length)}
-              aria-label="Previous Slide"
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-25 w-10 h-10 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md border border-white/25 flex items-center justify-center text-xl transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 h-10 ps-3 pe-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white text-sm font-semibold cursor-pointer"
+              aria-label={isAr ? "العودة إلى قائمة الرحلات" : "Back to tours"}
             >
-              ‹
+              {dir === "rtl" ? <ArrowRight className="w-4 h-4" aria-hidden="true" /> : <ArrowLeft className="w-4 h-4" aria-hidden="true" />}
+              <span>{isAr ? "الرحلات" : "Tours"}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveSlide((prev) => (prev + 1) % cityImages.length)}
-              aria-label="Next Slide"
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-25 w-10 h-10 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md border border-white/25 flex items-center justify-center text-xl transition opacity-0 group-hover:opacity-100 shadow-md cursor-pointer hover:scale-105 active:scale-95"
-            >
-              ›
-            </button>
-
-            {/* Slide indicator dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20">
-              {cityImages.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setActiveSlide(idx)}
-                  className={`rounded-full transition-all duration-300 cursor-pointer ${
-                    idx === activeSlide
-                      ? "w-5 h-1.5 bg-amber-400 shadow-md"
-                      : "w-1.5 h-1.5 bg-white/45 hover:bg-white/75"
-                  }`}
-                  aria-label={`الصورة ${idx + 1}`}
-                />
-              ))}
-              <span className="text-[10px] text-white/90 font-bold ml-1 font-mono">
-                {activeSlide + 1}/{cityImages.length}
-              </span>
-            </div>
-          </>
-        )}
-
-        {/* Floating Top Luxury Glass Navigation Bar with High Contrast & Clear Exit Button */}
-        <div className="absolute top-0 inset-x-0 z-30 p-3 sm:p-5 flex items-center justify-between gap-3 pointer-events-none">
-          {/* Back/Exit Button: Highly Visible, High-Contrast Luxury Glass Button */}
-          <button
-            type="button"
-            onClick={onBack}
-            className="pointer-events-auto group px-4 sm:px-5 py-2.5 rounded-2xl bg-white/95 hover:bg-white text-slate-900 font-black text-xs sm:text-sm shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md border-2 border-[#D96B27]/40 hover:border-[#D96B27] flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ring-4 ring-black/20"
-            title={isAr ? "العودة إلى قائمة الرحلات" : "Back to Tours"}
-          >
-            <span className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#D96B27] to-[#EA580C] text-white flex items-center justify-center text-sm font-black shadow-md transition-transform group-hover:-translate-x-1">
-              {dir === "rtl" ? "➔" : "←"}
-            </span>
-            <div className="flex flex-col text-right leading-tight">
-              <span className="text-[#003580] font-black">{isAr ? "العودة لقائمة الرحلات" : "Back to Tours"}</span>
-              <span className="text-[10px] text-[#D96B27] font-bold">{isAr ? "خروج وتصفح المزيد" : "Exit & Browse"}</span>
-            </div>
-          </button>
-
-          {/* Dallani Tourism Center Brand Badge */}
-          <div className="pointer-events-auto hidden md:inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/65 backdrop-blur-md border border-amber-500/30 text-white font-black text-xs shadow-xl">
-            <span className="text-amber-400 text-base">🧭</span>
-            <span className="tracking-wide">{isAr ? "منصة دلّني للسياحة والتجارب الليبية" : "Dallani Tourism Experiences"}</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
-          </div>
-
-          {/* Tour Type & Live Availability Status Badge */}
-          <div className="pointer-events-auto flex items-center gap-2">
             <FavoriteButton
               itemType={trip.type === "weekly" ? "weekly_trip" : "daily_trip"}
               itemId={trip.id}
               itemTitle={trip.title}
               size="md"
-              className="bg-white/95 hover:bg-white text-slate-700 shadow-xl border border-white/40"
+              className="bg-white/15 hover:bg-white/25 backdrop-blur-md text-white border border-white/25"
             />
-            <span className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-[#003580]/90 to-[#1B5A78]/90 text-white text-xs font-black shadow-xl backdrop-blur-md border border-white/20 flex items-center gap-1.5">
-              <span>{trip.type === "daily" ? "☀️" : trip.type === "weekly" ? "🗓️" : "👑"}</span>
-              <span>
-                {trip.type === "daily"
-                  ? (isAr ? "رحلة يومية" : "Daily Tour")
-                  : trip.type === "weekly"
-                  ? (isAr ? "رحلة أسبوعية" : "Weekly Tour")
-                  : (isAr ? "رحلة خاصة VIP" : "Private Tour")}
-              </span>
-            </span>
-
-            {info.availableSeats <= 0 ? (
-              <span className="px-3.5 py-2 rounded-2xl bg-red-600/95 text-white text-xs font-black shadow-xl backdrop-blur-md border border-red-400/40 animate-pulse">
-                {isAr ? "مكتملة الحجز" : "Fully Booked"}
-              </span>
-            ) : (
-              <span className="hidden sm:inline-flex px-3.5 py-2 rounded-2xl bg-emerald-950/80 backdrop-blur-md border border-emerald-400/40 text-emerald-300 text-xs font-black shadow-xl">
-                {isAr ? `متبقي ${info.availableSeats} مقاعد` : `${info.availableSeats} seats left`}
-              </span>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* 2. Trip Header & Key Highlights Section with Elegant Orange Top Border */}
-      <div className="bg-white border-b border-[#E8E2D6] border-t-4 border-t-[#D96B27] py-6 sm:py-8 shadow-xs relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#EBF3FF] text-[#003580] text-xs font-black border border-blue-100">
-                  <span>📍</span>
-                  <span>{info.departurePoint}</span>
-                </span>
-                {trip.type === "daily" && (
-                  <>
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-black border border-emerald-200">
-                      <span>⏰</span>
-                      <span>{isAr ? "09:00 ص - 09:00 م (12 ساعة كاملة)" : "09:00 AM - 09:00 PM"}</span>
-                    </span>
-                    {"daysOfWeek" in trip && (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 text-[#003580] text-xs font-black border border-blue-200">
-                        <span>🗓️</span>
-                        <span>{isAr ? `يوم الانطلاق: ${(trip as any).daysOfWeek}` : `Day: ${(trip as any).daysOfWeek}`}</span>
-                      </span>
-                    )}
-                  </>
-                )}
-                {trip.type === "weekly" && "startDate" in trip && (
-                  <>
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 text-[#003580] text-xs font-black border border-blue-200">
-                      <span>📅</span>
-                      <span>{isAr ? `تاريخ الانطلاق: ${String((trip as any).startDate || "").split("T")[0]}` : `Departure: ${String((trip as any).startDate || "").split("T")[0]}`}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-900 text-xs font-black border border-indigo-200">
-                      <span>🏁</span>
-                      <span>{isAr ? `تاريخ العودة: ${String((trip as any).endDate || "").split("T")[0]}` : `Return: ${String((trip as any).endDate || "").split("T")[0]}`}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-black border border-emerald-200">
-                      <span>⏱️</span>
-                      <span>{isAr ? "برنامج 7 أيام شامل" : "7 Days Tour"}</span>
-                    </span>
-                  </>
-                )}
-                <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black border ${
-                  info.availableSeats <= 0
-                    ? "bg-red-50 text-red-800 border-red-200"
-                    : "bg-amber-50 text-amber-800 border-amber-200"
-                }`}>
-                  <span>🪑</span>
-                  <span>
-                    {info.availableSeats <= 0
-                      ? (isAr ? "الرحلة مكتملة المقاعد" : "Fully Booked")
-                      : (isAr ? `متبقي ${info.availableSeats} مقاعد` : `${info.availableSeats} seats left`)}
-                  </span>
-                </span>
-              </div>
+        {/* Previous / next on desktop hover */}
+        {cityImages.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveSlide((prev) => (prev - 1 + cityImages.length) % cityImages.length)}
+              aria-label={isAr ? "الصورة السابقة" : "Previous photo"}
+              className="hidden md:flex absolute left-5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
+            >
+              <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSlide((prev) => (prev + 1) % cityImages.length)}
+              aria-label={isAr ? "الصورة التالية" : "Next photo"}
+              className="hidden md:flex absolute right-5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
+            >
+              <ChevronRight className="w-5 h-5" aria-hidden="true" />
+            </button>
+          </>
+        )}
 
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#0F172A] tracking-tight">
+        {/* Title block on the photograph */}
+        <div className="absolute bottom-0 inset-x-0 z-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+            <div className="max-w-3xl text-white">
+              <p className="text-sm sm:text-base font-medium text-white/85">
+                {tripKindLabel}
+                {info.departurePoint ? <span className="text-white/60">{"  ·  "}</span> : null}
+                {info.departurePoint}
+              </p>
+              <h1 className="mt-2 text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.15] tracking-tight [text-wrap:balance]">
                 {trip.title}
               </h1>
             </div>
 
-            <div className="flex items-center gap-4 bg-[#FAF7F2] p-4 rounded-2xl border border-[#E8E2D6] shrink-0">
-              <div>
-                <div className="text-[11px] text-slate-400 font-bold">{isAr ? "السعر للمقعد شامل" : "All inclusive price"}</div>
-                <div className="text-2xl sm:text-3xl font-black text-[#003580]">{info.priceFormatted}</div>
+            {cityImages.length > 1 && (
+              <div className="flex items-center gap-1.5 shrink-0" aria-label={isAr ? "صور الرحلة" : "Trip photos"}>
+                {cityImages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveSlide(idx)}
+                    aria-label={isAr ? `الصورة ${idx + 1}` : `Photo ${idx + 1}`}
+                    aria-current={idx === activeSlide}
+                    className="py-2 cursor-pointer"
+                  >
+                    <span className={`block h-1 rounded-full transition-[width,background-color] duration-300 ${idx === activeSlide ? "w-8 bg-white" : "w-4 bg-white/40 hover:bg-white/70"}`} />
+                  </button>
+                ))}
               </div>
-              <button
-                type="button"
-                disabled={info.availableSeats <= 0}
-                onClick={onBook}
-                className={`px-6 py-3.5 rounded-xl font-black text-sm shadow-md transition flex items-center gap-2 ${
-                  info.availableSeats <= 0
-                    ? "bg-stone-300 text-stone-500 cursor-not-allowed border border-stone-400"
-                    : "bg-[#D96B27] hover:bg-[#c25a1b] text-white cursor-pointer hover:shadow-lg active:scale-95"
-                }`}
-              >
-                <span>
-                  {info.availableSeats <= 0
-                    ? (isAr ? "مكتملة بالكامل" : "Fully Booked")
-                    : trip.type === "private"
-                    ? (isAr ? "طلب تصميم الرحلة" : "Request Custom Tour")
-                    : (isAr ? "حجز مقعدك الآن" : "Book Your Seat")}
-                </span>
-                {info.availableSeats > 0 && <span>➔</span>}
-              </button>
-            </div>
+            )}
           </div>
         </div>
-      </div>
+      </header>
 
+      {/* 2. The facts a visitor decides on, then the price and the one action */}
+      <section className="bg-white border-b border-[#E8E2D6]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-7 grid lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+          <dl className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5">
+            {tripFacts.map((f) => (
+              <div key={f.label} className="min-w-0">
+                <dt className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                  <f.icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  {f.label}
+                </dt>
+                <dd className={`mt-1 text-[15px] font-bold truncate ${f.tone || "text-[#0F172A]"}`} title={f.value}>{f.value}</dd>
+                {f.bar !== undefined && (
+                  <div className="mt-2 h-1 rounded-full bg-slate-100 overflow-hidden flex">
+                    <div className="h-full rounded-full bg-[#003580] transition-[width] duration-500" style={{ width: `${f.bar}%` }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </dl>
 
+          <div className="lg:col-span-4 flex items-center justify-between lg:justify-end gap-5 pt-5 lg:pt-0 border-t lg:border-t-0 lg:border-s border-[#E8E2D6] lg:ps-10">
+            <div>
+              <div className="text-xs font-medium text-slate-500">{isAr ? "السعر للمقعد" : "Price per seat"}</div>
+              <div className="mt-0.5 text-2xl sm:text-3xl font-bold text-[#003580] tabular-nums tracking-tight">{info.priceFormatted}</div>
+            </div>
+            <button
+              type="button"
+              disabled={info.availableSeats <= 0}
+              onClick={onBook}
+              className={`h-12 px-6 rounded-xl font-bold text-sm inline-flex items-center gap-2 shrink-0 ${
+                info.availableSeats <= 0
+                  ? "bg-stone-200 text-stone-500 cursor-not-allowed"
+                  : "bg-[#D96B27] hover:bg-[#c25a1b] text-white cursor-pointer"
+              }`}
+            >
+              {info.availableSeats <= 0
+                ? (isAr ? "مكتملة الحجز" : "Fully booked")
+                : trip.type === "private"
+                ? (isAr ? "طلب تصميم الرحلة" : "Request custom tour")
+                : (isAr ? "احجز مقعدك" : "Book your seat")}
+              {info.availableSeats > 0 && (dir === "rtl" ? <ArrowLeft className="w-4 h-4" aria-hidden="true" /> : <ArrowRight className="w-4 h-4" aria-hidden="true" />)}
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* Right Main Column (8 Cols) */}
           <div className="lg:col-span-8 space-y-6">
 
-            {/* 1. Seats Progress Bar Card */}
-            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E8E2D6] shadow-sm">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-xs sm:text-sm font-black text-[#003580] flex items-center gap-2">
-                  <span>🪑</span>
-                  <span>{isAr ? "حالة حجز المقاعد المتاحة في الرحلة:" : "Trip Seats Availability:"}</span>
-                </span>
-                <span className={`text-xs font-black px-3 py-1 rounded-full border ${
-                  info.availableSeats <= 0
-                    ? "text-red-700 bg-red-50 border-red-200 animate-pulse"
-                    : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                }`}>
-                  {info.availableSeats <= 0
-                    ? (isAr ? "الرحلة مكتملة بالكامل (0 مقاعد متبقية)" : "Fully booked - 0 seats left")
-                    : (isAr ? `متبقي ${info.availableSeats} مقاعد فقط للحجز!` : `Only ${info.availableSeats} seats left!`)}
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200 mb-2">
-                <div
-                  className="h-full bg-gradient-to-r from-[#003580] to-emerald-600 rounded-full transition-all duration-300"
-                  style={{ width: `${info.percentBooked}%` }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-slate-500 font-bold">
-                <span>{isAr ? `تم حجز ${info.bookedSeats} مقعد` : `${info.bookedSeats} seats booked`}</span>
-                <span>{isAr ? `إجمالي سعة الرحلة: ${info.totalSeats} مقعد` : `Total Capacity: ${info.totalSeats} seats`}</span>
-              </div>
-            </div>
-
             {/* 2. Realistic Description Card */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF3FF] text-[#003580] text-xs font-black border border-blue-100">
-                <span>📖</span>
-                <span>{isAr ? "نبذة وتفاصيل الرحلة الواقعية" : "Detailed Trip Overview"}</span>
-              </div>
-
-              <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] leading-snug">
-                {isAr ? "برنامج وتفاصيل الجولة السياحية الميدانية:" : "Tour Program & Field Experience:"}
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] leading-snug">
+                {isAr ? "عن الرحلة" : "About this tour"}
               </h2>
 
-              <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium bg-[#FAF7F2] p-4 sm:p-5 rounded-2xl border border-[#E8E2D6]">
+              <p className="text-base text-slate-700 leading-loose">
                 {info.realisticOverview}
               </p>
-
-              {/* Departure Feature Chip */}
-              <div className="pt-2">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
-                  <span className="text-xl">📍</span>
-                  <div>
-                    <div className="font-black text-xs text-[#0F172A]">{isAr ? "نقطة وموعد الانطلاق بدقة" : "Exact Departure Point"}</div>
-                    <div className="text-xs text-slate-600 font-medium mt-0.5">
-                      {info.departurePoint}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* 3. Itinerary Timeline Card */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-5">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
-                    <span>⏱️</span>
+                  <h3 className="text-lg sm:text-xl font-bold text-[#0F172A] flex items-center gap-2">
                     <span>{isAr ? "محطات وخط سير الرحلة خطوة بخطوة" : "Step-by-Step Itinerary Timeline"}</span>
                   </h3>
                   <p className="text-xs text-slate-500 font-bold mt-0.5">
@@ -950,10 +880,9 @@ function TripDetailsView({
 
             {/* 4. Included Attractions & City Landmarks (Weekly Trips only — Daily trips visit 1 landmark/city) */}
             {trip.type !== "daily" && "attractions" in trip && trip.attractions && trip.attractions.length > 0 && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
-                <h3 className="text-lg font-black text-[#003580] flex items-center gap-2">
-                  <span>🏛️</span>
-                  <span>{isAr ? "أبرز المعالم المشمولة في الزيارة:" : "Included Heritage Landmarks:"}</span>
+              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
+                <h3 className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
+                  <span>{isAr ? "أبرز المعالم المشمولة في الزيارة" : "Included Heritage Landmarks"}</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {trip.attractions.map((attr, aIdx) => (
@@ -969,13 +898,12 @@ function TripDetailsView({
 
             {/* 5. Recommended Accommodations & Stays (Only rendered when trip actually has linked hotels - Requirement 3) */}
             {filteredHotels.length > 0 && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
-                      <span>🏨</span>
+                    <h3 className="text-lg sm:text-xl font-bold text-[#0F172A] flex items-center gap-2">
                       <span>
-                        {isAr ? "فنادق وأماكن الإقامة المشمولة في برنامج الرحلة الأسبوعية:" : "Included Accommodations & Hotels for Weekly Tour:"}
+                        {isAr ? "فنادق وأماكن الإقامة المشمولة في برنامج الرحلة الأسبوعية" : "Included Accommodations & Hotels for Weekly Tour"}
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 font-bold mt-0.5">
@@ -1059,12 +987,11 @@ function TripDetailsView({
 
             {/* 6. Partner Dining & Restaurants (Only rendered when trip actually has linked restaurants - Requirement 4) */}
             {(includedRestaurants.length > 0 || Boolean(info.restaurant)) && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-4">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
-                      <span>🍽️</span>
-                      <span>{isAr ? "المطاعم والمقاهي المشمولة ضمن برنامج الرحلة:" : "Included Dining & Restaurants:"}</span>
+                    <h3 className="text-lg sm:text-xl font-bold text-[#0F172A] flex items-center gap-2">
+                      <span>{isAr ? "المطاعم والمقاهي المشمولة ضمن برنامج الرحلة" : "Included Dining & Restaurants"}</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-bold mt-0.5">
                       {isAr
@@ -1193,12 +1120,11 @@ function TripDetailsView({
           )}
 
             {/* 7. Verified Tourist Reviews (التقييمات المعتمدة من السياح بعد انتهاء الرحلة) */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E2D6] shadow-sm space-y-5">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg sm:text-xl font-black text-[#003580] flex items-center gap-2">
-                    <span>⭐</span>
-                    <span>{isAr ? "تقييمات وتجارب السياح المشاركين في الرحلة:" : "Verified Tourist Reviews & Ratings:"}</span>
+                  <h3 className="text-lg sm:text-xl font-bold text-[#0F172A] flex items-center gap-2">
+                    <span>{isAr ? "تقييمات وتجارب السياح المشاركين في الرحلة" : "Verified Tourist Reviews & Ratings"}</span>
                   </h3>
                   <p className="text-xs text-slate-500 font-bold mt-0.5">
                     {isAr
@@ -1278,38 +1204,38 @@ function TripDetailsView({
           <div className="lg:col-span-4 space-y-6">
 
             {/* Quick Booking Box */}
-            <div className="bg-gradient-to-b from-[#003580] to-[#0A2540] text-white rounded-3xl p-6 shadow-xl border border-white/20 sticky top-20 space-y-5">
+            <div className="bg-white rounded-2xl p-6 border border-[#E8E2D6] shadow-card sticky top-20 space-y-5">
               <div>
-                <span className="text-[11px] font-bold text-amber-300 block mb-1">
-                  {isAr ? "تأكيد المقاعد الفوري" : "Instant Seat Reservation"}
+                <span className="text-xs font-medium text-slate-500 block mb-1">
+                  {isAr ? "السعر للمقعد" : "Price per seat"}
                 </span>
-                <div className="text-3xl font-black text-white">
+                <div className="text-3xl font-bold text-[#003580] tabular-nums tracking-tight">
                   {info.priceFormatted}
                 </div>
-                <div className="text-xs text-white/80 font-medium mt-1">
+                <div className="text-xs text-slate-500 leading-relaxed mt-2">
                   {isAr ? "يشمل النقل السياحي، التذاكر، وجبة الغداء، والمرشد المعتمد." : "Includes VIP transport, museum passes, lunch, and certified guide."}
                 </div>
               </div>
 
-              <div className="p-3 bg-white/10 rounded-2xl border border-white/15 text-xs space-y-1.5">
-                <div className="flex items-center justify-between font-bold">
-                  <span>{isAr ? "المقاعد المتبقية:" : "Available seats:"}</span>
-                  <span className="text-amber-300 font-black">{info.availableSeats} {isAr ? "مقاعد" : "seats"}</span>
+              <dl className="text-sm divide-y divide-[#E8E2D6] border-y border-[#E8E2D6]">
+                <div className="flex items-center justify-between py-2.5">
+                  <dt className="text-slate-500">{isAr ? "المقاعد المتبقية" : "Seats left"}</dt>
+                  <dd className="font-bold text-[#0F172A] tabular-nums">{info.availableSeats}</dd>
                 </div>
-                <div className="flex items-center justify-between font-bold">
-                  <span>{isAr ? "مدينة الانطلاق:" : "Departure:"}</span>
-                  <span className="text-white">{"departure" in trip ? trip.departure : "طرابلس"}</span>
+                <div className="flex items-center justify-between py-2.5">
+                  <dt className="text-slate-500">{isAr ? "مدينة الانطلاق" : "Departs from"}</dt>
+                  <dd className="font-bold text-[#0F172A]">{"departure" in trip ? trip.departure : "طرابلس"}</dd>
                 </div>
-              </div>
+              </dl>
 
               <button
                 type="button"
                 disabled={info.availableSeats <= 0}
                 onClick={onBook}
-                className={`w-full py-3.5 rounded-2xl font-black text-sm shadow-lg transition-all flex items-center justify-center gap-2 ${
+                className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 ${
                   info.availableSeats <= 0
-                    ? "bg-stone-500/50 text-white/70 cursor-not-allowed border border-white/20"
-                    : "bg-[#D96B27] hover:bg-[#c25a1b] text-white hover:shadow-xl cursor-pointer active:scale-98"
+                    ? "bg-stone-200 text-stone-500 cursor-not-allowed"
+                    : "bg-[#D96B27] hover:bg-[#c25a1b] text-white cursor-pointer"
                 }`}
               >
                 <span>
@@ -1326,11 +1252,10 @@ function TripDetailsView({
 
 
             {/* Tour Guide Card */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E8E2D6] shadow-sm space-y-3">
-              <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
-                <span>🧭</span>
-                <span>{isAr ? "المرشد السياحي المرافق:" : "Assigned Tour Guide:"}</span>
-              </span>
+            <div className="bg-white rounded-2xl p-5 border border-[#E8E2D6] space-y-3">
+              <h3 className="text-sm font-bold text-[#0F172A]">
+                {isAr ? "المرشد السياحي المرافق" : "Your tour guide"}
+              </h3>
 
               {info.guide ? (
                 <>
@@ -1369,12 +1294,11 @@ function TripDetailsView({
             </div>
 
             {/* Vehicle & Driver Card (Directly below Tour Guide for all trips) */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E8E2D6] shadow-sm space-y-3">
+            <div className="bg-white rounded-2xl p-5 border border-[#E8E2D6] space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
-                  <span>🚌</span>
-                  <span>{isAr ? "مركبة وسائق الرحلة:" : "Trip Vehicle & Driver:"}</span>
-                </span>
+                <h3 className="text-sm font-bold text-[#0F172A]">
+                  {isAr ? "مركبة وسائق الرحلة" : "Vehicle and driver"}
+                </h3>
                 <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                   {isAr ? "معتمدة ✓" : "Certified ✓"}
                 </span>
@@ -1491,7 +1415,7 @@ function SpecialOffersSpotlight({
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-10">
       <div 
-        className="bg-gradient-to-br from-[#FFF9F5] via-white to-[#FEF3EB] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-xl relative overflow-hidden"
+        className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-xl relative overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -1513,7 +1437,7 @@ function SpecialOffersSpotlight({
         {/* Single Rotating Large Image Card */}
         <div className="relative z-10">
           <div 
-            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-2xl border-4 border-white cursor-pointer transition-all duration-500"
+            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-2xl border-4 border-white cursor-pointer transition duration-500"
             onClick={handleNextOffer}
           >
             <img
@@ -1527,7 +1451,7 @@ function SpecialOffersSpotlight({
 
             {/* Prominent Corner Triangle Discount Ribbon on Top-Right */}
             <div className="absolute top-0 right-0 w-48 h-48 overflow-hidden z-30 pointer-events-none">
-              <div className="absolute transform rotate-45 bg-gradient-to-r from-red-600 via-[#EA580C] to-[#D96B27] text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-2xl border-b-4 border-white/40 drop-shadow-xl tracking-wide">
+              <div className="absolute transform rotate-45 bg-red-600 text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-2xl border-b-4 border-white/40 drop-shadow-xl tracking-wide">
                 {currentOffer.tag}
               </div>
             </div>
@@ -1562,7 +1486,7 @@ function SpecialOffersSpotlight({
                       e.stopPropagation();
                       onDetails(currentOffer);
                     }}
-                    className="py-3 px-8 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-sm md:text-base shadow-lg transition cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-2"
+                    className="py-3 px-8 rounded-xl bg-[#D96B27] hover:opacity-95 text-white font-black text-sm md:text-base shadow-lg transition cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-2"
                   >
                     <span>{isAr ? "عرض تفاصيل العرض" : "View Offer Details"}</span>
                     <span>➔</span>
@@ -1579,7 +1503,7 @@ function SpecialOffersSpotlight({
                 key={dotIdx}
                 type="button"
                 onClick={() => setOfferIndex(dotIdx)}
-                className={`h-2.5 rounded-full transition-all cursor-pointer ${
+                className={`h-2.5 rounded-full transition cursor-pointer ${
                   dotIdx === offerIndex ? "w-8 bg-[#D96B27]" : "w-2.5 bg-slate-300 hover:bg-slate-400"
                 }`}
                 title={`عرض ${dotIdx + 1}`}
@@ -1651,7 +1575,7 @@ function CompactLocationHotelsFinder() {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-8">
-      <div className="bg-gradient-to-r from-[#FFF8F3] via-white to-[#F6F9FD] rounded-3xl p-6 sm:p-8 border-2 border-[#E8E2D6] shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
+      <div className="bg-[#FFF8F3] rounded-3xl p-6 sm:p-8 border-2 border-[#E8E2D6] shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
         
         {/* Left Side (RTL Right): Info & Geolocation Button */}
         <div className="space-y-2 flex-1">
@@ -1691,11 +1615,11 @@ function CompactLocationHotelsFinder() {
             onClick={() => {
               sessionStorage.setItem("dallani_selected_city", selectedCity);
             }}
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#D96B27] via-[#EA580C] to-[#C25A1B] hover:brightness-110 text-white shadow-xl shadow-orange-500/30 transition-all flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-[#D96B27] hover:brightness-110 text-white shadow-xl transition flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
             title={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
             aria-label={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
           >
-            <UtensilsCrossed className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-md group-hover:rotate-12 group-hover:scale-110 transition-all duration-300" />
+            <UtensilsCrossed className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-md group-hover:rotate-12 group-hover:scale-110 transition duration-300" />
             <span className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white text-[#D96B27] shadow-md flex items-center justify-center text-xs font-black group-hover:-translate-x-0.5 transition-transform">
               ➔
             </span>
@@ -2113,6 +2037,10 @@ function TripsPage() {
         <TripDetailsView
           trip={activeTripDetails}
           onBack={() => {
+            // Drop ?trip= from the address too, otherwise the effect that opens a linked trip reopens it at once
+            const url = new URL(window.location.href);
+            ["tripId", "trip", "id"].forEach((k) => url.searchParams.delete(k));
+            window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
             setActiveTripDetails(null);
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
@@ -2236,7 +2164,7 @@ function TripsPage() {
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Box */}
             <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-              <div className="bg-[#FAF7F2] p-2.5 px-3.5 rounded-2xl border border-[#E8E2D6] flex items-center gap-2.5 shadow-xs focus-within:border-[#003580] focus-within:bg-white transition-all">
+              <div className="bg-[#FAF7F2] p-2.5 px-3.5 rounded-2xl border border-[#E8E2D6] flex items-center gap-2.5 shadow-xs focus-within:border-[#003580] focus-within:bg-white transition">
                 <span className="text-[#003580] font-black text-sm">🔍</span>
                 <input
                   type="text"
@@ -2304,7 +2232,7 @@ function TripsPage() {
                       key={item.id}
                       type="button"
                       onClick={() => toggleType(item.id)}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border select-none ${
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer border select-none ${
                         isChecked
                           ? "bg-[#003580] text-white border-[#003580] shadow-sm"
                           : "bg-[#FAF7F2] text-[#1B5A78] border-[#E8E2D6] hover:bg-white hover:border-[#003580]/40"
@@ -2362,7 +2290,7 @@ function TripsPage() {
                       key={item.id}
                       type="button"
                       onClick={() => toggleDeparture(item.id)}
-                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border select-none ${
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer border select-none ${
                         isChecked
                           ? "bg-[#1B5A78] text-white border-[#1B5A78] shadow-sm"
                           : "bg-[#FAF7F2] text-[#1B5A78] border-[#E8E2D6] hover:bg-white hover:border-[#1B5A78]/40"
@@ -2475,7 +2403,7 @@ function TripsPage() {
             <button
               type="button"
               onClick={() => scrollHorizontally("left")}
-              className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition-all cursor-pointer"
+              className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition cursor-pointer"
               aria-label={isAr ? "السابق" : "Previous"}
               title={isAr ? "تحريك لليسار" : "Scroll Left"}
             >
@@ -2484,7 +2412,7 @@ function TripsPage() {
             <button
               type="button"
               onClick={() => scrollHorizontally("right")}
-              className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition-all cursor-pointer"
+              className="w-11 h-11 rounded-full bg-[#D96B27] hover:bg-[#c25a1b] text-white flex items-center justify-center text-xl shadow-md hover:scale-110 active:scale-95 transition cursor-pointer"
               aria-label={isAr ? "التالي" : "Next"}
               title={isAr ? "تحريك لليمين" : "Scroll Right"}
             >
@@ -2573,7 +2501,7 @@ function TripsPage() {
             <button
               type="button"
               onClick={() => setPrivateOpen(true)}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-xs font-black shadow-md cursor-pointer hover:brightness-105 transition"
+              className="px-5 py-2.5 rounded-xl bg-[#D96B27] text-white text-xs font-black shadow-md cursor-pointer hover:brightness-105 transition"
             >
               {isAr ? "تصميم رحلة خاصة مخصصة ✨" : "Design Custom Private Tour ✨"}
             </button>
@@ -2611,7 +2539,7 @@ function TripsPage() {
       {/* 6. CUSTOM PRIVATE TRIP VIP CALLOUT BOX (USER BUILDS IT)      */}
       {/* ============================================================ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="rounded-3xl bg-gradient-to-r from-[#0B132B] via-[#003580] to-[#1B5A78] text-white p-6 sm:p-10 shadow-2xl border border-white/20 relative overflow-hidden">
+        <div className="rounded-3xl bg-[#0B132B] text-white p-6 sm:p-10 shadow-2xl border border-white/20 relative overflow-hidden">
           {/* Decorative background accents */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-[#D96B27]/25 to-transparent rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-radial from-[#003580]/40 to-transparent rounded-full blur-2xl pointer-events-none -ml-20 -mb-20" />
@@ -2638,7 +2566,7 @@ function TripsPage() {
               <button
                 type="button"
                 onClick={() => setPrivateOpen(true)}
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#F59E0B] text-white font-black text-sm sm:text-base shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2.5 border border-amber-300/40"
+                className="px-8 py-4 rounded-2xl bg-[#D96B27] text-white font-black text-sm sm:text-base shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-2.5 border border-amber-300/40"
               >
                 <span>🧭</span>
                 <span>{isAr ? "صمّم رحلتك الخاصة الآن" : "Build Your Private Trip Now"}</span>
@@ -2852,7 +2780,7 @@ function TripCard({
   return (
     <article
       onClick={onDetails}
-      className={`group relative w-[290px] sm:w-[315px] min-w-[290px] sm:min-w-[315px] h-[450px] sm:h-[480px] rounded-[34px] overflow-hidden shadow-[0_20px_55px_rgba(217,107,39,0.32)] hover:shadow-[0_28px_70px_rgba(217,107,39,0.55)] transition-all duration-300 cursor-pointer select-none flex flex-col justify-between ${stagger}`}
+      className={`group relative w-[290px] sm:w-[315px] min-w-[290px] sm:min-w-[315px] h-[450px] sm:h-[480px] rounded-[34px] overflow-hidden shadow-lg hover:shadow-lg transition duration-300 cursor-pointer select-none flex flex-col justify-between ${stagger}`}
     >
       {/* Photo Background: Single Clean Photo for Daily Trips, 5 Navigable Transition Photos for Weekly Trips */}
       {t.type === "weekly" ? (
@@ -2863,7 +2791,7 @@ function TripCard({
               src={imgSrc}
               alt={`${t.title} - ${i + 1}`}
               loading={i === 0 ? "eager" : "lazy"}
-              className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 brightness-100 contrast-100 ${
+              className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-700 brightness-100 contrast-100 ${
                 i === activeImgIndex ? "opacity-100 z-0 scale-100" : "opacity-0 -z-10 pointer-events-none"
               }`}
             />
@@ -2874,7 +2802,7 @@ function TripCard({
             type="button"
             onClick={handlePrevImage}
             aria-label="Previous Image"
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
           >
             ‹
           </button>
@@ -2882,7 +2810,7 @@ function TripCard({
             type="button"
             onClick={handleNextImage}
             aria-label="Next Image"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 z-25 w-8 h-8 rounded-full bg-black/45 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md hover:scale-110 active:scale-95 cursor-pointer text-base font-bold select-none"
           >
             ›
           </button>
@@ -2893,7 +2821,7 @@ function TripCard({
           src={t.img || tripImages[0]}
           alt={t.title}
           loading="eager"
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 brightness-100 contrast-100 z-0"
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-700 brightness-100 contrast-100 z-0"
         />
       )}
 
@@ -2904,7 +2832,7 @@ function TripCard({
       {offer && (
         <div className="absolute top-14 left-3 z-20 pointer-events-none">
           <div className="flex flex-col items-start gap-1">
-            <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-red-600 to-[#EA580C] text-white font-black text-[11px] shadow-lg border border-white/20 animate-pulse">
+            <span className="px-2.5 py-1 rounded-full bg-red-600 text-white font-black text-[11px] shadow-lg border border-white/20 animate-pulse">
               🔥 {offer.discountPercent} خصم
             </span>
             <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-amber-300 font-bold text-[10px] border border-amber-400/30">
@@ -2943,7 +2871,7 @@ function TripCard({
                   setActiveImgIndex(i);
                 }}
                 aria-label={`الصورة ${i + 1}`}
-                className={`transition-all rounded-full cursor-pointer ${
+                className={`transition rounded-full cursor-pointer ${
                   i === activeImgIndex
                     ? "w-3.5 h-1.5 bg-amber-400"
                     : "w-1.5 h-1.5 bg-white/50 hover:bg-white"

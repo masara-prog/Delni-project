@@ -4,6 +4,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Motion tokens: one easing family and short durations for every transition on the site.
+   Strong ease-out for things that enter or respond, ease-in-out for things moving on screen. */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Headings at 800 instead of 900: still strong, less heavy */
+  --font-weight-black: 800;
+}
+
 @theme inline {
   --font-sans: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
@@ -82,17 +93,18 @@
   --input: #F3ECE1;
   --ring: #003580;
 
-  /* Signature Gradients */
-  --gradient-hero: linear-gradient(180deg, rgba(0, 53, 128, 0.20) 0%, rgba(15, 23, 42, 0.55) 60%, rgba(15, 23, 42, 0.90) 100%);
-  --gradient-sun: linear-gradient(135deg, #003580 0%, #0D5C96 100%);
-  --gradient-sea: linear-gradient(135deg, #003580 0%, #10B981 100%);
-  --gradient-sand: linear-gradient(180deg, #FFFDF9 0%, #F5EFE6 100%);
+  /* Flat brand surfaces: the old decorative gradients resolve to solid colours (the names stay, so no markup changes).
+     The hero keeps a neutral scrim, the one gradient that serves legibility over photographs. */
+  --gradient-hero: linear-gradient(180deg, rgba(15, 23, 42, 0.10) 0%, rgba(15, 23, 42, 0.55) 60%, rgba(15, 23, 42, 0.90) 100%);
+  --gradient-sun: #003580;
+  --gradient-sea: #003580;
+  --gradient-sand: #FAF8F5;
 
-  /* Eye-soothing Soft Shadows */
-  --shadow-soft: 0 4px 20px -4px rgba(0, 53, 128, 0.12);
-  --shadow-card: 0 10px 30px -10px rgba(15, 23, 42, 0.06);
-  --shadow-glow: 0 15px 40px -10px rgba(0, 53, 128, 0.25);
-  --shadow-gold: 0 10px 25px -8px rgba(0, 53, 128, 0.30);
+  /* Quiet neutral elevation: surfaces at rest barely lift; only floating things (dialogs, menus) cast a real shadow */
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 20px 48px -20px rgba(15, 23, 42, 0.28);
+  --shadow-gold: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 @layer base {
@@ -115,20 +127,47 @@
     font-family: var(--font-display);
     letter-spacing: -0.01em;
   }
+
+  /* Pressing a button gives instant feedback (a subtle scale, never from or to zero) */
+  button, [role="button"], a.inline-flex {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform, translate, scale;
+    transition-duration: 160ms;
+    transition-timing-function: var(--ease-out);
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:not(:disabled):active, [role="button"]:active, a.inline-flex:active {
+    scale: 0.97;
+  }
+
+  /* A visible focus ring for keyboard users on every control */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
+/* Reduced motion: keep fades that help understanding, drop movement and endless loops */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, ::before, ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  button:not(:disabled):active, [role="button"]:active, a.inline-flex:active {
+    scale: none;
+  }
+}
+
+/* Accent words in headings: one solid colour each (emerald-700 keeps 4.5:1 contrast on white) */
 @utility text-gradient-sea {
-  background: var(--gradient-sea);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #047857;
 }
 
 @utility text-gradient-sun {
-  background: var(--gradient-sun);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--primary);
 }
 
 @utility bg-gradient-hero {
@@ -227,7 +266,22 @@
   animation: float-slow 6s ease-in-out infinite;
 }
 @utility animate-fade-up {
-  animation: fade-up 0.8s ease-out both;
+  animation: fade-up 0.5s var(--ease-out) both;
+}
+/* Dialog entrance: from 95% scale and transparent, centred (dialogs are not anchored to a trigger) */
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.95) }
+  to { opacity: 1; transform: scale(1) }
+}
+@keyframes overlay-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+@utility animate-dialog-in {
+  animation: dialog-in 220ms var(--ease-out) both;
+}
+@utility animate-overlay-in {
+  animation: overlay-in 180ms ease both;
 }
 @utility animate-zoom-slow {
   animation: zoom-slow 12s ease-in-out infinite alternate;

@@ -477,7 +477,7 @@ function GuidesPage() {
                   onClick={() => setSelectedGuide(guide)}
                   className={`${
                     viewMode === "grid" ? "w-full" : "w-72 sm:w-[285px] shrink-0 snap-start"
-                  } bg-white rounded-[24px] shadow-card hover:shadow-2xl hover:-translate-y-1.5 border border-[#E8E2D6] transition-all duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
+                  } bg-white rounded-[24px] shadow-card hover:shadow-2xl hover:-translate-y-1.5 border border-[#E8E2D6] transition duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
                 >
                   {/* Top Image Section with Guide Photo */}
                   <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100 flex items-center justify-center">
@@ -488,7 +488,7 @@ function GuidesPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#1B5A78]/10 via-slate-100 to-[#1B5A78]/20 flex flex-col items-center justify-center text-slate-400 group-hover:scale-105 transition-transform duration-300">
+                      <div className="w-full h-full bg-[#1B5A78]/10 flex flex-col items-center justify-center text-slate-400 group-hover:scale-105 transition-transform duration-300">
                         <span className="text-5xl">👤</span>
                         <span className="text-xs font-black text-slate-500 mt-2">مرشد سياحي مسجل</span>
                       </div>
@@ -571,7 +571,7 @@ function GuidesPage() {
                           e.stopPropagation();
                           setSelectedGuide(guide);
                         }}
-                        className="w-8 h-8 rounded-full bg-[#EA580C] hover:bg-[#C25B1E] text-white flex items-center justify-center shadow-md shadow-orange-500/25 hover:scale-110 active:scale-95 transition-all cursor-pointer shrink-0"
+                        className="w-8 h-8 rounded-full bg-[#EA580C] hover:bg-[#C25B1E] text-white flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition cursor-pointer shrink-0"
                         title="عرض كرت السيرة الذاتية"
                       >
                         <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
@@ -608,7 +608,7 @@ function GuidesPage() {
         )}
 
         {/* Guide Registration CTA Banner Card (Image 2 style) */}
-        <section className="bg-gradient-to-r from-[#1B5A78] to-[#0F394D] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl border border-white/10 mt-12">
+        <section className="bg-[#1B5A78] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl border border-white/10 mt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
             {/* Left Image (Image 2 style Traveller/Guide) */}
             <div className="lg:col-span-4 flex justify-center">
@@ -640,7 +640,7 @@ function GuidesPage() {
               <div className="pt-2 flex flex-wrap items-center gap-4">
                 <Link
                   to="/auth/signup"
-                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black text-sm shadow-xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+                  className="px-8 py-4 rounded-2xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-sm shadow-xl hover:scale-105 transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>تسجيل الدخول / الانضمام كمرشد سياحي</span>
                   <span className="text-lg">🧭</span>

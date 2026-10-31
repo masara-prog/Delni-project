@@ -329,7 +329,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             )}
 
             {/* Capacity & Driver Badge */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-xs space-y-2">
+            <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200/80 text-xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-black text-[#003580] flex items-center gap-1.5 text-xs">
                   <span>🚌</span>
@@ -483,7 +483,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
 
             <button
               disabled={hasSeatError || isWithin24h}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
+              className="w-full h-12 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
             >
               {hasSeatError
                 ? (isAr ? "حدد عدد مقاعد متاح للاستمرار" : "Select valid seats to continue")
@@ -502,7 +502,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
               ? `رقم الحجز #BK-${Math.floor(Math.random() * 90000 + 10000)}. تم حجز (${numSeats}) مقاعد على الحافلة سعة (${busCapacity} راكب). يرجى التوجه إلى مقر وموقع الشركة لإتمام الدفع الفيزيائي نقداً وتأكيد تذكرتك النهائية قبل موعد الانطلاق.`
               : `Booking ID #BK-${Math.floor(Math.random() * 90000 + 10000)}. (${numSeats}) seats booked on ${busCapacity}-passenger coach. Linked to your account.`}
           </p>
-          <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black shadow-soft">
+          <button onClick={onClose} className="mt-6 px-6 h-12 rounded-xl bg-[#D96B27] text-white font-black shadow-soft">
             {isAr ? "إغلاق" : "Close"}
           </button>
         </div>
@@ -570,7 +570,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
   if (isLandmark) {
     return (
       <Modal open={open} onClose={onClose} size="2xl">
-        <div dir={dir} className="p-6 sm:p-8 text-right bg-gradient-to-br from-white via-slate-50/90 to-blue-50/30 relative overflow-hidden">
+        <div dir={dir} className="p-6 sm:p-8 text-right bg-white relative overflow-hidden">
           {/* Subtle Ambient Corner Flares */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -609,7 +609,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
               {item.info && item.info.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1">
                   {item.info.map((i) => (
-                    <div key={i.label} className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-blue-300 transition-all">
+                    <div key={i.label} className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-blue-300 transition">
                       <span className="text-[10px] text-[#003580] font-bold block mb-0.5">{i.label}</span>
                       <span className="font-black text-slate-900 text-xs sm:text-sm leading-snug block">{i.value}</span>
                     </div>
@@ -644,7 +644,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                     onClose();
                     onBook?.();
                   }}
-                  className="flex-1 min-w-[200px] px-7 py-3.5 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#C2410C] hover:from-[#C2410C] hover:to-[#D96B27] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                  className="flex-1 min-w-[200px] px-7 py-3.5 rounded-full bg-[#D96B27] hover:bg-[#C2410C] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                 >
                   <span>🧭</span>
                   <span>{isAr ? "ذهاب برحلة خاصة لهذا المعلم" : "Book Private Tour to this Site"}</span>
@@ -748,7 +748,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                   key={idx}
                   type="button"
                   onClick={() => setActiveImg(idx)}
-                  className={`w-14 h-9 sm:w-16 sm:h-10 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer shadow-md shrink-0 ${
+                  className={`w-14 h-9 sm:w-16 sm:h-10 rounded-xl overflow-hidden border-2 transition duration-200 cursor-pointer shadow-md shrink-0 ${
                     activeImg === idx ? "border-amber-400 scale-105 ring-2 ring-amber-400/50" : "border-white/30 opacity-60 hover:opacity-100"
                   }`}
                   aria-label={`Photo ${idx + 1}`}
@@ -776,7 +776,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
 
           {/* ── 2. VEHICLE & TRANSPORT DETAILS (بيانات المركبة المطلوبة فقط: نوع المركبة واسم الشركة وسائقها) ── */}
           {item.vehicle && (
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-white to-[#F8FAFC] border border-[#E2E8F0] shadow-xs space-y-2.5">
+            <div className="p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-black text-[#003580]">
                 <span className="text-base">🚌</span>
                 <span>{isAr ? "بيانات وسيلة النقل السياحية" : "Tour Transport Details"}</span>
@@ -971,7 +971,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
               </div>
             ) : <span />}
             {item.bookable && onBook ? (
-              <button onClick={onBook} className="px-6 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition">
+              <button onClick={onBook} className="px-6 h-12 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black shadow-soft hover:-translate-y-0.5 transition">
                 {item.bookLabel || (isAr ? "احجز الرحلة الآن 🚀" : "Book Trip Now 🚀")}
               </button>
             ) : (
@@ -1441,7 +1441,7 @@ export function TripScheduleModal({
                       <div className="text-[10px] text-[#526078]">{isAr ? "د.ل / شخص" : "LYD / person"}</div>
                     </div>
                     {isSelected && (
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] grid place-items-center text-white text-xs font-black shrink-0">✓</div>
+                      <div className="w-6 h-6 rounded-full bg-[#D96B27] grid place-items-center text-white text-xs font-black shrink-0">✓</div>
                     )}
                   </div>
                 </button>
@@ -1490,7 +1490,7 @@ export function TripScheduleModal({
                 setSelected(targetId);
                 setStep("form");
               }}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft hover:-translate-y-0.5 transition disabled:opacity-40 disabled:cursor-not-allowed mt-2 cursor-pointer"
+              className="w-full h-12 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black shadow-soft hover:-translate-y-0.5 transition disabled:opacity-40 disabled:cursor-not-allowed mt-2 cursor-pointer"
             >
               {selectedTrip && (selectedTrip.seats - selectedTrip.taken) <= 0
                 ? (isAr ? "عذراً، هذه الرحلة مكتملة المقاعد بالكامل" : "Sorry, this tour is fully booked")
@@ -1637,7 +1637,7 @@ export function TripScheduleModal({
 
               return (
                 <div className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-xs space-y-2">
+                  <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200/80 text-xs space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-black text-[#003580] flex items-center gap-1.5 text-xs">
                         <span>🚌</span>
@@ -1738,7 +1738,7 @@ export function TripScheduleModal({
                     return (
                       <button
                         disabled={isBtnDisabled}
-                        className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
+                        className="w-full h-12 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-soft hover:-translate-y-0.5 transition cursor-pointer"
                       >
                         {isAccountRestricted
                           ? (isAr ? "⛔ حسابك مقيّد من قِبل الإدارة ولا يمكنك الحجز" : "Account Restricted from Booking")
@@ -1793,7 +1793,7 @@ export function TripScheduleModal({
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={onClose}
-              className="w-full sm:w-auto px-8 h-12 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white font-black shadow-soft cursor-pointer transition text-sm"
+              className="w-full sm:w-auto px-8 h-12 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black shadow-soft cursor-pointer transition text-sm"
             >
               {isAr ? "تم" : "Done"}
             </button>
@@ -2888,7 +2888,7 @@ export function PrivateTripModal({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-12 rounded-full font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#B85D36] hover:bg-[#a04e2c] text-white hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
+                className="w-full h-12 rounded-full font-black text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer bg-[#B85D36] hover:bg-[#a04e2c] text-white hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>

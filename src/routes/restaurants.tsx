@@ -154,7 +154,7 @@ function RestaurantDetailsView({
           <button
             type="button"
             onClick={onBack}
-            className="group inline-flex items-center gap-2.5 text-slate-300 hover:text-white text-xs sm:text-sm font-black transition-all cursor-pointer bg-white/5 hover:bg-white/10 px-4 py-2 rounded-2xl border border-white/10"
+            className="group inline-flex items-center gap-2.5 text-slate-300 hover:text-white text-xs sm:text-sm font-black transition cursor-pointer bg-white/5 hover:bg-white/10 px-4 py-2 rounded-2xl border border-white/10"
           >
             <span className="w-6 h-6 rounded-full bg-white/10 group-hover:bg-[#D96B27] flex items-center justify-center text-xs text-white transition-colors">
               {dir === "rtl" ? "→" : "←"}
@@ -172,7 +172,7 @@ function RestaurantDetailsView({
           </div>
 
           {/* VIP Perk Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-emerald-500/20 border border-amber-400/30 text-amber-300 text-xs font-black shadow-lg shadow-amber-500/5">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-black shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span>{isAr ? "خصم 20% لرواد منصة دلّني" : "20% Dallani Guest Perk"}</span>
           </div>
@@ -183,7 +183,7 @@ function RestaurantDetailsView({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-24">
         
         {/* Luxury Hero Header Bar */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-slate-950/95 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 bg-orange-600/15 rounded-full blur-3xl pointer-events-none" />
 
@@ -242,7 +242,7 @@ function RestaurantDetailsView({
                 <div className="text-sm font-black text-white">{restaurant.rating > 0 ? (restaurant.ratingWord || (isAr ? "تقييم معتمد" : "Verified")) : (isAr ? "مكان معتمد جديد" : "Newly Verified")}</div>
                 <div className="text-xs text-slate-400 font-bold">{restaurant.reviewsCount > 0 ? `${restaurant.reviewsCount} ${isAr ? "تقييم زائر معتمد" : "verified reviews"}` : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet")}</div>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D96B27] via-amber-600 to-orange-600 text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
+              <div className="w-14 h-14 rounded-2xl bg-[#D96B27] text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
                 <span className="text-lg leading-tight font-black">{restaurant.rating > 0 ? restaurant.rating : "—"}</span>
                 <span className="text-[9px] text-amber-200 font-bold">{restaurant.rating > 0 ? (isAr ? "من 5" : "/5") : (isAr ? "جديد" : "New")}</span>
               </div>
@@ -264,7 +264,7 @@ function RestaurantDetailsView({
                 src={photos[activePhoto]}
                 alt={restaurant.name}
                 key={activePhoto}
-                className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
+                className="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 pointer-events-none" />
 
@@ -286,7 +286,7 @@ function RestaurantDetailsView({
                     e.stopPropagation();
                     setLightboxOpen(true);
                   }}
-                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>🔍</span>
                   <span>{isAr ? "تكبير واستعراض الشاشة الكاملة" : "Expand Fullscreen"}</span>
@@ -300,7 +300,7 @@ function RestaurantDetailsView({
                   e.stopPropagation();
                   prevPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة السابقة" : "Previous photo"}
               >
                 {dir === "rtl" ? "→" : "←"}
@@ -311,7 +311,7 @@ function RestaurantDetailsView({
                   e.stopPropagation();
                   nextPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة التالية" : "Next photo"}
               >
                 {dir === "rtl" ? "←" : "→"}
@@ -334,7 +334,7 @@ function RestaurantDetailsView({
                         e.stopPropagation();
                         setActivePhoto(idx);
                       }}
-                      className={`h-2 rounded-full transition-all cursor-pointer ${
+                      className={`h-2 rounded-full transition cursor-pointer ${
                         activePhoto === idx ? "w-6 bg-amber-400" : "w-2 bg-white/40 hover:bg-white/70"
                       }`}
                     />
@@ -351,7 +351,7 @@ function RestaurantDetailsView({
                   <div
                     key={idx}
                     onClick={() => setActivePhoto(idx)}
-                    className={`relative h-28 sm:h-36 lg:h-[155px] rounded-3xl overflow-hidden cursor-pointer group transition-all duration-300 bg-slate-950 border ${
+                    className={`relative h-28 sm:h-36 lg:h-[155px] rounded-3xl overflow-hidden cursor-pointer group transition duration-300 bg-slate-950 border ${
                       isSelected
                         ? "border-amber-400 ring-2 ring-amber-400/50 scale-[1.02] shadow-xl"
                         : "border-white/10 hover:border-white/40 opacity-80 hover:opacity-100"
@@ -390,9 +390,9 @@ function RestaurantDetailsView({
                 key={idx}
                 type="button"
                 onClick={() => setActivePhoto(idx)}
-                className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
+                className={`px-4 py-2 rounded-2xl text-xs font-black transition flex items-center gap-2 cursor-pointer border ${
                   activePhoto === idx
-                    ? "bg-gradient-to-r from-[#D96B27] to-amber-600 text-white border-amber-400/40 shadow-lg shadow-amber-500/20 scale-102"
+                    ? "bg-[#D96B27] text-white border-amber-400/40 shadow-lg scale-102"
                     : "bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
                 }`}
               >
@@ -420,9 +420,9 @@ function RestaurantDetailsView({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab === tab.id
-                      ? "bg-gradient-to-r from-[#D96B27] to-amber-600 text-white shadow-md border border-amber-400/30"
+                      ? "bg-[#D96B27] text-white shadow-md border border-amber-400/30"
                       : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -516,7 +516,7 @@ function RestaurantDetailsView({
                 </div>
 
                 {/* Map Action Box */}
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/40 to-slate-900/60 border border-amber-400/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="p-5 rounded-2xl bg-amber-950/40 border border-amber-400/30 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="space-y-1 text-right w-full sm:w-auto">
                     <div className="text-sm font-black text-white flex items-center gap-2">
                       <span>🗺️</span>
@@ -532,7 +532,7 @@ function RestaurantDetailsView({
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition-all shadow-lg text-center"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition shadow-lg text-center"
                   >
                     {isAr ? "فتح الموقع في خرائط Google ↗" : "Open Google Maps ↗"}
                   </a>
@@ -546,7 +546,7 @@ function RestaurantDetailsView({
           <div className="lg:col-span-4 sticky top-20 space-y-4">
             
             {/* VIP Dallani Pass Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-slate-800/80 to-slate-900/90 border border-amber-400/30 p-6 shadow-2xl backdrop-blur-xl space-y-5">
+            <div className="relative overflow-hidden rounded-3xl bg-amber-500/20 border border-amber-400/30 p-6 shadow-2xl backdrop-blur-xl space-y-5">
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
               <div className="space-y-2">
@@ -568,7 +568,7 @@ function RestaurantDetailsView({
               <div className="space-y-3">
                 <a
                   href={`tel:${restaurant.phone}`}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-[#003580] hover:from-blue-500 hover:to-blue-700 text-white font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-blue-600/30 active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">📞</span>
                   <span>{isAr ? `اتصال مباشر وحجز طاولة (${restaurant.phone})` : `Call Restaurant (${restaurant.phone})`}</span>
@@ -580,7 +580,7 @@ function RestaurantDetailsView({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-600/30 active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">💬</span>
                   <span>{isAr ? "مراسلة واستعلام عبر واتساب" : "WhatsApp Table Reservation"}</span>
@@ -592,7 +592,7 @@ function RestaurantDetailsView({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-slate-200 font-black text-xs transition-all flex items-center justify-center gap-2 border border-white/15"
+                  className="w-full py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-slate-200 font-black text-xs transition flex items-center justify-center gap-2 border border-white/15"
                 >
                   <span>📍</span>
                   <span>{isAr ? "عرض الموقع في خرائط Google" : "Open in Google Maps"}</span>
@@ -661,14 +661,14 @@ function RestaurantDetailsView({
             <button
               type="button"
               onClick={prevPhoto}
-              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
+              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={nextPhoto}
-              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
+              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
@@ -682,7 +682,7 @@ function RestaurantDetailsView({
               <div
                 key={idx}
                 onClick={() => setActivePhoto(idx)}
-                className={`w-20 h-14 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                className={`w-20 h-14 rounded-xl overflow-hidden cursor-pointer border-2 transition ${
                   activePhoto === idx ? "border-amber-400 scale-110 shadow-lg" : "border-white/20 opacity-60 hover:opacity-100"
                 }`}
               >
@@ -1022,7 +1022,7 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "seafood").length,
                 img: "/assets/seafood_category.jpg",
                 badge: isAr ? "صيد بحري طازج" : "Fresh Catch",
-                badgeBg: "bg-gradient-to-r from-blue-700 to-sky-600",
+                badgeBg: "bg-blue-700",
                 border: "border-blue-500 ring-4 ring-blue-500/25",
               },
               {
@@ -1032,7 +1032,7 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "traditional").length,
                 img: "/assets/restaurant-libya.jpg",
                 badge: isAr ? "أصالة وتراث ليبي" : "Heritage Libyan",
-                badgeBg: "bg-gradient-to-r from-amber-700 to-orange-700",
+                badgeBg: "bg-amber-700",
                 border: "border-amber-600 ring-4 ring-amber-600/25",
               },
               {
@@ -1042,7 +1042,7 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "fastfood").length,
                 img: "/assets/fastfood_category.jpg",
                 badge: isAr ? "سريع وعصري" : "Fast & Casual",
-                badgeBg: "bg-gradient-to-r from-[#D96B27] to-red-600",
+                badgeBg: "bg-[#D96B27]",
                 border: "border-[#D96B27] ring-4 ring-[#D96B27]/25",
               },
               {
@@ -1052,7 +1052,7 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "cafe").length,
                 img: "/assets/cafe-libya.jpg",
                 badge: isAr ? "شاي باللوز وقهوة" : "Specialty Coffee",
-                badgeBg: "bg-gradient-to-r from-emerald-700 to-teal-600",
+                badgeBg: "bg-emerald-700",
                 border: "border-emerald-600 ring-4 ring-emerald-600/25",
               },
             ].map((cat) => {
@@ -1063,7 +1063,7 @@ function RestaurantsPage() {
                   onClick={() => {
                     setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
                   }}
-                  className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
+                  className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
                     isSelected
                       ? `${cat.border} scale-[1.02]`
                       : "border-slate-200 hover:border-slate-400"
@@ -1164,7 +1164,7 @@ function RestaurantsPage() {
                     <article
                       key={r.id}
                       onClick={() => setSelectedRest(r)}
-                      className="group bg-white rounded-3xl border border-slate-200 hover:border-[#D96B27]/50 shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 cursor-pointer flex flex-col md:flex-row gap-5"
+                      className="group bg-white rounded-3xl border border-slate-200 hover:border-[#D96B27]/50 shadow-sm hover:shadow-xl transition p-4 sm:p-5 cursor-pointer flex flex-col md:flex-row gap-5"
                     >
                       {/* Photo */}
                       <div className="relative w-full md:w-72 h-52 sm:h-56 rounded-2xl overflow-hidden shrink-0 bg-slate-900">
@@ -1233,7 +1233,7 @@ function RestaurantsPage() {
                               e.stopPropagation();
                               setSelectedRest(r);
                             }}
-                            className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
+                            className="py-2.5 px-5 rounded-xl bg-[#D96B27] hover:opacity-95 text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
                           >
                             <span>{isAr ? "معرفة المزيد" : "Learn More"}</span>
                             <span>➔</span>

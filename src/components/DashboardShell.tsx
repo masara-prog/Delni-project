@@ -7,6 +7,21 @@ import { clearStoredSession } from "@/lib/api";
 import { DashboardSupportChatModal } from "@/components/DashboardSupportChatModal";
 import { platformConfirm } from "@/components/PlatformAlert";
 import { NotificationBell } from "@/components/NotificationBell";
+import {
+  BadgeCheck, Bell, Building2, Bus, CalendarDays, Car, ChartColumn, ClipboardCheck, Compass, Crown, Heart, House,
+  IdCard, Landmark, LayoutDashboard, LogOut, MapPin, Megaphone, MessageCircle, ScanLine, Star, Ticket, UserRound, Users,
+  type LucideIcon,
+} from "lucide-react";
+
+// One SVG icon set for every dashboard menu (by section id), so all roles share the same visual language.
+// A section without an entry keeps the icon its dashboard passed.
+const NAV_ICONS: Record<string, LucideIcon> = {
+  overview: LayoutDashboard, scanner: ScanLine, companies: Bus, drivers: IdCard, guides: BadgeCheck, tourists: Users,
+  trips: Compass, assigned_trips: Compass, bookings: Ticket, offers: Megaphone, private_trips: Crown, entities: Landmark,
+  reviews: Star, analytics: ChartColumn, inquiries_chat: MessageCircle, notifications: Bell, live_trip: MapPin,
+  vehicle: Car, vehicles: Bus, profile: UserRound, calendar: CalendarDays, active_tourists: ClipboardCheck,
+  favorites: Heart, company_payment: Building2,
+};
 
 export type NavItem = { id: string; label: string; icon: string; badge?: string | number; group?: string };
 
@@ -71,9 +86,10 @@ export function DashboardShell({
               to="/"
               className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold text-slate-700 hover:text-primary hover:border-primary transition shadow-2xs"
               title={isAr ? "الرجوع للصفحة الرئيسية للمنصة" : "Back to Home"}
+              aria-label={isAr ? "الصفحة الرئيسية" : "Home"}
             >
-              <span>🏠</span>
-              <span>{isAr ? "الرئيسية" : "Home"}</span>
+              <House className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{isAr ? "الرئيسية" : "Home"}</span>
             </Link>
             {/* The admin answers support chats; he does not open one himself */}
             {role !== "admin" && (
@@ -82,7 +98,7 @@ export function DashboardShell({
                 onClick={() => setShowSupportChat(true)}
                 className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition cursor-pointer"
               >
-                💬 {isAr ? "الدعم" : "Support"}
+                <MessageCircle className="w-4 h-4" aria-hidden="true" /> {isAr ? "الدعم" : "Support"}
               </button>
             )}
             <NotificationBell />
@@ -107,11 +123,10 @@ export function DashboardShell({
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-500 text-red-600 hover:text-white border border-red-200 transition text-xs font-bold shadow-2xs cursor-pointer"
               title={isAr ? "تسجيل الخروج من المنصة بالكامل" : "Sign Out"}
+              aria-label={isAr ? "تسجيل الخروج" : "Sign Out"}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span>{isAr ? "خروج" : "Logout"}</span>
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{isAr ? "خروج" : "Logout"}</span>
             </button>
           </div>
         </div>
@@ -134,7 +149,7 @@ export function DashboardShell({
               : (open ? "translate-x-0" : "-translate-x-full")
           } lg:translate-x-0 fixed lg:sticky top-16 ${dir === 'rtl' ? 'right-0' : 'left-0'} z-20 h-[calc(100vh-4rem)] w-72 transition-transform duration-300 overflow-y-auto no-scrollbar`}
           style={{
-            background: "linear-gradient(165deg, #0F172A 0%, #1E293B 40%, #0F172A 100%)",
+            background: "#0F172A",
             borderLeft: dir === 'rtl' ? "1px solid rgba(26,188,156,0.2)" : undefined,
             borderRight: dir === 'ltr' ? "1px solid rgba(26,188,156,0.2)" : undefined,
           }}
@@ -170,22 +185,25 @@ export function DashboardShell({
                       onNavigate(item.id);
                       setOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 group ${
+                    className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition duration-200 group ${
                       isActive
-                        ? "bg-gradient-sun text-gold-foreground shadow-gold"
+                        ? "bg-primary text-white"
                         : "hover:bg-white/5"
                     }`}
                     style={!isActive ? { color: "rgba(255,255,255,0.72)" } : {}}
                   >
                     <span className="flex items-center gap-3">
                       <span
-                        className={`w-8 h-8 rounded-lg grid place-items-center text-base flex-shrink-0 transition-all ${
+                        className={`w-8 h-8 rounded-lg grid place-items-center text-base flex-shrink-0 transition ${
                           isActive
                             ? "bg-white/25"
                             : "bg-white/5 group-hover:bg-white/10"
                         }`}
                       >
-                        {item.icon}
+                        {(() => {
+                          const Icon = role === "transport" && item.id === "profile" ? Building2 : NAV_ICONS[item.id];
+                          return Icon ? <Icon className="w-[18px] h-[18px]" strokeWidth={2} aria-hidden="true" /> : item.icon;
+                        })()}
                       </span>
                       <span className="text-[13px] font-bold leading-tight">{item.label}</span>
                     </span>
@@ -193,7 +211,7 @@ export function DashboardShell({
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full font-black flex-shrink-0 ${
                           isActive
-                            ? "bg-gold-foreground/20 text-gold-foreground"
+                            ? "bg-white/20 text-white"
                             : "bg-red-500/80 text-white"
                         }`}
                       >
@@ -215,9 +233,9 @@ export function DashboardShell({
                   window.location.href = "/";
                 }
               }}
-              className="w-full mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:bg-red-500/10 text-red-400 group cursor-pointer"
+              className="w-full mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition duration-200 hover:bg-red-500/10 text-red-400 group cursor-pointer"
             >
-              <span className="w-8 h-8 rounded-lg grid place-items-center text-base flex-shrink-0 transition-all bg-white/5 group-hover:bg-red-500/20">
+              <span className="w-8 h-8 rounded-lg grid place-items-center text-base flex-shrink-0 transition bg-white/5 group-hover:bg-red-500/20">
                 🚪
               </span>
               <span className="text-[13px] font-bold leading-tight">{isAr ? "تسجيل الخروج" : "Logout"}</span>
@@ -230,7 +248,7 @@ export function DashboardShell({
             {role !== "admin" && (
               <div
                 className="p-4 rounded-2xl"
-                style={{ background: "linear-gradient(135deg, rgba(197,160,89,0.15) 0%, rgba(168,131,68,0.1) 100%)", border: "1px solid rgba(197,160,89,0.2)" }}
+                style={{ background: "rgba(197,160,89,0.12)", border: "1px solid rgba(197,160,89,0.2)" }}
               >
                 <div className="text-sm font-black text-white">{isAr ? "تحتاج مساعدة؟" : "Need Help?"}</div>
                 <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -290,29 +308,20 @@ export function StatCard({
   tone?: "sea" | "sun" | "clay" | "green";
   onClick?: () => void;
 }) {
-  const tones: Record<string, string> = {
-    sea: "bg-gradient-sea text-white",
-    sun: "bg-gradient-sun text-gold-foreground",
-    clay: "bg-secondary text-white",
-    green: "bg-emerald-500 text-white",
-  };
+  // icon and tone stay in the signature so every dashboard keeps compiling; the card shows the figure only
+  void icon; void tone;
   return (
     <div
       onClick={onClick}
-      className={`p-5 rounded-2xl bg-white border border-border shadow-soft transition-all duration-200 ${
+      className={`p-5 rounded-2xl bg-white border border-border shadow-soft transition duration-200 ${
         onClick
           ? "cursor-pointer hover:shadow-card hover:-translate-y-0.5 hover:border-primary/40 active:translate-y-0 select-none group"
           : "hover:shadow-card"
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">{label}</div>
-          <div className="text-2xl md:text-3xl font-black text-foreground mt-1 group-hover:text-primary transition-colors">{value}</div>
-          {hint && <div className="text-[11px] text-muted-foreground mt-1">{hint}</div>}
-        </div>
-        <div className={`w-11 h-11 rounded-xl grid place-items-center text-xl ${tones[tone]} shadow-soft transition-transform group-hover:scale-110`}>{icon}</div>
-      </div>
+      <div className="text-[13px] font-semibold text-muted-foreground group-hover:text-primary transition-colors">{label}</div>
+      <div className="text-3xl font-bold text-foreground mt-2 tabular-nums tracking-tight group-hover:text-primary transition-colors">{value}</div>
+      {hint && <div className="text-xs text-muted-foreground mt-1.5">{hint}</div>}
     </div>
   );
 }

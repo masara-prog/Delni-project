@@ -222,7 +222,7 @@ function MessageBubble({ msg }: { msg: Msg }) {
           <img src={logoAsset.url} alt="" className="w-full h-full object-contain" />
         </div>
       ) : (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white grid place-items-center text-xs font-black flex-shrink-0">أ</div>
+        <div className="w-8 h-8 rounded-full bg-[#D96B27] text-white grid place-items-center text-xs font-black flex-shrink-0">أ</div>
       )}
       <div className={`max-w-[75%] px-4 py-2.5 text-sm ${isAdmin ? "bg-muted text-foreground rounded-2xl rounded-br-sm" : "bg-gradient-sea text-white rounded-2xl rounded-bl-sm shadow-soft"}`}>
         <div>{msg.text}</div>

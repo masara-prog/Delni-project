@@ -60,7 +60,7 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-300 ${shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      className={`transition duration-300 ${shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
     >
       {children}
     </div>
@@ -217,18 +217,18 @@ function Navbar() {
       </Link>
       <div className="flex items-center gap-3">
         {accountName ? (
-          <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-xl transition-all">
+          <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-xl transition">
             <Link
               to={dashboardPath}
-              className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Tajawal',sans-serif] tracking-wide shadow-md hover:scale-105 transition-all border border-white/25 antialiased"
+              className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Tajawal',sans-serif] tracking-wide shadow-md hover:scale-105 transition border border-white/25 antialiased"
               title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-lg" />
               <span className="leading-tight drop-shadow-sm">{accountName}</span>
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Tajawal',sans-serif] transition-all border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Tajawal',sans-serif] transition border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
               title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout'}
             >
               <svg className="w-3.5 h-3.5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,13 +241,13 @@ function Navbar() {
           <>
             <Link
               to="/auth/login"
-              className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition-all shadow-md"
+              className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition shadow-md"
             >
               {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
             </Link>
             <Link
               to="/auth/signup"
-              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition-all border border-white/20"
+              className="px-6 py-2.5 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition border border-white/20"
             >
               {language === 'ar' ? 'إنشاء حساب' : 'Sign Up'}
             </Link>
@@ -297,15 +297,12 @@ function Hero() {
       ))}
       {/* Completely clear with no white fog or haze */}
       <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+      <div className={`absolute inset-0 z-10 pointer-events-none bg-black/40 md:bg-transparent ${language === 'ar' ? 'md:bg-gradient-to-l' : 'md:bg-gradient-to-r'} md:from-black/65 md:via-black/30 md:to-transparent`} />
       <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none" />
       <Navbar />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-36 pb-10 md:pt-44 md:pb-16">
         <div className="max-w-3xl text-white animate-fade-up">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-sm font-medium mb-6">
-            <Icon.Sparkle className="w-4 h-4 text-amber-300" />
-            {language === 'ar' ? 'اكتشف ليبيا كما لم تراها من قبل' : 'Discover Libya like never before'}
-          </span>
           <h1 className="text-5xl md:text-7xl font-black leading-[1.1] mb-6 drop-shadow-lg">
             {language === 'ar' ? (
               <>
@@ -325,19 +322,6 @@ function Hero() {
               : 'Book your hotels, desert tours, and transportation across Libya’s finest heritage & natural wonders — a modern & secure travel experience.'}
           </p>
 
-          {/* Clean Inline Stats */}
-          <div className="flex items-center gap-4 mt-6">
-            <FloatingStat 
-              icon={<Icon.Pin className="w-5 h-5" />} 
-              value="+120" 
-              label={language === 'ar' ? "وجهة سياحية" : "Tourist Destinations"} 
-            />
-            <FloatingStat 
-              icon={<Icon.Users className="w-5 h-5" />} 
-              value="+45K" 
-              label={language === 'ar' ? "مسافر سعيد" : "Happy Travelers"} 
-            />
-          </div>
         </div>
 
         {/* Search Card */}
@@ -381,7 +365,7 @@ function SearchCard() {
             key={tItem.id}
             to={tItem.to}
             onClick={() => setTab(tItem.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black whitespace-nowrap transition-all duration-300 cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black whitespace-nowrap transition duration-300 cursor-pointer ${
               tab === tItem.id
                 ? "bg-[#003580] text-white shadow-md border border-[#003580] scale-105"
                 : "text-slate-700 hover:text-[#003580] hover:bg-slate-100/80 border border-transparent"
@@ -420,7 +404,7 @@ function SearchCard() {
         <div className="md:col-span-2 flex">
           <Link
             to={tab === "stays" ? "/hotels" : tab === "cars" ? "/transport" : tab === "restaurants" ? "/restaurants" : tab === "guides" ? "/guides" : tab === "attractions" ? "/attractions" : "/trips"}
-            className="w-full h-full min-h-[56px] rounded-2xl bg-gradient-to-r from-[#003580] to-[#0D5C96] hover:from-[#002866] hover:to-[#003580] text-white font-black text-base shadow-md hover:-translate-y-0.5 transition flex items-center justify-center gap-2"
+            className="w-full h-full min-h-[56px] rounded-2xl bg-[#003580] hover:bg-[#002866] text-white font-black text-base shadow-md hover:-translate-y-0.5 transition flex items-center justify-center gap-2"
           >
             <Icon.Search className="w-5 h-5" />
             {t('search_button')}
@@ -554,7 +538,7 @@ function Destinations() {
                     <h3 className="text-2xl font-black mt-1 mb-2">{d.name}</h3>
                     <div className="flex items-center justify-between">
                       <span className="text-gold font-bold text-sm">{d.price}</span>
-                      <span className="inline-flex items-center gap-1 text-sm font-black bg-white/20 backdrop-blur px-3 py-1 rounded-full group-hover:bg-gold group-hover:text-gold-foreground transition-all">
+                      <span className="inline-flex items-center gap-1 text-sm font-black bg-white/20 backdrop-blur px-3 py-1 rounded-full group-hover:bg-gold group-hover:text-gold-foreground transition">
                         احجز
                         <Icon.Chevron className="w-4 h-4 rotate-180" />
                       </span>
@@ -600,24 +584,12 @@ function WhyUs() {
                 <div className="font-black text-sm">{language === 'ar' ? "واحات أوباري" : "Ubari Oases"}</div>
               </div>
             </div>
-            <div className="absolute -top-6 -right-4 hidden md:flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-card animate-float-slow">
-              <div className="w-10 h-10 rounded-full bg-gradient-sun grid place-items-center">
-                <Icon.Star className="w-5 h-5 text-gold-foreground" />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">{language === 'ar' ? "تقييم المستخدمين" : "User Rating"}</div>
-                <div className="font-black text-foreground">4.9 / 5</div>
-              </div>
-            </div>
           </div>
         </Reveal>
 
         <div>
           <Reveal>
-            <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/25 text-xs font-black uppercase tracking-wider">
-              {language === 'ar' ? "لماذا دلني" : "Why Dallani"}
-            </span>
-            <h2 className="mt-4 text-4xl md:text-5xl font-black leading-tight text-foreground">
+            <h2 className="text-4xl md:text-5xl font-black leading-tight text-foreground">
               {language === 'ar' ? "خبرة ليبية،" : "Libyan Expertise,"}
               <br />
               <span className="text-gradient-sea">{language === 'ar' ? "تقنية عصرية." : "Modern Technology."}</span>
@@ -721,28 +693,13 @@ function Testimonials() {
     <section className="py-14 md:py-20 bg-slate-50 overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-wider border border-primary/20">
-            <Icon.Star className="w-3.5 h-3.5 text-gold" />
-            {language === 'ar' ? 'آراء المسافرين' : 'Traveler Reviews'}
-          </span>
-          <h2 className="mt-4 text-4xl md:text-5xl font-black text-slate-900 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
             {language === 'ar' ? 'قصص من زوارنا' : 'Stories from our visitors'}
           </h2>
           <p className="mt-3 text-slate-600 text-lg">
-            {language === 'ar' ? '+45,000 مسافر وثقوا بدلّني' : 'Over 45,000 travelers trusted Dallani'}
+            {language === 'ar' ? 'تجارب زوار رحلات دلني' : 'What visitors say about their Dallani trips'}
           </p>
-          {/* Overall rating bar */}
-          <div className="mt-6 inline-flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm">
-            <div className="flex gap-0.5">
-              {[1,2,3,4,5].map(s => <Icon.Star key={s} className="w-5 h-5 text-gold" />)}
-            </div>
-            <div className="text-slate-900">
-              <span className="text-2xl font-black">4.9</span>
-              <span className="text-slate-500 text-sm ms-1">/ 5</span>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <span className="text-slate-600 text-sm font-bold">45K+ {language === 'ar' ? 'تقييم' : 'reviews'}</span>
-          </div>
+          
         </div>
 
         {/* Scrollable cards */}
@@ -750,7 +707,7 @@ function Testimonials() {
           {items.map((item, i) => (
             <div
               key={item.name + i}
-              className="group shrink-0 w-[300px] md:w-[340px] snap-start bg-white border border-slate-200 rounded-3xl p-7 hover:border-primary/40 hover:shadow-card hover:-translate-y-1 transition-all duration-300 flex flex-col"
+              className="group shrink-0 w-[300px] md:w-[340px] snap-start bg-white border border-slate-200 rounded-3xl p-7 hover:border-primary/40 hover:shadow-card hover:-translate-y-1 transition duration-300 flex flex-col"
             >
               {/* Quote icon */}
               <div className="text-4xl text-slate-200 font-black leading-none mb-3">&ldquo;</div>
@@ -766,7 +723,7 @@ function Testimonials() {
               <div className="my-5 h-px bg-slate-100" />
               {/* Author */}
               <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${item.gradient} flex items-center justify-center text-white font-black text-lg shadow-md`}>
+                <div className={`w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-black text-lg shadow-md`}>
                   {item.avatar}
                 </div>
                 <div>
@@ -813,14 +770,14 @@ function CTABanner() {
                     e.preventDefault();
                     alert(language === 'ar' ? "تطبيق دلّني متوفر حالياً كنسخة ويب متجاوبة بالكامل. سيتم إطلاق تطبيقات الأندرويد والآيفون على المتاجر قريباً!" : "The Dallani app is currently available as a fully responsive web version. Android and iPhone apps will be launched in stores soon!");
                   }}
-                  className="px-8 py-4 rounded-full bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#D96B27] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-xl hover:scale-105 transition-all cursor-pointer flex items-center gap-2"
+                  className="px-8 py-4 rounded-full bg-[#D96B27] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-xl hover:scale-105 transition cursor-pointer flex items-center gap-2"
                 >
                   <span>📱</span>
                   {language === 'ar' ? "حمّل التطبيق" : "Download App"}
                 </button>
                 <Link
                   to="/trips"
-                  className="px-8 py-4 rounded-full bg-white/15 backdrop-blur-md border border-white/40 text-white font-black text-sm sm:text-base hover:bg-white/25 transition-all shadow-md hover:scale-105"
+                  className="px-8 py-4 rounded-full bg-white/15 backdrop-blur-md border border-white/40 text-white font-black text-sm sm:text-base hover:bg-white/25 transition shadow-md hover:scale-105"
                 >
                   {language === 'ar' ? "ابدأ رحلتك الآن" : "Start your journey now"}
                 </Link>
@@ -839,11 +796,8 @@ function CTABanner() {
 function SectionHeading({ eyebrow, title, desc }: { eyebrow: string; title: string; desc: string }) {
   return (
     <div className="text-center max-w-2xl mx-auto">
-      <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#003580]/10 border border-[#003580]/20 text-[#003580] text-xs font-black uppercase tracking-wider">
-        <Icon.Sparkle className="w-3.5 h-3.5" />
-        {eyebrow}
-      </span>
-      <h2 className="mt-4 text-4xl md:text-5xl font-black text-[#0B132B] leading-tight">{title}</h2>
+      {/* eyebrow kept in the signature for callers; the heading carries the section on its own */}
+      <h2 data-eyebrow={eyebrow} className="text-4xl md:text-5xl font-black text-[#0B132B] leading-tight">{title}</h2>
       <p className="mt-3 text-muted-foreground text-lg">{desc}</p>
     </div>
   );
@@ -906,9 +860,9 @@ function TripTypes() {
             <button
               key={t.id}
               onClick={() => setActive(t.id)}
-              className={`px-6 py-3 rounded-full text-sm font-black transition-all duration-200 ${
+              className={`px-6 py-3 rounded-full text-sm font-black transition duration-200 ${
                 active === t.id
-                  ? "bg-gradient-to-r from-[#003580] to-[#0D5C96] text-white shadow-lg shadow-blue-900/30 scale-105"
+                  ? "bg-[#003580] text-white shadow-lg scale-105"
                   : "bg-white text-foreground border border-border hover:border-blue-500 hover:text-blue-700"
               }`}
             >
@@ -921,7 +875,7 @@ function TripTypes() {
           <div className="mt-10 grid lg:grid-cols-2 gap-8 items-center bg-gradient-sand rounded-[2.5rem] overflow-hidden shadow-card">
             <div className="relative h-72 lg:h-[480px] overflow-hidden">
               <img src={current.img} alt={current.title} className="absolute inset-0 w-full h-full object-cover animate-zoom-slow" />
-              <div className={`absolute inset-0 bg-gradient-to-tr ${current.accent}`} />
+              <div className="absolute inset-0 bg-black/10" />
               <div className="absolute bottom-6 right-6 px-4 py-2 rounded-full bg-white/95 backdrop-blur text-primary font-black text-sm">
                 {current.tag}
               </div>
@@ -982,11 +936,7 @@ function DepartureOffices() {
             </div>
           </Reveal>
           <div>
-            <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#003580]/10 text-[#003580] border border-[#003580]/20 text-xs font-black uppercase tracking-wider">
-              <Icon.Pin className="w-3.5 h-3.5" />
-              {language === 'ar' ? "نقاط الانطلاق" : "Departure Points"}
-            </span>
-            <h2 className="mt-4 text-4xl md:text-5xl font-black text-foreground leading-tight">
+            <h2 className="text-4xl md:text-5xl font-black text-foreground leading-tight">
               {language === 'ar' ? "انطلق من أقرب " : "Depart From Your Nearest "}
               <span className="text-gradient-sea">{language === 'ar' ? "مكتب لك" : "Office"}</span>
             </h2>
@@ -1151,7 +1101,7 @@ function RestaurantsCafes() {
                         { label: language === 'ar' ? "التقييم" : "Rating", value: `${r.rating} / 5` },
                       ],
                     })}
-                    className="mt-auto pt-3 text-primary text-xs font-black inline-flex items-center gap-1 group-hover:gap-2 transition-all"
+                    className="mt-auto pt-3 text-primary text-xs font-black inline-flex items-center gap-1 group-hover:gap-2 transition"
                   >
                     {language === 'ar' ? "عرض التفاصيل" : "View Details"}
                     <Icon.Chevron className="w-3.5 h-3.5 rotate-180" />
