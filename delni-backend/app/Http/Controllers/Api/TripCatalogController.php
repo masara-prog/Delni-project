@@ -107,7 +107,7 @@ class TripCatalogController extends Controller
         $id = trim((string) ($request->input('daily_trip_id') ?: $request->input('id')));
         $existing = $id !== '' ? DB::table('daily_trips')->where('daily_trip_id', $id)->first() : null;
         if ($id !== '' && !$existing && !$request->boolean('isNew', true)) {
-            return $this->error('الرحلة اليومية المحددة غير موجودة في قاعدة البيانات', 404);
+            return $this->error('الرحلة اليومية المحددة غير موجودة', 404);
         }
         if ($existing && $request->input('isNew') !== null && $request->boolean('isNew')) {
             return $this->error('رقم الرحلة اليومية مسجل مسبقاً لرحلة أخرى', 409);
@@ -254,7 +254,7 @@ class TripCatalogController extends Controller
             }
         });
 
-        $message = $sentToGuide ? 'تم حفظ الرحلة اليومية وإرسالها للمرشد؛ تُنشر للسياح بعد موافقته' : 'تم حفظ الرحلة اليومية ومحطاتها في قاعدة البيانات بنجاح';
+        $message = $sentToGuide ? 'تم حفظ الرحلة اليومية وإرسالها للمرشد؛ تُنشر للسياح بعد موافقته' : 'تم حفظ الرحلة اليومية ومحطاتها بنجاح';
         return response()->json(['success' => true, 'message' => $warning ? "{$message}. {$warning}" : $message, 'warning' => $warning,
             'trip_id' => $id, 'data' => $this->findTrip('daily', $id)], 201);
     }
@@ -333,7 +333,7 @@ class TripCatalogController extends Controller
         $id = trim((string) ($request->input('weekly_trip_id') ?: $request->input('id')));
         $existing = $id !== '' ? DB::table('weekly_trips')->where('weekly_trip_id', $id)->first() : null;
         if ($id !== '' && !$existing && !$request->boolean('isNew', true)) {
-            return $this->error('الرحلة الأسبوعية المحددة غير موجودة في قاعدة البيانات', 404);
+            return $this->error('الرحلة الأسبوعية المحددة غير موجودة', 404);
         }
         if ($existing && $request->input('isNew') !== null && $request->boolean('isNew')) {
             return $this->error('رقم الرحلة الأسبوعية مسجل مسبقاً لرحلة أخرى', 409);

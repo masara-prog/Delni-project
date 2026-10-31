@@ -88,7 +88,7 @@ export async function toggleFavorite(
         message: isFavorite ? `تمت إضافة "${itemTitle || 'العنصر'}" إلى المفضلة ❤️` : `تمت إزالة "${itemTitle || 'العنصر'}" من المفضلة`,
       };
     }
-    return { isFavorite: currentSet.has(compositeKey), message: data?.error || "تعذر حفظ المفضلة في قاعدة البيانات" };
+    return { isFavorite: currentSet.has(compositeKey), message: data?.error || "تعذر حفظ المفضلة" };
   } catch {
     return { isFavorite: currentSet.has(compositeKey), message: "تعذر الاتصال بخادم المنصة لحفظ المفضلة" };
   }

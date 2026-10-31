@@ -26,14 +26,9 @@ export const Route = createFileRoute("/auth/login")({
 
 type Role = "tourist" | "admin" | "guide" | "transport" | "driver";
 
+// One fixed photo beside the login and signup forms
 const LANDMARK_SLIDES = [
-  { img: heroImg, titleAr: "لبدة الكبرى — تحفة البحر المتوسط", locationAr: "الخمس" },
-  { img: destSabratah, titleAr: "مسرح وآثار صبراتة الرومانية", locationAr: "صبراتة" },
-  { img: destCyrene, titleAr: "قورينا وشحات — عبق الجبل الأخضر", locationAr: "شحات" },
-  { img: destGhadames, titleAr: "غدامس — لؤلؤة الصحراء والتراث", locationAr: "غدامس" },
-  { img: destUbari, titleAr: "بحيرات أوباري — واحة الرمال الذهبية", locationAr: "أوباري" },
-  { img: destAcacus, titleAr: "جبال تدرارت أكاكوس — سحر الصحراء", locationAr: "غات" },
-  { img: destTripoli, titleAr: "السراي الحمراء والمدينة القديمة", locationAr: "طرابلس" },
+  { img: "/assets/libya/sabratha-theatre.jpg", titleAr: "مسرح صبراتة الروماني على ساحل المتوسط", locationAr: "صبراتة" },
 ];
 
 function LoginPage() {
@@ -42,7 +37,7 @@ function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [slideIdx, setSlideIdx] = useState(0);
+  const slideIdx = 0;
   const { dir } = useLanguage();
 
   const [errorMsg, setErrorMsg] = useState("");
@@ -68,12 +63,6 @@ function LoginPage() {
     setResubmitMsg({ ok: true, text: res.data || "تم إرسال طلبك من جديد وهو قيد المراجعة." });
   };
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSlideIdx((prev) => (prev + 1) % LANDMARK_SLIDES.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
 
   const currentSlide = LANDMARK_SLIDES[slideIdx];
 
@@ -143,27 +132,25 @@ function LoginPage() {
             <img
               src={slide.img}
               alt={slide.titleAr}
-              className={`w-full h-full object-cover brightness-[1.05] contrast-[1.03] transition-transform duration-[6000ms] ease-out ${
-                idx === slideIdx ? "scale-105" : "scale-100"
-              }`}
+              className="w-full h-full object-cover"
             />
           </div>
         ))}
 
         {/* Crisp Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/40 to-transparent z-1" />
-        <div className="absolute inset-0 z-1" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#D96B27]/20 via-transparent to-transparent z-1" />
 
         <div className="relative z-10 h-full flex flex-col justify-between p-10 xl:p-12 text-white">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition duration-300">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition-all duration-300">
               <MapPin className="w-4 h-4 text-[#D96B27]" />
               <span>{currentSlide.titleAr}</span>
             </span>
           </div>
 
           <div className="max-w-lg space-y-4">
-            <div className="inline-block px-3.5 py-1.5 rounded-lg bg-[#D96B27] text-white text-xs font-black tracking-wide shadow-md">
+            <div className="inline-block px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D96B27] to-[#1B5A78] text-white text-xs font-black tracking-wide shadow-md">
               بوابة السياحة الذكية
             </div>
             <h2 className="text-3xl xl:text-4xl font-black leading-tight text-white drop-shadow-md">
@@ -173,21 +160,7 @@ function LoginPage() {
               انضم إلى مجتمع دَلِّني — منصتك الشاملة لحجز الرحلات، الفنادق، النقل السياحي وخدمات المرشدين المعتمدين.
             </p>
 
-            {/* Slideshow Indicator Dots */}
-            <div className="flex items-center gap-2 pt-1">
-              {LANDMARK_SLIDES.map((slide, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setSlideIdx(i)}
-                  className={`h-2 rounded-full transition duration-300 cursor-pointer ${
-                    i === slideIdx ? "w-8 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/70"
-                  }`}
-                  title={slide.titleAr}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-            </div>
+
           </div>
         </div>
       </div>
@@ -221,7 +194,7 @@ function LoginPage() {
                   key={r.id}
                   type="button"
                   onClick={() => handleRoleSelect(r.id)}
-                  className={`p-3 rounded-[18px] bg-white text-right transition duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
+                  className={`p-3 rounded-[18px] bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
                     isSelected
                       ? "border-2 border-[#1B5A78] shadow-sm ring-1 ring-[#1B5A78]/20 bg-blue-50/50"
                       : "border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/40"
@@ -335,7 +308,7 @@ function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@dalni.ly"
+                placeholder="example@gmail.com"
                 required
                 className="w-full h-13 sm:h-14 px-5 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 transition shadow-2xs text-right"
               />

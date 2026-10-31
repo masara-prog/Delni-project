@@ -1,3 +1,4 @@
+import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
@@ -258,7 +259,7 @@ function TouristDashboard() {
     const u = getStoredSession().user || {};
     const res = await apiDecidePrivateTrip(tripId, u.tourist_id || u.id || "", decision);
     if (!res.success) {
-      alert("❌ لم يتم حفظ قرارك في قاعدة البيانات.\n" + res.error);
+      alert("❌ لم يتم حفظ قرارك.\n" + res.error);
       return;
     }
     setPrivateTrips((prev) => prev.map((t) => (t.private_trip_id === tripId ? res.data : t)));
@@ -290,10 +291,10 @@ function TouristDashboard() {
       password: touristInfo.password && touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
     });
     if (res.status !== "success") {
-      alert("❌ لم يتم حفظ التعديلات في قاعدة البيانات.\n" + res.message);
+      alert("❌ لم يتم حفظ التعديلات.\n" + res.message);
       return;
     }
-    alert("تم حفظ وتحديث بيانات حسابك في قاعدة البيانات بنجاح ✓");
+    alert("تم حفظ وتحديث بيانات حسابك بنجاح ✓");
   };
 
   return (
@@ -793,8 +794,8 @@ function TouristDashboard() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (confirm("هل أنت متأكد من رغبتك في إلغاء طلب هذه الرحلة الخاصة؟")) {
+                                onClick={async () => {
+                                  if (await platformConfirm("هل أنت متأكد من رغبتك في إلغاء طلب هذه الرحلة الخاصة؟")) {
                                     handleTouristDecision(p.private_trip_id, "ملغاة من السائح");
                                   }
                                 }}

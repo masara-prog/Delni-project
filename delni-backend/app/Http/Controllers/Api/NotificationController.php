@@ -16,10 +16,8 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         [$role, $userId] = $this->recipient();
-        // Expiry alerts (contracts, guides' licences) are checked at most hourly when the admin, a guide or a company loads notifications
-        if (in_array($role, ['admin', 'guide', 'transport'], true)) {
-            \App\Support\ContractExpiryAlerts::runHourly();
-        }
+        // Expiry alerts (partner contracts, guides' and drivers' licences) are checked at most hourly, whoever loads notifications
+        \App\Support\ContractExpiryAlerts::runHourly();
 
         $query = Notification::query();
 

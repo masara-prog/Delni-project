@@ -702,7 +702,7 @@ export async function apiRegisterTourist(params: {
     const resData = await res.json().catch(() => null);
 
     if (!res.ok) {
-      let errorMsg = "تعذر تسجيل السائح في قاعدة البيانات";
+      let errorMsg = "تعذر تسجيل السائح";
       if (resData?.errors) {
         const errorList = Object.values(resData.errors).flat() as string[];
         if (errorList.length > 0) {
@@ -747,7 +747,7 @@ export async function apiRegisterTourist(params: {
 
     return {
       status: "success",
-      message: resData?.message || "تم إنشاء حساب السائح وتخزينه في قاعدة البيانات بنجاح",
+      message: resData?.message || "تم إنشاء حساب السائح وتخزينه بنجاح",
       user: savedUser,
       token,
     };
@@ -755,7 +755,7 @@ export async function apiRegisterTourist(params: {
     console.error("apiRegisterTourist error:", err);
     return {
       status: "error",
-      message: "تعذر الاتصال بخادم قاعدة البيانات (Laravel / SQL Server). يرجى التأكد من تشغيل الخادم.",
+      message: "تعذر الاتصال بخادم المنصة. يرجى المحاولة لاحقاً.",
     };
   }
 }

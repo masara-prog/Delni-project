@@ -5,6 +5,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/lib/i18n";
 import { clearStoredSession } from "@/lib/api";
 import { DashboardSupportChatModal } from "@/components/DashboardSupportChatModal";
+import { platformConfirm } from "@/components/PlatformAlert";
 import { NotificationBell } from "@/components/NotificationBell";
 import {
   BadgeCheck, Bell, Building2, Bus, CalendarDays, Car, ChartColumn, ClipboardCheck, Compass, Crown, Heart, House,
@@ -51,7 +52,7 @@ export function DashboardShell({
   useEffect(() => {
     const tab = new URLSearchParams(searchStr).get("tab");
     if (!tab) return;
-    if (tab === "support") setShowSupportChat(true);
+    if (tab === "support") setShowSupportChat(role !== "admin");
     else if (nav.some((item) => item.id === tab)) onNavigate(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,13 +91,16 @@ export function DashboardShell({
               <House className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">{isAr ? "الرئيسية" : "Home"}</span>
             </Link>
-            <button
-              type="button"
-              onClick={() => setShowSupportChat(true)}
-              className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition cursor-pointer"
-            >
-              <MessageCircle className="w-4 h-4" aria-hidden="true" /> {isAr ? "الدعم" : "Support"}
-            </button>
+            {/* The admin answers support chats; he does not open one himself */}
+            {role !== "admin" && (
+              <button
+                type="button"
+                onClick={() => setShowSupportChat(true)}
+                className="hidden md:inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-border bg-white text-xs font-bold hover:border-primary/40 transition cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4" aria-hidden="true" /> {isAr ? "الدعم" : "Support"}
+              </button>
+            )}
             <NotificationBell />
             <div className="flex items-center gap-2.5 px-3 border-x border-border">
               <div className="w-9 h-9 rounded-full bg-gradient-sea text-white grid place-items-center font-black text-sm shadow-soft">
@@ -108,8 +112,8 @@ export function DashboardShell({
               </div>
             </div>
             <button
-              onClick={() => {
-                if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+              onClick={async () => {
+                if (await platformConfirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
                   clearStoredSession();
                   localStorage.removeItem("dalni_token");
                   localStorage.removeItem("dalni_role");
@@ -220,8 +224,8 @@ export function DashboardShell({
             </nav>
 
             <button
-              onClick={() => {
-                if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+              onClick={async () => {
+                if (await platformConfirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
                   clearStoredSession();
                   localStorage.removeItem("dalni_token");
                   localStorage.removeItem("dalni_role");

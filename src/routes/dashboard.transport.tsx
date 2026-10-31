@@ -30,21 +30,6 @@ export const Route = createFileRoute("/dashboard/transport")({
   component: TransportDashboard,
 });
 
-// One trip assigned to a company vehicle, as returned by GET /dashboard/transport/{contractNumber}
-type CompanyTrip = {
-  kind: "يومية" | "أسبوعية" | "خاصة";
-  id: string;
-  title: string;
-  vehicle_plate: string;
-  driver_name: string | null;
-  guide_name: string | null;
-  schedule: string;
-  next_date: string | null;
-  passengers: number;
-  departure_city: string | null;
-  status: string;
-};
-
 function TransportDashboard() {
   const navigate = useNavigate();
   const [active, setActive] = useState("overview");
@@ -71,10 +56,10 @@ function TransportDashboard() {
       const data = matched || u;
       return {
         contract_number: data.contract_number || "",
-        company_name: data.company_name || data.name || "",
+        company_name: data.company_name || data.name || "شركة النقل السياحي",
         phone_number: data.phone_number || data.phone || "",
-        address: data.google_maps_url || data.address || "",
-        city: data.city || "",
+        address: data.address || "",
+        city: data.city || "طرابلس",
         total_vehicles: Number(data.total_vehicles) || 0,
         verification_status: data.verification_status || data.status || "",
         contract_start_date: data.contract_start_date || "",
@@ -86,10 +71,10 @@ function TransportDashboard() {
     const first = companies[0];
     return {
       contract_number: first?.contract_number || "",
-      company_name: first?.company_name || first?.name || "",
+      company_name: first?.company_name || first?.name || "شركة النقل السياحي",
       phone_number: first?.phone_number || first?.phone || "",
-      address: first?.google_maps_url || first?.address || "",
-      city: first?.city || "",
+      address: first?.address || "",
+      city: first?.city || "طرابلس",
       total_vehicles: Number(first?.total_vehicles) || 0,
       verification_status: first?.verification_status || "بانتظار التوثيق",
       contract_start_date: first?.contract_start_date || "",
@@ -109,8 +94,6 @@ function TransportDashboard() {
     return getVehicles(companyInfo.contract_number) as Vehicle[];
   });
   const [previewInsuranceDoc, setPreviewInsuranceDoc] = useState<string | null>(null);
-  // Trips the admin assigned to the company's vehicles (daily, weekly, private), from /dashboard/transport
-  const [trips, setTrips] = useState<CompanyTrip[]>([]);
 
   // Reload data when company or active changes
   useEffect(() => {
@@ -138,24 +121,17 @@ function TransportDashboard() {
     // Live sync with DelniDB through Laravel
     if (companyInfo.contract_number) {
       // The contract terms (agreed vehicle count, dates) are set by the admin and may have changed
-      // The company's own record (contract terms are set by the admin) and the trips assigned to its vehicles
-      laravelRequest<any>("GET", `/dashboard/transport/${encodeURIComponent(companyInfo.contract_number)}`).then(res => {
-        const mine = res.ok ? res.body?.company : null;
+      laravelRequest<any[]>("GET", "/transport/companies").then(res => {
+        const mine = res.ok && Array.isArray(res.data) ? res.data.find(c => c.contract_number === companyInfo.contract_number) : null;
         if (mine) {
           setCompanyInfo(prev => ({
             ...prev,
-            company_name: mine.company_name || prev.company_name,
-            phone_number: mine.phone_number || prev.phone_number,
-            email: mine.email || prev.email,
-            city: mine.city || prev.city,
-            address: mine.google_maps_url || prev.address,
             total_vehicles: Number(mine.total_vehicles) || 0,
             contract_start_date: mine.contract_start_date || prev.contract_start_date,
             contract_end_date: mine.contract_end_date || prev.contract_end_date,
             verification_status: mine.verification_status || prev.verification_status,
           }));
         }
-        setTrips(res.ok && Array.isArray(res.body?.trips) ? res.body.trips : []);
       });
       refreshFleet(companyInfo.contract_number).then(fleet => {
         if (fleet) {
@@ -356,7 +332,7 @@ function TransportDashboard() {
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground bg-muted/40 p-2 rounded-xl border border-border/50">
-                        🛡️ {v.insurance_image ? "وثيقة التأمين مرفقة" : "لا توجد وثيقة تأمين مرفقة"}
+                        🛡️ {v.insurance_details}
                       </div>
                       <div className="flex justify-end gap-2 pt-1">
                         <button onClick={() => setEditingVehicle(v)} className="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-lg">تعديل البيانات والتأمين</button>
@@ -368,21 +344,24 @@ function TransportDashboard() {
             </div>
 
             <div className="space-y-6">
-              <SectionCard title="الرحلات القادمة لأسطول الشركة">
-                {trips.length === 0 ? (
+              <SectionCard title="الرحلات المسنّدة اليوم">
+                {vehicles.length === 0 ? (
                   <div className="p-6 text-center text-xs text-muted-foreground bg-muted/30 rounded-xl">
-                    لا توجد رحلات مسندة لمركبات الشركة حالياً.
+                    لا توجد رحلات مسندة حالياً. ستظهر الرحلات هنا فور اعتماد الأسطول وتعيين السائقين.
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {trips.slice(0, 3).map((t) => (
-                      <div key={`${t.kind}-${t.id}`} className="p-3 rounded-xl bg-muted/50 text-right">
-                        <div className="font-black text-sm text-foreground">{t.title}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          📅 {t.next_date || t.schedule} · 🚘 {t.vehicle_plate} · 🧑‍✈️ {t.driver_name || "بلا سائق"}
+                    {vehicles.slice(0, 3).map((v) => {
+                      const d = drivers.find((dr) => dr.assigned_vehicle_plate === v.plate_number);
+                      return (
+                        <div key={v.plate_number} className="p-3 rounded-xl bg-muted/50 text-right">
+                          <div className="font-black text-sm text-foreground">{v.vehicle_type}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            🧑‍✈️ {d ? d.full_name : "بانتظار تعيين سائق"} · 🚘 لوحة: {v.plate_number}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </SectionCard>
@@ -515,18 +494,18 @@ function TransportDashboard() {
                 </div>
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
-                    <div className="text-xs text-muted-foreground font-bold">نوع وموديل السيارة (vehicle_type):</div>
+                    <div className="text-xs text-muted-foreground font-bold">نوع وموديل السيارة:</div>
                     <h4 className="font-black text-foreground text-base mt-0.5">{v.vehicle_type}</h4>
                     <div className="flex items-center justify-between text-xs mt-1">
                       <span className="font-bold text-primary">👥 عدد المقاعد: {v.seating_capacity} مقعد</span>
                       <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                        💰 {v.daily_rate ? `${v.daily_rate} د.ل / اليوم` : "السعر غير محدد"}
+                        💰 {v.daily_rate || 450} د.ل / اليوم
                       </span>
                     </div>
                     
                     <div className="mt-3 p-3 rounded-xl bg-muted/30 border border-border/60 text-xs space-y-1">
-                      <div className="font-black text-foreground">🛡️ وثيقة التأمين:</div>
-                      <p className="text-muted-foreground">{v.insurance_image ? "مرفقة" : "لا توجد وثيقة مرفقة"}</p>
+                      <div className="font-black text-foreground">🛡️ تفاصيل التأمين:</div>
+                      <p className="text-muted-foreground">{v.insurance_details}</p>
                       {v.insurance_image && (
                         <div className="mt-1 flex items-center gap-1.5 text-primary text-[11px] font-bold">
                           <span>📄 صورة الوثيقة:</span>
@@ -555,36 +534,31 @@ function TransportDashboard() {
       {/* TRIPS TAB */}
       {active === "trips" && (
         <SectionCard title="الرحلات المسنّدة للشركة وسائقيها">
-          {trips.length === 0 ? (
+          {vehicles.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
               <span className="text-3xl block mb-2">🚌</span>
               <div className="font-bold text-sm text-foreground">لا توجد رحلات مسندة حالياً لأسطول الشركة</div>
-              <div className="text-xs text-muted-foreground mt-1">تظهر هنا الرحلات اليومية والأسبوعية والخاصة التي تسندها الإدارة لمركبات الشركة.</div>
+              <div className="text-xs text-muted-foreground mt-1">ستظهر الرحلات المجدولة تلقائياً فور تعيين المركبات والسائقين على الرحلات السياحية.</div>
             </div>
           ) : (
             <div className="space-y-4 text-right">
-              {trips.map((t) => (
-                <div key={`${t.kind}-${t.id}`} className="p-4 rounded-xl border border-border flex flex-wrap gap-4 items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Badge tone={t.kind === "يومية" ? "sea" : t.kind === "أسبوعية" ? "green" : "sun"}>رحلة {t.kind}</Badge>
-                      <span className="text-xs text-muted-foreground font-mono">{t.id}</span>
+              {vehicles.map((v, i) => {
+                const d = drivers.find((dr) => dr.assigned_vehicle_plate === v.plate_number);
+                return (
+                  <div key={v.plate_number} className="p-4 rounded-xl border border-border flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">مركبة مسجلة #{i + 1}</div>
+                      <h4 className="font-black text-foreground text-base mt-0.5">{v.vehicle_type}</h4>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        👤 السائق: <b>{d ? d.full_name : "غير معين"}</b> · اللوحة: <b>{v.plate_number}</b> · السعة: <b>{v.seating_capacity} راكب</b>
+                      </div>
                     </div>
-                    <h4 className="font-black text-foreground text-base mt-1">{t.title}</h4>
-                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                      <div>📅 {t.schedule}{t.kind === "يومية" && t.next_date ? ` · الرحلة القادمة ${t.next_date}` : ""}</div>
-                      <div>
-                        🚘 المركبة: <b>{t.vehicle_plate}</b> · 👤 السائق: <b>{t.driver_name || "غير معين"}</b> · 🧭 المرشد: <b>{t.guide_name || "غير محدد"}</b>
-                      </div>
-                      <div>
-                        👥 الركاب{t.kind === "يومية" ? " في الرحلة القادمة" : ""}: <b>{t.passengers}</b>
-                        {t.departure_city ? <> · 📍 الانطلاق: <b>{t.departure_city}</b></> : null}
-                      </div>
+                    <div className="text-right">
+                      <Badge tone={v.vehicle_status === "جاهزة" ? "green" : "sun"}>{v.vehicle_status || "جاهزة"}</Badge>
                     </div>
                   </div>
-                  <Badge tone={t.status === "بانتظار تأكيد السائح" ? "sun" : "green"}>{t.status}</Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </SectionCard>
@@ -702,14 +676,15 @@ function TransportDashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 mb-1 block">المدينة 🔒</label>
-                  <input
-                    type="text"
-                    value={companyInfo.city || "غير محددة"}
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">المدينة (طرابلس أو بنغازي) 🔒</label>
+                  <select
+                    value={companyInfo.city === "بنغازي" ? "بنغازي" : "طرابلس"}
                     disabled
-                    readOnly
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs text-right cursor-not-allowed"
-                  />
+                  >
+                    <option value="طرابلس">طرابلس</option>
+                    <option value="بنغازي">بنغازي</option>
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 mb-1 flex items-center justify-between">
@@ -1450,8 +1425,8 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
 
 function ModalShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto animate-overlay-in" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-3xl shadow-glow overflow-hidden my-6 animate-dialog-in">
+    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-3xl shadow-glow overflow-hidden my-6">
         <div className="p-4 bg-gradient-sea text-white flex justify-between items-center">
           <h3 className="text-base font-black">{title}</h3>
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 grid place-items-center text-xs transition">✕</button>

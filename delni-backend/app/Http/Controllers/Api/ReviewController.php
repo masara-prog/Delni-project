@@ -77,7 +77,7 @@ class ReviewController extends Controller
             return $this->error('التقييم متاح فقط للسياح المسجلين', 401);
         }
         if (!DB::table($itemTable)->where($itemColumn, $data['item_id'])->exists()) {
-            return $this->error("{$label} غير موجود في قاعدة البيانات", 404);
+            return $this->error("{$label} غير موجود", 404);
         }
         if ($error = $this->tripReviewError($type, $data['tourist_id'], $data['item_id'])) {
             return $this->error($error, 403);

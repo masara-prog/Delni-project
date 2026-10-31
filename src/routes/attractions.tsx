@@ -132,15 +132,29 @@ function AttractionsPage() {
   const [cityViewMode, setCityViewMode] = useState<"carousel" | "grid">("carousel");
   const cityCarouselRef = useRef<HTMLDivElement>(null);
   
-  const heroImages = useMemo(() => [
-    destSabratah, destJabalAkhdarPanorama, destUbariGaberoun, destJabalAkhdarForest, destAcacusArch, destTripoli, heroImg, destUbariUmmAlMaa, destGhadames, destSaharaDunes, destJabalAkhdarBridge, destGharyanCave, destKsarDesert
-  ], []);
+  // The landmarks' own photos first, then landmark photos not used by the trips page
+  const heroImages = useMemo(() => {
+    const own = dbPlaces.map((p: any) => p.place_image).filter((img: any) => typeof img === "string" && img.length > 5);
+    return Array.from(new Set([
+      ...own,
+      "/assets/libya/leptis-severus-arch.jpg",
+      "/assets/libya/sabratha-theatre.jpg",
+      "/assets/libya/ghadames-mosque.jpg",
+      "/assets/libya/sabratha-temple-sea.jpg",
+      "/assets/libya/acacus-rocks.jpg",
+      "/assets/libya/leptis-basilica.jpg",
+      "/assets/libya/nalut-sunset.jpg",
+      "/assets/libya/ghadames-palms.jpg",
+      "/assets/libya/qasr-al-haj.jpg",
+      "/assets/libya/leptis-arch-detail.jpg",
+    ]));
+  }, [dbPlaces]);
   const [heroIndex, setHeroIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setHeroIndex((prev) => (prev + 1) % heroImages.length);
-    }, 2000);
+    }, 5500);
     return () => clearInterval(timer);
   }, [heroImages.length]);
   const scrollCityCarouselLeft = () => {

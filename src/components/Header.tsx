@@ -1,3 +1,4 @@
+import { platformConfirm } from "@/components/PlatformAlert";
 import { Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Logo } from "@/components/Logo";
@@ -48,8 +49,8 @@ export function Header({ active }: HeaderProps) {
     return () => window.removeEventListener("storage", checkAuth);
   }, []);
 
-  const handleLogout = () => {
-    if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
+  const handleLogout = async () => {
+    if (await platformConfirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
       clearStoredSession();
       setSession(null);
       window.location.href = "/";
