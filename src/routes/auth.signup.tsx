@@ -266,7 +266,7 @@ function SignupPage() {
               <div className="mt-6">
                 <Link
                   to="/trips"
-                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black shadow-lg hover:shadow-xl transition-all text-base cursor-pointer"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black shadow-lg hover:shadow-xl transition text-base cursor-pointer"
                 >
                   استكشف الرحلات السياحية الآن 🧭
                 </Link>
@@ -285,7 +285,7 @@ function SignupPage() {
               <div className="mt-6 flex flex-col gap-2">
                 <Link
                   to="/auth/login"
-                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-base shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-base shadow-lg hover:shadow-xl transition cursor-pointer"
                 >
                   الانتقال لتسجيل الدخول 🔑
                 </Link>
@@ -332,21 +332,21 @@ function SignupPage() {
 
           {/* Crisp Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/35 to-transparent z-1" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#D96B27]/20 via-transparent to-transparent z-1" />
+          <div className="absolute inset-0 z-1" />
 
           <div className="relative z-10 h-full flex flex-col justify-between p-8 xl:p-10 text-white">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-3 w-fit group">
                 <Logo size="lg" textColor="light" />
               </Link>
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition-all duration-300">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition duration-300">
                 <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
                 <span>{currentSlide.titleAr}</span>
               </span>
             </div>
 
             <div className="max-w-md space-y-3.5">
-              <div className="inline-block px-3 py-1 rounded-lg bg-gradient-to-r from-[#D96B27] to-[#1B5A78] text-white text-[11px] font-black tracking-wide shadow-md">
+              <div className="inline-block px-3 py-1 rounded-lg bg-[#D96B27] text-white text-[11px] font-black tracking-wide shadow-md">
                 انضم إلى منصة دَلِّني
               </div>
               <h2 className="text-2xl xl:text-3xl font-black leading-tight text-white drop-shadow-md">
@@ -377,7 +377,7 @@ function SignupPage() {
                     key={i}
                     type="button"
                     onClick={() => setSlideIdx(i)}
-                    className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    className={`h-1.5 rounded-full transition duration-300 cursor-pointer ${
                       i === slideIdx ? "w-6 bg-[#D96B27]" : "w-1.5 bg-white/40 hover:bg-white/70"
                     }`}
                     title={slide.titleAr}
@@ -395,11 +395,11 @@ function SignupPage() {
             {/* Header Row: Clear Prominent Logo on Right, Clear Navigation Arrow on Left */}
             <div className="flex items-center justify-between mb-8 pt-2">
               <Logo size="lg" showText={false} className="hover:scale-105 transition-transform" />
-              <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#1B5A78] hover:scale-105 transition-all text-[#1B5A78]" />
+              <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#1B5A78] hover:scale-105 transition text-[#1B5A78]" />
             </div>
 
             <div className="mb-4 text-right">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#D96B27]/15 to-[#1B5A78]/15 text-[#D96B27] text-xs font-black border border-[#D96B27]/30 mb-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D96B27]/15 text-[#D96B27] text-xs font-black border border-[#D96B27]/30 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-[#D96B27]" />
                 <span>منصة دَلِّني — السياحة الليبية بأبهى صورها</span>
               </div>
@@ -413,11 +413,11 @@ function SignupPage() {
             </div>
 
             {/* Interactive Top Destination Showcase Bar */}
-            <div className="mb-5 p-3 rounded-2xl bg-gradient-to-r from-[#1B5A78] via-[#13445C] to-[#0F172A] text-white shadow-md relative overflow-hidden">
+            <div className="mb-5 p-3 rounded-2xl bg-[#1B5A78] text-white shadow-md relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#D96B27]/25 rounded-full blur-2xl pointer-events-none" />
               <div className="relative z-1 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D96B27] to-[#EA580C] grid place-items-center text-white shrink-0 shadow-sm">
+                  <div className="w-9 h-9 rounded-xl bg-[#D96B27] grid place-items-center text-white shrink-0 shadow-sm">
                     <Compass className="w-5 h-5 animate-spin" style={{ animationDuration: "12s" }} />
                   </div>
                   <div className="min-w-0">
@@ -436,7 +436,7 @@ function SignupPage() {
                       key={i}
                       type="button"
                       onClick={() => setSlideIdx(i)}
-                      className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                      className={`h-2 rounded-full transition duration-300 cursor-pointer ${
                         i === slideIdx ? "w-6 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/80"
                       }`}
                       title={s.titleAr}
@@ -456,7 +456,7 @@ function SignupPage() {
                       key={r.id}
                       type="button"
                       onClick={() => setRole(r.id)}
-                      className={`p-3.5 rounded-2xl text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-2.5 ${
+                      className={`p-3.5 rounded-2xl text-right transition duration-200 cursor-pointer flex items-center justify-between gap-2.5 ${
                         isSelected
                           ? "bg-white border-2 border-[#D96B27] shadow-md ring-4 ring-[#D96B27]/15"
                           : "bg-white/80 border border-[#E2E8F0] shadow-2xs hover:border-[#D96B27]/50 hover:bg-white"
@@ -522,7 +522,7 @@ function SignupPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       <Link
                         to="/auth/login"
-                        className="py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#1B5A78] to-[#13445C] hover:from-[#13445C] hover:to-[#0F172A] text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2"
+                        className="py-3.5 px-4 rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2"
                       >
                         <span>الانتقال لصفحة تسجيل الدخول</span>
                         <span>←</span>
@@ -554,7 +554,7 @@ function SignupPage() {
                     <div className="pt-2">
                       <Link
                         to="/auth/login"
-                        className="inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black text-xs sm:text-sm shadow-md transition"
+                        className="inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-[#D96B27] text-white font-black text-xs sm:text-sm shadow-md transition"
                       >
                         <span>تسجيل الدخول إلى حسابك الآن</span>
                         <span>←</span>
@@ -649,7 +649,7 @@ function SignupPage() {
 
               <button
                 type="submit"
-                className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer mt-2 flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer mt-2 flex items-center justify-center gap-2"
               >
                 <span>إنشاء الحساب والتسجيل الآن</span>
                 <span className="text-lg">←</span>
@@ -711,7 +711,7 @@ function SignupPage() {
                             className="w-14 h-14 rounded-2xl object-cover border-2 border-[#D96B27] shadow-sm"
                           />
                         ) : (
-                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FAF7F2] to-[#F1ECE1] border-2 border-dashed border-[#D96B27]/40 flex flex-col items-center justify-center text-[#D96B27] shrink-0 shadow-2xs">
+                          <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border-2 border-dashed border-[#D96B27]/40 flex flex-col items-center justify-center text-[#D96B27] shrink-0 shadow-2xs">
                             <Camera className="w-5 h-5 text-[#D96B27]" />
                             <span className="text-[9px] font-bold mt-0.5 text-[#64748B]">صورة شخصية</span>
                           </div>
@@ -751,7 +751,7 @@ function SignupPage() {
                             }
                           }}
                         />
-                        <div className="h-10 px-3.5 rounded-xl border border-[#D96B27]/40 bg-gradient-to-r from-[#D96B27]/10 to-[#EA580C]/10 hover:from-[#D96B27]/20 hover:to-[#EA580C]/20 text-[#D96B27] flex items-center gap-1.5 transition font-black text-xs shadow-2xs">
+                        <div className="h-10 px-3.5 rounded-xl border border-[#D96B27]/40 bg-[#D96B27]/10 hover:bg-[#D96B27]/20 text-[#D96B27] flex items-center gap-1.5 transition font-black text-xs shadow-2xs">
                           <UploadCloud className="w-4 h-4" />
                           <span>{guide.avatar ? "استبدال" : "اختيار صورة"}</span>
                         </div>
@@ -882,7 +882,7 @@ function SignupPage() {
 
                   <button
                     type="submit"
-                    className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer mt-1 flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer mt-1 flex items-center justify-center gap-2"
                   >
                     <span>المتابعة إلى نطاق العمل والمستندات (خطوة 2 من 2)</span>
                     <span className="text-base">←</span>
@@ -959,7 +959,7 @@ function SignupPage() {
                           <div
                             key={pid}
                             onClick={() => togglePlaceId(pid)}
-                            className={`flex items-center gap-2 p-2 rounded-xl border text-right transition-all cursor-pointer select-none text-[11px] font-bold ${
+                            className={`flex items-center gap-2 p-2 rounded-xl border text-right transition cursor-pointer select-none text-[11px] font-bold ${
                               isChecked
                                 ? "border-[#D96B27] bg-[#D96B27]/10 text-[#D96B27] shadow-xs"
                                 : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#D96B27]/40"
@@ -997,7 +997,7 @@ function SignupPage() {
                             key={day.id}
                             type="button"
                             onClick={() => toggleDay(day.id)}
-                            className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer ${
+                            className={`py-2 px-1 rounded-xl border text-center transition cursor-pointer ${
                               isChecked
                                 ? "bg-[#D96B27] border-[#D96B27] text-white shadow-2xs font-black"
                                 : "bg-white border-[#E2E8F0] text-[#64748B] hover:bg-stone-50 font-bold"
@@ -1104,7 +1104,7 @@ function SignupPage() {
                           }}
                         />
                         <div className="p-4 rounded-2xl border-2 border-dashed border-[#D96B27]/40 bg-white hover:border-[#D96B27] hover:bg-[#D96B27]/5 transition flex flex-col items-center justify-center gap-2 text-center group cursor-pointer shadow-2xs">
-                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#D96B27]/15 to-[#EA580C]/15 text-[#D96B27] grid place-items-center transition group-hover:scale-110">
+                          <div className="w-10 h-10 rounded-2xl bg-[#D96B27]/15 text-[#D96B27] grid place-items-center transition group-hover:scale-110">
                             <UploadCloud className="w-5 h-5" />
                           </div>
                           <span className="font-bold text-xs sm:text-sm text-[#0F172A]">
@@ -1231,7 +1231,7 @@ function SignupPage() {
                     </button>
                     <button
                       type="submit"
-                      className="col-span-2 py-3 rounded-2xl bg-gradient-to-r from-[#D96B27] via-[#EA580C] to-[#1B5A78] hover:from-[#C2581A] hover:to-[#13445C] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer flex items-center justify-center gap-2"
+                      className="col-span-2 py-3 rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer flex items-center justify-center gap-2"
                     >
                       <span>إرسال طلب التسجيل والاعتماد</span>
                       <span className="text-base">✨</span>

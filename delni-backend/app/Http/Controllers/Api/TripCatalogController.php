@@ -171,6 +171,14 @@ class TripCatalogController extends Controller
                 return $this->error($error, 422);
             }
         }
+        // A newly given vehicle must be in service, its company active and under contract (driver issues are warnings)
+        if ($tripPlate && (!$existing || $tripPlate !== $existing->vehicle_plate)) {
+            [$error, $vehicleWarning] = $this->vehicleFitness($tripPlate, null, null);
+            if ($error) {
+                return $this->error($error, 422);
+            }
+            $warning = $this->joinWarnings($warning, $vehicleWarning);
+        }
         // Like weekly trips: a new trip, or a trip given to another guide, waits for that guide's acceptance before it is published
         $sentToGuide = $guide && $guideChanged;
         if (!$sentToGuide && $existing && $existing->guide_approval_status === DailyTrip::GUIDE_DECLINED) {
@@ -361,8 +369,9 @@ class TripCatalogController extends Controller
         }
         $start = $data['start_date'] ?? (string) $existing?->start_date;
         $end = $data['end_date'] ?? (string) $existing?->end_date;
-        if (substr($end, 0, 10) < substr($start, 0, 10)) {
-            return $this->error('تاريخ نهاية الرحلة لا يمكن أن يكون قبل تاريخ بدايتها', 422);
+        // A weekly trip lasts more than one day (the table requires end_date > start_date)
+        if (substr($end, 0, 10) <= substr($start, 0, 10)) {
+            return $this->error('تاريخ نهاية الرحلة الأسبوعية يجب أن يكون بعد تاريخ بدايتها (الرحلة تمتد يومين على الأقل)', 422);
         }
 
         $guide = $data['guide_license_number'] ?? $existing?->guide_license_number;
@@ -385,6 +394,14 @@ class TripCatalogController extends Controller
             if ($error) {
                 return $this->error($error, 422);
             }
+        }
+
+        if ($tripPlate && (!$existing || $tripPlate !== $existing->vehicle_plate || $datesChanged)) {
+            [$error, $vehicleWarning] = $this->vehicleFitness($tripPlate, substr($start, 0, 10), substr($end, 0, 10));
+            if ($error) {
+                return $this->error($error, 422);
+            }
+            $warning = $this->joinWarnings($warning, $vehicleWarning);
         }
 
         $id = $id !== '' ? $id : $this->newTripId('WT');

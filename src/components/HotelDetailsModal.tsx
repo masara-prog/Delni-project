@@ -128,7 +128,7 @@ export function HotelDetailsModal({
     <>
       {/* ── BACKDROP OVERLAY WITH LUXURY BLUR ── */}
       <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md transition-all duration-300 animate-in fade-in"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md transition duration-300 animate-in fade-in"
         dir={dir}
         onClick={onClose}
       >
@@ -138,7 +138,7 @@ export function HotelDetailsModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Top Brand & Partnership Strip (Matching Delni Petrol & Amber identity) */}
-          <div className="bg-gradient-to-r from-[#1B5A78] via-[#144258] to-[#D97706] text-white px-5 py-2.5 text-xs font-bold flex items-center justify-between shadow-sm">
+          <div className="bg-[#1B5A78] text-white px-5 py-2.5 text-xs font-bold flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${hotel.partnership_status === "غير نشط" ? "bg-slate-400" : "bg-emerald-400 ring-4 ring-emerald-400/20 animate-pulse"}`} />
               <span className="font-black">
@@ -187,7 +187,7 @@ export function HotelDetailsModal({
               <img
                 src={photos[activePhoto]}
                 alt=""
-                className="w-full h-full object-cover blur-2xl opacity-35 scale-110 transition-all duration-700"
+                className="w-full h-full object-cover blur-2xl opacity-35 scale-110 transition duration-700"
                 aria-hidden="true"
               />
             </div>
@@ -196,7 +196,7 @@ export function HotelDetailsModal({
             <img
               src={photos[activePhoto]}
               alt={hotel.name}
-              className="relative z-10 w-full h-full object-cover object-center transition-all duration-700 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
+              className="relative z-10 w-full h-full object-cover object-center transition duration-700 ease-out transform scale-100 group-hover:scale-105 cursor-pointer"
               onClick={() => setLightboxOpen(true)}
             />
 
@@ -232,7 +232,7 @@ export function HotelDetailsModal({
                       key={idx}
                       type="button"
                       onClick={() => setActivePhoto(idx)}
-                      className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                      className={`h-2 rounded-full transition duration-300 cursor-pointer ${
                         activePhoto === idx ? "w-5 bg-amber-400" : "w-2 bg-white/40 hover:bg-white/70"
                       }`}
                       aria-label={`Slide ${idx + 1}`}
@@ -256,7 +256,7 @@ export function HotelDetailsModal({
             {/* Hours & Check-in Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Working Hours */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#1B5A78]/5 to-[#1B5A78]/15 dark:from-slate-800 dark:to-slate-800/60 border border-[#1B5A78]/20 dark:border-slate-700 flex items-center gap-3">
+              <div className="p-3.5 rounded-2xl bg-[#1B5A78]/5 dark:from-slate-800 dark:to-slate-800/60 border border-[#1B5A78]/20 dark:border-slate-700 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#1B5A78] text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
                   ⏱️
                 </div>
@@ -274,7 +274,7 @@ export function HotelDetailsModal({
               </div>
 
               {/* Check-in / Check-out */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/5 to-amber-500/15 dark:from-slate-800 dark:to-slate-800/60 border border-amber-500/20 dark:border-slate-700 flex items-center gap-3">
+              <div className="p-3.5 rounded-2xl bg-amber-500/5 dark:from-slate-800 dark:to-slate-800/60 border border-amber-500/20 dark:border-slate-700 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#D97706] text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
                   🛎️
                 </div>
@@ -292,7 +292,7 @@ export function HotelDetailsModal({
               </div>
 
               {/* Location & City */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-emerald-500/15 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-500/20 dark:border-slate-700 flex items-center gap-3">
+              <div className="p-3.5 rounded-2xl bg-emerald-500/5 dark:from-slate-800 dark:to-slate-800/60 border border-emerald-500/20 dark:border-slate-700 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
                   📍
                 </div>
@@ -362,7 +362,7 @@ export function HotelDetailsModal({
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <a
                 href={`tel:${hotel.phone}`}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#1B5A78] hover:bg-[#144258] text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-md shadow-[#1B5A78]/20 active:scale-95 cursor-pointer"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#1B5A78] hover:bg-[#144258] text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
               >
                 <span>📞</span>
                 <span>{isAr ? `اتصال (${hotel.phone})` : `Call ${hotel.phone}`}</span>
@@ -374,7 +374,7 @@ export function HotelDetailsModal({
                 )}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
               >
                 <span>💬</span>
                 <span>{isAr ? "واتساب الفندق" : "WhatsApp"}</span>
@@ -418,14 +418,14 @@ export function HotelDetailsModal({
             <button
               type="button"
               onClick={() => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length)}
-              className="absolute left-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
+              className="absolute left-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={() => setActivePhoto((prev) => (prev + 1) % photos.length)}
-              className="absolute right-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
+              className="absolute right-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
@@ -437,7 +437,7 @@ export function HotelDetailsModal({
               <div
                 key={idx}
                 onClick={() => setActivePhoto(idx)}
-                className={`w-16 h-12 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                className={`w-16 h-12 rounded-xl overflow-hidden cursor-pointer border-2 transition ${
                   activePhoto === idx ? "border-amber-400 scale-110 shadow-lg" : "border-white/20 opacity-60 hover:opacity-100"
                 }`}
               >

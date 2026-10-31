@@ -65,14 +65,14 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       onClick={handleClick}
       aria-label={active ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
       title={active ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
-      className={`rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer select-none ${
+      className={`rounded-full flex items-center justify-center transition duration-200 cursor-pointer select-none ${
         active
           ? "bg-rose-600 text-white border-2 border-rose-500 hover:bg-rose-700 shadow-md"
           : "bg-white/95 text-rose-600 hover:text-rose-700 hover:bg-white border-2 border-rose-200/90 hover:border-rose-400 shadow-md backdrop-blur-md"
       } ${showLabel ? "px-3.5 h-9 w-auto gap-1.5" : sizeClasses[size]} ${animating ? "scale-125" : "hover:scale-105 active:scale-95"} ${className}`}
     >
       <svg
-        className={`${heartSizes[size]} transition-all duration-200 drop-shadow-xs ${
+        className={`${heartSizes[size]} transition duration-200 drop-shadow-xs ${
           active
             ? "fill-white stroke-white stroke-[1.8]"
             : "fill-transparent stroke-rose-600 hover:fill-rose-50/80 stroke-[2.4]"

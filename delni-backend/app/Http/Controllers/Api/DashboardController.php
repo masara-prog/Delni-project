@@ -234,7 +234,54 @@ class DashboardController extends Controller
             'company' => $company,
             'vehicles' => $company->vehicles,
             'drivers' => $company->drivers,
+            'trips' => $this->companyTrips($company),
         ]);
+    }
+
+    /**
+     * The trips the admin assigned to the company's vehicles and that are still running or ahead:
+     * daily trips accepted by their guide (next run date and its passengers), weekly trips not ended,
+     * private trips quoted or confirmed. Each row names the vehicle, its driver and the guide.
+     */
+    private function companyTrips(TransportationCompany $company): array
+    {
+        $plates = $company->vehicles->pluck('plate_number')->all();
+        if (!$plates) {
+            return [];
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        $drivers = $company->drivers->keyBy('assigned_vehicle_plate');
+        $approved = fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', WeeklyTrip::GUIDE_APPROVED);
+        $row = fn ($kind, $id, $title, $plate, $guide, $schedule, $nextDate, $passengers, $city, $status) => [
+            'kind' => $kind, 'id' => $id, 'title' => $title, 'vehicle_plate' => $plate,
+            'driver_name' => $drivers[$plate]->full_name ?? null, 'guide_name' => $guide,
+            'schedule' => $schedule, 'next_date' => $nextDate, 'passengers' => $passengers,
+            'departure_city' => $city, 'status' => $status,
+        ];
+
+        $trips = [];
+        foreach (DailyTrip::with(['days', 'guide'])->whereIn('vehicle_plate', $plates)->where('is_active', true)->where($approved)->get() as $t) {
+            $next = $t->openDates(1)[0] ?? null;
+            $trips[] = $row('يومية', $t->daily_trip_id, $t->trip_title, $t->vehicle_plate, $t->guide?->full_name,
+                'كل ' . ($t->days->pluck('day_of_week')->implode(' و') ?: 'يوم'), $next['date'] ?? null,
+                $next ? $t->max_capacity - $next['seats_left'] : 0, $t->departure_city, 'مقبولة');
+        }
+        foreach (WeeklyTrip::with('guide')->whereIn('vehicle_plate', $plates)->where('is_active', true)
+            ->where('end_date', '>=', $today)->where($approved)->orderBy('start_date')->get() as $t) {
+            $trips[] = $row('أسبوعية', $t->weekly_trip_id, $t->trip_title, $t->vehicle_plate, $t->guide?->full_name,
+                $t->start_date->format('Y-m-d') . ' إلى ' . $t->end_date->format('Y-m-d'), $t->start_date->format('Y-m-d'),
+                $t->max_capacity - $t->available_seats, $t->departure_city, 'مقبولة');
+        }
+        foreach (PrivateTrip::with('guide')->whereIn('vehicle_plate', $plates)
+            ->whereIn('status_order', [PrivateTripController::QUOTED, PrivateTripController::CONFIRMED])
+            ->whereRaw('DATEADD(day, duration_days - 1, preferred_start_date) >= ?', [$today])->orderBy('preferred_start_date')->get() as $t) {
+            $start = $t->preferred_start_date->format('Y-m-d');
+            $trips[] = $row('خاصة', $t->private_trip_id, 'رحلة خاصة', $t->vehicle_plate, $t->guide?->full_name,
+                "{$start} لمدة {$t->duration_days} أيام", $start, (int) $t->number_of_companions, null,
+                $t->status_order === PrivateTripController::CONFIRMED ? 'مؤكدة' : 'بانتظار تأكيد السائح');
+        }
+        usort($trips, fn ($a, $b) => strcmp((string) $a['next_date'], (string) $b['next_date']));
+        return $trips;
     }
 
     /**

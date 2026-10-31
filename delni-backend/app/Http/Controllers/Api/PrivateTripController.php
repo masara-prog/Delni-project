@@ -245,6 +245,13 @@ class PrivateTripController extends Controller
             if ($error) {
                 return $this->error($error, 422);
             }
+            if ($tripPlate) {
+                [$error, $vehicleWarning] = $this->vehicleFitness($tripPlate, $start, $end);
+                if ($error) {
+                    return $this->error($error, 422);
+                }
+                $warning = $this->joinWarnings($warning, $vehicleWarning);
+            }
         }
 
         $status = $data['status_order'];

@@ -58,6 +58,22 @@ class ContractExpiryAlerts
                     'dedupe_key' => $key,
                 ]);
                 $created++;
+                // A transport company is told too, so it can renew before its vehicles stop receiving trips
+                if ($code === 't' && !Notification::where('dedupe_key', "{$key}-company")->exists()) {
+                    Notification::create([
+                        'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999),
+                        'type' => 'contract',
+                        'title' => '⏰ عقد شركتكم مع منصة دلني ينتهي خلال أسبوع',
+                        'body' => "ينتهي عقد شركتكم ({$row->name}) مع المنصة بتاريخ {$row->end_date}. بعد هذا التاريخ لا تُسند رحلات جديدة لمركباتكم؛ يرجى التواصل مع الإدارة لتجديد العقد.",
+                        'recipient_role' => 'company',
+                        'recipient_id' => $row->id,
+                        'link' => '/dashboard/transport',
+                        'is_read' => false,
+                        'created_at' => now('Africa/Tripoli'),
+                        'dedupe_key' => "{$key}-company",
+                    ]);
+                    $created++;
+                }
             }
         }
         return $created + self::guideLicences($today);

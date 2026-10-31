@@ -275,7 +275,7 @@ export function FloatingChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="مساعد الذكاء الاصطناعي"
-        className={`fixed bottom-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-[90] h-[52px] w-[150px] justify-center rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 text-white font-black shadow-2xl shadow-orange-500/40 hover:scale-105 hover:shadow-orange-500/60 transition-all flex items-center gap-2 border-2 border-white/50`}
+        className={`fixed bottom-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-[90] h-[52px] w-[150px] justify-center rounded-full bg-orange-500 text-white font-black shadow-2xl hover:scale-105 transition flex items-center gap-2 border-2 border-white/50`}
       >
         <span className="relative flex items-center justify-center shrink-0 w-6 h-6 text-xl animate-bounce">🤖</span>
         <span className="text-xs font-black text-white drop-shadow text-center">
@@ -286,9 +286,9 @@ export function FloatingChat() {
 
       {open && (
         <div className={`fixed bottom-24 ${language === 'ar' ? 'left-6' : 'right-6'} z-[95] w-[94vw] max-w-md h-[78vh] max-h-[620px] bg-white text-[#0B132B] rounded-3xl shadow-2xl border border-[#E6E1D6] flex flex-col overflow-hidden animate-fade-up`} dir={dir}>
-          <div className="bg-gradient-to-r from-blue-50 via-sky-50 to-amber-50 p-4 border-b border-[#E6E1D6] flex items-center justify-between">
+          <div className="bg-blue-50 p-4 border-b border-[#E6E1D6] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#003580] to-[#1B5A78] p-0.5 shadow-md flex items-center justify-center text-xl text-white">
+              <div className="w-10 h-10 rounded-2xl bg-[#003580] p-0.5 shadow-md flex items-center justify-center text-xl text-white">
                 🤖
               </div>
               <div>
@@ -375,7 +375,7 @@ export function FloatingChat() {
               placeholder={language === 'ar' ? "اكتب استفسارك هنا..." : "Type your query here..."}
               className="flex-1 h-10 px-3.5 rounded-xl bg-[#FAFAF8] border border-[#E6E1D6] text-[#0B132B] focus:border-[#003580] focus:bg-white outline-none text-xs font-semibold"
             />
-            <button className="h-10 px-4 rounded-xl bg-[#003580] hover:bg-[#1B5A78] text-white font-black text-xs shadow-soft transition-all">
+            <button className="h-10 px-4 rounded-xl bg-[#003580] hover:bg-[#1B5A78] text-white font-black text-xs shadow-soft transition">
               {language === 'ar' ? 'إرسال' : 'Send'}
             </button>
           </form>

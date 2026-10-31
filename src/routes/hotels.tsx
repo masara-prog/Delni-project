@@ -80,7 +80,7 @@ function HotelOffersSpotlight({
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6">
       <div
         onClick={cycleNext}
-        className="group relative rounded-3xl bg-gradient-to-br from-[#FFF9F5] via-white to-[#FEF3EB] border-2 border-[#E8E2D6] p-6 sm:p-10 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden select-none"
+        className="group relative rounded-3xl bg-[#FFF9F5] border-2 border-[#E8E2D6] p-6 sm:p-10 shadow-lg hover:shadow-2xl transition duration-300 cursor-pointer overflow-hidden select-none"
       >
         {/* Ambient Glow */}
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-radial from-[#D96B27]/15 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -88,7 +88,7 @@ function HotelOffersSpotlight({
 
         {/* Diagonal Corner Triangle / Ribbon for Discount */}
         <div className="absolute top-0 right-0 w-36 h-36 overflow-hidden pointer-events-none z-20">
-          <div className="absolute top-6 -right-10 w-44 py-1.5 bg-gradient-to-r from-red-600 via-[#EA580C] to-[#D96B27] text-white text-center text-xs font-black tracking-wider shadow-md rotate-45 border-y border-white/30">
+          <div className="absolute top-6 -right-10 w-44 py-1.5 bg-red-600 text-white text-center text-xs font-black tracking-wider shadow-md rotate-45 border-y border-white/30">
             {isAr ? `خصم ${offer.discountPct}%` : `${offer.discountPct}% OFF`}
           </div>
         </div>
@@ -126,7 +126,7 @@ function HotelOffersSpotlight({
               <button
                 type="button"
                 onClick={() => onSelectHotel(offer.hotelId)}
-                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:opacity-95 text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+                className="px-6 py-3.5 rounded-2xl bg-[#D96B27] hover:opacity-95 text-white font-black text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
               >
                 <span>🏨</span>
                 <span>{isAr ? "معاينة الفندق والتفاصيل" : "View Hotel Details"}</span>
@@ -143,15 +143,15 @@ function HotelOffersSpotlight({
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
             <div className="relative w-64 sm:w-72 h-80 sm:h-96">
               {/* Back card 2 */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-md rotate-12 translate-x-6 translate-y-3 opacity-60 transition-all duration-300">
+              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-md rotate-12 translate-x-6 translate-y-3 opacity-60 transition duration-300">
                 <img src={photo2} alt="Hotel view" className="w-full h-full object-cover" />
               </div>
               {/* Back card 1 */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-lg rotate-6 translate-x-3 translate-y-1.5 opacity-80 transition-all duration-300">
+              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-lg rotate-6 translate-x-3 translate-y-1.5 opacity-80 transition duration-300">
                 <img src={photo1} alt="Hotel view" className="w-full h-full object-cover" />
               </div>
               {/* Front active card */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-2xl rotate-0 hover:rotate-1 transition-all duration-300">
+              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-2xl rotate-0 hover:rotate-1 transition duration-300">
                 <img src={photo0} alt={offer.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                 <div className="absolute bottom-4 right-4 left-4 flex items-center justify-between text-white text-xs font-bold">
@@ -238,7 +238,7 @@ function HotelDetailsView({
           <button
             type="button"
             onClick={onBack}
-            className="group inline-flex items-center gap-2.5 text-slate-300 hover:text-white text-xs sm:text-sm font-black transition-all cursor-pointer bg-white/5 hover:bg-white/10 px-4 py-2 rounded-2xl border border-white/10"
+            className="group inline-flex items-center gap-2.5 text-slate-300 hover:text-white text-xs sm:text-sm font-black transition cursor-pointer bg-white/5 hover:bg-white/10 px-4 py-2 rounded-2xl border border-white/10"
           >
             <span className="w-6 h-6 rounded-full bg-white/10 group-hover:bg-[#003580] flex items-center justify-center text-xs text-white transition-colors">
               {dir === "rtl" ? "→" : "←"}
@@ -256,7 +256,7 @@ function HotelDetailsView({
           </div>
 
           {/* VIP Dallani Perk Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-blue-500/20 border border-amber-400/30 text-amber-300 text-xs font-black shadow-lg shadow-amber-500/5">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-black shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span>{isAr ? "خصم 20% حصري لرواد منصة دلّني" : "20% Exclusive Dallani Perk"}</span>
           </div>
@@ -267,7 +267,7 @@ function HotelDetailsView({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-24">
         
         {/* Luxury Hero Header Bar */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-slate-950/95 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#003580]/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -342,7 +342,7 @@ function HotelDetailsView({
                   {(hotel.reviewsCount || 0) > 0 ? `${hotel.reviewsCount} ${isAr ? "تقييم نزيل معتمد" : "verified reviews"}` : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet")}
                 </div>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#003580] via-blue-600 to-indigo-700 text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
+              <div className="w-14 h-14 rounded-2xl bg-[#003580] text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
                 <span className="text-lg leading-tight font-black">{(hotel.rating || 0) > 0 ? hotel.rating : "—"}</span>
                 <span className="text-[9px] text-amber-300 font-bold">{(hotel.rating || 0) > 0 ? (isAr ? "من 10" : "/10") : (isAr ? "جديد" : "New")}</span>
               </div>
@@ -374,7 +374,7 @@ function HotelDetailsView({
                 src={photos[activePhoto]}
                 alt={hotel.name}
                 key={activePhoto}
-                className="relative z-10 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
+                className="relative z-10 w-full h-full object-cover object-center transition duration-700 ease-out group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 pointer-events-none z-10" />
 
@@ -396,7 +396,7 @@ function HotelDetailsView({
                     e.stopPropagation();
                     setLightboxOpen(true);
                   }}
-                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>🔍</span>
                   <span>{isAr ? "تكبير واستعراض الشاشة الكاملة" : "Expand Fullscreen"}</span>
@@ -410,7 +410,7 @@ function HotelDetailsView({
                   e.stopPropagation();
                   prevPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة السابقة" : "Previous photo"}
               >
                 {dir === "rtl" ? "→" : "←"}
@@ -421,7 +421,7 @@ function HotelDetailsView({
                   e.stopPropagation();
                   nextPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة التالية" : "Next photo"}
               >
                 {dir === "rtl" ? "←" : "→"}
@@ -444,7 +444,7 @@ function HotelDetailsView({
                         e.stopPropagation();
                         setActivePhoto(idx);
                       }}
-                      className={`h-2 rounded-full transition-all cursor-pointer ${
+                      className={`h-2 rounded-full transition cursor-pointer ${
                         activePhoto === idx ? "w-6 bg-amber-400" : "w-2 bg-white/40 hover:bg-white/70"
                       }`}
                     />
@@ -461,7 +461,7 @@ function HotelDetailsView({
                   <div
                     key={idx}
                     onClick={() => setActivePhoto(idx)}
-                    className={`relative h-28 sm:h-36 lg:h-[155px] rounded-3xl overflow-hidden cursor-pointer group transition-all duration-300 bg-slate-950 border ${
+                    className={`relative h-28 sm:h-36 lg:h-[155px] rounded-3xl overflow-hidden cursor-pointer group transition duration-300 bg-slate-950 border ${
                       isSelected
                         ? "border-amber-400 ring-2 ring-amber-400/50 scale-[1.02] shadow-xl"
                         : "border-white/10 hover:border-white/40 opacity-80 hover:opacity-100"
@@ -500,9 +500,9 @@ function HotelDetailsView({
                 key={idx}
                 type="button"
                 onClick={() => setActivePhoto(idx)}
-                className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
+                className={`px-4 py-2 rounded-2xl text-xs font-black transition flex items-center gap-2 cursor-pointer border ${
                   activePhoto === idx
-                    ? "bg-gradient-to-r from-[#003580] to-blue-600 text-white border-blue-400/40 shadow-lg shadow-blue-500/20 scale-102"
+                    ? "bg-[#003580] text-white border-blue-400/40 shadow-lg scale-102"
                     : "bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
                 }`}
               >
@@ -531,9 +531,9 @@ function HotelDetailsView({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab === tab.id
-                      ? "bg-gradient-to-r from-[#003580] to-blue-600 text-white shadow-md border border-blue-400/30"
+                      ? "bg-[#003580] text-white shadow-md border border-blue-400/30"
                       : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -604,7 +604,7 @@ function HotelDetailsView({
                       tag: isAr ? "مثالي للعائلات" : "Family Choice",
                     },
                   ].map((room, idx) => (
-                    <div key={idx} className="p-5 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 space-y-2.5">
+                    <div key={idx} className="p-5 rounded-2xl bg-white/5 hover:bg-white/10 transition border border-white/10 space-y-2.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <h4 className="text-sm sm:text-base font-black text-white">{room.name}</h4>
                         <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[11px] font-black border border-amber-400/30">
@@ -666,7 +666,7 @@ function HotelDetailsView({
                 </p>
 
                 {/* Map Action Box */}
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-900/40 to-slate-900/60 border border-blue-400/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="p-5 rounded-2xl bg-blue-900/40 border border-blue-400/30 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="space-y-1 text-right w-full sm:w-auto">
                     <div className="text-sm font-black text-white flex items-center gap-2">
                       <span>🗺️</span>
@@ -682,7 +682,7 @@ function HotelDetailsView({
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition-all shadow-lg text-center"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition shadow-lg text-center"
                   >
                     {isAr ? "فتح الموقع في خرائط Google ↗" : "Open Google Maps ↗"}
                   </a>
@@ -696,7 +696,7 @@ function HotelDetailsView({
           <div className="lg:col-span-4 sticky top-20 space-y-4">
             
             {/* VIP Dallani Pass Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-slate-800/80 to-slate-900/90 border border-amber-400/30 p-6 shadow-2xl backdrop-blur-xl space-y-5">
+            <div className="relative overflow-hidden rounded-3xl bg-amber-500/20 border border-amber-400/30 p-6 shadow-2xl backdrop-blur-xl space-y-5">
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
               <div className="space-y-2">
@@ -718,7 +718,7 @@ function HotelDetailsView({
               <div className="space-y-3">
                 <a
                   href={`tel:${hotel.phone}`}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-[#003580] hover:from-blue-500 hover:to-blue-700 text-white font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-blue-600/30 active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">📞</span>
                   <span>{isAr ? `اتصال فوري بالاستقبال (${hotel.phone})` : `Call Front Desk (${hotel.phone})`}</span>
@@ -730,7 +730,7 @@ function HotelDetailsView({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-600/30 active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">💬</span>
                   <span>{isAr ? "مراسلة واستعلام عبر واتساب" : "WhatsApp VIP Inquiry"}</span>
@@ -742,7 +742,7 @@ function HotelDetailsView({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-slate-200 font-black text-xs transition-all flex items-center justify-center gap-2 border border-white/15"
+                  className="w-full py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-slate-200 font-black text-xs transition flex items-center justify-center gap-2 border border-white/15"
                 >
                   <span>📍</span>
                   <span>{isAr ? "عرض الموقع في خرائط Google" : "Open in Google Maps"}</span>
@@ -811,14 +811,14 @@ function HotelDetailsView({
             <button
               type="button"
               onClick={prevPhoto}
-              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
+              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={nextPhoto}
-              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition-all cursor-pointer"
+              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
@@ -832,7 +832,7 @@ function HotelDetailsView({
               <div
                 key={idx}
                 onClick={() => setActivePhoto(idx)}
-                className={`w-20 h-14 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                className={`w-20 h-14 rounded-xl overflow-hidden cursor-pointer border-2 transition ${
                   activePhoto === idx ? "border-amber-400 scale-110 shadow-lg" : "border-white/20 opacity-60 hover:opacity-100"
                 }`}
               >
@@ -1204,7 +1204,7 @@ function HotelsPage() {
                 <div
                   key={prop.id}
                   onClick={() => setPropertyType(prop.id)}
-                  className="group relative h-60 sm:h-64 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer border border-slate-200 hover:border-[#D96B27] flex flex-col justify-between p-5"
+                  className="group relative h-60 sm:h-64 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 cursor-pointer border border-slate-200 hover:border-[#D96B27] flex flex-col justify-between p-5"
                 >
                   <img
                     src={prop.img}
@@ -1245,13 +1245,13 @@ function HotelsPage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
                     <div className="relative z-10 flex items-center justify-between">
-                      <span className="px-3.5 py-1 rounded-full text-white text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 shadow-xs">
+                      <span className="px-3.5 py-1 rounded-full text-white text-xs font-black bg-amber-500 shadow-xs">
                         🌟 {isAr ? "عرض شامل (كافة الأماكن)" : "All Accommodations"}
                       </span>
                       <button
                         type="button"
                         onClick={() => setPropertyType("none")}
-                        className="px-4 py-2 rounded-2xl bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
+                        className="px-4 py-2 rounded-2xl bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md"
                       >
                         <span>✕</span>
                         <span>{isAr ? "العودة للتصنيفات" : "Show Categories"}</span>
@@ -1330,7 +1330,7 @@ function HotelsPage() {
                       <button
                         type="button"
                         onClick={() => setPropertyType("all")}
-                        className="px-3.5 py-1.5 rounded-2xl bg-amber-500/80 hover:bg-amber-500 text-white backdrop-blur-md border border-white/30 text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                        className="px-3.5 py-1.5 rounded-2xl bg-amber-500/80 hover:bg-amber-500 text-white backdrop-blur-md border border-white/30 text-xs font-black transition cursor-pointer flex items-center gap-1 shadow-sm"
                       >
                         <span>🌟</span>
                         <span>{isAr ? "عرض الكل" : "View All"}</span>
@@ -1338,7 +1338,7 @@ function HotelsPage() {
                       <button
                         type="button"
                         onClick={() => setPropertyType("none")}
-                        className="px-3.5 py-1.5 rounded-2xl bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-md"
+                        className="px-3.5 py-1.5 rounded-2xl bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 text-xs font-black transition cursor-pointer flex items-center gap-1 shadow-md"
                       >
                         <span>✕</span>
                         <span>{isAr ? "عرض باقي التصنيفات" : "Show All"}</span>
@@ -1458,7 +1458,7 @@ function HotelsPage() {
                         e.preventDefault();
                         setSelectedHotel(h);
                       }}
-                      className="group w-[320px] sm:w-[420px] md:w-[480px] shrink-0 snap-start bg-white rounded-3xl border border-orange-200/90 shadow-[0_10px_30px_rgba(217,107,39,0.20)] overflow-hidden cursor-pointer flex flex-col justify-between"
+                      className="group w-[320px] sm:w-[420px] md:w-[480px] shrink-0 snap-start bg-white rounded-3xl border border-orange-200/90 shadow-lg overflow-hidden cursor-pointer flex flex-col justify-between"
                     >
                       {/* Card Photo */}
                       <div className="relative w-full h-52 sm:h-56 overflow-hidden bg-slate-100">
@@ -1491,7 +1491,7 @@ function HotelsPage() {
                           <span className="bg-white/95 backdrop-blur-md text-[#003580] text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs border border-blue-100">
                             📍 {h.city}
                           </span>
-                          <span className="bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs">
+                          <span className="bg-[#D96B27] text-white text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs">
                             🏷️ خصم {h.discountPct || 15}% دلّني
                           </span>
                         </div>
@@ -1568,7 +1568,7 @@ function HotelsPage() {
                               e.stopPropagation();
                               setSelectedHotel(h);
                             }}
-                            className="flex-1 py-2.5 px-4 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-950/20 cursor-pointer"
+                            className="flex-1 py-2.5 px-4 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
                           >
                             <span>{isAr ? "معرفة المزيد" : "View Details"}</span>
                             <span>➔</span>

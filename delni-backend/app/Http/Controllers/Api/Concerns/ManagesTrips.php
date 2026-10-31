@@ -138,7 +138,7 @@ trait ManagesTrips
         }
         $today = now('Africa/Tripoli')->toDateString();
         $who = function (object $row) use ($guide, $plate): string {
-            return $guide !== null && $row->guide_license_number === $guide ? 'المرشد المختار' : "المركبة ({$plate})";
+            return $guide !== null && $row->guide_license_number === $guide ? 'المرشد المختار مسند' : "المركبة ({$plate}) مسندة";
         };
         $sameResources = function ($q, string $guideColumn = 'guide_license_number', string $plateColumn = 'vehicle_plate') use ($guide, $plate) {
             $q->where(function ($w) use ($guide, $plate, $guideColumn, $plateColumn) {
@@ -165,7 +165,7 @@ trait ManagesTrips
         }
         foreach ($weekly->get(['weekly_trip_id', 'trip_title', 'guide_license_number', 'vehicle_plate', 'start_date', 'end_date']) as $t) {
             if ($weekdays === null || array_intersect($days, $this->weekdaysBetween((string) $t->start_date, (string) $t->end_date))) {
-                return "{$who($t)} مسند لرحلة أسبوعية أخرى ({$t->trip_title}) من " . substr($t->start_date, 0, 10) . ' إلى ' . substr($t->end_date, 0, 10) . ' في نفس الفترة.';
+                return "{$who($t)} لرحلة أسبوعية أخرى ({$t->trip_title}) من " . substr($t->start_date, 0, 10) . ' إلى ' . substr($t->end_date, 0, 10) . ' في نفس الفترة.';
             }
         }
 
@@ -184,7 +184,7 @@ trait ManagesTrips
             $tStart = substr((string) $t->preferred_start_date, 0, 10);
             $tEnd = date('Y-m-d', strtotime($tStart . ' +' . max(0, (int) $t->duration_days - 1) . ' days'));
             if ($weekdays === null || array_intersect($days, $this->weekdaysBetween($tStart, $tEnd))) {
-                return "{$who($t)} مسند لرحلة خاصة أخرى (#{$t->private_trip_id}) من {$tStart} إلى {$tEnd} في نفس الفترة.";
+                return "{$who($t)} لرحلة خاصة أخرى (#{$t->private_trip_id}) من {$tStart} إلى {$tEnd} في نفس الفترة.";
             }
         }
 
@@ -200,7 +200,7 @@ trait ManagesTrips
             $tDays = ($runDays[$t->daily_trip_id] ?? collect())->pluck('day_of_week')->map([$this, 'normalizeDayName'])->all();
             $shared = $tDays ? array_intersect($days, $tDays) : $days; // no stored days = every day
             if ($shared) {
-                return "{$who($t)} مسند لرحلة يومية أخرى ({$t->trip_title}) تنطلق يوم " . implode(' و', array_values($shared)) . '.';
+                return "{$who($t)} لرحلة يومية أخرى ({$t->trip_title}) تنطلق يوم " . implode(' و', array_values($shared)) . '.';
             }
         }
         return null;
@@ -244,6 +244,49 @@ trait ManagesTrips
             }
         }
         return [null, $warning];
+    }
+
+    /**
+     * Whether a vehicle can serve a trip: [error, warning]. The error blocks the assignment (vehicle in maintenance or out of
+     * service, company suspended, company contract ending before the trip ends); the warning informs the admin about the
+     * vehicle's driver (none assigned, on leave, driving licence ending before the trip ends).
+     */
+    private function vehicleFitness(string $plate, ?string $start, ?string $end): array
+    {
+        $v = DB::table('vehicles as v')->join('transportation_companies as c', 'v.contract_number', '=', 'c.contract_number')
+            ->where('v.plate_number', $plate)
+            ->first(['v.vehicle_status', 'c.company_name', 'c.verification_status',
+                DB::raw('CONVERT(VARCHAR(10), c.contract_end_date, 23) as contract_end_date')]);
+        if (!$v) {
+            return [null, null];
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        $lastDay = max($end ? substr($end, 0, 10) : $today, $today);
+        if (in_array($v->vehicle_status, ['صيانة', 'خارج الخدمة'], true)) {
+            return ["المركبة ({$plate}) حالتها «{$v->vehicle_status}» ولا يمكن إسنادها لرحلة.", null];
+        }
+        if ($v->verification_status === 'موقوفة') {
+            return ["شركة النقل ({$v->company_name}) موقوفة من قبل الإدارة، ولا يمكن إسناد مركباتها لرحلات.", null];
+        }
+        if ($v->contract_end_date && $v->contract_end_date < $lastDay) {
+            return ["عقد شركة النقل ({$v->company_name}) ينتهي بتاريخ {$v->contract_end_date} قبل انتهاء الرحلة. يرجى تجديد العقد أو اختيار مركبة أخرى.", null];
+        }
+
+        $d = DB::table('drivers')->where('assigned_vehicle_plate', $plate)
+            ->first(['full_name', 'operational_status', DB::raw('CONVERT(VARCHAR(10), license_date_valid, 23) as license_date_valid')]);
+        $warning = match (true) {
+            !$d => "تنبيه: لا يوجد سائق مخصص للمركبة ({$plate}) حتى الآن.",
+            $d->operational_status === 'إجازة' => "تنبيه: سائق المركبة ({$d->full_name}) في إجازة حالياً.",
+            $d->license_date_valid && $d->license_date_valid < $lastDay => "تنبيه: رخصة سائق المركبة ({$d->full_name}) تنتهي بتاريخ {$d->license_date_valid} قبل انتهاء الرحلة.",
+            default => null,
+        };
+        return [null, $warning];
+    }
+
+    // Joins the guide and vehicle warnings shown to the admin after saving
+    private function joinWarnings(?string ...$warnings): ?string
+    {
+        return trim(implode(' ', array_filter($warnings))) ?: null;
     }
 
     private const WEEKDAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];

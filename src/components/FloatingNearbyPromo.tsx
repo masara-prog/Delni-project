@@ -201,7 +201,7 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
         </span>
         <Link
           to={current.detailsUrl as any}
-          className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-[#003580] to-[#1B5A78] hover:from-[#002860] hover:to-[#13445C] text-white text-[11px] font-black rounded-lg transition shadow-xs"
+          className="inline-flex items-center gap-1 px-3 py-1 bg-[#003580] hover:bg-[#002860] text-white text-[11px] font-black rounded-lg transition shadow-xs"
         >
           <span>{isAr ? "استكشاف العرض" : "Explore"}</span>
           <span>➔</span>

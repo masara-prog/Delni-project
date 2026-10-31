@@ -152,18 +152,18 @@ function LoginPage() {
 
         {/* Crisp Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/40 to-transparent z-1" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#D96B27]/20 via-transparent to-transparent z-1" />
+        <div className="absolute inset-0 z-1" />
 
         <div className="relative z-10 h-full flex flex-col justify-between p-10 xl:p-12 text-white">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition-all duration-300">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition duration-300">
               <MapPin className="w-4 h-4 text-[#D96B27]" />
               <span>{currentSlide.titleAr}</span>
             </span>
           </div>
 
           <div className="max-w-lg space-y-4">
-            <div className="inline-block px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D96B27] to-[#1B5A78] text-white text-xs font-black tracking-wide shadow-md">
+            <div className="inline-block px-3.5 py-1.5 rounded-lg bg-[#D96B27] text-white text-xs font-black tracking-wide shadow-md">
               بوابة السياحة الذكية
             </div>
             <h2 className="text-3xl xl:text-4xl font-black leading-tight text-white drop-shadow-md">
@@ -180,7 +180,7 @@ function LoginPage() {
                   key={i}
                   type="button"
                   onClick={() => setSlideIdx(i)}
-                  className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                  className={`h-2 rounded-full transition duration-300 cursor-pointer ${
                     i === slideIdx ? "w-8 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/70"
                   }`}
                   title={slide.titleAr}
@@ -221,7 +221,7 @@ function LoginPage() {
                   key={r.id}
                   type="button"
                   onClick={() => handleRoleSelect(r.id)}
-                  className={`p-3 rounded-[18px] bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
+                  className={`p-3 rounded-[18px] bg-white text-right transition duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
                     isSelected
                       ? "border-2 border-[#1B5A78] shadow-sm ring-1 ring-[#1B5A78]/20 bg-blue-50/50"
                       : "border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/40"

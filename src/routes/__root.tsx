@@ -46,7 +46,7 @@ function RoleDashboardsSidebar() {
       <div className={`fixed top-1/3 -translate-y-1/2 z-[90] flex flex-col gap-2 ${language === 'ar' ? 'right-0' : 'left-0'}`}>
         <button
           onClick={() => setIsOpen(true)}
-          className={`bg-gradient-to-b from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] text-white py-3.5 px-2.5 shadow-soft transition-all duration-300 flex flex-col items-center gap-2 group border-y border-white/20 ${
+          className={`bg-gradient-to-b from-[#D96B27] to-[#EA580C] hover:bg-[#C25B1E] text-white py-3.5 px-2.5 shadow-soft transition duration-300 flex flex-col items-center gap-2 group border-y border-white/20 ${
             language === 'ar' ? 'rounded-l-2xl border-l' : 'rounded-r-2xl border-r'
           }`}
           title={t('dashboards')}
@@ -107,7 +107,7 @@ function RoleDashboardsSidebar() {
               <a
                 key={link.to}
                 href={link.to}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition duration-200 ${
                   isActive
                     ? "bg-primary text-white shadow-soft"
                     : "text-slate-350 hover:bg-slate-800 hover:text-white"
@@ -127,7 +127,7 @@ function RoleDashboardsSidebar() {
               <a
                 key={link.to}
                 href={link.to}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition duration-200 ${
                   isActive
                     ? "bg-gradient-sun text-gold-foreground shadow-gold"
                     : "text-slate-350 hover:bg-slate-800 hover:text-white"
@@ -184,7 +184,7 @@ function NotFoundComponent() {
         <div className="pt-2">
           <Link
             to="/"
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] hover:from-[#C25B1E] hover:to-[#D96B27] px-6 py-3 text-xs font-black text-white shadow-soft transition-all cursor-pointer"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] px-6 py-3 text-xs font-black text-white shadow-soft transition cursor-pointer"
           >
             <span>🏠</span>
             <span>{isAr ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}</span>

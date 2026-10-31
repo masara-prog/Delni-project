@@ -23,6 +23,7 @@ Artisan::command('images:extract', function () {
         ['tour_guides', 'license_number', 'avatar', 'guide', 'guides'],
         ['places_tourist', 'place_id', 'place_image', 'place', 'places'],
         ['vehicles', 'plate_number', 'vehicle_image', 'vehicle', 'vehicles'],
+        ['vehicles', 'plate_number', 'insurance_image', 'insurance', 'vehicles'],
     ];
     foreach ($sources as [$table, $key, $column, $prefix, $folder]) {
         $moved = $skipped = 0;

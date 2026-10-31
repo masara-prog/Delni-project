@@ -415,7 +415,7 @@ function DriverDashboard() {
                 </div>
 
                 {/* Company Affiliation Card on the Left */}
-                <div className="p-4 rounded-2xl border-2 border-[#1B5A78]/25 bg-gradient-to-br from-[#1B5A78]/5 via-[#1B5A78]/10 to-transparent space-y-2">
+                <div className="p-4 rounded-2xl border-2 border-[#1B5A78]/25 space-y-2">
                   <div className="text-[11px] font-black text-[#1B5A78] flex items-center gap-1.5">
                     <span>🏢</span>
                     <span>شركة النقل السياحي المعتمدة التابع لها:</span>

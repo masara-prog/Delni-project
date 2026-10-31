@@ -50,7 +50,7 @@ export function VehicleDetailsModal({ vehicle, onClose }: VehicleDetailsModalPro
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#003580] to-[#00224f] text-white">
+        <div className="flex items-center justify-between px-6 py-4 bg-[#003580] text-white">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-white/10 text-xl">🚍</span>
             <div>

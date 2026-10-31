@@ -42,7 +42,7 @@ export function Logo({
   return (
     <div className={`inline-flex items-center gap-3 select-none ${className}`}>
       {/* Icon Emblem - Pure Borderless Image */}
-      <div className={`relative ${iconSizes[size]} shrink-0 flex items-center justify-center group transition-all duration-300 hover:scale-105`}>
+      <div className={`relative ${iconSizes[size]} shrink-0 flex items-center justify-center group transition duration-300 hover:scale-105`}>
         <img
           src="/logo.png"
           alt="دَلِّني"

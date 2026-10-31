@@ -593,7 +593,7 @@ export function TripVideoShowcase({
             <button
               type="button"
               onClick={handleReplay}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#D96B27] to-[#EA580C] text-white font-black text-xs hover:scale-105 transition shadow-soft flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2 rounded-xl bg-[#D96B27] text-white font-black text-xs hover:scale-105 transition shadow-soft flex items-center gap-2 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>إعادة مشاهدة الفيديو</span>
@@ -654,9 +654,9 @@ export function TripVideoShowcase({
                   key={i}
                   type="button"
                   onClick={() => setCurrentChapter(i)}
-                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  className={`h-1.5 rounded-full transition duration-300 cursor-pointer ${
                     i === currentChapter
-                      ? "flex-1 bg-gradient-to-r from-[#D96B27] to-[#EA580C] shadow-sm"
+                      ? "flex-1 bg-[#D96B27] shadow-sm"
                       : i < currentChapter
                       ? "w-4 bg-white/70"
                       : "w-3 bg-white/30 hover:bg-white/50"
@@ -668,7 +668,7 @@ export function TripVideoShowcase({
           ) : (
             <div className="flex-1 max-w-xs mx-2 h-1.5 bg-white/20 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-[#D96B27] to-[#EA580C] transition-all duration-200"
+                className="h-full bg-[#D96B27] transition-[width] duration-200"
                 style={{ width: `${videoProgress}%` }}
               />
             </div>

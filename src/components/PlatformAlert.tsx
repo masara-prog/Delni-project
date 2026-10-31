@@ -35,8 +35,8 @@ export function PlatformAlert() {
   const text = current.replace(/^\s*(❌|⚠️|✅|🎉)\s*/, "");
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/45 backdrop-blur-sm grid place-items-center p-4" dir="rtl" onClick={() => setQueue((q) => q.slice(1))}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden text-right animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-[200] bg-black/45 backdrop-blur-sm grid place-items-center p-4 animate-overlay-in" dir="rtl" onClick={() => setQueue((q) => q.slice(1))}>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden text-right animate-dialog-in">
         <div className={`px-5 py-3 text-white font-black text-sm flex items-center gap-2 ${isError ? "bg-red-600" : isSuccess ? "bg-emerald-600" : "bg-[#003580]"}`}>
           <span>{isError ? "⚠️" : isSuccess ? "✅" : "ℹ️"}</span>
           <span>منصة دَلِّني</span>

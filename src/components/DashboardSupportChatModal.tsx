@@ -94,7 +94,7 @@ export function DashboardSupportChatModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#003580] via-[#1E293B] to-[#003580] text-white p-4 flex items-center justify-between shadow-md">
+        <div className="bg-[#003580] text-white p-4 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-sun text-gold-foreground grid place-items-center text-lg font-black shadow-soft">
               💬
@@ -139,7 +139,7 @@ export function DashboardSupportChatModal({
                     isMe
                       ? "bg-[#003580] text-white font-semibold rounded-bl-xs"
                       : m.from === "admin"
-                      ? "bg-emerald-700 text-white rounded-br-xs font-semibold shadow-emerald-700/20"
+                      ? "bg-emerald-700 text-white rounded-br-xs font-semibold"
                       : "bg-white border border-slate-200 text-slate-800 rounded-br-xs font-medium"
                   }`}
                 >
