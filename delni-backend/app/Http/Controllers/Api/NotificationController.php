@@ -26,8 +26,19 @@ class NotificationController extends Controller
 
         $unreadCount = (clone $query)->where('is_read', false)->count();
 
-        $notifications = $query->orderBy('created_at', 'desc')
-            ->limit(50)
+        // ?page=&per_page= pages through all of them; otherwise the latest 50 as before
+        $meta = [];
+        if ($request->filled('page')) {
+            $page = max(1, (int) $request->input('page'));
+            $perPage = min(100, max(1, (int) $request->input('per_page', 20)));
+            $total = (clone $query)->count();
+            $meta = ['meta' => ['page' => $page, 'per_page' => $perPage, 'total' => $total, 'last_page' => max(1, (int) ceil($total / $perPage))]];
+            $query->orderBy('created_at', 'desc')->skip(($page - 1) * $perPage)->take($perPage);
+        } else {
+            $query->orderBy('created_at', 'desc')->limit(50);
+        }
+
+        $notifications = $query
             ->get()
             ->map(function ($item) {
                 return [
@@ -50,7 +61,7 @@ class NotificationController extends Controller
             'status' => 'success',
             'data' => $notifications,
             'unread_count' => $unreadCount,
-        ]);
+        ] + $meta);
     }
 
     /**

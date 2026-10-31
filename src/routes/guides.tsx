@@ -234,7 +234,11 @@ function GuidesPage() {
       if (expFilter === "9+" && g.experienceYears < 9) return false;
 
       // Work Days
-      if (workDaysFilter === "full" && !g.workingDays.includes("طوال أيام الأسبوع") && !g.workingDays.includes("السبت") && !g.workingDays.includes("sat")) return false;
+      // "full": works all 7 days; "weekend": works Friday or Saturday
+      const days: string[] = g.workingDays || [];
+      const allWeek = days.includes("طوال أيام الأسبوع") || days.length >= 7;
+      if (workDaysFilter === "full" && !allWeek) return false;
+      if (workDaysFilter === "weekend" && !allWeek && !days.some((d) => ["الجمعة", "السبت", "fri", "sat"].includes(d))) return false;
 
       return true;
     });
@@ -307,7 +311,7 @@ function GuidesPage() {
               <div className="flex items-center gap-3 text-xs font-bold text-[#0F172A]">
                 <span className="text-[#5A6A85]">{isAr ? "أيام الجاهزية:" : "Availability:"}</span>
                 {[
-                  { value: "all", label: isAr ? "بداية الأسبوع فقط" : "Early Week Only" },
+                  { value: "all", label: isAr ? "كل الأيام" : "Any Day" },
                   { value: "full", label: isAr ? "طوال الأسبوع (7 أيام)" : "All Week" },
                   { value: "weekend", label: isAr ? "نهاية الأسبوع فقط" : "Weekends Only" },
                 ].map((w) => (

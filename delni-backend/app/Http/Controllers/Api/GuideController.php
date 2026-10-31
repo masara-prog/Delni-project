@@ -31,7 +31,7 @@ class GuideController extends Controller
         }
         $guides = $query->get();
 
-        return response()->json(['success' => true, 'data' => $this->withDetails($guides)]);
+        return $this->listResponse($this->withDetails($guides));
     }
 
     public function show(string $licenseNumber): JsonResponse

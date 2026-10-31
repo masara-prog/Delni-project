@@ -32,7 +32,7 @@ class FacilityController extends Controller
             ->get()
             ->map(fn (Hotel $h) => $this->withList($h, 'amenities', 'amenity'));
 
-        return response()->json(['success' => true, 'data' => $hotels]);
+        return $this->listResponse($hotels);
     }
 
     public function saveHotel(Request $request): JsonResponse
@@ -106,7 +106,7 @@ class FacilityController extends Controller
             ->get()
             ->map(fn (RestaurantCafe $r) => $this->withList($r, 'features', 'feature'));
 
-        return response()->json(['success' => true, 'data' => $restaurants]);
+        return $this->listResponse($restaurants);
     }
 
     public function saveRestaurant(Request $request): JsonResponse

@@ -138,7 +138,7 @@ class BookingController extends Controller
         if ($request->filled('tourist_id')) {
             $query->where('b.tourist_id', $request->input('tourist_id'));
         }
-        return response()->json(['success' => true, 'data' => $this->typed($query->get()->all())]);
+        return $this->listResponse($this->typed($query->get()->all()));
     }
 
     // The tourist's own bookings, each with its trip and guide (shape used by the tourist dashboard)
@@ -173,13 +173,22 @@ class BookingController extends Controller
 
         $dailyRows = $withTrip($daily, $dailyTrips, 'daily_trip_id', 'daily_trip');
         $weeklyRows = $withTrip($weekly, $weeklyTrips, 'weekly_trip_id', 'weekly_trip');
+        // ?page applies to each list (daily and weekly) separately
+        $meta = [];
+        if ($page = $this->pageRequest()) {
+            [$number, $perPage] = $page;
+            $meta = ['meta' => ['daily' => $this->pageMeta(count($dailyRows), $number, $perPage),
+                'weekly' => $this->pageMeta(count($weeklyRows), $number, $perPage)]];
+            $dailyRows = array_slice($dailyRows, ($number - 1) * $perPage, $perPage);
+            $weeklyRows = array_slice($weeklyRows, ($number - 1) * $perPage, $perPage);
+        }
         return response()->json([
             'success' => true,
             'daily' => $dailyRows,
             'weekly' => $weeklyRows,
             'daily_bookings' => $dailyRows,
             'weekly_bookings' => $weeklyRows,
-        ]);
+        ] + $meta);
     }
 
     // Admin: mark a booking paid / unpaid

@@ -99,6 +99,35 @@ trait JsonApiResponses
         return $new <= now('Africa/Tripoli')->toDateString() ? "{$label} يجب أن يكون تاريخاً قادماً (بعد تاريخ اليوم)" : null;
     }
 
+    // ?page=N (&per_page=, default 20, at most 100): one page of the list and a "meta" block.
+    // Without ?page the full list is returned as before, so the existing site keeps working unchanged.
+    private function listResponse($items, array $extra = []): JsonResponse
+    {
+        $items = array_values($items instanceof \Illuminate\Support\Collection ? $items->all() : (array) $items);
+        $page = $this->pageRequest();
+        if ($page === null) {
+            return response()->json(['success' => true, 'data' => $items] + $extra);
+        }
+        [$number, $perPage] = $page;
+        return response()->json(['success' => true, 'data' => array_slice($items, ($number - 1) * $perPage, $perPage),
+            'meta' => $this->pageMeta(count($items), $number, $perPage)] + $extra);
+    }
+
+    // [page, per_page] when the client asked for pages, otherwise null
+    private function pageRequest(): ?array
+    {
+        $request = request();
+        if (!$request->filled('page')) {
+            return null;
+        }
+        return [max(1, (int) $request->input('page')), min(100, max(1, (int) $request->input('per_page', 20)))];
+    }
+
+    private function pageMeta(int $total, int $page, int $perPage): array
+    {
+        return ['page' => $page, 'per_page' => $perPage, 'total' => $total, 'last_page' => max(1, (int) ceil($total / $perPage))];
+    }
+
     private function error(string $message, int $status): JsonResponse
     {
         return response()->json(['success' => false, 'error' => $message], $status);

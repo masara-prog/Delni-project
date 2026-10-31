@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Dalni: tokens (web site and mobile app) last 30 days; after that the user signs in again.
+    // POST /api/auth/logout ends a token earlier. Set SANCTUM_EXPIRATION (minutes) in .env to change it.
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 43200),
 
     /*
     |--------------------------------------------------------------------------

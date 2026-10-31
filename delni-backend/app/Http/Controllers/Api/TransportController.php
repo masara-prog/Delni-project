@@ -37,7 +37,17 @@ class TransportController extends Controller
 
     public function companies(): JsonResponse
     {
-        return response()->json(['success' => true, 'data' => TransportationCompany::orderBy('company_name')->get()]);
+        // The email is the company's sign-in account: shown only to the admin and to the company itself
+        $role = \App\Support\Actor::role();
+        $ownId = \App\Support\Actor::id();
+        $companies = TransportationCompany::orderBy('company_name')->get()->map(function (TransportationCompany $c) use ($role, $ownId) {
+            $row = $c->toArray();
+            if ($role !== 'admin' && !($role === 'transport' && $ownId === (string) $c->contract_number)) {
+                unset($row['email']);
+            }
+            return $row;
+        });
+        return response()->json(['success' => true, 'data' => $companies]);
     }
 
     public function saveCompany(Request $request): JsonResponse

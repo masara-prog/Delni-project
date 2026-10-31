@@ -15,6 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Development database viewer (routes/web.php): off unless explicitly enabled, local environment only
+    'db_viewer_enabled' => (bool) env('DB_VIEWER_ENABLED', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

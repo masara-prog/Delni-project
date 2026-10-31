@@ -89,7 +89,7 @@ class TripCatalogController extends Controller
             ];
         })->values()->all();
 
-        return response()->json(['success' => true, 'data' => $this->typed($data)]);
+        return $this->listResponse($this->typed($data));
     }
 
     // The next bookable run dates of one daily trip and the seats left on each (used by the booking form)
@@ -317,7 +317,7 @@ class TripCatalogController extends Controller
             ];
         })->values()->all();
 
-        return response()->json(['success' => true, 'data' => $this->typed($data)]);
+        return $this->listResponse($this->typed($data));
     }
 
     public function saveWeekly(Request $request): JsonResponse
