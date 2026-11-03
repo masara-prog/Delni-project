@@ -35,7 +35,6 @@ export interface TourGuide {
   digital_certificate_file?: string | null; // NVARCHAR(MAX)
   license_expiry_date?: string | null; // DATE: guiding licence expiry
   availability_status?: "متاح" | "إجازة" | string | null; // NVARCHAR(30) DEFAULT متاح
-  rejection_reason?: string | null; // NVARCHAR(1000)
   total_tours_completed?: number; // INT DEFAULT 0
   // Deprecated/Virtual helpers:
   title?: string | null;
@@ -214,7 +213,6 @@ export interface RestaurantFeature {
 export interface DailyTrip {
   daily_trip_id: string; // VARCHAR(50) PRIMARY KEY
   trip_title: string; // VARCHAR(150)
-  description: string; // TEXT
   price_per_seat: number; // DECIMAL(10,2) (CHECK > 0)
   is_active: boolean; // BIT DEFAULT 1
   photo_1?: string | null;
@@ -247,7 +245,6 @@ export interface WeeklyTrip {
   max_capacity: number; // INT (CHECK > 0)
   available_seats: number; // INT (CHECK >= 0 AND <= max_capacity)
   seat_per_price: number; // DECIMAL(10,2) (CHECK > 0)
-  trip_description: string; // TEXT
   guide_license_number: string; // VARCHAR(50) FK -> TourGuides
   is_active: boolean; // BIT DEFAULT 1
   departure_city?: string | null; // VARCHAR(50)

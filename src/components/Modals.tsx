@@ -1189,6 +1189,9 @@ export type ScheduledTrip = {
   taken: number;
   guide: string;
   price: number;
+  // An offer running on this date: the seat price before it and its discount
+  originalPrice?: number;
+  discount?: number;
   tripTitle?: string;
   kind?: string;
 };
@@ -1289,7 +1292,7 @@ export function TripScheduleModal({
   // A daily trip runs every week: its bookable dates and the seats left on each come from the server
   const isDaily = kind === "daily" || trip?.type === "daily";
   const dailyTripId: string = trip?.daily_trip_id || trip?.id || tripId || customSchedules?.[0]?.tripId || "";
-  const [dailyDates, setDailyDates] = useState<{ date: string; day: string; seats_left: number }[] | null>(null);
+  const [dailyDates, setDailyDates] = useState<{ date: string; day: string; seats_left: number; discount?: number; price?: number }[] | null>(null);
   useEffect(() => {
     if (!open || !isDaily || !dailyTripId) return;
     setDailyDates(null);
@@ -1321,7 +1324,10 @@ export function TripScheduleModal({
       seats: realSeats || d.seats_left,
       taken: Math.max(0, (realSeats || d.seats_left) - d.seats_left),
       guide: realGuide,
-      price: realPrice,
+      // the server prices each date (an offer running on that date lowers it)
+      price: d.price ?? realPrice,
+      originalPrice: d.discount ? realPrice : undefined,
+      discount: d.discount || undefined,
       tripTitle: realTitle,
       kind: "daily",
     }));
@@ -1437,6 +1443,12 @@ export function TripScheduleModal({
                       </div>
                     </div>
                     <div className="text-left shrink-0">
+                      {s.discount ? (
+                        <div className="text-[10px] font-black text-emerald-700 bg-emerald-50 rounded-full px-2 py-0.5 mb-0.5 text-center">
+                          {isAr ? `عرض -${s.discount}%` : `Offer -${s.discount}%`}
+                        </div>
+                      ) : null}
+                      {s.originalPrice ? <div className="text-[11px] text-slate-400 line-through">{s.originalPrice.toLocaleString()}</div> : null}
                       <div className="text-lg font-black text-[#D96B27]">{s.price.toLocaleString()}</div>
                       <div className="text-[10px] text-[#526078]">{isAr ? "د.ل / شخص" : "LYD / person"}</div>
                     </div>
@@ -1722,8 +1734,18 @@ export function TripScheduleModal({
                     <div className="rounded-2xl bg-[#FAFAF8] p-4 border border-[#E6E1D6]">
                       <div className="flex justify-between text-sm text-[#526078]">
                         <span>{isAr ? "سعر المقعد" : "Seat Price"}</span>
-                        <span className="font-bold text-[#0B132B]">{selectedTrip.price.toLocaleString()} {isAr ? "د.ل" : "LYD"}</span>
+                        <span className="font-bold text-[#0B132B]">
+                          {selectedTrip.originalPrice ? (
+                            <span className="text-slate-400 line-through font-medium ms-2">{selectedTrip.originalPrice.toLocaleString()}</span>
+                          ) : null}
+                          {selectedTrip.price.toLocaleString()} {isAr ? "د.ل" : "LYD"}
+                        </span>
                       </div>
+                      {selectedTrip.discount ? (
+                        <div className="mt-2 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1.5">
+                          🏷️ {isAr ? `عرض ترويجي: خصم ${selectedTrip.discount}% على موعد هذه الرحلة` : `Promotion: ${selectedTrip.discount}% off this date`}
+                        </div>
+                      ) : null}
                       <div className="mt-3 pt-3 border-t border-[#E6E1D6] flex justify-between items-center">
                         <span className="font-black text-[#0B132B]">{isAr ? "الإجمالي" : "Total"}</span>
                         <span className="text-2xl font-black text-[#D96B27]">{(selectedTrip.price * n).toLocaleString()} <span className="text-sm text-[#526078] font-bold">{isAr ? "د.ل" : "LYD"}</span></span>

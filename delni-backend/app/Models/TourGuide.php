@@ -33,7 +33,6 @@ class TourGuide extends Model
         'avatar',
         'digital_certificate_file',
         'license_expiry_date',
-        'rejection_reason',
         'availability_status',
     ];
 

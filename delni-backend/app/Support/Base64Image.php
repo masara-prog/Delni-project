@@ -10,7 +10,9 @@ use Illuminate\Validation\ValidationException;
  */
 class Base64Image
 {
-    private const TYPES = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+    private const TYPES = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif'];
+    private const MAX_SIDE = 1600;
+    private const QUALITY = 82;
 
     public static function store(?string $value, string $prefix, string $folder = 'trips'): ?string
     {
@@ -30,6 +32,14 @@ class Base64Image
         if ($ext === null) {
             throw ValidationException::withMessages(['image' => 'صيغة الصورة غير مدعومة؛ يرجى رفع صورة JPG أو PNG أو WEBP']);
         }
+        [$bytes, $ext] = self::shrink($bytes, $ext);
+
+        return self::save($bytes, $ext, $prefix, $folder);
+    }
+
+    /** Writes image bytes under public/uploads/<folder> and returns the site path. */
+    public static function save(string $bytes, string $ext, string $prefix, string $folder): string
+    {
         $dir = base_path('../public/uploads/' . $folder);
         if (!is_dir($dir)) {
             mkdir($dir, 0775, true);
@@ -38,5 +48,36 @@ class Base64Image
         file_put_contents($dir . DIRECTORY_SEPARATOR . $name, $bytes);
 
         return '/uploads/' . $folder . '/' . $name;
+    }
+
+    /**
+     * Scales a large photo down (longest side MAX_SIDE px) and re-encodes it as JPEG, when PHP has GD.
+     * GIFs, images GD cannot read, and results that would not be smaller are kept as they are.
+     */
+    public static function shrink(string $bytes, string $ext): array
+    {
+        if ($ext === 'gif' || !function_exists('imagecreatefromstring')) {
+            return [$bytes, $ext];
+        }
+        $src = @imagecreatefromstring($bytes);
+        if ($src === false) {
+            return [$bytes, $ext];
+        }
+        $w = imagesx($src);
+        $h = imagesy($src);
+        $scale = min(1, self::MAX_SIDE / max($w, $h));
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+        $dst = imagecreatetruecolor($nw, $nh);
+        // Transparent PNG areas become white in the JPEG
+        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        ob_start();
+        imagejpeg($dst, null, self::QUALITY);
+        $jpeg = (string) ob_get_clean();
+        imagedestroy($src);
+        imagedestroy($dst);
+
+        return $jpeg !== '' && strlen($jpeg) < strlen($bytes) ? [$jpeg, 'jpg'] : [$bytes, $ext];
     }
 }

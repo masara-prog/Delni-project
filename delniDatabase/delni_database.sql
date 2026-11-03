@@ -104,7 +104,6 @@ BEGIN
     CREATE TABLE dbo.[daily_trips] (
         [daily_trip_id] VARCHAR(50) NOT NULL,
         [trip_title] NVARCHAR(200) NOT NULL,
-        [description] NVARCHAR(MAX) NOT NULL,
         [price_per_seat] DECIMAL(10, 2) NOT NULL,
         [is_active] BIT NOT NULL DEFAULT ((1)),
         [max_capacity] INT NOT NULL,
@@ -618,7 +617,6 @@ BEGIN
         [avatar] NVARCHAR(MAX) NULL,
         [digital_certificate_file] NVARCHAR(MAX) NULL,
         [license_expiry_date] DATE NULL,
-        [rejection_reason] NVARCHAR(1000) NULL,
         [availability_status] NVARCHAR(30) NULL DEFAULT (N'متاح')
     );
 END;
@@ -740,7 +738,6 @@ BEGIN
         [photo_3] NVARCHAR(500) NULL,
         [photo_4] NVARCHAR(500) NULL,
         [photo_5] NVARCHAR(500) NULL,
-        [trip_description] NVARCHAR(MAX) NULL,
         [guide_approval_status] NVARCHAR(30) NULL
     );
 END;

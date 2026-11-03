@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { MapPin, MessageCircle, Phone } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { useLanguage } from "@/lib/i18n";
@@ -913,7 +914,7 @@ function HotelsPage() {
               propertyType: cleanType,
               description: item.description || "",
               working_hours: item.working_hours || "",
-              discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
+              discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 0,
               contract_start_date: item.contract_start_date || "",
               contract_end_date: item.contract_end_date || "",
               amenities: Array.isArray(item.amenities) ? item.amenities : [],
@@ -956,7 +957,7 @@ function HotelsPage() {
                 propertyType: cleanType,
                 description: item.description || "",
                 working_hours: item.working_hours || "",
-                discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 15,
+                discountPct: Number(item.discount_percentage) || Number(item.discountPct) || 0,
                 contract_start_date: item.contract_start_date || "",
                 contract_end_date: item.contract_end_date || "",
                 amenities: Array.isArray(item.amenities) ? item.amenities : [],
@@ -1458,121 +1459,108 @@ function HotelsPage() {
                         e.preventDefault();
                         setSelectedHotel(h);
                       }}
-                      className="group w-[320px] sm:w-[420px] md:w-[480px] shrink-0 snap-start bg-white rounded-3xl border border-orange-200/90 shadow-lg overflow-hidden cursor-pointer flex flex-col justify-between"
+                      className="group w-[320px] sm:w-[400px] md:w-[440px] shrink-0 snap-start bg-white rounded-[28px] border border-[#E8E2D6] shadow-[0_10px_30px_-12px_rgba(15,23,42,0.25)] hover:shadow-[0_24px_50px_-18px_rgba(15,23,42,0.35)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
                     >
-                      {/* Card Photo */}
-                      <div className="relative w-full h-52 sm:h-56 overflow-hidden bg-slate-100">
+                      {/* Photo */}
+                      <div className="relative w-full h-56 sm:h-60 overflow-hidden bg-slate-100">
                         <img
                           src={h.photos[0]}
                           alt={h.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/75 via-[#0F172A]/10 to-transparent pointer-events-none" />
 
-                        {/* Top Badges */}
-                        <div className="absolute top-3 right-3 left-3 flex items-center justify-between z-10">
-                          {/* Stars in Royal Blue Badge */}
-                          <div className="bg-[#003580] backdrop-blur-md px-3 py-1 rounded-full text-amber-300 text-xs font-black shadow-md flex items-center gap-1 border border-blue-900/40">
-                            <span>{"★".repeat(h.stars)}</span>
-                            <span className="text-[10px] text-white/95 font-bold">({h.stars} نجوم)</span>
-                          </div>
-
-                          {/* Favorite */}
-                          <FavoriteButton
-                            itemType="hotel"
-                            itemId={h.id}
-                            itemTitle={h.name}
-                            size="sm"
-                          />
+                        <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10">
+                          <span className="px-3 py-1 rounded-full bg-black/35 backdrop-blur-md text-amber-300 text-xs font-black tracking-wider ring-1 ring-white/20">
+                            {"★".repeat(h.stars)}
+                            <span className="sr-only">{h.stars} نجوم</span>
+                          </span>
+                          <FavoriteButton itemType="hotel" itemId={h.id} itemTitle={h.name} size="sm" />
                         </div>
 
-                        {/* Bottom Badges on Image */}
-                        <div className="absolute bottom-3 right-3 left-3 flex items-center justify-between text-xs z-10">
-                          <span className="bg-white/95 backdrop-blur-md text-[#003580] text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs border border-blue-100">
-                            📍 {h.city}
+                        <div className="absolute bottom-3 inset-x-3 flex items-end justify-between gap-2 z-10">
+                          <span className="inline-flex items-center gap-1 text-white text-xs font-bold drop-shadow">
+                            <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
+                            {h.city}
                           </span>
-                          <span className="bg-[#D96B27] text-white text-[10px] font-black px-2.5 py-1 rounded-xl shadow-xs">
-                            🏷️ خصم {h.discountPct || 15}% دلّني
-                          </span>
+                          {(h.discountPct ?? 0) > 0 && (
+                            <span className="px-3 py-1 rounded-full bg-gradient-to-l from-[#D96B27] to-[#C56A3D] text-white text-[11px] font-black shadow-lg">
+                              {isAr ? `خصم ${h.discountPct}% لعملاء دلّني` : `${h.discountPct}% off with Dalni`}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      {/* Card Body: Simple, Elegant & Infused with Royal Blue */}
-                      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
-                        <div className="space-y-2">
-                          {/* Location Link & Verified Badge */}
-                          <div className="flex items-center justify-between text-xs">
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.mapsQuery || `${h.name} ${h.city}`)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[#003580] hover:text-blue-900 font-bold underline flex items-center gap-1 transition"
-                            >
-                              <span>🗺️</span>
-                              <span>{isAr ? "إظهار على خرائط Google" : "View Map"}</span>
-                            </a>
-                            <span className="text-[#003580] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-                              ✓ {h.partnership_status || "شريك معتمد"}
-                            </span>
-                          </div>
-
-                          {/* Title in Royal Blue */}
-                          <h4 className="text-lg sm:text-xl font-black text-[#003580] group-hover:text-blue-950 transition-colors leading-snug">
+                      {/* Body */}
+                      <div className="p-5 flex-1 flex flex-col gap-3">
+                        <div>
+                          <h4 className="text-lg sm:text-xl font-black text-[#0F172A] group-hover:text-[#003580] transition-colors leading-snug line-clamp-1">
                             {h.name}
                           </h4>
-
-                          {/* Amenities in Royal Blue tones */}
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {[
-                              { label: isAr ? "مسبح" : "Pool", icon: "🏊" },
-                              { label: isAr ? "واي فاي" : "Wi-Fi", icon: "📶" },
-                              { label: isAr ? "موقف" : "Parking", icon: "🅿️" },
-                            ].map((a, idx) => (
-                              <span
-                                key={idx}
-                                className="px-2.5 py-1 rounded-xl bg-blue-50/70 border border-blue-200/60 text-[#003580] text-[11px] font-bold flex items-center gap-1"
-                              >
-                                <span>{a.icon}</span>
-                                <span>{a.label}</span>
-                              </span>
-                            ))}
-                          </div>
+                          {h.description && (
+                            <p className="mt-1.5 text-xs text-slate-500 font-medium leading-relaxed line-clamp-2">{h.description}</p>
+                          )}
                         </div>
 
-                        {/* Bottom Action Row (Phone + WhatsApp + معرفة المزيد in Royal Blue) */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <a
-                            href={`tel:${h.phone}`}
-                            className="py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
-                            title={isAr ? "اتصال مباشر" : "Call"}
-                          >
-                            <span>📞</span>
-                            <span>{h.phone}</span>
-                          </a>
+                        {Array.isArray(h.amenities) && h.amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {h.amenities.slice(0, 4).map((a: string) => (
+                              <span key={a} className="px-2.5 py-1 rounded-full bg-[#1ABC9C]/10 text-[#0E8C74] text-[11px] font-bold">
+                                {a}
+                              </span>
+                            ))}
+                            {h.amenities.length > 4 && (
+                              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">+{h.amenities.length - 4}</span>
+                            )}
+                          </div>
+                        )}
 
-                          <a
-                            href={`https://wa.me/218${h.phone.replace(/^0+/, "")}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm transition flex items-center justify-center cursor-pointer shadow-xs"
-                            title={isAr ? "واتساب" : "WhatsApp"}
-                          >
-                            <span>💬</span>
-                          </a>
-
+                        {/* Actions */}
+                        <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
-                              e.stopPropagation();
                               setSelectedHotel(h);
                             }}
-                            className="flex-1 py-2.5 px-4 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                            className="flex-1 h-11 rounded-full bg-[#003580] hover:bg-[#0F172A] text-white font-black text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
                           >
-                            <span>{isAr ? "معرفة المزيد" : "View Details"}</span>
-                            <span>➔</span>
+                            <span>{isAr ? "عرض التفاصيل" : "View details"}</span>
+                            <span className="transition-transform duration-300 group-hover:-translate-x-1">←</span>
                           </button>
+                          {h.phone && (
+                            <a
+                              href={`tel:${h.phone}`}
+                              className="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-sm transition-colors"
+                              title={isAr ? `اتصال: ${h.phone}` : `Call ${h.phone}`}
+                              aria-label={isAr ? "اتصال بالفندق" : "Call the hotel"}
+                            >
+                              <Phone className="w-4 h-4" aria-hidden="true" />
+                            </a>
+                          )}
+                          {h.phone && (
+                            <a
+                              href={`https://wa.me/218${h.phone.replace(/^0+/, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-11 h-11 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 flex items-center justify-center transition-colors"
+                              title={isAr ? "واتساب" : "WhatsApp"}
+                              aria-label={isAr ? "مراسلة الفندق على واتساب" : "WhatsApp the hotel"}
+                            >
+                              <MessageCircle className="w-4 h-4" aria-hidden="true" />
+                            </a>
+                          )}
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.mapsQuery || `${h.name} ${h.city}`)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-11 h-11 rounded-full bg-[#003580]/8 hover:bg-[#003580]/15 text-[#003580] ring-1 ring-[#003580]/15 flex items-center justify-center transition-colors"
+                            title={isAr ? "الموقع على خرائط Google" : "Open in Google Maps"}
+                            aria-label={isAr ? "الموقع على الخريطة" : "Map"}
+                          >
+                            <MapPin className="w-4 h-4" aria-hidden="true" />
+                          </a>
                         </div>
                       </div>
                     </article>

@@ -64,6 +64,8 @@ import { TRIP_VIDEO_DATABASE, TripVideoTrailerModal } from "@/components/TripVid
 import { useLanguage } from "@/lib/i18n";
 import { GuideCVModal, GuideCVData } from "@/components/GuideCVModal";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
+import { LandmarkDetailsModal, placeToLandmark } from "@/components/LandmarkDetailsModal";
+import type { CityDestinationItem } from "@/lib/attractionsData";
 import { Footer } from "@/components/Footer";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { 
@@ -72,7 +74,8 @@ import {
   apiGetHotels, 
   apiGetRestaurants, 
   apiGetDailyOffers, 
-  apiGetWeeklyOffers 
+  apiGetWeeklyOffers,
+  apiGetPlaces,
 } from "@/lib/api";
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Clock, Flag, MapPin, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -97,7 +100,64 @@ export type TouristAttraction = {
   name: string;
   location: string;
   description: string;
+  placeId?: string;
+  image?: string;
+  category?: string;
 };
+
+/* The landmarks a trip visits, exactly as linked to it in the database (places_trip_daily / places_trip_weekly) */
+function tripAttractionsFromRow(t: any): TouristAttraction[] {
+  return (Array.isArray(t.places) ? t.places : []).map((p: any) => ({
+    name: p.place_name || p.city || "",
+    location: p.city || "",
+    description: "",
+    placeId: p.place_id,
+    image: p.place_image || undefined,
+    category: p.category || undefined,
+  }));
+}
+
+/* Guide and vehicle of a trip, built only from the columns the trips API returns (no invented values) */
+function tripGuideFromRow(t: any) {
+  if (!t.guide_name) return undefined;
+  const languages = ["العربية", t.guide_speaks_english && "الإنجليزية", t.guide_speaks_french && "الفرنسية", t.guide_speaks_italian && "الإيطالية"]
+    .filter(Boolean) as string[];
+  const avatar = t.guide_avatar || undefined;
+  return {
+    name: t.guide_name,
+    title: "مرشد سياحي معتمد",
+    phone: t.guide_phone || "",
+    avatar,
+    cv: {
+      name: t.guide_name,
+      title: "مرشد سياحي معتمد",
+      licenseNumber: t.guide_license_number || "",
+      avatar,
+      experienceYears: t.guide_years ? Number(t.guide_years) : undefined,
+      pricePerDay: t.guide_price_per_day ? Number(t.guide_price_per_day) : undefined,
+      phone: t.guide_phone || "",
+      bio: t.guide_bio || undefined,
+      languages,
+    } as GuideCVData,
+  };
+}
+
+function tripVehicleFromRow(t: any) {
+  if (!t.vehicle_plate && !t.vehicle_model) return undefined;
+  return {
+    model: t.vehicle_model || "",
+    company: t.transport_company_name || "",
+    driver: t.driver_name || "",
+    plateNumber: t.vehicle_plate || undefined,
+    driverPhone: t.driver_phone || undefined,
+    capacity: t.vehicle_capacity ? Number(t.vehicle_capacity) : undefined,
+    image: t.vehicle_image || undefined,
+    category: t.vehicle_category || undefined,
+    dailyRate: t.vehicle_daily_rate ? Number(t.vehicle_daily_rate) : undefined,
+    status: t.vehicle_status || undefined,
+    companyPhone: t.transport_company_phone || undefined,
+  };
+}
 
 export type DailyTrip = {
   id: string;
@@ -114,10 +174,13 @@ export type DailyTrip = {
   daysOfWeek: string;
   departure: "طرابلس" | "بنغازي";
   entertainment?: string;
+  // The trip's current or next promotional offer (applies to run dates inside its period)
+  activeOffer?: { title: string; discount: number; start_date: string; end_date: string };
   guide?: {
     name: string;
     title: string;
     phone: string;
+    avatar?: string;
     cv?: GuideCVData;
   };
   vehicle?: {
@@ -128,6 +191,11 @@ export type DailyTrip = {
     driverPhone?: string;
     capacity?: number;
     year?: number;
+    image?: string;
+    category?: string;
+    dailyRate?: number;
+    status?: string;
+    companyPhone?: string;
   };
   restaurant?: {
     id?: string;
@@ -163,10 +231,13 @@ export type WeeklyTrip = {
   hotels: string[];
   departure: "طرابلس" | "بنغازي";
   entertainment?: string;
+  // The trip's current or next promotional offer (applies to run dates inside its period)
+  activeOffer?: { title: string; discount: number; start_date: string; end_date: string };
   guide?: {
     name: string;
     title: string;
     phone: string;
+    avatar?: string;
     cv?: GuideCVData;
   };
   vehicle?: {
@@ -177,6 +248,11 @@ export type WeeklyTrip = {
     driverPhone?: string;
     capacity?: number;
     year?: number;
+    image?: string;
+    category?: string;
+    dailyRate?: number;
+    status?: string;
+    companyPhone?: string;
   };
   restaurant?: {
     id?: string;
@@ -383,11 +459,7 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
   const itinerary = customSteps || [];
 
   const vehicle = "vehicle" in t && t.vehicle ? {
-    model: t.vehicle.model,
-    company: t.vehicle.company,
-    driver: t.vehicle.driver,
-    plateNumber: t.vehicle.plateNumber,
-    driverPhone: t.vehicle.driverPhone,
+    ...t.vehicle,
     capacity: t.vehicle.capacity || totalSeats,
   } : null;
 
@@ -427,6 +499,21 @@ function TripDetailsView({
   const { language, dir } = useLanguage();
   const isAr = language === "ar";
   const info = getTripFullInfo(trip, isAr);
+  // Stations start folded: two are shown, the rest on demand
+  const [showAllStops, setShowAllStops] = useState(false);
+
+  // A landmark of the trip opens the same details window as the landmarks page
+  const [platformPlaces, setPlatformPlaces] = useState<any[]>([]);
+  const [openedLandmark, setOpenedLandmark] = useState<CityDestinationItem | null>(null);
+  const [privateTripDest, setPrivateTripDest] = useState<string | null>(null);
+  useEffect(() => {
+    apiGetPlaces().then(setPlatformPlaces);
+  }, []);
+  const openLandmark = (a: TouristAttraction) => {
+    const index = platformPlaces.findIndex((x) => x.place_id === a.placeId);
+    const row = index >= 0 ? platformPlaces[index] : { place_id: a.placeId, place_name: a.name, city: a.location, category: a.category, place_image: a.image };
+    setOpenedLandmark(placeToLandmark(row, Math.max(index, 0)));
+  };
 
   // Auto-playing authentic video for this trip
   const videoData = TRIP_VIDEO_DATABASE[trip.id];
@@ -535,19 +622,12 @@ function TripDetailsView({
     return list.map((s) => String(s).toLowerCase().trim()).filter(Boolean);
   }, [trip]);
 
+  // Hotels belong to weekly trips only, and only those chosen when the trip was created
   const filteredHotels = useMemo(() => {
-    if (platformHotels.length === 0) return [];
-    const assigned = platformHotels.filter(
-      (h) => (trip as any).hotel_ids?.includes(h.hotel_id) || (trip as any).hotel_id === h.hotel_id
-    );
-    if (assigned.length > 0) return assigned;
-
-    const matched = platformHotels.filter((h) => {
-      const hCity = String(h.city || h.address || h.hotel_name || "").toLowerCase();
-      return destinationKeywords.some((kw) => kw.includes(hCity) || hCity.includes(kw));
-    });
-    return matched.slice(0, 4);
-  }, [platformHotels, destinationKeywords, trip]);
+    if (trip.type !== "weekly" || platformHotels.length === 0) return [];
+    const ids: string[] = (trip as any).hotel_ids || [];
+    return platformHotels.filter((h) => ids.includes(h.hotel_id));
+  }, [platformHotels, trip]);
 
   const { includedRestaurants, promoRestaurants } = useMemo(() => {
     if (platformRestaurants.length === 0) return { includedRestaurants: [], promoRestaurants: [] };
@@ -692,11 +772,13 @@ function TripDetailsView({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-2 h-10 ps-3 pe-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white text-sm font-semibold cursor-pointer"
+              className="group inline-flex items-center gap-2.5 h-11 ps-1.5 pe-5 rounded-full bg-white/95 hover:bg-white text-[#0F172A] text-sm font-black shadow-lg shadow-black/20 ring-1 ring-white/60 hover:shadow-xl transition-all duration-200 cursor-pointer"
               aria-label={isAr ? "العودة إلى قائمة الرحلات" : "Back to tours"}
             >
-              {dir === "rtl" ? <ArrowRight className="w-4 h-4" aria-hidden="true" /> : <ArrowLeft className="w-4 h-4" aria-hidden="true" />}
-              <span>{isAr ? "الرحلات" : "Tours"}</span>
+              <span className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+                {dir === "rtl" ? <ArrowRight className="w-4 h-4" aria-hidden="true" /> : <ArrowLeft className="w-4 h-4" aria-hidden="true" />}
+              </span>
+              <span>{isAr ? "كل الرحلات" : "All tours"}</span>
             </button>
             <FavoriteButton
               itemType={trip.type === "weekly" ? "weekly_trip" : "daily_trip"}
@@ -817,16 +899,40 @@ function TripDetailsView({
           {/* Right Main Column (8 Cols) */}
           <div className="lg:col-span-8 space-y-6">
 
-            {/* 2. Realistic Description Card */}
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] leading-snug">
-                {isAr ? "عن الرحلة" : "About this tour"}
-              </h2>
+            {/* 2. Description card: skipped when the description only repeats the trip title */}
+            {info.realisticOverview && info.realisticOverview.trim() !== trip.title.trim() && (
+              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] leading-snug">
+                  {isAr ? "عن الرحلة" : "About this tour"}
+                </h2>
 
-              <p className="text-base text-slate-700 leading-loose">
-                {info.realisticOverview}
-              </p>
-            </div>
+                <p className="text-base text-slate-700 leading-loose">
+                  {info.realisticOverview}
+                </p>
+              </div>
+            )}
+
+            {/* Promotional offer of this trip, with its period */}
+            {"activeOffer" in trip && trip.activeOffer && (
+              <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 bg-gradient-to-l from-[#D96B27] to-[#C56A3D] text-white shadow-lg">
+                <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-white/10" aria-hidden="true" />
+                <div className="relative flex flex-wrap items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-white/80">🏷️ {isAr ? "عرض ترويجي على هذه الرحلة" : "Promotion on this tour"}</div>
+                    <div className="mt-1 text-lg font-black leading-snug">{trip.activeOffer.title}</div>
+                    <div className="mt-1.5 text-xs font-bold text-white/90">
+                      {isAr
+                        ? `من ${trip.activeOffer.start_date} إلى ${trip.activeOffer.end_date} — يُطبق الخصم تلقائياً عند حجز موعد ضمن هذه الفترة`
+                        : `${trip.activeOffer.start_date} → ${trip.activeOffer.end_date} — applied automatically to dates in this period`}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-white text-[#C56A3D] flex flex-col items-center justify-center shadow-md">
+                    <span className="text-2xl font-black leading-none">-{trip.activeOffer.discount}%</span>
+                    <span className="text-[10px] font-black mt-1">{isAr ? "خصم" : "off"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 3. Itinerary Timeline Card */}
             <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-5">
@@ -852,45 +958,100 @@ function TripDetailsView({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4 relative before:absolute before:inset-0 before:left-auto before:right-3.5 before:w-0.5 before:bg-[#E8E2D6] pt-2">
-                  {info.itinerary.map((step, idx) => (
-                    <div key={idx} className="relative flex items-start gap-4 pr-9">
-                      <div className="absolute right-1 top-1 w-5 h-5 rounded-full bg-[#003580] text-white flex items-center justify-center text-[10px] font-black shadow-xs ring-4 ring-white">
-                        {idx + 1}
-                      </div>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-black">
+                    <span className="px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580]">📍 {info.itinerary.length} {isAr ? "محطات" : "stops"}</span>
+                    {info.itinerary[0]?.time && (
+                      <span className="px-3 py-1 rounded-full bg-[#D96B27]/10 text-[#B4541A]">
+                        🕘 {info.itinerary[0].time} ← {info.itinerary[info.itinerary.length - 1].time}
+                      </span>
+                    )}
+                  </div>
 
-                      <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-[#E8E2D6] flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                          <h4 className="font-black text-sm text-[#0F172A]">{step.title}</h4>
-                          <span className="text-xs font-black text-[#003580] bg-white px-2.5 py-0.5 rounded-lg border border-blue-100">
-                            {step.time}
-                          </span>
+                  <ol className="relative space-y-2.5 before:absolute before:top-2 before:bottom-2 before:right-[15px] before:w-0.5 before:bg-gradient-to-b before:from-[#1ABC9C] before:to-[#D96B27]">
+                    {(showAllStops ? info.itinerary : info.itinerary.slice(0, 2)).map((step, idx) => (
+                      <li key={idx} className="relative flex items-start gap-3 pr-10">
+                        <span className="absolute right-0 top-2 w-8 h-8 rounded-full bg-white border-2 border-[#1ABC9C] text-[#003580] flex items-center justify-center text-[11px] font-black shadow-xs">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 p-3.5 rounded-2xl bg-gradient-to-l from-[#FAF7F2] to-white border border-[#E8E2D6] hover:border-[#1ABC9C]/50 hover:shadow-xs transition">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-black text-sm text-[#0F172A] leading-snug">{step.title}</h4>
+                            {step.time && (
+                              <span className="flex-shrink-0 text-[11px] font-black text-white bg-[#003580] px-2.5 py-0.5 rounded-full">{step.time}</span>
+                            )}
+                          </div>
+                          {step.desc && <p className="text-xs text-slate-600 font-medium leading-relaxed mt-1">{step.desc}</p>}
                         </div>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                          {step.desc}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      </li>
+                    ))}
+                  </ol>
+
+                  {info.itinerary.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllStops((v) => !v)}
+                      className="w-full py-2.5 rounded-xl border border-[#003580]/20 bg-[#003580]/5 hover:bg-[#003580]/10 text-[#003580] text-xs font-black transition cursor-pointer"
+                    >
+                      {showAllStops
+                        ? (isAr ? "إخفاء المحطات ▲" : "Show fewer stops ▲")
+                        : (isAr ? `عرض كل المحطات (${info.itinerary.length - 2} أخرى) ▼` : `Show all stops (${info.itinerary.length - 2} more) ▼`)}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
 
 
 
-            {/* 4. Included Attractions & City Landmarks (Weekly Trips only — Daily trips visit 1 landmark/city) */}
-            {trip.type !== "daily" && "attractions" in trip && trip.attractions && trip.attractions.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-4">
-                <h3 className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
-                  <span>{isAr ? "أبرز المعالم المشمولة في الزيارة" : "Included Heritage Landmarks"}</span>
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* 4. Landmarks the trip visits (daily and weekly): photo cards that open the landmark's details */}
+            {"attractions" in trip && trip.attractions && trip.attractions.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E2D6] space-y-5">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-[#0F172A]">
+                      {isAr ? "المعالم التي تزورها الرحلة" : "Landmarks on this tour"}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-bold mt-0.5">
+                      {isAr ? "اضغط على أي معلم للتعرف عليه أكثر" : "Tap a landmark to learn more about it"}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-[#1ABC9C]/10 text-[#0E8C74] text-xs font-black">
+                    🏛️ {trip.attractions.length} {isAr ? (trip.attractions.length === 1 ? "معلم" : "معالم") : "sites"}
+                  </span>
+                </div>
+                <div className={`grid gap-4 ${trip.attractions.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
                   {trip.attractions.map((attr, aIdx) => (
-                    <div key={aIdx} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6]">
-                      <div className="font-black text-sm text-[#0F172A] mb-1">{attr.name}</div>
-                      <div className="text-[11px] text-[#003580] font-bold mb-1.5">📍 {attr.location}</div>
-                      <div className="text-xs text-slate-600 font-medium leading-relaxed">{attr.description}</div>
-                    </div>
+                    <button
+                      key={attr.placeId || aIdx}
+                      type="button"
+                      onClick={() => openLandmark(attr)}
+                      className="group relative h-48 rounded-2xl overflow-hidden text-right shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1ABC9C]/40"
+                    >
+                      <img
+                        src={attr.image || destLeptisTheater}
+                        alt={attr.name}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0F172A]/35 to-transparent" />
+                      {attr.category && (
+                        <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[#003580] text-[11px] font-black shadow-sm">
+                          {attr.category}
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <div className="text-xl font-black text-white drop-shadow">{attr.name}</div>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          {attr.location && attr.location !== attr.name ? (
+                            <span className="text-xs font-bold text-white/80">📍 {attr.location}</span>
+                          ) : <span />}
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D96B27] text-white text-[11px] font-black transition-transform duration-300 group-hover:-translate-x-1">
+                            {isAr ? "اعرف المزيد ←" : "Learn more →"}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1259,8 +1420,13 @@ function TripDetailsView({
 
               {info.guide ? (
                 <>
-                  <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] flex items-center justify-between gap-3 text-xs">
-                    <div>
+                  <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6] flex items-center gap-3 text-xs">
+                    {info.guide.avatar ? (
+                      <img src={info.guide.avatar} alt={info.guide.name} className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs flex-shrink-0" />
+                    ) : (
+                      <span className="w-12 h-12 rounded-xl bg-white border border-[#E8E2D6] flex items-center justify-center text-xl flex-shrink-0">👤</span>
+                    )}
+                    <div className="min-w-0">
                       <div className="font-black text-[#0F172A] text-sm">{info.guide.name}</div>
                       <div className="text-[11px] text-slate-500 font-medium">{info.guide.title || (isAr ? "مرشد سياحي معتمد" : "Certified Guide")}</div>
                       {info.guide.phone && <div className="text-xs text-[#003580] font-bold mt-1">📞 {info.guide.phone}</div>}
@@ -1269,16 +1435,11 @@ function TripDetailsView({
 
                   <button
                     type="button"
-                    onClick={() => onOpenGuideCV?.((info.guide as any).cv || {
+                    onClick={() => onOpenGuideCV?.(info.guide!.cv || {
                       name: info.guide!.name,
-                      title: info.guide!.title || "مرشد سياحي معتمد",
-                      phone: info.guide!.phone || "",
-                      bio: `مرشد سياحي معتمد ومخصص لرحلة ${trip.title}.`,
-                      licenseNumber: (info.guide as any).licenseNumber || "",
-                      experienceYears: 2,
-                      rating: Number((info.guide as any).rating_avg) || 0,
-                      pricePerDay: 180,
-                      specialties: ["إرشاد الرحلات", "التاريخ والآثار"],
+                      title: info.guide!.title,
+                      phone: info.guide!.phone,
+                      avatar: info.guide!.avatar,
                     })}
                     className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
@@ -1345,7 +1506,11 @@ function TripDetailsView({
                       companyName: info.vehicle!.company,
                       plateNumber: (info.vehicle!.plateNumber || "").replace(/\?+/g, "").trim() || undefined,
                       seats: info.vehicle!.capacity,
-                      phone_number: info.vehicle!.driverPhone || undefined,
+                      companyPhone: info.vehicle!.companyPhone,
+                      vehicle_image: info.vehicle!.image,
+                      category: info.vehicle!.category,
+                      dailyRate: info.vehicle!.dailyRate,
+                      vehicle_status: info.vehicle!.status,
                     })}
                     className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
@@ -1365,11 +1530,25 @@ function TripDetailsView({
         </div>
       </div>
 
+      <LandmarkDetailsModal
+        city={openedLandmark}
+        onClose={() => setOpenedLandmark(null)}
+        onBookPrivate={() => {
+          setPrivateTripDest(openedLandmark?.name || "");
+          setOpenedLandmark(null);
+        }}
+      />
+      <PrivateTripModal
+        open={privateTripDest !== null}
+        onClose={() => setPrivateTripDest(null)}
+        initialDestination={privateTripDest || ""}
+      />
+
       {/* 8. Floating Promotional Cards for Nearby Stays & Dining (خامساً: عروض ترويجية قريبة عائمة) */}
       <FloatingNearbyPromo
         tripId={trip.id}
         tripCity={"departure" in trip ? trip.departure : "ليبيا"}
-        destinationKeywords={destinationKeywords}
+        landmarkCities={("attractions" in trip ? trip.attractions : []).map((a: TouristAttraction) => a.location).filter((c: string) => c && c !== "ليبيا")}
         platformHotels={platformHotels}
         platformRestaurants={platformRestaurants}
       />
@@ -1716,44 +1895,17 @@ function TripsPage() {
             img: primaryImg,
             images: fiveImgs.slice(0, 5),
             gallery: t.gallery,
-            description: t.description || `رحلة يومية تنطلق من ${t.departure_city || 'طرابلس'} باتجاه ${t.destination_city || 'المعلم الأثري'}.`,
+            description: "",
             activities: t.activities ? (Array.isArray(t.activities) ? t.activities : String(t.activities).split(',')) : ["جولة ميدانية مع مرشد سياحي", "نقل سياحي مريح ومكيف", "شرح تاريخي وأثري متكامل"],
-            attractions: [
-              {
-                name: t.destination_city || "المعلم الأثري",
-                location: `${t.departure_city || 'طرابلس'} - ليبيا`,
-                description: t.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
-              }
-            ],
+            attractions: tripAttractionsFromRow(t),
             targetPersons: t.max_capacity || 25,
             availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
             daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "السبت,الثلاثاء",
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
-            guide: t.guide_name ? {
-              name: t.guide_name,
-              title: t.guide_title || "مرشد سياحي معتمد",
-              phone: t.guide_phone || "",
-              cv: {
-                name: t.guide_name,
-                title: t.guide_title || "مرشد سياحي معتمد",
-                licenseNumber: t.guide_license_number || "",
-                experienceYears: Number(t.guide?.years_of_experience) || 2,
-                rating: Number(t.rating_avg) || 0,
-                pricePerDay: Number(t.guide?.price_per_day) || 180,
-                phone: t.guide_phone || "",
-                bio: t.guide?.bio || `مرشد سياحي معتمد ومخصص لرحلة ${t.trip_title}.`,
-                specialties: ["إرشاد سياحي", "آثار ومعالم تاريخية", "جولات عائلية"],
-              }
-            } : undefined,
-            vehicle: (t.vehicle_model || t.vehicle_plate) ? {
-              model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة ميني باص سياحي 25 راكب"),
-              company: t.transport_company_name || "شركة النقل السياحي المعتمدة",
-              driver: t.driver_name || "سائق مرخص ومحترف",
-              plateNumber: t.vehicle_plate || undefined,
-              driverPhone: t.driver_phone || undefined,
-              capacity: t.vehicle_capacity || t.max_capacity || 25,
-            } : undefined,
+            activeOffer: t.active_offer || undefined,
+            guide: tripGuideFromRow(t),
+            vehicle: tripVehicleFromRow(t),
             restaurant: t.restaurant_name ? {
               id: t.restaurant_id,
               name: t.restaurant_name,
@@ -1784,7 +1936,7 @@ function TripsPage() {
             img: primaryImg,
             images: fiveImgs.slice(0, 5),
             gallery: t.gallery,
-            description: t.trip_description || t.description || `برنامج رحلة أسبوعية متكامل يشمل الإقامة والنقل.`,
+            description: "",
             startDate: t.start_date || "2026-10-25",
             endDate: t.end_date || "2026-10-31",
             targetPersons: t.max_capacity || 20,
@@ -1793,37 +1945,17 @@ function TripsPage() {
             cities: (t.destinations && Array.isArray(t.destinations) && t.destinations.length > 0)
               ? t.destinations
               : (t.destination ? t.destination.split(" + ") : [t.departure_city || "طرابلس", t.destination_region || "الصحراء"]),
-            attractions: (t.places && Array.isArray(t.places) && t.places.length > 0)
-              ? t.places.map((p: any) => ({
-                  name: p.place_name || p.name,
-                  location: p.city || "ليبيا",
-                  description: p.description || "معلم سياحي وتاريخي بارز يزخر بالتراث والأصالة الليبية العريقة.",
-                }))
-              : [
-                  {
-                    name: t.destination_region || "الواحات والآثار",
-                    location: "ليبيا",
-                    description: "وجهة استكشافية وتجربة سياحية فريدة تشمل معالم التراث والطبيعة.",
-                  }
-                ],
+            attractions: tripAttractionsFromRow(t),
             hotels: (t.hotels && Array.isArray(t.hotels) && t.hotels.length > 0)
               ? t.hotels.map((h: any) => h.hotel_name || h.name)
               : [],
+            // Hotels chosen for this weekly trip when it was created (hotels_trip_weekly)
+            hotel_ids: Array.isArray(t.hotels) ? t.hotels.map((h: any) => h.hotel_id) : [],
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "سهرة تراثية، مخيمات وجولات استكشافية",
-            guide: t.guide_name ? {
-              name: t.guide_name,
-              title: t.guide_title || "مرشد سياحي معتمد",
-              phone: t.guide_phone || "",
-            } : undefined,
-            vehicle: (t.vehicle_model || t.vehicle_plate) ? {
-              model: t.vehicle_model || (t.max_capacity === 50 ? "حافلة سياحية كبرى VIP 50 راكب" : t.max_capacity === 15 ? "مرسيدس فان سياحي 15 راكب" : "حافلة سياحية مجهزة للمسافات الطويلة"),
-              company: t.transport_company_name || "شركة النقل السياحي الدولية",
-              driver: t.driver_name || "سائق خبير بالمسارات السياحية",
-              plateNumber: t.vehicle_plate || undefined,
-              driverPhone: t.driver_phone || undefined,
-              capacity: t.vehicle_capacity || t.max_capacity || 20,
-            } : undefined,
+            activeOffer: t.active_offer || undefined,
+            guide: tripGuideFromRow(t),
+            vehicle: tripVehicleFromRow(t),
             restaurant: t.restaurant_name ? {
               id: t.restaurant_id,
               name: t.restaurant_name,
@@ -1845,7 +1977,8 @@ function TripsPage() {
           const basePrice = Number(o.price_per_seat || trip?.price || 120);
           const discount = Number(o.percent_discount) || 15;
           const finalPrice = Math.round(basePrice * (1 - discount / 100));
-          const primaryImg = o.offer_image_url || trip?.img || destLeptisTheater;
+          // An offer shows its trip's own photo
+          const primaryImg = trip?.img || o.offer_image_url || destLeptisTheater;
 
           return {
             id: o.offer_daily_id || `DO-${o.id}`,
@@ -1881,7 +2014,7 @@ function TripsPage() {
           const basePrice = Number(w.seat_per_price || trip?.seatPrice || 1500);
           const discount = Number(w.discount_percentage) || 15;
           const finalPrice = Math.round(basePrice * (1 - discount / 100));
-          const primaryImg = w.offer_image_url || trip?.img || destUbariGaberoun;
+          const primaryImg = trip?.img || w.offer_image_url || destUbariGaberoun;
 
           return {
             id: w.offer_weekly_id || `WO-${w.id}`,

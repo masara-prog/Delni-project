@@ -555,12 +555,14 @@ function RestaurantDetailsView({
                   <span>{isAr ? "ضيافة خاصة لرواد دلّني" : "Exclusive Dallani Perk"}</span>
                 </div>
                 <div className="text-xl sm:text-2xl font-black text-white">
-                  {isAr ? "خصم 20% أو ضيافة شاي مجانية" : "20% Discount / Free Tea"}
+                  {(restaurant.discountPct ?? 0) > 0
+                    ? (isAr ? `خصم ${restaurant.discountPct}% لرواد دلّني` : `${restaurant.discountPct}% off for Dalni visitors`)
+                    : (isAr ? "تواصل مباشرة مع المطعم" : "Contact the restaurant directly")}
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed font-medium">
                   {isAr
-                    ? "أبلغ المضيف أو أرسل استفسارك لحجز طاولتك موضحاً أنك من رواد (منصة دلّني) للاستفادة الفورية من الخصم والضيافة."
-                    : "Mention Dallani upon arrival or booking to claim your exclusive 20% hospitality perk directly."}
+                    ? "أبلغ المضيف أو أرسل استفسارك لحجز طاولتك موضحاً أنك من رواد (منصة دلّني) للاستفادة من الخصم."
+                    : "Mention Dalni upon arrival or booking to claim the discount."}
                 </p>
               </div>
 
@@ -699,9 +701,13 @@ function RestaurantDetailsView({
 }
 
 function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
+  // The API sends the table's column names (facility_name, facility_type, phone_number, ...); the older short names are kept as a fallback
+  const name = r.facility_name || r.name || "";
+  const type = r.facility_type || r.type || "";
+  const phone = r.phone_number || r.phone || "";
   let category: "seafood" | "traditional" | "fastfood" | "cafe" = "traditional";
-  const typeStr = (r.type || "").toLowerCase();
-  const nameStr = (r.name || "").toLowerCase();
+  const typeStr = type.toLowerCase();
+  const nameStr = name.toLowerCase();
 
   if (typeStr.includes("بحر") || nameStr.includes("بحر") || typeStr.includes("سمك") || nameStr.includes("سمك") || typeStr.includes("seafood")) {
     category = "seafood";
@@ -745,23 +751,23 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
   }
 
   return {
-    id: r.id || `REST-CUSTOM-${Math.random()}`,
-    name: r.name || (isAr ? "مطعم جديد" : "New Restaurant"),
+    id: r.facility_id || r.id || `REST-CUSTOM-${Math.random()}`,
+    name,
     category: category,
-    type: r.type || (isAr ? "مطعم ومقهى" : "Restaurant & Cafe"),
-    city: r.city || (isAr ? "طرابلس" : "Tripoli"),
-    address: r.address || (isAr ? "ليبيا" : "Libya"),
-    phone: r.phone || "0910000000",
-    mapsQuery: r.google_maps_url || `${r.name || ""} ${r.city || ""}`,
-    rating: typeof r.rating_avg === "number" ? r.rating_avg : 0,
-    ratingWord: isAr ? (r.rating_avg > 0 ? "تقييم معتمد" : "جديد") : (r.rating_avg > 0 ? "Rated" : "New"),
+    type,
+    city: r.city || "",
+    address: r.address_details || r.address || "",
+    phone,
+    mapsQuery: r.google_maps_url || `${name} ${r.city || ""}`,
+    rating: Number(r.rating_avg) || 0,
+    ratingWord: isAr ? (Number(r.rating_avg) > 0 ? "تقييم معتمد" : "جديد") : (Number(r.rating_avg) > 0 ? "Rated" : "New"),
     reviewsCount: Number(r.reviews_count) || 0,
     priceRange: isAr ? "حسب الطلب" : "On Demand",
-    hours: r.working_hours || (isAr ? "10:00 ص – 11:00 م" : "10:00 AM – 11:00 PM"),
-    specialty: r.description || (isAr ? "تشكيلة فاخرة من المأكولات والمشاريب الطازجة" : "Fresh Food & Drinks"),
+    hours: r.working_hours || "",
+    specialty: r.description || "",
     description: r.description || "",
-    discountPct: typeof r.discount_percentage === "number" ? r.discount_percentage : 20,
-    whatsapp: r.whatsapp || r.phone || "0910000000",
+    discountPct: Number(r.discount_percentage) || 0,
+    whatsapp: r.whatsapp || phone,
     partnership_status: r.partnership_status || "شريك معتمد",
     contract_start_date: r.contract_start_date || "",
     contract_end_date: r.contract_end_date || "",
@@ -1221,10 +1227,14 @@ function RestaurantsPage() {
                         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                           <div className="text-xs text-slate-500 font-bold flex items-center gap-2">
                             <span>📞 {r.phone}</span>
-                            <span>·</span>
-                            <span className="text-emerald-700 font-black bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                              ✓ {isAr ? "خصم 20% لرواد دلّني" : "20% Dallani Perk"}
-                            </span>
+                            {(r.discountPct ?? 0) > 0 && (
+                              <>
+                                <span>·</span>
+                                <span className="text-emerald-700 font-black bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                  ✓ {isAr ? `خصم ${r.discountPct}% لرواد دلّني` : `${r.discountPct}% Dallani Perk`}
+                                </span>
+                              </>
+                            )}
                           </div>
 
                           <button

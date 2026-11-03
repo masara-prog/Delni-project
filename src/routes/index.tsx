@@ -746,16 +746,56 @@ function Testimonials() {
 }
 
 /* ---------- CTA banner ---------- */
+// Bright Libya photos (public/assets/libya, see CREDITS.md) that cross-fade with a slow zoom
+const CTA_SLIDES = [
+  "/assets/libya/sabratha-turquoise-sea.jpg",
+  "/assets/libya/ubari-palm-lake.jpg",
+  "/assets/libya/nalut-red-sky.jpg",
+  "/assets/libya/ghadames-palms.jpg",
+  "/assets/libya/leptis-aerial-green.jpg",
+  "/assets/libya/acacus-rocks.jpg",
+];
+
 function CTABanner() {
   const { language } = useLanguage();
   const modals = useModals();
+  const [slide, setSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setSlide((s) => (s + 1) % CTA_SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <section className="py-10 md:py-12">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-[2.5rem] shadow-card">
-          <img src="/assets/libya/sabratha-bay.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/50 backdrop-contrast-[1.02]" />
+          {CTA_SLIDES.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                opacity: i === slide ? 1 : 0,
+                transform: i === slide ? "scale(1.12)" : "scale(1)",
+                transition: "opacity 1.2s ease-in-out, transform 6s ease-out",
+              }}
+            />
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/15" />
+          <div className="absolute bottom-4 inset-x-0 z-10 flex justify-center gap-2">
+            {CTA_SLIDES.map((src, i) => (
+              <button
+                key={src}
+                type="button"
+                aria-label={`${i + 1}`}
+                onClick={() => setSlide(i)}
+                className={`h-2 rounded-full transition-all duration-300 ${i === slide ? "w-8 bg-[#D96B27]" : "w-2 bg-white/50 hover:bg-white/80"}`}
+              />
+            ))}
+          </div>
           <div className="relative p-10 md:p-16 text-white text-center">
             <Reveal>
               <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-3xl mx-auto drop-shadow-md">

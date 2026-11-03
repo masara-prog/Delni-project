@@ -34,7 +34,6 @@ class WeeklyTrip extends Model
         'photo_3',
         'photo_4',
         'photo_5',
-        'trip_description',
         'guide_approval_status',
     ];
 

@@ -39,8 +39,11 @@ class TripCatalogController extends Controller
             ->leftJoin('drivers as d', 'd.assigned_vehicle_plate', '=', 'v.plate_number')
             ->leftJoin('restaurants_cafes as r', 'dt.restaurant_id', '=', 'r.facility_id')
             ->select('dt.*', 'g.full_name as guide_name', 'g.phone_number as guide_phone', 'g.avatar as guide_avatar',
+                'g.years_of_experience as guide_years', 'g.price_per_day as guide_price_per_day', 'g.bio as guide_bio',
+                'g.speaks_english as guide_speaks_english', 'g.speaks_french as guide_speaks_french', 'g.speaks_italian as guide_speaks_italian',
                 'v.vehicle_type as vehicle_model', 'v.seating_capacity as vehicle_capacity', 'v.vehicle_image',
-                'tc.company_name as transport_company_name', 'd.full_name as driver_name', 'd.phone_number as driver_phone',
+                'v.category as vehicle_category', 'v.daily_rate as vehicle_daily_rate', 'v.vehicle_status',
+                'tc.company_name as transport_company_name', 'tc.phone_number as transport_company_phone', 'd.full_name as driver_name', 'd.phone_number as driver_phone',
                 'd.driver_license_number', 'r.facility_name as restaurant_name', 'r.facility_type as restaurant_type',
                 'r.city as restaurant_city', 'r.address_details as restaurant_address', 'r.phone_number as restaurant_phone',
                 'r.facility_image_1 as restaurant_image')
@@ -60,9 +63,13 @@ class TripCatalogController extends Controller
         $places = $this->linkedPlaces('places_trip_daily', 'daily_trip_id', $ids);
         $stats = $this->tripStats('reviews_daily_trips', 'bookings_daily', 'daily_trip_id', $ids);
 
-        $data = $trips->map(function ($dt) use ($stations, $days, $places, $stats, $models) {
+        $offers = $this->runningOffers('offers_daily_trips', 'daily_trip_id', 'percent_discount', $ids);
+        $data = $trips->map(function ($dt) use ($stations, $days, $places, $stats, $models, $offers) {
+            // Seats are per run date: the trip stays bookable while any of this month's dates has a free seat
+            // (a full date is closed on its own in the booking window)
             $openDates = $models[$dt->daily_trip_id]->openDates();
-            $dt->available_seats = $openDates[0]['seats_left'] ?? 0;
+            $dt->available_seats = $openDates ? max(array_column($openDates, 'seats_left')) : 0;
+            $dt->open_dates_count = count($openDates);
             $tripStations = ($stations[$dt->daily_trip_id] ?? collect())->values();
             // Saturday-first week order (the database returns the rows in no fixed order)
             $tripDays = ($days[$dt->daily_trip_id] ?? collect())->pluck('day_of_week')
@@ -83,6 +90,7 @@ class TripCatalogController extends Controller
                 'itinerary_steps' => $itinerary,
                 'place_ids' => array_column($tripPlaces, 'place_id'),
                 'places' => $tripPlaces,
+                'active_offer' => $offers[$dt->daily_trip_id] ?? null,
                 'destinations' => array_column($tripPlaces, 'place_name'),
                 'open_dates' => $openDates,
                 'next_trip_date' => $openDates[0]['date'] ?? null,
@@ -99,7 +107,14 @@ class TripCatalogController extends Controller
         if (!$trip || !$trip->is_active) {
             return $this->error('الرحلة اليومية غير متاحة للحجز', 404);
         }
-        return response()->json(['success' => true, 'data' => $trip->openDates(DailyTrip::BOOKING_HORIZON_DAYS)]);
+        // Each date carries the discount of the offer running on it and the seat price after that discount
+        $offers = DB::table('offers_daily_trips')->where('daily_trip_id', $tripId)->get(['start_date', 'end_date', 'percent_discount']);
+        $dates = array_map(function ($d) use ($offers, $trip) {
+            $discount = (float) $offers->filter(fn ($o) => substr((string) $o->start_date, 0, 10) <= $d['date'] && substr((string) $o->end_date, 0, 10) >= $d['date'])
+                ->max('percent_discount');
+            return $d + ['discount' => $discount, 'price' => round((float) $trip->price_per_seat * (1 - $discount / 100), 2)];
+        }, $trip->openDates(DailyTrip::BOOKING_HORIZON_DAYS));
+        return response()->json(['success' => true, 'data' => $dates]);
     }
 
     public function saveDaily(Request $request): JsonResponse
@@ -121,7 +136,6 @@ class TripCatalogController extends Controller
         $required = $existing ? 'sometimes|required' : 'required';
         $data = $this->validateArabic($request, [
             'trip_title' => "{$required}|string|max:200",
-            'description' => "{$required}|string",
             'price_per_seat' => "{$required}|numeric|min:1",
             'max_capacity' => "{$required}|integer|in:" . implode(',', self::DAILY_CAPACITIES),
             'guide_license_number' => "{$required}|string|max:50",
@@ -131,7 +145,7 @@ class TripCatalogController extends Controller
             'is_active' => 'nullable|boolean',
             'recurring_days' => $existing ? 'nullable' : 'required',
         ], [
-            'trip_title' => 'عنوان الرحلة', 'description' => 'وصف الرحلة', 'price_per_seat' => 'سعر المقعد',
+            'trip_title' => 'عنوان الرحلة', 'price_per_seat' => 'سعر المقعد',
             'max_capacity' => 'سعة الحافلة (15 أو 25 أو 50)', 'guide_license_number' => 'المرشد السياحي',
             'departure_city' => 'مدينة الانطلاق', 'recurring_days' => 'أيام الرحلة',
         ]);
@@ -186,7 +200,7 @@ class TripCatalogController extends Controller
         }
 
         $id = $id !== '' ? $id : $this->newTripId('DT');
-        $values = $this->changed($data, ['trip_title', 'description', 'price_per_seat', 'departure_city']);
+        $values = $this->changed($data, ['trip_title', 'price_per_seat', 'departure_city']);
         if ($guide) {
             $values['guide_license_number'] = $guide;
         }
@@ -274,8 +288,11 @@ class TripCatalogController extends Controller
             ->leftJoin('transportation_companies as tc', 'v.contract_number', '=', 'tc.contract_number')
             ->leftJoin('drivers as d', 'd.assigned_vehicle_plate', '=', 'v.plate_number')
             ->select('wt.*', 'g.full_name as guide_name', 'g.phone_number as guide_phone', 'g.avatar as guide_avatar',
+                'g.years_of_experience as guide_years', 'g.price_per_day as guide_price_per_day', 'g.bio as guide_bio',
+                'g.speaks_english as guide_speaks_english', 'g.speaks_french as guide_speaks_french', 'g.speaks_italian as guide_speaks_italian',
                 'v.vehicle_type as vehicle_model', 'v.seating_capacity as vehicle_capacity', 'v.vehicle_image',
-                'tc.company_name as transport_company_name', 'd.full_name as driver_name', 'd.phone_number as driver_phone',
+                'v.category as vehicle_category', 'v.daily_rate as vehicle_daily_rate', 'v.vehicle_status',
+                'tc.company_name as transport_company_name', 'tc.phone_number as transport_company_phone', 'd.full_name as driver_name', 'd.phone_number as driver_phone',
                 'd.driver_license_number')
             ->orderByDesc('wt.weekly_trip_id');
         // Visitors see published trips that have not ended yet
@@ -298,7 +315,8 @@ class TripCatalogController extends Controller
             ->get(['j.weekly_trip_id', 'r.facility_id', 'r.facility_name', 'r.city', 'r.facility_type', 'r.facility_image_1'])->groupBy('weekly_trip_id');
         $stats = $this->tripStats('reviews_weekly_trips', 'bookings_weekly', 'weekly_trip_id', $ids);
 
-        $data = $trips->map(function ($wt) use ($stations, $places, $hotels, $restaurants, $stats) {
+        $offers = $this->runningOffers('offers_weekly_trips', 'weekly_trip_id', 'discount_percentage', $ids);
+        $data = $trips->map(function ($wt) use ($stations, $places, $hotels, $restaurants, $stats, $offers) {
             $tripStations = ($stations[$wt->weekly_trip_id] ?? collect())->values();
             $itinerary = $tripStations->map(fn ($s) => [
                 'time' => 'اليوم ' . $s->day_number, 'title' => $s->station_title, 'desc' => $s->station_desc ?? '',
@@ -310,11 +328,11 @@ class TripCatalogController extends Controller
             $tripRestaurants = ($restaurants[$wt->weekly_trip_id] ?? collect())->map(fn ($r) => (array) $r)->values()->all();
             return (array) $wt + $this->photoView($wt, self::WEEKLY_PHOTOS) + $stats($wt->weekly_trip_id) + [
                 'title' => $wt->trip_title,
-                'description' => $wt->trip_description,
                 'stations' => $tripStations->all(),
                 'itinerary_steps' => $itinerary,
                 'place_ids' => array_column($tripPlaces, 'place_id'),
                 'places' => $tripPlaces,
+                'active_offer' => $offers[$wt->weekly_trip_id] ?? null,
                 'destinations' => array_column($tripPlaces, 'place_name'),
                 'hotel_ids' => array_column($tripHotels, 'hotel_id'),
                 'hotels' => $tripHotels,
@@ -341,14 +359,12 @@ class TripCatalogController extends Controller
         $this->mergeAliases($request, [
             'trip_title' => ['trip_title', 'title'],
             'seat_per_price' => ['seat_per_price', 'price'],
-            'trip_description' => ['trip_description', 'description'],
         ]);
 
         $required = $existing ? 'sometimes|required' : 'required';
         $data = $this->validateArabic($request, [
             'trip_title' => "{$required}|string|max:200",
             'seat_per_price' => "{$required}|numeric|min:1",
-            'trip_description' => "{$required}|string",
             'max_capacity' => "{$required}|integer|min:1|max:100",
             'guide_license_number' => "{$required}|string|max:50",
             'start_date' => "{$required}|date" . ($existing ? '' : '|after_or_equal:today'),
@@ -360,7 +376,7 @@ class TripCatalogController extends Controller
             'restaurant_ids' => 'nullable|array',
             'restaurant_id' => 'nullable|string|max:50',
         ], [
-            'trip_title' => 'عنوان الرحلة', 'seat_per_price' => 'سعر المقعد', 'trip_description' => 'وصف الرحلة', 'max_capacity' => 'سعة الرحلة',
+            'trip_title' => 'عنوان الرحلة', 'seat_per_price' => 'سعر المقعد', 'max_capacity' => 'سعة الرحلة',
             'guide_license_number' => 'المرشد السياحي', 'start_date' => 'تاريخ البداية', 'end_date' => 'تاريخ النهاية',
             'departure_city' => 'مدينة الانطلاق',
         ]);
@@ -405,7 +421,7 @@ class TripCatalogController extends Controller
         }
 
         $id = $id !== '' ? $id : $this->newTripId('WT');
-        $values = $this->changed($data, ['trip_title', 'trip_description', 'seat_per_price', 'start_date', 'end_date', 'departure_city']);
+        $values = $this->changed($data, ['trip_title', 'seat_per_price', 'start_date', 'end_date', 'departure_city']);
         if ($guide) {
             $values['guide_license_number'] = $guide;
         }
@@ -437,6 +453,11 @@ class TripCatalogController extends Controller
         }
 
         $stations = $this->stationRows($request);
+        // One station per trip day: a trip from the 12th to the 16th has exactly 5 stations
+        $days = (int) round((strtotime(substr($end, 0, 10)) - strtotime(substr($start, 0, 10))) / 86400) + 1;
+        if ($stations !== null && count($stations) > 0 && count($stations) !== $days) {
+            return $this->error("عدد محطات الرحلة الأسبوعية يجب أن يساوي عدد أيامها ({$days} أيام = {$days} محطات)، والمرسل " . count($stations) . ' محطات.', 422);
+        }
         $placeIds = $this->placeIds($request);
         $hotelIds = $request->has('hotel_ids') || $request->has('hotel_id')
             ? DB::table('hotels')->whereIn('hotel_id', (array) ($request->input('hotel_ids') ?? [$request->input('hotel_id')]))->pluck('hotel_id')->all()
@@ -616,6 +637,21 @@ class TripCatalogController extends Controller
             $images[] = $trip->{"photo_{$i}"} ?: $defaults[$i - 1];
         }
         return ['photo' => $images[0], 'cover_photo' => $images[0], 'images' => $images, 'gallery' => implode(',', $images)];
+    }
+
+    // The offer each trip has now or next (not ended yet): its title, discount and dates
+    private function runningOffers(string $table, string $key, string $discountColumn, array $ids): array
+    {
+        $today = now('Africa/Tripoli')->toDateString();
+        return DB::table($table)->whereIn($key, $ids)->where('end_date', '>=', $today)
+            ->orderBy('start_date')->get([$key, 'offer_title', $discountColumn . ' as discount', 'start_date', 'end_date'])
+            ->groupBy($key)
+            ->map(fn ($list) => [
+                'title' => $list->first()->offer_title,
+                'discount' => (float) $list->first()->discount,
+                'start_date' => substr((string) $list->first()->start_date, 0, 10),
+                'end_date' => substr((string) $list->first()->end_date, 0, 10),
+            ])->all();
     }
 
     private function linkedPlaces(string $junction, string $key, array $ids): array

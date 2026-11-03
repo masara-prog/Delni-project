@@ -12,6 +12,7 @@ import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin } from "lucide-react";
 import { apiLogin, apiResubmitGuide } from "@/lib/api";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({
@@ -146,6 +147,11 @@ function LoginPage() {
           </div>
         ))}
 
+        {/* Logo only (no text) over the photos */}
+        <Link to="/" className="absolute top-8 right-8 z-20 w-fit" aria-label="الصفحة الرئيسية">
+          <Logo size="lg" showText={false} />
+        </Link>
+
         {/* Crisp Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/40 to-transparent z-1" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#D96B27]/20 via-transparent to-transparent z-1" />
@@ -188,11 +194,10 @@ function LoginPage() {
       </div>
 
       {/* Form side - All Text Right-Aligned & Icon-Only Logo */}
-      <div className="flex items-center justify-center p-6 md:p-10 lg:p-12 min-h-screen lg:h-screen lg:min-h-0 bg-[#FAF7F2] overflow-y-auto">
-        <div className="w-full max-w-lg my-auto text-right">
-          {/* Header Row: Icon-only Logo on Right, Navigation Arrow Button on Left */}
-          <div className="flex items-center justify-between mb-8">
-            <Logo size="lg" showText={false} />
+      <div className="flex items-start justify-center px-6 pt-6 pb-10 md:px-10 lg:px-12 lg:pt-10 min-h-screen lg:h-screen lg:min-h-0 bg-[#FAF7F2] overflow-y-auto">
+        <div className="w-full max-w-lg text-right">
+          {/* Back arrow only: the logo is on the photo side */}
+          <div className="flex items-center justify-end mb-4">
             <BackHome />
           </div>
 
@@ -283,9 +288,7 @@ function LoginPage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setResubmitFile({ name: file.name, data: String(reader.result) });
-                    reader.readAsDataURL(file);
+                    fileToCompressedDataUrl(file).then((data) => setResubmitFile({ name: file.name, data }));
                   }}
                   className="w-full text-xs"
                 />

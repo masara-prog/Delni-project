@@ -8,8 +8,8 @@ import { DashboardSupportChatModal } from "@/components/DashboardSupportChatModa
 import { platformConfirm } from "@/components/PlatformAlert";
 import { NotificationBell } from "@/components/NotificationBell";
 import {
-  BadgeCheck, Bell, Building2, Bus, CalendarDays, Car, ChartColumn, ClipboardCheck, Compass, Crown, Heart, House,
-  IdCard, Landmark, LayoutDashboard, LogOut, MapPin, Megaphone, MessageCircle, ScanLine, Star, Ticket, UserRound, Users,
+  BadgeCheck, BedDouble, Bell, Building2, Bus, CalendarDays, Car, ChartColumn, ClipboardCheck, Compass, Crown, Heart, House,
+  IdCard, Landmark, LayoutDashboard, LogOut, MapPin, Megaphone, MessageCircle, ScanLine, Star, Ticket, UserRound, Users, UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 
@@ -18,6 +18,7 @@ import {
 const NAV_ICONS: Record<string, LucideIcon> = {
   overview: LayoutDashboard, scanner: ScanLine, companies: Bus, drivers: IdCard, guides: BadgeCheck, tourists: Users,
   trips: Compass, assigned_trips: Compass, bookings: Ticket, offers: Megaphone, private_trips: Crown, entities: Landmark,
+  hotels: BedDouble, restaurants: UtensilsCrossed, landmarks: Landmark,
   reviews: Star, analytics: ChartColumn, inquiries_chat: MessageCircle, notifications: Bell, live_trip: MapPin,
   vehicle: Car, vehicles: Bus, profile: UserRound, calendar: CalendarDays, active_tourists: ClipboardCheck,
   favorites: Heart, company_payment: Building2,
@@ -46,6 +47,30 @@ export function DashboardShell({
   const [showSupportChat, setShowSupportChat] = useState(false);
   const { dir, language } = useLanguage();
   const isAr = language === 'ar';
+
+  // All tabs of the site share one stored session: signing in to another account in another tab replaces this
+  // dashboard's token, and its requests would then be refused. Notice it and send this tab to sign in again.
+  useEffect(() => {
+    let warned = false;
+    const check = () => {
+      if (warned) return;
+      const stored = localStorage.getItem("dalni_role");
+      if (stored === role) return;
+      warned = true;
+      alert(
+        stored
+          ? "تم تسجيل الدخول بحساب آخر في نافذة أخرى من نفس المتصفح، فانتهت جلسة هذه اللوحة. يرجى تسجيل الدخول من جديد."
+          : "انتهت جلستك أو تم تسجيل الخروج من نافذة أخرى. يرجى تسجيل الدخول من جديد."
+      );
+      window.location.href = "/auth/login";
+    };
+    window.addEventListener("storage", check);
+    window.addEventListener("focus", check);
+    return () => {
+      window.removeEventListener("storage", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [role]);
 
   // ?tab=<section> (from a clicked notification) opens that section; "support" opens the support chat
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -308,19 +333,36 @@ export function StatCard({
   tone?: "sea" | "sun" | "clay" | "green";
   onClick?: () => void;
 }) {
-  // icon and tone stay in the signature so every dashboard keeps compiling; the card shows the figure only
-  void icon; void tone;
+  const tones = {
+    sea: { chip: "bg-[#1ABC9C]/12 text-[#0E8C74]", bar: "from-[#1ABC9C] to-[#0EA5AB]" },
+    sun: { chip: "bg-amber-100 text-amber-700", bar: "from-amber-400 to-orange-400" },
+    clay: { chip: "bg-[#C56A3D]/12 text-[#A4532B]", bar: "from-[#C56A3D] to-[#D96B27]" },
+    green: { chip: "bg-emerald-100 text-emerald-700", bar: "from-emerald-400 to-teal-500" },
+  }[tone];
+  // Figures stay large; a text value (a trip name, "not set") gets a smaller font so it never overflows the card
+  const isText = typeof value === "string" && !/^[\d\s.,%٠-٩]+$/.test(value) && value.length > 10;
   return (
     <div
       onClick={onClick}
-      className={`p-5 rounded-2xl bg-white border border-border shadow-soft transition duration-200 ${
+      className={`relative overflow-hidden p-4 sm:p-5 rounded-2xl bg-white border border-border shadow-soft transition duration-200 ${
         onClick
           ? "cursor-pointer hover:shadow-card hover:-translate-y-0.5 hover:border-primary/40 active:translate-y-0 select-none group"
           : "hover:shadow-card"
       }`}
     >
-      <div className="text-[13px] font-semibold text-muted-foreground group-hover:text-primary transition-colors">{label}</div>
-      <div className="text-3xl font-bold text-foreground mt-2 tabular-nums tracking-tight group-hover:text-primary transition-colors">{value}</div>
+      <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-l ${tones.bar}`} aria-hidden="true" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[12px] sm:text-[13px] font-semibold text-muted-foreground group-hover:text-primary transition-colors leading-snug">{label}</div>
+        <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${tones.chip}`} aria-hidden="true">{icon}</span>
+      </div>
+      <div
+        className={`mt-2 font-black text-foreground group-hover:text-primary transition-colors ${
+          isText ? "text-base sm:text-lg leading-snug line-clamp-2" : "text-2xl sm:text-3xl tabular-nums tracking-tight"
+        }`}
+        title={typeof value === "string" ? value : undefined}
+      >
+        {value}
+      </div>
       {hint && <div className="text-xs text-muted-foreground mt-1.5">{hint}</div>}
     </div>
   );

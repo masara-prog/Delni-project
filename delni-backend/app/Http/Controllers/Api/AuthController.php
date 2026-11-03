@@ -100,16 +100,14 @@ class AuthController extends Controller
                 if ($user && Passwords::matches($password, $user->password)) {
                     // Only guides approved by the admin can sign in
                     if ($user->verification_status !== 'موثق') {
-                        // A rejected guide sees the admin's reason here and can resubmit (POST /auth/guide/resubmit)
+                        // A rejected guide is told here and can resubmit (POST /auth/guide/resubmit)
                         $rejected = $user->verification_status === 'مرفوض';
                         return response()->json([
                             'status' => 'error',
                             'message' => $rejected
-                                ? 'تم رفض طلب اعتماد حسابك كمرشد سياحي.' . ($user->rejection_reason ? " السبب: {$user->rejection_reason}." : '')
-                                    . ' يمكنك تصحيح وثيقة الترخيص وإعادة تقديم الطلب.'
+                                ? 'تم رفض طلب اعتماد حسابك كمرشد سياحي. يمكنك تصحيح وثيقة الترخيص وإعادة تقديم الطلب.'
                                 : 'الحساب قيد المراجعة: لم تعتمد إدارة المنصة حسابك كمرشد سياحي بعد، ولا يمكنك الدخول إلى لوحتك قبل الاعتماد. سيتم إشعارك فور اعتماده.',
                             'verification_status' => $user->verification_status,
-                            'rejection_reason' => $rejected ? $user->rejection_reason : null,
                             'can_resubmit' => $rejected,
                         ], 403);
                     }
@@ -384,7 +382,6 @@ class AuthController extends Controller
                 'digital_certificate_file' => $data['digital_certificate_file'],
                 'license_expiry_date' => $data['license_expiry_date'],
                 'verification_status' => 'قيد المراجعة',
-                'rejection_reason' => null,
             ]);
             $note = trim((string) ($data['note'] ?? ''));
             $this->notify("guide_resubmit_{$guide->license_number}_" . now('Africa/Tripoli')->format('YmdHis'), 'admin', null, 'system',

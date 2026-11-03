@@ -12,6 +12,7 @@ import { BackHome } from "@/components/BackHome";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin, Award, FileText, Check, Camera, DollarSign, X, Trash2, Plus, User, Phone, Mail, Lock, Shield, Sparkles, UploadCloud, ChevronLeft, ChevronRight, Compass } from "lucide-react";
 import { apiRegisterTourist, apiRegisterGuide, LARAVEL_API_URL } from "@/lib/api";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
 export const Route = createFileRoute("/auth/signup")({
   head: () => ({
@@ -347,7 +348,7 @@ function SignupPage() {
           <div className="relative z-10 h-full flex flex-col justify-between p-8 xl:p-10 text-white">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-3 w-fit group">
-                <Logo size="lg" textColor="light" />
+                <Logo size="lg" showText={false} />
               </Link>
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition duration-300">
                 <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
@@ -400,11 +401,10 @@ function SignupPage() {
         </div>
 
         {/* Form side - Natural smooth scrolling, Logo & Arrow fully visible with generous top padding */}
-        <div className="w-full min-w-0 min-h-screen lg:h-screen lg:min-h-0 lg:overflow-y-auto flex flex-col justify-start px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+        <div className="w-full min-w-0 min-h-screen lg:h-screen lg:min-h-0 lg:overflow-y-auto flex flex-col justify-start px-6 py-5 sm:px-10 sm:py-6 lg:px-12 lg:py-6">
           <div className="w-full max-w-xl mx-auto text-right pb-16">
-            {/* Header Row: Clear Prominent Logo on Right, Clear Navigation Arrow on Left */}
-            <div className="flex items-center justify-between mb-8 pt-2">
-              <Logo size="lg" showText={false} className="hover:scale-105 transition-transform" />
+            {/* Back arrow only: the logo is on the photo side */}
+            <div className="flex items-center justify-end mb-3">
               <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#1B5A78] hover:scale-105 transition text-[#1B5A78]" />
             </div>
 
@@ -719,11 +719,7 @@ function SignupPage() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setGuide((g) => ({ ...g, avatar: reader.result as string }));
-                              };
-                              reader.readAsDataURL(file);
+                              fileToCompressedDataUrl(file, { maxSide: 800 }).then((avatar) => setGuide((g) => ({ ...g, avatar })));
                             }
                           }}
                         />
@@ -1097,14 +1093,7 @@ function SignupPage() {
                           onChange={async (e) => {
                             const filesArr = Array.from(e.target.files ?? []);
                             if (filesArr.length > 0) {
-                              const readPromises = filesArr.map(file => {
-                                return new Promise<string>((resolve) => {
-                                  const reader = new FileReader();
-                                  reader.onload = (loadEv) => resolve((loadEv.target?.result as string) || "");
-                                  reader.onerror = () => resolve("");
-                                  reader.readAsDataURL(file);
-                                });
-                              });
+                              const readPromises = filesArr.map((file) => fileToCompressedDataUrl(file).catch(() => ""));
                               const urls = await Promise.all(readPromises);
                               setGuide((g) => ({
                                 ...g,
@@ -1181,14 +1170,7 @@ function SignupPage() {
                               onChange={async (e) => {
                                 const filesArr = Array.from(e.target.files ?? []);
                                 if (filesArr.length > 0) {
-                                  const readPromises = filesArr.map(file => {
-                                    return new Promise<string>((resolve) => {
-                                      const reader = new FileReader();
-                                      reader.onload = (loadEv) => resolve((loadEv.target?.result as string) || "");
-                                      reader.onerror = () => resolve("");
-                                      reader.readAsDataURL(file);
-                                    });
-                                  });
+                                  const readPromises = filesArr.map((file) => fileToCompressedDataUrl(file).catch(() => ""));
                                   const urls = await Promise.all(readPromises);
                                   setGuide((g) => ({
                                     ...g,

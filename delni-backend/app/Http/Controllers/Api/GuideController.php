@@ -51,8 +51,7 @@ class GuideController extends Controller
         }
         $data = $this->validateArabic($request, [
             'verification_status' => 'required|string|in:' . implode(',', self::STATUSES),
-            'rejection_reason' => 'nullable|string|max:1000',
-        ], ['verification_status' => 'حالة التوثيق', 'rejection_reason' => 'سبب الرفض']);
+        ], ['verification_status' => 'حالة التوثيق']);
         if ($data instanceof JsonResponse) {
             return $data;
         }
@@ -62,10 +61,8 @@ class GuideController extends Controller
         if ($status !== 'موثق' && $guide->verification_status === 'موثق' && ($trips = $this->upcomingTrips($guide->license_number))) {
             return $this->error('لا يمكن سحب اعتماد هذا المرشد لأنه مسند لرحلات قادمة: ' . implode('، ', $trips) . '. يرجى تعيين مرشد آخر لها أولاً.', 409);
         }
-        DB::transaction(function () use ($guide, $status, $data) {
-            // The reason is kept on the account: a rejected guide can't sign in to read notifications, so login shows it
-            $reason = $status === 'مرفوض' ? (trim((string) ($data['rejection_reason'] ?? '')) ?: null) : null;
-            $guide->update(['verification_status' => $status, 'rejection_reason' => $reason]);
+        DB::transaction(function () use ($guide, $status) {
+            $guide->update(['verification_status' => $status]);
             $stamp = now('Africa/Tripoli')->format('YmdHis');
             if ($status === 'موثق') {
                 $this->notify("guide_approved_{$guide->license_number}_{$stamp}", 'guide', $guide->license_number, 'system',
@@ -75,7 +72,7 @@ class GuideController extends Controller
             } elseif ($status === 'مرفوض') {
                 $this->notify("guide_rejected_{$guide->license_number}_{$stamp}", 'guide', $guide->license_number, 'system',
                     '❌ إشعار بخصوص طلب اعتماد حساب المرشد',
-                    $data['rejection_reason'] ?? "نأسف يا ({$guide->full_name})، تم رفض طلب اعتماد حسابك كمرشد سياحي بعد مراجعة الوثائق المرفوعة. يرجى التأكد من صحة المستندات والتواصل مع إدارة المنصة.",
+                    "نأسف يا ({$guide->full_name})، تم رفض طلب اعتماد حسابك كمرشد سياحي بعد مراجعة الوثائق المرفوعة. يرجى التأكد من صحة المستندات والتواصل مع إدارة المنصة.",
                     '/auth/login');
             }
         });
@@ -151,7 +148,7 @@ class GuideController extends Controller
             $lic = $g->license_number;
             $myPlaces = ($places[$lic] ?? collect())->map(fn ($p) => (array) $p)->values();
             $rating = $ratings[$lic] ?? null;
-            $fields = $isAdmin ? $g->toArray() : collect($g->toArray())->except(['digital_certificate_file', 'email', 'rejection_reason'])->all();
+            $fields = $isAdmin ? $g->toArray() : collect($g->toArray())->except(['digital_certificate_file', 'email'])->all();
             return $fields + [
                 'places' => $myPlaces->all(),
                 'place_ids' => $myPlaces->pluck('place_id')->all(),
