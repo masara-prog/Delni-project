@@ -45,7 +45,7 @@ class TripCatalogController extends Controller
                 'v.category as vehicle_category', 'v.daily_rate as vehicle_daily_rate', 'v.vehicle_status',
                 'tc.company_name as transport_company_name', 'tc.phone_number as transport_company_phone', 'd.full_name as driver_name', 'd.phone_number as driver_phone',
                 'd.driver_license_number', 'r.facility_name as restaurant_name', 'r.facility_type as restaurant_type',
-                'r.city as restaurant_city', 'r.address_details as restaurant_address', 'r.phone_number as restaurant_phone',
+                'r.city as restaurant_city', 'r.phone_number as restaurant_phone',
                 'r.facility_image_1 as restaurant_image')
             ->orderByDesc('dt.daily_trip_id');
         // Visitors see active trips their guide has accepted

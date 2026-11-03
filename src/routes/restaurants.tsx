@@ -756,7 +756,7 @@ function mapAdminRestaurantToPublic(r: any, isAr: boolean): Restaurant {
     category: category,
     type,
     city: r.city || "",
-    address: r.address_details || r.address || "",
+    address: r.address || "",
     phone,
     mapsQuery: r.google_maps_url || `${name} ${r.city || ""}`,
     rating: Number(r.rating_avg) || 0,

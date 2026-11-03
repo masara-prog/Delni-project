@@ -329,7 +329,7 @@ function mapHotelRow(h: any): Hotel {
     hotel_id: h.hotel_id,
     name: h.hotel_name,
     city: h.city,
-    address: h.address_details || "",
+    address: "",
     phone: h.phone_number || "",
     whatsapp: h.phone_number || "",
     stars: Number(h.star_rating) || 4,
@@ -344,7 +344,7 @@ function mapHotelRow(h: any): Hotel {
     amenities: Array.isArray(h.amenities) ? h.amenities : [],
     contract_start_date: h.contract_start_date || "",
     contract_end_date: h.contract_end_date || "",
-    hotel_photo_1: h.hotel_photo_1 || "/assets/ai_hotel.jpg",
+    hotel_photo_1: h.hotel_photo_1 || "",
     hotel_photo_2: h.hotel_photo_2 || "",
     hotel_photo_3: h.hotel_photo_3 || "",
     hotel_photo_4: h.hotel_photo_4 || "",
@@ -359,7 +359,7 @@ function mapRestaurantRow(r: any): Restaurant {
     name: r.facility_name,
     type: r.facility_type || "مطعم",
     city: r.city,
-    address: r.address_details || "",
+    address: "",
     phone: r.phone_number || "",
     whatsapp: r.phone_number || "",
     rating_avg: Number(r.rating_avg) || 0,
@@ -371,7 +371,7 @@ function mapRestaurantRow(r: any): Restaurant {
     features: Array.isArray(r.features) ? r.features : [],
     contract_start_date: r.contract_start_date || "",
     contract_end_date: r.contract_end_date || "",
-    facility_image_1: r.facility_image_1 || "/assets/restaurant-libya.jpg",
+    facility_image_1: r.facility_image_1 || "",
     facility_image_2: r.facility_image_2 || "",
     facility_image_3: r.facility_image_3 || "",
     facility_image_4: r.facility_image_4 || "",
@@ -574,7 +574,6 @@ function toHotelPayload(h: any) {
     hotel_id: String(h.hotel_id || h.id || "").trim(),
     hotel_name: h.name,
     city: h.city,
-    address_details: h.address || undefined,
     phone_number: h.phone,
     star_rating: Number(h.stars),
     partnership_status: h.partnership_status || "نشط",
@@ -600,7 +599,6 @@ function toRestaurantPayload(r: any) {
     facility_name: r.name,
     facility_type: r.type,
     city: r.city,
-    address_details: r.address || undefined,
     phone_number: r.phone,
     description: r.description,
     working_hours: r.working_hours,
@@ -7836,11 +7834,11 @@ function RestaurantModal({
 
   const [features, setFeatures] = useState<string[]>(initialFeatures);
 
-  const [i1, setI1] = useState(restaurant?.facility_image_1 || "/assets/restaurant-libya.jpg");
-  const [i2, setI2] = useState(restaurant?.facility_image_2 || "/assets/ai_food.jpg");
-  const [i3, setI3] = useState(restaurant?.facility_image_3 || "/assets/cafe-libya.jpg");
-  const [i4, setI4] = useState(restaurant?.facility_image_4 || "/assets/dest-tripoli-medina.jpg");
-  const [i5, setI5] = useState(restaurant?.facility_image_5 || "/assets/dest-harbor-coast.jpg");
+  const [i1, setI1] = useState(restaurant?.facility_image_1 || "");
+  const [i2, setI2] = useState(restaurant?.facility_image_2 || "");
+  const [i3, setI3] = useState(restaurant?.facility_image_3 || "");
+  const [i4, setI4] = useState(restaurant?.facility_image_4 || "");
+  const [i5, setI5] = useState(restaurant?.facility_image_5 || "");
 
   const categoryOptions = [
     { id: "traditional", label: "🍲 مطعم تراثي وشعبي", desc: "أكلات ليبية أصيلة (كسكسي، بازين، مبطن)" },

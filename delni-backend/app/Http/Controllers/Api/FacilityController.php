@@ -50,8 +50,6 @@ class FacilityController extends Controller
             'hotel_id' => 'required|string|max:50',
             'hotel_name' => "{$required}|string|max:200",
             'city' => "{$required}|string|max:100",
-            // The forms no longer ask for it (the Google Maps link gives the location); a new record stores its city
-            'address_details' => 'nullable|string|max:500',
             'phone_number' => "{$required}|string|max:20",
             'star_rating' => "{$required}|integer|between:1,5",
             'partnership_status' => 'nullable|string|max:100',
@@ -73,13 +71,12 @@ class FacilityController extends Controller
 
         $id = trim($data['hotel_id']);
         $values = $this->changedValues($data, [
-            'hotel_name', 'city', 'address_details', 'phone_number', 'star_rating', 'partnership_status',
+            'hotel_name', 'city', 'phone_number', 'star_rating', 'partnership_status',
             'property_type', 'google_maps_url', 'description', 'working_hours', 'discount_percentage', 'contract_end_date',
         ]);
         $values += $this->changedPhotos($data, 'hotel_photo_', "hotel-{$id}", 'hotels');
         if (!$existing) {
             $values += [
-                'address_details' => trim((string) ($data['address_details'] ?? '')) ?: ($data['city'] ?? ''),
                 'partnership_status' => 'نشط',
                 'property_type' => 'hotel',
                 'contract_start_date' => $data['contract_start_date'] ?? now('Africa/Tripoli')->toDateString(),
@@ -126,8 +123,6 @@ class FacilityController extends Controller
             'facility_name' => "{$required}|string|max:200",
             'facility_type' => "{$required}|string|max:100",
             'city' => "{$required}|string|max:100",
-            // The forms no longer ask for it (the Google Maps link gives the location); a new record stores its city
-            'address_details' => 'nullable|string|max:500',
             'phone_number' => "{$required}|string|max:20",
             'partnership_status' => 'nullable|string|max:50',
             'google_maps_url' => 'nullable|string|max:500',
@@ -147,13 +142,12 @@ class FacilityController extends Controller
 
         $id = trim($data['facility_id']);
         $values = $this->changedValues($data, [
-            'facility_name', 'facility_type', 'city', 'address_details', 'phone_number', 'partnership_status',
+            'facility_name', 'facility_type', 'city', 'phone_number', 'partnership_status',
             'google_maps_url', 'description', 'working_hours', 'discount_percentage', 'contract_end_date',
         ]);
         $values += $this->changedPhotos($data, 'facility_image_', "restaurant-{$id}", 'restaurants');
         if (!$existing) {
             $values += [
-                'address_details' => trim((string) ($data['address_details'] ?? '')) ?: ($data['city'] ?? ''),
                 'partnership_status' => 'نشط',
                 'discount_percentage' => 0,
                 'contract_start_date' => $data['contract_start_date'] ?? now('Africa/Tripoli')->toDateString(),
@@ -229,7 +223,7 @@ class FacilityController extends Controller
         return [
             'hotel_id' => 'رقم القيد البلدي', 'facility_id' => 'رقم القيد البلدي',
             'hotel_name' => "اسم {$label}", 'facility_name' => "اسم {$label}", 'facility_type' => 'نوع المنشأة',
-            'city' => 'المدينة', 'address_details' => 'العنوان التفصيلي', 'phone_number' => 'رقم الهاتف',
+            'city' => 'المدينة', 'phone_number' => 'رقم الهاتف',
             'star_rating' => 'تصنيف النجوم', 'partnership_status' => 'حالة الشراكة', 'property_type' => 'نوع مكان الإقامة',
             'google_maps_url' => 'رابط خرائط جوجل', 'description' => 'الوصف', 'working_hours' => 'أوقات العمل',
             'discount_percentage' => 'نسبة الخصم', 'contract_start_date' => 'تاريخ بداية العقد', 'contract_end_date' => 'تاريخ نهاية العقد',

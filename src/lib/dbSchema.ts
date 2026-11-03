@@ -137,7 +137,6 @@ export interface Hotel {
   hotel_id: string; // VARCHAR(50) PRIMARY KEY
   hotel_name: string; // VARCHAR(200)
   city: string; // VARCHAR(100)
-  address_details: string; // VARCHAR(500)
   phone_number: string; // VARCHAR(20)
   star_rating: number; // INT (CHECK BETWEEN 1 AND 5)
   partnership_status: "نشط" | "معلق" | "موقوف" | string; // VARCHAR(100)
@@ -179,7 +178,6 @@ export interface RestaurantCafe {
   facility_name: string; // VARCHAR(200)
   facility_type: string; // VARCHAR(100)
   city: string; // VARCHAR(100)
-  address_details: string; // VARCHAR(500)
   phone_number?: string | null; // VARCHAR(20)
   description?: string | null; // NVARCHAR(MAX)
   facility_image_1?: string | null; // NVARCHAR(MAX)

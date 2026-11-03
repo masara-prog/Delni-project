@@ -1108,7 +1108,7 @@ function TripDetailsView({
                                 {"★".repeat(Math.min(5, Math.max(1, hStars)))} · {isAr ? `فندق ${hStars} نجوم` : `${hStars} Stars`}
                               </div>
                               <div className="text-[11px] text-[#003580] font-black mt-1">
-                                📍 {hCity} {h.address_details || h.address ? `— ${h.address_details || h.address}` : ""}
+                                📍 {hCity}
                               </div>
                             </div>
                           </div>
@@ -1201,7 +1201,7 @@ function TripDetailsView({
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
-                          <span>📍 {rCity} {r.address_details || r.address ? `— ${r.address_details || r.address}` : ""}</span>
+                          <span>📍 {rCity}</span>
                           <div className="flex items-center gap-2">
                             <FavoriteButton
                               itemType="restaurant"
@@ -2963,15 +2963,10 @@ function TripCard({
 
       {/* Offer Badge — shown when this trip has an active offer */}
       {offer && (
-        <div className="absolute top-14 left-3 z-20 pointer-events-none">
-          <div className="flex flex-col items-start gap-1">
-            <span className="px-2.5 py-1 rounded-full bg-red-600 text-white font-black text-[11px] shadow-lg border border-white/20 animate-pulse">
-              🔥 {offer.discountPercent} خصم
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-amber-300 font-bold text-[10px] border border-amber-400/30">
-              {offer.price} <span className="text-white/70">{isAr ? "د.ل" : "LYD"}</span>
-              <span className="line-through text-white/50 mr-1">{offer.oldPrice}</span>
-            </span>
+        <div className="absolute top-16 left-0 z-20 pointer-events-none">
+          <div className="ps-3 pe-4 py-2 rounded-e-2xl bg-gradient-to-l from-[#E11D48] to-[#D96B27] text-white shadow-xl">
+            <div className="text-[10px] font-bold text-white/85 leading-none">{isAr ? "عرض لفترة محدودة" : "Limited offer"}</div>
+            <div className="text-xl font-black leading-tight">{isAr ? `خصم ${offer.discountPercent}` : `${offer.discountPercent} OFF`}</div>
           </div>
         </div>
       )}
@@ -3066,16 +3061,31 @@ function TripCard({
             {t.type === "daily" && (
               <div>
                 <div className="text-[9px] text-white/70 font-semibold">{isAr ? "سعر المقعد" : "Seat Price"}</div>
-                <div className="text-lg font-black text-amber-300">
-                  {t.price} <span className="text-xs font-bold text-white/80">{isAr ? "د.ل" : "LYD"}</span>
-                </div>
+                {offer ? (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-black text-amber-300">
+                        {offer.price} <span className="text-xs font-bold text-white/80">{isAr ? "د.ل" : "LYD"}</span>
+                      </span>
+                      <span className="text-sm font-bold text-white/60 line-through">{offer.oldPrice}</span>
+                    </div>
+                    <div className="text-[10px] font-black text-emerald-300">
+                      {isAr ? `وفّر ${Number(offer.oldPrice) - Number(offer.price)} د.ل` : `Save ${Number(offer.oldPrice) - Number(offer.price)} LYD`}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-lg font-black text-amber-300">
+                    {t.price} <span className="text-xs font-bold text-white/80">{isAr ? "د.ل" : "LYD"}</span>
+                  </div>
+                )}
               </div>
             )}
             {t.type === "weekly" && (
               <div>
                 <div className="text-[9px] text-white/70 font-semibold">{isAr ? "شامل الإقامة" : "All Inclusive"}</div>
+                {offer && <div className="text-sm font-bold text-white/60 line-through leading-none">{offer.oldPrice}</div>}
                 <div className="text-lg font-black text-amber-300">
-                  {t.seatPrice} <span className="text-xs font-bold text-white/80">{isAr ? "د.ل" : "LYD"}</span>
+                  {offer ? offer.price : t.seatPrice} <span className="text-xs font-bold text-white/80">{isAr ? "د.ل" : "LYD"}</span>
                 </div>
               </div>
             )}

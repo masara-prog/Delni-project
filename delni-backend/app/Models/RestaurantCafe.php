@@ -18,7 +18,6 @@ class RestaurantCafe extends Model
         'facility_name',
         'facility_type',
         'city',
-        'address_details',
         'phone_number',
         'description',
         'facility_image_1',
