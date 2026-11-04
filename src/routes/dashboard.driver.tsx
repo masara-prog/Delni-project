@@ -23,6 +23,14 @@ const TRIP_STAGES = [
   { stage: "وصلنا الوجهة", icon: "📍" },
   { stage: "مكتملة", icon: "🏁" },
 ];
+// The stages that may follow each stage (same rule as the server's Driver::STAGE_TRANSITIONS)
+const NEXT_STAGES: Record<string, string[]> = {
+  "في الانتظار": ["تم الانطلاق"],
+  "تم الانطلاق": ["في الطريق - استراحة", "وصلنا الوجهة"],
+  "في الطريق - استراحة": ["تم الانطلاق", "وصلنا الوجهة"],
+  "وصلنا الوجهة": ["تم الانطلاق", "مكتملة"],
+  "مكتملة": ["في الانتظار"],
+};
 
 export const Route = createFileRoute("/dashboard/driver")({
   head: () => ({
@@ -172,7 +180,8 @@ function DriverDashboard() {
       alert("❌ " + res.error);
       return;
     }
-    setDriverInfo((prev) => ({ ...prev, current_trip_stage: stage } as Driver));
+    // The server also moves the operational status ("في رحلة" on the road, "متاح" once completed)
+    setDriverInfo((prev) => ({ ...prev, current_trip_stage: stage, operational_status: res.data?.operational_status || prev.operational_status } as Driver));
   };
 
   const openNotification = (n: NotificationItem) => {
@@ -193,6 +202,11 @@ function DriverDashboard() {
   ];
 
   const handleToggleOperationalStatus = async () => {
+    // During a trip the status is "في رحلة" and returns to "متاح" by itself when the trip is completed
+    if (driverInfo.operational_status === "في رحلة") {
+      alert("لا يمكن تغيير حالتك أثناء رحلة جارية؛ تعود حالتك إلى «متاح» تلقائياً عند اختيار مرحلة «مكتملة».");
+      return;
+    }
     const nextStatus: "متاح" | "إجازة" = driverInfo.operational_status === "متاح" ? "إجازة" : "متاح";
     const res = await apiUpdateDriver(driverInfo.driver_license_number, { operational_status: nextStatus });
     if (!res.success) {
@@ -245,7 +259,7 @@ function DriverDashboard() {
         {TRIP_STAGES.map((st) => (
           <button
             key={st.stage}
-            disabled={savingStage}
+            disabled={savingStage || (st.stage !== tripStage && !NEXT_STAGES[tripStage]?.includes(st.stage))}
             onClick={() => handleTripStage(st.stage)}
             className={`p-3 rounded-2xl border text-center transition disabled:opacity-60 ${
               tripStage === st.stage ? "border-primary bg-primary/10 text-primary font-black shadow-soft" : "border-border bg-white text-foreground hover:border-primary/40"
@@ -305,7 +319,7 @@ function DriverDashboard() {
               </div>
               <label className="flex items-center gap-3 bg-white/15 backdrop-blur px-4 h-12 rounded-xl cursor-pointer">
                 <span className="text-sm font-black">
-                  {driverInfo.operational_status === "متاح" ? "متاح للقيادة" : "في إجازة"}
+                  {driverInfo.operational_status === "متاح" ? "متاح للقيادة" : driverInfo.operational_status === "في رحلة" ? "في رحلة الآن" : "في إجازة"}
                 </span>
                 <button
                   onClick={handleToggleOperationalStatus}

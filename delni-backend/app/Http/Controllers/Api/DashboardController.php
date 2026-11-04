@@ -188,31 +188,8 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'error' => 'حساب السائق غير موجود'], 404);
         }
 
-        // Only trips the admin actually assigned to the driver's vehicle (no contract details for the driver)
-        $trips = [];
-        $plate = $driver->assigned_vehicle_plate;
-        if ($plate) {
-            $today = now('Africa/Tripoli')->toDateString();
-            // A daily trip shows its next run date and the passengers booked on that date
-            foreach (DailyTrip::with('days')->where('vehicle_plate', $plate)->where('is_active', true)->get() as $t) {
-                $next = $t->openDates(1)[0] ?? null;
-                $trips[] = ['kind' => 'يومية', 'id' => $t->daily_trip_id, 'title' => $t->trip_title,
-                    'schedule' => ($t->days->pluck('day_of_week')->implode('، ') ?: 'يومياً') . ($next ? " — الرحلة القادمة {$next['date']}" : ''),
-                    'departure_city' => $t->departure_city, 'passengers' => $next ? $t->max_capacity - $next['seats_left'] : 0];
-            }
-            foreach (WeeklyTrip::where('vehicle_plate', $plate)->where('is_active', true)->where('end_date', '>=', $today)
-                ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', WeeklyTrip::GUIDE_APPROVED))->orderBy('start_date')->get() as $t) {
-                $trips[] = ['kind' => 'أسبوعية', 'id' => $t->weekly_trip_id, 'title' => $t->trip_title,
-                    'schedule' => $t->start_date->format('Y-m-d') . ' إلى ' . $t->end_date->format('Y-m-d'),
-                    'departure_city' => $t->departure_city, 'passengers' => $t->max_capacity - $t->available_seats];
-            }
-            foreach (PrivateTrip::where('vehicle_plate', $plate)->where('status_order', 'مؤكدة')
-                ->where('preferred_start_date', '>=', $today)->orderBy('preferred_start_date')->get() as $t) {
-                $trips[] = ['kind' => 'خاصة', 'id' => $t->private_trip_id, 'title' => 'رحلة خاصة',
-                    'schedule' => $t->preferred_start_date->format('Y-m-d') . " لمدة {$t->duration_days} أيام",
-                    'departure_city' => null, 'passengers' => (int) $t->number_of_companions];
-            }
-        }
+        // Only trips the admin assigned to the driver's vehicle and their guide accepted (no contract details for the driver)
+        $trips = $driver->assignedTrips();
 
         return response()->json([
             'success' => true,

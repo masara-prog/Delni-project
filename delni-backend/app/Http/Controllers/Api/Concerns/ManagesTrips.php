@@ -273,9 +273,10 @@ trait ManagesTrips
         }
 
         $d = DB::table('drivers')->where('assigned_vehicle_plate', $plate)
-            ->first(['full_name', 'operational_status', DB::raw('CONVERT(VARCHAR(10), license_date_valid, 23) as license_date_valid')]);
+            ->first(['full_name', 'operational_status', 'account_status', DB::raw('CONVERT(VARCHAR(10), license_date_valid, 23) as license_date_valid')]);
         $warning = match (true) {
             !$d => "تنبيه: لا يوجد سائق مخصص للمركبة ({$plate}) حتى الآن.",
+            $d->account_status === 'موقوف' => "تنبيه: حساب سائق المركبة ({$d->full_name}) موقوف من قبل شركته، ولا يستطيع تنفيذ الرحلة.",
             $d->operational_status === 'إجازة' => "تنبيه: سائق المركبة ({$d->full_name}) في إجازة حالياً.",
             $d->license_date_valid && $d->license_date_valid < $lastDay => "تنبيه: رخصة سائق المركبة ({$d->full_name}) تنتهي بتاريخ {$d->license_date_valid} قبل انتهاء الرحلة.",
             default => null,

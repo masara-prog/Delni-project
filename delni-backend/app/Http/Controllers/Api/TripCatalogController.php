@@ -534,7 +534,8 @@ class TripCatalogController extends Controller
                     "✅ وافق المرشد على الرحلة {$label} ({$trip->trip_title})",
                     "وافق المرشد ({$guideName}) على الرحلة {$label} ({$trip->trip_title})، وأصبحت منشورة ومتاحة للحجز.",
                     '/dashboard/admin?tab=trips');
-                $this->notifyAssignment($tripId, $trip->trip_title, "رحلة {$label}", null, $trip->vehicle_plate, null);
+                // Same wording as when the admin assigns the trip ("رحلة يومية" / "رحلة أسبوعية")
+                $this->notifyAssignment($tripId, $trip->trip_title, $kind === 'daily' ? 'رحلة يومية' : 'رحلة أسبوعية', null, $trip->vehicle_plate, null);
             } else {
                 $reason = trim((string) ($data['reason'] ?? ''));
                 $this->notify("admin-{$kind}-guide-no-{$tripId}-{$trip->guide_license_number}", 'admin', null, 'trip',

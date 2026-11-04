@@ -107,6 +107,10 @@ class AuthController extends Controller
                 $user = Driver::where('email', $login)->first();
 
                 if ($user && Passwords::matches($password, $user->password)) {
+                    // A driver suspended by the company, or working for a suspended company, cannot sign in
+                    if ($blocked = $user->blockedReason()) {
+                        return response()->json(['status' => 'error', 'message' => $blocked], 403);
+                    }
                     $token = $user->createToken('driver-token', ['role:driver'])->plainTextToken;
                     return response()->json([
                         'status' => 'success',
@@ -135,6 +139,15 @@ class AuthController extends Controller
             'status' => 'error',
             'message' => 'بيانات تسجيل الدخول غير صحيحة، يرجى التأكد من البريد أو كلمة المرور',
         ], 401);
+    }
+
+    /**
+     * Sign-out revokes the token on the server, so a copied token stops working too
+     */
+    public function logout(Request $request)
+    {
+        $request->user()?->currentAccessToken()?->delete();
+        return response()->json(['status' => 'success', 'message' => 'تم تسجيل الخروج']);
     }
 
     /**

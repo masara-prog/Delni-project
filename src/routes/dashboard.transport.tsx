@@ -889,6 +889,8 @@ function DriverModal({
   const [pass, setPass] = useState("");
   const [assignedPlate, setAssignedPlate] = useState(driver?.assigned_vehicle_plate || "");
   const [operationalStatus, setOperationalStatus] = useState<Driver["operational_status"]>(driver?.operational_status || "متاح");
+  // A suspended driver cannot sign in or work until the company reactivates the account
+  const [accountStatus, setAccountStatus] = useState<Driver["account_status"]>(driver?.account_status || "نشط");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -937,7 +939,7 @@ function DriverModal({
         ...(driver ? {} : { password: pass }),
         contract_number: contractNumber,
         assigned_vehicle_plate: driver ? (assignedPlate.trim() || null) : null,
-        account_status: driver?.account_status || "نشط",
+        account_status: accountStatus,
         operational_status: operationalStatus,
       });
     } finally {
@@ -1037,6 +1039,16 @@ function DriverModal({
             <option value="إجازة">{isAr ? "في إجازة" : "On Leave"}</option>
           </select>
         </div>
+
+        {driver && (
+          <div>
+            <label className="text-xs font-bold text-foreground mb-1 block">{isAr ? "حالة حساب السائق" : "Account Status"}</label>
+            <select value={accountStatus} onChange={e => setAccountStatus(e.target.value as Driver["account_status"])} className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right">
+              <option value="نشط">{isAr ? "نشط (يستطيع الدخول والعمل)" : "Active"}</option>
+              <option value="موقوف">{isAr ? "موقوف (لا يستطيع الدخول حتى يُعاد تفعيله)" : "Suspended"}</option>
+            </select>
+          </div>
+        )}
 
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 h-10 rounded-xl border font-black text-xs cursor-pointer">{isAr ? "إلغاء" : "Cancel"}</button>
