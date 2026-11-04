@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { platformConfirm } from "@/components/PlatformAlert";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
-import { MapPin, Check, Eye, Lock, ShieldCheck, AlertCircle, FileText, Upload, RefreshCw, Trash2, X } from "lucide-react";
+import { MapPin, Check, Eye, Lock, ShieldCheck, AlertCircle, FileText, Upload, RefreshCw, Trash2, X, CalendarDays, Wallet, Users, Bus, Phone, Clock, type LucideIcon } from "lucide-react";
 import type { TourGuide } from "@/lib/dbSchema";
 import {
   getStoredSession,
@@ -35,7 +37,6 @@ type AssignedTrip = {
   seats_booked: number;
   status: "بانتظار القبول" | "مقبولة" | "مرفوضة";
   is_active_now?: boolean;
-  rejection_reason?: string;
   raw: any; // full trip record from DelniDB, shown read-only in TripDetailsModal
 };
 
@@ -300,15 +301,10 @@ function GuideDashboard() {
 
   const [respondingTripId, setRespondingTripId] = useState<string | null>(null);
   const respondToTrip = async (trip: AssignedTrip, decision: "accept" | "decline") => {
-    let reason: string | undefined;
-    if (decision === "decline") {
-      const typed = window.prompt("سبب الاعتذار عن الرحلة (اختياري):");
-      if (typed === null) return;
-      reason = typed.trim() || undefined;
-    }
+    if (decision === "decline" && !(await platformConfirm(`هل تريد الاعتذار عن الرحلة «${trip.trip_name}»؟ سيتم إشعار الإدارة.`))) return;
     setRespondingTripId(trip.id);
     const respond = trip.type === "يومية" ? apiGuideRespondDailyTrip : trip.type === "أسبوعية" ? apiGuideRespondWeeklyTrip : apiGuideRespondPrivateTrip;
-    const res = await respond(guideInfo.license_number, trip.id, decision, reason);
+    const res = await respond(guideInfo.license_number, trip.id, decision);
     setRespondingTripId(null);
     if (!res.success) {
       alert("❌ " + res.error);
@@ -368,18 +364,16 @@ function GuideDashboard() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
+      fileToCompressedDataUrl(file).then((data) => {
+        if (data) {
           setGuideInfo({
             ...guideInfo,
-            digital_certificate_file: ev.target.result as string,
+            digital_certificate_file: data,
             certificate_name: file.name,
           });
           alert("تم تحميل الوثيقة وتجهيز المعاينة بنجاح ✓ انقر على 'معاينة الوثيقة' للتأكد منها، ثم احفظ التعديلات في أسفل الصفحة.");
         }
-      };
-      reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -602,7 +596,6 @@ function GuideDashboard() {
                   <p className="text-stone-600">
                     رقم الترخيص: <span className="font-mono font-bold text-stone-900">{guideInfo.license_number || "قيد المراجعة"}</span>
                   </p>
-                  <p className="text-stone-600 text-[11px]">{guideInfo.certificate || "لا يوجد وصف إضافي مسجل للترخيص"}</p>
 
                   {guideInfo.digital_certificate_file && (
                     <button
@@ -658,11 +651,6 @@ function GuideDashboard() {
                     <div>⏱️ المدة: {t.time_or_duration}</div>
                     <div>👥 السياح المحجوزون: {t.seats_booked} فرد</div>
                   </div>
-                  {t.rejection_reason && (
-                    <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
-                      سبب الاعتذار: {t.rejection_reason}
-                    </div>
-                  )}
                   <div className="pt-2 border-t border-stone-100 flex justify-between items-center">
                     {t.is_active_now && (
                       <button onClick={() => setActive("active_tourists")} className="text-primary text-xs font-bold hover:underline">
@@ -1001,19 +989,7 @@ function GuideDashboard() {
               </div>
             </div>
 
-            {/* Section 6: Certificate Notes */}
-            <div>
-              <label className="text-xs font-semibold text-stone-700 mb-1 block">بيانات الشهادة والترخيص:</label>
-              <textarea
-                value={guideInfo.certificate}
-                onChange={(e) => setGuideInfo({ ...guideInfo, certificate: e.target.value })}
-                rows={2}
-                placeholder="تفاصيل جهة الإصدار وتاريخ الصلاحية..."
-                className="w-full p-2.5 rounded-xl border border-stone-200 bg-white text-xs font-medium text-stone-800 text-right outline-none focus:border-[#1B5A78]"
-              />
-            </div>
-
-            {/* Section 7: Dedicated Certificate Preview & Upload Widget */}
+            {/* Section 6: Dedicated Certificate Preview & Upload Widget */}
             <div className="p-4 rounded-xl border border-stone-200 bg-stone-50/60 space-y-3 text-right">
               <div className="flex items-center justify-between">
                 <div>
@@ -1117,7 +1093,7 @@ function GuideDashboard() {
               )}
             </div>
 
-            {/* Section 8: Bio */}
+            {/* Section 7: Bio */}
             <div>
               <label className="text-xs font-semibold text-stone-700 mb-1 block">النبذة التعريفية عن خبراتك وجولاتك:</label>
               <textarea
@@ -1402,6 +1378,8 @@ function GuideCalendar({ trips, onDetails }: { trips: AssignedTrip[]; onDetails:
 
 function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () => void }) {
   const r = trip.raw || {};
+  // Stations start folded: two are shown, the rest on demand
+  const [showAllStations, setShowAllStations] = useState(false);
   const fmtDate = (v?: string) => (v ? new Date(v).toLocaleDateString("ar-LY") : "—");
   const money = (v: any) => (v !== null && v !== undefined && v !== "" ? `${Number(v).toLocaleString("ar-LY")} د.ل` : "—");
   const list = (v: any): any[] => (Array.isArray(v) ? v : []);
@@ -1428,79 +1406,174 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
   if (r.departure_city) info.push(["مدينة الانطلاق", r.departure_city]);
   // A daily trip's free seats depend on the run date, so only its capacity is shown
   if (r.max_capacity) info.push(trip.type === "يومية" ? ["سعة الرحلة", `${r.max_capacity} مقعد`] : ["السعة / المقاعد المتاحة", `${r.max_capacity} / ${r.available_seats ?? "—"}`]);
-  if (r.vehicle) info.push(["المركبة", `${r.vehicle.vehicle_type || ""} — لوحة ${r.vehicle.plate_number} (${r.vehicle.seating_capacity || "?"} مقعد)`]);
-  else if (r.vehicle_plate) info.push(["المركبة", `لوحة ${r.vehicle_plate}`]);
-  if (r.vehicle?.driver) info.push(["السائق", `${r.vehicle.driver.full_name}${r.vehicle.driver.phone_number ? ` — ${r.vehicle.driver.phone_number}` : ""}`]);
+  const vehicle = r.vehicle || (r.vehicle_plate ? { plate_number: r.vehicle_plate } : null);
+  const driver = r.vehicle?.driver || null;
+  // Icon and colour per fact; anything else falls back to the calendar
+  const factStyle: Record<string, { icon: LucideIcon; tone: string }> = {
+    "من": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
+    "إلى": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
+    "أيام التشغيل": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
+    "تاريخ البدء المفضل": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
+    "المدة": { icon: Clock, tone: "bg-sky-100 text-sky-700" },
+    "سعر المقعد": { icon: Wallet, tone: "bg-[#D96B27]/12 text-[#B4541A]" },
+    "السعر المعتمد": { icon: Wallet, tone: "bg-[#D96B27]/12 text-[#B4541A]" },
+    "مصروفات الخدمات": { icon: Wallet, tone: "bg-[#D96B27]/12 text-[#B4541A]" },
+    "مدينة الانطلاق": { icon: MapPin, tone: "bg-[#003580]/10 text-[#003580]" },
+    "سعة الرحلة": { icon: Users, tone: "bg-violet-100 text-violet-700" },
+    "السعة / المقاعد المتاحة": { icon: Users, tone: "bg-violet-100 text-violet-700" },
+    "عدد المرافقين": { icon: Users, tone: "bg-violet-100 text-violet-700" },
+  };
+  const tripDays = trip.type === "أسبوعية" && r.start_date && r.end_date
+    ? Math.round((new Date(String(r.end_date).slice(0, 10)).getTime() - new Date(String(r.start_date).slice(0, 10)).getTime()) / 86400000) + 1
+    : 0;
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="space-y-1.5">
-      <h4 className="text-xs font-bold text-stone-900 border-b border-stone-100 pb-1">{title}</h4>
+    <div className="space-y-2.5">
+      <h4 className="text-sm font-black text-[#0F172A] flex items-center gap-2">
+        <span className="w-1 h-4 rounded-full bg-gradient-to-b from-[#1ABC9C] to-[#D96B27]" aria-hidden="true" />
+        {title}
+      </h4>
       {children}
     </div>
   );
 
+  const description = r.customer_requirements ? `متطلبات العميل: ${r.customer_requirements}` : "";
+  const cover = r.photo_1 || r.photo || r.trip_photo_1;
+  const shownStations = showAllStations ? stations : stations.slice(0, 2);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-center p-4 animate-overlay-in" onClick={onClose}>
       <div
-        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-2xl p-5 space-y-4 shadow-xl text-right border border-stone-200 animate-dialog-in"
+        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-3xl shadow-xl text-right border border-stone-200 animate-dialog-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-start gap-3">
-          <div>
-            <span className="text-[11px] font-mono font-bold text-stone-400">{trip.id}</span>
-            <h3 className="text-base font-bold text-stone-900">{trip.trip_name}</h3>
-            <div className="flex gap-2 mt-1">
+        {/* Header: trip photo with title */}
+        <div className="relative h-36 sm:h-40 bg-gradient-to-l from-[#1B5A78] to-[#0F172A] overflow-hidden rounded-t-3xl">
+          {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+          <button onClick={onClose} className="absolute top-3 left-3 p-1.5 rounded-full bg-white/90 hover:bg-white text-stone-700" aria-label="إغلاق">
+            <X className="w-4 h-4" />
+          </button>
+          <div className="absolute bottom-3 right-4 left-4">
+            <div className="flex gap-1.5 mb-1.5">
               <Badge tone={trip.type === "خاصة VIP" ? "sun" : "sea"}>{trip.type}</Badge>
               <Badge tone="green">للاطلاع فقط</Badge>
             </div>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500" aria-label="إغلاق">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {(r.description || r.trip_description || r.customer_requirements) && (
-          <p className="text-xs text-stone-700 leading-relaxed bg-stone-50 rounded-xl p-3">
-            {r.description || r.trip_description || `متطلبات العميل: ${r.customer_requirements}`}
-          </p>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {info.map(([k, v]) => (
-            <div key={k} className="p-2.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
-              <div className="text-stone-500">{k}</div>
-              <div className="font-bold text-stone-900 mt-0.5">{v}</div>
-            </div>
-          ))}
-        </div>
-
-        {stations.length > 0 && (
-          <Section title="🗺️ برنامج الرحلة والمحطات">
-            <ol className="space-y-1.5">
-              {stations.map((s, i) => (
-                <li key={s.station_id || i} className="p-2.5 rounded-lg border border-stone-100 text-xs">
-                  <div className="font-bold text-stone-900">
-                    {s.day_number ? `اليوم ${s.day_number} · ` : ""}{s.station_order ? `${s.station_order}. ` : ""}{s.station_title}
-                    {s.station_time ? <span className="text-stone-500 font-medium"> — {s.station_time}</span> : null}
-                  </div>
-                  {s.station_desc && <div className="text-stone-600 mt-0.5">{s.station_desc}</div>}
-                </li>
-              ))}
-            </ol>
-          </Section>
-        )}
-
-        {list(r.places).length > 0 && (
-          <Section title="🏛️ المعالم السياحية">
-            <div className="flex flex-wrap gap-1.5">
-              {list(r.places).map((p) => (
-                <span key={p.place_id} className="px-2 py-1 rounded-lg bg-teal-50 text-teal-800 text-[11px] font-bold">
-                  {p.place_name}{p.city ? ` — ${p.city}` : ""}
+            <h3 className="text-lg sm:text-xl font-black text-white leading-snug drop-shadow">{trip.trip_name}</h3>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              {tripDays > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur text-white text-[11px] font-bold">
+                  🗓️ {fmtDate(r.start_date)} ← {fmtDate(r.end_date)} · {tripDays} أيام
                 </span>
-              ))}
+              )}
+              <span className="text-[10px] font-mono text-white/70">{trip.id}</span>
             </div>
-          </Section>
-        )}
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {description && description.trim() !== String(trip.trip_name || "").trim() && (
+            <p className="text-xs text-stone-700 leading-relaxed bg-[#F4F8FA] border border-[#1B5A78]/10 rounded-xl p-3">{description}</p>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {info.map(([k, v]) => {
+              const st = factStyle[k] || { icon: CalendarDays, tone: "bg-stone-100 text-stone-600" };
+              const Icon = st.icon;
+              return (
+                <div key={k} className="p-3 rounded-2xl bg-white border border-stone-200/80 shadow-[0_4px_14px_-8px_rgba(15,23,42,0.25)] flex items-center gap-2.5 min-w-0">
+                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${st.tone}`}>
+                    <Icon className="w-4 h-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold text-stone-500">{k}</div>
+                    <div className="text-[13px] font-black text-stone-900 leading-snug truncate" title={v}>{v}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {(vehicle || driver) && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-l from-[#003580] to-[#0F172A] text-white flex flex-wrap items-center gap-3">
+              <span className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                <Bus className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <div className="flex-1 min-w-[140px]">
+                <div className="text-[10px] font-bold text-blue-200">المركبة</div>
+                <div className="text-sm font-black">
+                  {vehicle?.vehicle_type || "مركبة الرحلة"}
+                  {vehicle?.plate_number && <span className="font-mono text-blue-200 text-xs"> · {vehicle.plate_number}</span>}
+                  {vehicle?.seating_capacity && <span className="text-blue-200 text-xs"> · {vehicle.seating_capacity} مقعد</span>}
+                </div>
+              </div>
+              {driver && (
+                <div className="flex items-center gap-2.5 ps-3 sm:border-s border-white/15">
+                  <div>
+                    <div className="text-[10px] font-bold text-blue-200">السائق</div>
+                    <div className="text-sm font-black">{driver.full_name}</div>
+                  </div>
+                  {driver.phone_number && (
+                    <a
+                      href={`tel:${driver.phone_number}`}
+                      className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center transition-colors"
+                      title={driver.phone_number}
+                      aria-label="اتصال بالسائق"
+                    >
+                      <Phone className="w-4 h-4" aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {stations.length > 0 && (
+            <Section title={`🗺️ برنامج الرحلة والمحطات (${stations.length})`}>
+              <ol className="relative space-y-2 before:absolute before:top-2 before:bottom-2 before:right-[13px] before:w-0.5 before:bg-gradient-to-b before:from-[#1ABC9C] before:to-[#D96B27]">
+                {shownStations.map((st, i) => (
+                  <li key={st.station_id || i} className="relative pr-9">
+                    <span className="absolute right-0 top-2 w-7 h-7 rounded-full bg-white border-2 border-[#1ABC9C] text-[#1B5A78] grid place-items-center text-[10px] font-black">
+                      {st.station_order || i + 1}
+                    </span>
+                    <div className="p-3 rounded-xl bg-gradient-to-l from-stone-50 to-white border border-stone-200 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-black text-stone-900 leading-snug">
+                          {st.day_number ? `اليوم ${st.day_number} · ` : ""}{st.station_title}
+                        </span>
+                        {st.station_time && (
+                          <span className="flex-shrink-0 text-[10px] font-black text-white bg-[#1B5A78] px-2 py-0.5 rounded-full">{st.station_time}</span>
+                        )}
+                      </div>
+                      {st.station_desc && <div className="text-stone-600 mt-1 leading-relaxed">{st.station_desc}</div>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {stations.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllStations((v) => !v)}
+                  className="w-full mt-1 py-2 rounded-xl border border-[#1B5A78]/20 bg-[#1B5A78]/5 hover:bg-[#1B5A78]/10 text-[#1B5A78] text-xs font-black transition cursor-pointer"
+                >
+                  {showAllStations ? "إخفاء المحطات ▲" : `عرض كل المحطات (${stations.length - 2} أخرى) ▼`}
+                </button>
+              )}
+            </Section>
+          )}
+
+          {list(r.places).length > 0 && (
+            <Section title="🏛️ المعالم السياحية">
+              <div className="flex flex-wrap gap-1.5">
+                {list(r.places).map((p) => (
+                  <span key={p.place_id} className="px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+                    {p.place_name || p.city}
+                    {p.city && p.place_name && p.city !== p.place_name ? ` — ${p.city}` : ""}
+                  </span>
+                ))}
+              </div>
+            </Section>
+          )}
 
         {list(r.hotels).length > 0 && (
           <Section title="🏨 الإقامة">
@@ -1565,6 +1638,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
           <button onClick={onClose} className="px-4 py-1.5 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 hover:bg-stone-50">
             إغلاق
           </button>
+        </div>
         </div>
       </div>
     </div>

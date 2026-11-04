@@ -20,7 +20,6 @@ class DailyTrip extends Model
     protected $fillable = [
         'daily_trip_id',
         'trip_title',
-        'description',
         'price_per_seat',
         'is_active',
         'max_capacity',
@@ -97,8 +96,9 @@ class DailyTrip extends Model
 
     // Weekday names in Carbon's dayOfWeek order (0 = Sunday)
     private const DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    // A tourist books one run date at most this many days ahead
-    public const BOOKING_HORIZON_DAYS = 60;
+    // Run dates open for booking one calendar month at a time: the current month only (the next month opens on its 1st).
+    // Kept as the most dates any month can list.
+    public const BOOKING_HORIZON_DAYS = 31;
     // Booking for a date closes at 07:00 Libya time on that date
     private const CLOSING_HOUR = 7;
 
@@ -127,8 +127,8 @@ class DailyTrip extends Model
         if ($day->lt($now->copy()->startOfDay())) {
             return 'لا يمكن الحجز في تاريخ مضى.';
         }
-        if ($day->gt($now->copy()->startOfDay()->addDays(self::BOOKING_HORIZON_DAYS))) {
-            return 'يمكن الحجز قبل موعد الرحلة بـ ' . self::BOOKING_HORIZON_DAYS . ' يوماً كحد أقصى.';
+        if ($day->gt($now->copy()->endOfMonth())) {
+            return 'الحجز متاح لأيام الشهر الحالي فقط، وتُفتح مواعيد الشهر القادم مع بدايته.';
         }
         if (!$this->runsOn($day)) {
             return 'هذه الرحلة لا تنطلق في يوم ' . self::DAY_NAMES[$day->dayOfWeek] . '. يرجى اختيار أحد أيام انطلاقها.';
@@ -148,12 +148,14 @@ class DailyTrip extends Model
         return max(0, (int) $this->max_capacity - $taken);
     }
 
-    // The next dates that can still be booked, with their free seats: [['date' => 'Y-m-d', 'day' => 'السبت', 'seats_left' => 12], ...]
-    public function openDates(int $limit = 8): array
+    // This month's remaining run dates that can still be booked, with their free seats:
+    // [['date' => 'Y-m-d', 'day' => 'السبت', 'seats_left' => 12], ...] (a full date stays listed with 0 seats)
+    public function openDates(int $limit = self::BOOKING_HORIZON_DAYS): array
     {
         $dates = [];
         $day = now('Africa/Tripoli')->startOfDay();
-        for ($i = 0; $i <= self::BOOKING_HORIZON_DAYS && count($dates) < $limit; $i++, $day->addDay()) {
+        $last = $day->copy()->endOfMonth();
+        for (; $day->lte($last) && count($dates) < $limit; $day->addDay()) {
             $date = $day->toDateString();
             if ($this->bookingClosedReason($date) === null) {
                 $dates[] = ['date' => $date, 'day' => self::DAY_NAMES[$day->dayOfWeek], 'seats_left' => $this->seatsLeft($date)];

@@ -73,9 +73,11 @@ class BookingController extends Controller
         }
 
         $seats = (int) $data['number_of_seats'];
-        $today = now('Africa/Tripoli')->toDateString();
+        // An offer applies when the trip itself runs inside the offer period: the run date of a daily trip,
+        // the start date of a weekly trip (so the price matches what the booking window showed for that date)
+        $offerDay = $tripDate ?: substr((string) ($trip->start_date ?? now('Africa/Tripoli')->toDateString()), 0, 10);
         $discount = (float) DB::table($offers)->where($tripKey, $trip->{$tripKey})
-            ->where('start_date', '<=', $today)->where('end_date', '>=', $today)->max($discountColumn);
+            ->where('start_date', '<=', $offerDay)->where('end_date', '>=', $offerDay)->max($discountColumn);
         $total = round((float) $trip->{$priceColumn} * $seats * (1 - $discount / 100), 2);
         $id = $prefix . '-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
 
@@ -138,7 +140,7 @@ class BookingController extends Controller
         if ($request->filled('tourist_id')) {
             $query->where('b.tourist_id', $request->input('tourist_id'));
         }
-        return response()->json(['success' => true, 'data' => $this->typed($query->get()->all())]);
+        return $this->listResponse($this->typed($query->get()->all()));
     }
 
     // The tourist's own bookings, each with its trip and guide (shape used by the tourist dashboard)
@@ -173,13 +175,22 @@ class BookingController extends Controller
 
         $dailyRows = $withTrip($daily, $dailyTrips, 'daily_trip_id', 'daily_trip');
         $weeklyRows = $withTrip($weekly, $weeklyTrips, 'weekly_trip_id', 'weekly_trip');
+        // ?page applies to each list (daily and weekly) separately
+        $meta = [];
+        if ($page = $this->pageRequest()) {
+            [$number, $perPage] = $page;
+            $meta = ['meta' => ['daily' => $this->pageMeta(count($dailyRows), $number, $perPage),
+                'weekly' => $this->pageMeta(count($weeklyRows), $number, $perPage)]];
+            $dailyRows = array_slice($dailyRows, ($number - 1) * $perPage, $perPage);
+            $weeklyRows = array_slice($weeklyRows, ($number - 1) * $perPage, $perPage);
+        }
         return response()->json([
             'success' => true,
             'daily' => $dailyRows,
             'weekly' => $weeklyRows,
             'daily_bookings' => $dailyRows,
             'weekly_bookings' => $weeklyRows,
-        ]);
+        ] + $meta);
     }
 
     // Admin: mark a booking paid / unpaid

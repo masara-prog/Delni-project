@@ -12,6 +12,7 @@ import { BackHome } from "@/components/BackHome";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin, Award, FileText, Check, Camera, DollarSign, X, Trash2, Plus, User, Phone, Mail, Lock, Shield, Sparkles, UploadCloud, ChevronLeft, ChevronRight, Compass } from "lucide-react";
 import { apiRegisterTourist, apiRegisterGuide, LARAVEL_API_URL } from "@/lib/api";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
 export const Route = createFileRoute("/auth/signup")({
   head: () => ({
@@ -25,9 +26,14 @@ export const Route = createFileRoute("/auth/signup")({
 
 type Role = "tourist" | "guide";
 
-// One fixed photo beside the login and signup forms
+// Photos beside the login and signup forms; they change by themselves
 const LANDMARK_SLIDES = [
   { img: "/assets/libya/sabratha-theatre.jpg", titleAr: "مسرح صبراتة الروماني على ساحل المتوسط", locationAr: "صبراتة" },
+  { img: "/assets/libya/leptis-severus-arch.jpg", titleAr: "قوس سيبتيموس سيفيروس — لبدة الكبرى", locationAr: "الخمس" },
+  { img: "/assets/libya/ubari-palm-lake.jpg", titleAr: "بحيرات أوباري — واحة وسط الرمال", locationAr: "أوباري" },
+  { img: "/assets/libya/ghadames-mosque.jpg", titleAr: "غدامس — لؤلؤة الصحراء", locationAr: "غدامس" },
+  { img: "/assets/libya/acacus-pillar.jpg", titleAr: "جبال أكاكوس وتكويناتها الصخرية", locationAr: "غات" },
+  { img: "/assets/libya/sabratha-turquoise-sea.jpg", titleAr: "الساحل الليبي الفيروزي", locationAr: "صبراتة" },
 ];
 
 const WEEKDAYS = [
@@ -46,7 +52,11 @@ function SignupPage() {
   const [guideStep, setGuideStep] = useState<1 | 2>(1);
   const [submitted, setSubmitted] = useState<null | "tourist" | "guide">(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const slideIdx = 0;
+  const [slideIdx, setSlideIdx] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setSlideIdx((prev) => (prev + 1) % LANDMARK_SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
 
   const currentSlide = LANDMARK_SLIDES[slideIdx];
@@ -312,14 +322,14 @@ function SignupPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2]" dir={dir}>
-      <div className="grid lg:grid-cols-2 min-h-screen items-start">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#FAF7F2]" dir={dir}>
+      <div className="grid lg:grid-cols-2 min-h-screen lg:h-screen items-start">
         {/* Visual side - Crisp Slideshow of Libyan Landmarks (Sticky & 100% fixed on desktop during scrolling) */}
         <div className="hidden lg:block sticky top-0 h-screen w-full overflow-hidden select-none z-10">
           {LANDMARK_SLIDES.map((slide, idx) => (
             <div
               key={idx}
-              className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
                 idx === slideIdx ? "opacity-100 z-0" : "opacity-0 pointer-events-none"
               }`}
             >
@@ -338,7 +348,7 @@ function SignupPage() {
           <div className="relative z-10 h-full flex flex-col justify-between p-8 xl:p-10 text-white">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-3 w-fit group">
-                <Logo size="lg" textColor="light" />
+                <Logo size="lg" showText={false} />
               </Link>
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition duration-300">
                 <MapPin className="w-3.5 h-3.5 text-[#D96B27]" />
@@ -370,6 +380,19 @@ function SignupPage() {
                   </li>
                 ))}
               </ul>
+            <div className="flex items-center gap-2 pt-1">
+              {LANDMARK_SLIDES.map((slide, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSlideIdx(i)}
+                  className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${i === slideIdx ? "w-8 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/70"}`}
+                  title={slide.titleAr}
+                  aria-label={`صورة ${i + 1}`}
+                />
+              ))}
+            </div>
+
 
 
 
@@ -378,11 +401,10 @@ function SignupPage() {
         </div>
 
         {/* Form side - Natural smooth scrolling, Logo & Arrow fully visible with generous top padding */}
-        <div className="w-full min-w-0 min-h-screen flex flex-col justify-start px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+        <div className="w-full min-w-0 min-h-screen lg:h-screen lg:min-h-0 lg:overflow-y-auto flex flex-col justify-start px-6 py-5 sm:px-10 sm:py-6 lg:px-12 lg:py-6">
           <div className="w-full max-w-xl mx-auto text-right pb-16">
-            {/* Header Row: Clear Prominent Logo on Right, Clear Navigation Arrow on Left */}
-            <div className="flex items-center justify-between mb-8 pt-2">
-              <Logo size="lg" showText={false} className="hover:scale-105 transition-transform" />
+            {/* Back arrow only: the logo is on the photo side */}
+            <div className="flex items-center justify-end mb-3">
               <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#1B5A78] hover:scale-105 transition text-[#1B5A78]" />
             </div>
 
@@ -697,11 +719,7 @@ function SignupPage() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setGuide((g) => ({ ...g, avatar: reader.result as string }));
-                              };
-                              reader.readAsDataURL(file);
+                              fileToCompressedDataUrl(file, { maxSide: 800 }).then((avatar) => setGuide((g) => ({ ...g, avatar })));
                             }
                           }}
                         />
@@ -1075,14 +1093,7 @@ function SignupPage() {
                           onChange={async (e) => {
                             const filesArr = Array.from(e.target.files ?? []);
                             if (filesArr.length > 0) {
-                              const readPromises = filesArr.map(file => {
-                                return new Promise<string>((resolve) => {
-                                  const reader = new FileReader();
-                                  reader.onload = (loadEv) => resolve((loadEv.target?.result as string) || "");
-                                  reader.onerror = () => resolve("");
-                                  reader.readAsDataURL(file);
-                                });
-                              });
+                              const readPromises = filesArr.map((file) => fileToCompressedDataUrl(file).catch(() => ""));
                               const urls = await Promise.all(readPromises);
                               setGuide((g) => ({
                                 ...g,
@@ -1159,14 +1170,7 @@ function SignupPage() {
                               onChange={async (e) => {
                                 const filesArr = Array.from(e.target.files ?? []);
                                 if (filesArr.length > 0) {
-                                  const readPromises = filesArr.map(file => {
-                                    return new Promise<string>((resolve) => {
-                                      const reader = new FileReader();
-                                      reader.onload = (loadEv) => resolve((loadEv.target?.result as string) || "");
-                                      reader.onerror = () => resolve("");
-                                      reader.readAsDataURL(file);
-                                    });
-                                  });
+                                  const readPromises = filesArr.map((file) => fileToCompressedDataUrl(file).catch(() => ""));
                                   const urls = await Promise.all(readPromises);
                                   setGuide((g) => ({
                                     ...g,

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Support\Base64Image;
+use App\Support\Actor;
 use App\Support\Passwords;
 
 class AuthController extends Controller
@@ -23,6 +24,45 @@ class AuthController extends Controller
     /**
      * Unified Login for all 5 roles: tourist, guide, transport, driver, admin
      */
+    // When a token issued now stops working (config/sanctum.php "expiration", in minutes)
+    private static function tokenExpiresAt(): \Illuminate\Support\Carbon
+    {
+        return now()->addMinutes((int) config('sanctum.expiration', 43200));
+    }
+
+    /**
+     * GET /auth/me — the signed-in account (from its token only): role, id and basic profile.
+     * Nobody can read another account here: there is no id parameter.
+     */
+    public function me(Request $request)
+    {
+        $user = Actor::user();
+        $token = $user?->currentAccessToken();
+        $profile = $user->toArray();
+        // documents and images can be large; the app loads them where it needs them
+        unset($profile['digital_certificate_file']);
+        return response()->json([
+            'success' => true,
+            'role' => Actor::role(),
+            'id' => Actor::id() ?? (string) $user->getKey(),
+            'user' => $profile,
+            'token_expires_at' => $token?->expires_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * POST /auth/logout — ends this device's session on the server: the token is expired now, so it is
+     * refused from then on. The token row is kept (records are not deleted), only its expiry is set.
+     */
+    public function logout(Request $request)
+    {
+        $token = Actor::user()?->currentAccessToken();
+        if ($token && method_exists($token, 'forceFill')) {
+            $token->forceFill(['expires_at' => now()])->save();
+        }
+        return response()->json(['success' => true, 'status' => 'success', 'message' => 'تم تسجيل الخروج بنجاح']);
+    }
+
     public function login(Request $request)
     {
         $validated = $request->validate([
@@ -43,12 +83,13 @@ class AuthController extends Controller
                 $user = Tourist::where('email', $login)->first();
 
                 if ($user && Passwords::matches($password, $user->password)) {
-                    $token = $user->createToken('tourist-token', ['role:tourist'])->plainTextToken;
+                    $token = $user->createToken('tourist-token', ['role:tourist'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',
                         'role' => 'tourist',
                         'user' => $user,
                         'token' => $token,
+                        'expires_at' => self::tokenExpiresAt()->toIso8601String(),
                     ]);
                 }
                 break;
@@ -59,25 +100,24 @@ class AuthController extends Controller
                 if ($user && Passwords::matches($password, $user->password)) {
                     // Only guides approved by the admin can sign in
                     if ($user->verification_status !== 'موثق') {
-                        // A rejected guide sees the admin's reason here and can resubmit (POST /auth/guide/resubmit)
+                        // A rejected guide is told here and can resubmit (POST /auth/guide/resubmit)
                         $rejected = $user->verification_status === 'مرفوض';
                         return response()->json([
                             'status' => 'error',
                             'message' => $rejected
-                                ? 'تم رفض طلب اعتماد حسابك كمرشد سياحي.' . ($user->rejection_reason ? " السبب: {$user->rejection_reason}." : '')
-                                    . ' يمكنك تصحيح وثيقة الترخيص وإعادة تقديم الطلب.'
+                                ? 'تم رفض طلب اعتماد حسابك كمرشد سياحي. يمكنك تصحيح وثيقة الترخيص وإعادة تقديم الطلب.'
                                 : 'الحساب قيد المراجعة: لم تعتمد إدارة المنصة حسابك كمرشد سياحي بعد، ولا يمكنك الدخول إلى لوحتك قبل الاعتماد. سيتم إشعارك فور اعتماده.',
                             'verification_status' => $user->verification_status,
-                            'rejection_reason' => $rejected ? $user->rejection_reason : null,
                             'can_resubmit' => $rejected,
                         ], 403);
                     }
-                    $token = $user->createToken('guide-token', ['role:guide'])->plainTextToken;
+                    $token = $user->createToken('guide-token', ['role:guide'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',
                         'role' => 'guide',
                         'user' => $user,
                         'token' => $token,
+                        'expires_at' => self::tokenExpiresAt()->toIso8601String(),
                     ]);
                 }
                 break;
@@ -93,12 +133,13 @@ class AuthController extends Controller
                             'message' => 'حساب شركة النقل موقوف من قبل إدارة المنصة. يرجى التواصل مع الإدارة.',
                         ], 403);
                     }
-                    $token = $user->createToken('transport-token', ['role:transport'])->plainTextToken;
+                    $token = $user->createToken('transport-token', ['role:transport'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',
                         'role' => 'transport',
                         'user' => $user,
                         'token' => $token,
+                        'expires_at' => self::tokenExpiresAt()->toIso8601String(),
                     ]);
                 }
                 break;
@@ -111,12 +152,13 @@ class AuthController extends Controller
                     if ($blocked = $user->blockedReason()) {
                         return response()->json(['status' => 'error', 'message' => $blocked], 403);
                     }
-                    $token = $user->createToken('driver-token', ['role:driver'])->plainTextToken;
+                    $token = $user->createToken('driver-token', ['role:driver'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',
                         'role' => 'driver',
                         'user' => $user,
                         'token' => $token,
+                        'expires_at' => self::tokenExpiresAt()->toIso8601String(),
                     ]);
                 }
                 break;
@@ -124,12 +166,13 @@ class AuthController extends Controller
             case 'admin':
                 $user = User::where('email', $login)->first();
                 if ($user && Passwords::matches($password, $user->password)) {
-                    $token = $user->createToken('admin-token', ['role:admin'])->plainTextToken;
+                    $token = $user->createToken('admin-token', ['role:admin'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',
                         'role' => 'admin',
                         'user' => $user,
                         'token' => $token,
+                        'expires_at' => self::tokenExpiresAt()->toIso8601String(),
                     ]);
                 }
                 break;
@@ -139,15 +182,6 @@ class AuthController extends Controller
             'status' => 'error',
             'message' => 'بيانات تسجيل الدخول غير صحيحة، يرجى التأكد من البريد أو كلمة المرور',
         ], 401);
-    }
-
-    /**
-     * Sign-out revokes the token on the server, so a copied token stops working too
-     */
-    public function logout(Request $request)
-    {
-        $request->user()?->currentAccessToken()?->delete();
-        return response()->json(['status' => 'success', 'message' => 'تم تسجيل الخروج']);
     }
 
     /**
@@ -182,13 +216,14 @@ class AuthController extends Controller
             'password' => bcrypt($validated['password']),
         ]);
 
-        $token = $tourist->createToken('tourist-token', ['role:tourist'])->plainTextToken;
+        $token = $tourist->createToken('tourist-token', ['role:tourist'], self::tokenExpiresAt())->plainTextToken;
 
         return response()->json([
             'status' => 'success',
             'message' => 'تم إنشاء حساب السائح بنجاح',
             'user' => $tourist,
             'token' => $token,
+            'expires_at' => self::tokenExpiresAt()->toIso8601String(),
         ], 201);
     }
 
@@ -351,7 +386,6 @@ class AuthController extends Controller
                 'digital_certificate_file' => $data['digital_certificate_file'],
                 'license_expiry_date' => $data['license_expiry_date'],
                 'verification_status' => 'قيد المراجعة',
-                'rejection_reason' => null,
             ]);
             $note = trim((string) ($data['note'] ?? ''));
             $this->notify("guide_resubmit_{$guide->license_number}_" . now('Africa/Tripoli')->format('YmdHis'), 'admin', null, 'system',

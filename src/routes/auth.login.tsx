@@ -12,6 +12,7 @@ import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin } from "lucide-react";
 import { apiLogin, apiResubmitGuide } from "@/lib/api";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({
@@ -26,9 +27,14 @@ export const Route = createFileRoute("/auth/login")({
 
 type Role = "tourist" | "admin" | "guide" | "transport" | "driver";
 
-// One fixed photo beside the login and signup forms
+// Photos beside the login and signup forms; they change by themselves
 const LANDMARK_SLIDES = [
   { img: "/assets/libya/sabratha-theatre.jpg", titleAr: "مسرح صبراتة الروماني على ساحل المتوسط", locationAr: "صبراتة" },
+  { img: "/assets/libya/leptis-severus-arch.jpg", titleAr: "قوس سيبتيموس سيفيروس — لبدة الكبرى", locationAr: "الخمس" },
+  { img: "/assets/libya/ubari-palm-lake.jpg", titleAr: "بحيرات أوباري — واحة وسط الرمال", locationAr: "أوباري" },
+  { img: "/assets/libya/ghadames-mosque.jpg", titleAr: "غدامس — لؤلؤة الصحراء", locationAr: "غدامس" },
+  { img: "/assets/libya/acacus-pillar.jpg", titleAr: "جبال أكاكوس وتكويناتها الصخرية", locationAr: "غات" },
+  { img: "/assets/libya/sabratha-turquoise-sea.jpg", titleAr: "الساحل الليبي الفيروزي", locationAr: "صبراتة" },
 ];
 
 function LoginPage() {
@@ -37,7 +43,11 @@ function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const slideIdx = 0;
+  const [slideIdx, setSlideIdx] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setSlideIdx((prev) => (prev + 1) % LANDMARK_SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
   const { dir } = useLanguage();
 
   const [errorMsg, setErrorMsg] = useState("");
@@ -119,13 +129,13 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-[#FAF7F2]" dir={dir}>
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden grid lg:grid-cols-2 bg-[#FAF7F2]" dir={dir}>
       {/* Visual side - Crisp Landmark Slideshow without blur */}
-      <div className="relative hidden lg:block overflow-hidden h-full">
+      <div className="relative hidden lg:block overflow-hidden h-screen">
         {LANDMARK_SLIDES.map((slide, idx) => (
           <div
             key={idx}
-            className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
               idx === slideIdx ? "opacity-100 z-0" : "opacity-0 pointer-events-none"
             }`}
           >
@@ -136,6 +146,11 @@ function LoginPage() {
             />
           </div>
         ))}
+
+        {/* Logo only (no text) over the photos */}
+        <Link to="/" className="absolute top-8 right-8 z-20 w-fit" aria-label="الصفحة الرئيسية">
+          <Logo size="lg" showText={false} />
+        </Link>
 
         {/* Crisp Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/40 to-transparent z-1" />
@@ -159,6 +174,19 @@ function LoginPage() {
             <p className="text-white/95 text-sm xl:text-base leading-relaxed drop-shadow-sm font-medium">
               انضم إلى مجتمع دَلِّني — منصتك الشاملة لحجز الرحلات، الفنادق، النقل السياحي وخدمات المرشدين المعتمدين.
             </p>
+            <div className="flex items-center gap-2 pt-1">
+              {LANDMARK_SLIDES.map((slide, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSlideIdx(i)}
+                  className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${i === slideIdx ? "w-8 bg-[#D96B27]" : "w-2 bg-white/40 hover:bg-white/70"}`}
+                  title={slide.titleAr}
+                  aria-label={`صورة ${i + 1}`}
+                />
+              ))}
+            </div>
+
 
 
           </div>
@@ -166,11 +194,10 @@ function LoginPage() {
       </div>
 
       {/* Form side - All Text Right-Aligned & Icon-Only Logo */}
-      <div className="flex items-center justify-center p-6 md:p-10 lg:p-12 min-h-screen bg-[#FAF7F2] overflow-y-auto">
-        <div className="w-full max-w-lg my-auto text-right">
-          {/* Header Row: Icon-only Logo on Right, Navigation Arrow Button on Left */}
-          <div className="flex items-center justify-between mb-8">
-            <Logo size="lg" showText={false} />
+      <div className="flex items-start justify-center px-6 pt-6 pb-10 md:px-10 lg:px-12 lg:pt-10 min-h-screen lg:h-screen lg:min-h-0 bg-[#FAF7F2] overflow-y-auto">
+        <div className="w-full max-w-lg text-right">
+          {/* Back arrow only: the logo is on the photo side */}
+          <div className="flex items-center justify-end mb-4">
             <BackHome />
           </div>
 
@@ -261,9 +288,7 @@ function LoginPage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setResubmitFile({ name: file.name, data: String(reader.result) });
-                    reader.readAsDataURL(file);
+                    fileToCompressedDataUrl(file).then((data) => setResubmitFile({ name: file.name, data }));
                   }}
                   className="w-full text-xs"
                 />

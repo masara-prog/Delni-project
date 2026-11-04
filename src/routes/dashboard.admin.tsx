@@ -1,7 +1,6 @@
 import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
-import { BedDouble, Bus, CalendarDays, Compass, Gift, Landmark, Tag, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { useLanguage } from "@/lib/i18n";
 import { 
@@ -64,6 +63,8 @@ import type {
   BookingWeekly,
 } from "@/lib/dbSchema";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
+import { QrCameraScanner } from "@/components/QrCameraScanner";
 
 export const formatTripDate = (rawDate?: string | null): string => {
   if (!rawDate) return "غير محدد";
@@ -161,7 +162,6 @@ type Guide = {
   city?: string | null;
   license_expiry_date?: string | null;
   availability_status?: string | null;
-  rejection_reason?: string | null;
 };
 
 type Vehicle = { 
@@ -217,8 +217,6 @@ type WeeklyTrip = {
   weekly_trip_id?: string;
   title: string; 
   trip_title?: string;
-  trip_description?: string;
-  description?: string;
   start_date?: string; 
   end_date?: string; 
   seat_per_price: number; 
@@ -408,7 +406,6 @@ function mapGuideRow(g: any): Guide {
     total_tours_completed: Number(g.total_tours_completed) || 0,
     license_expiry_date: g.license_expiry_date ? String(g.license_expiry_date).slice(0, 10) : null,
     availability_status: g.availability_status || "متاح",
-    rejection_reason: g.rejection_reason || null,
   } as Guide;
 }
 
@@ -455,7 +452,6 @@ function mapDailyTripRow(d: any): any {
     daily_trip_id: d.daily_trip_id,
     title: d.trip_title,
     trip_title: d.trip_title,
-    description: d.description || "",
     price_per_seat: Number(d.price_per_seat) || 0,
     departure_city: d.departure_city || "طرابلس",
     destination: d.destination || d.destination_city || "",
@@ -504,8 +500,6 @@ function mapWeeklyTripRow(w: any): any {
     weekly_trip_id: w.weekly_trip_id,
     title: w.trip_title,
     trip_title: w.trip_title,
-    description: w.trip_description || "",
-    trip_description: w.trip_description || "",
     seat_per_price: Number(w.seat_per_price) || 0,
     departure_city: w.departure_city || "طرابلس",
     destination: w.destination || w.destination_region || "",
@@ -580,7 +574,7 @@ function toHotelPayload(h: any) {
     hotel_id: String(h.hotel_id || h.id || "").trim(),
     hotel_name: h.name,
     city: h.city,
-    address_details: h.address,
+    address_details: h.address || undefined,
     phone_number: h.phone,
     star_rating: Number(h.stars),
     partnership_status: h.partnership_status || "نشط",
@@ -606,7 +600,7 @@ function toRestaurantPayload(r: any) {
     facility_name: r.name,
     facility_type: r.type,
     city: r.city,
-    address_details: r.address,
+    address_details: r.address || undefined,
     phone_number: r.phone,
     description: r.description,
     working_hours: r.working_hours,
@@ -910,7 +904,6 @@ function AdminDashboard() {
 
         const payload = {
           trip_title: data.trip_title || data.title,
-          trip_description: data.trip_description || data.description || "",
           seat_per_price: Number(data.seat_per_price) || 1200,
           departure_city: data.departure_city || "طرابلس",
           destination_region: data.destination || data.destination_region || "الصحراء",
@@ -1000,7 +993,6 @@ function AdminDashboard() {
 
       const payload = {
         trip_title: updated.trip_title || updated.title,
-        trip_description: updated.trip_description || updated.description || "",
         seat_per_price: Number(updated.seat_per_price) || 1200,
         departure_city: updated.departure_city || "طرابلس",
         destination_region: updated.destination || updated.destination_region || "الصحراء",
@@ -1258,6 +1250,7 @@ function AdminDashboard() {
 
   /* ---- TICKET SCANNER & VERIFICATION (DelniDB e-ticket validation) ---- */
   const [scanCode, setScanCode] = useState("");
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [scannedTicket, setScannedTicket] = useState<any | null>(null);
   const [scanStatusMsg, setScanStatusMsg] = useState<{ type: "success" | "error" | "info"; msg: string } | null>(null);
 
@@ -1323,10 +1316,13 @@ function AdminDashboard() {
     { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length || undefined },
     { id: "tourists", label: isAr ? "إدارة وتقييد السياح" : "Tourists Management", icon: "👥" },
     { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭", badge: [...weeklyTrips, ...dailyTrips].filter(t => t.guide_approval_status === "اعتذر المرشد").length || undefined },
+    { id: "vehicles", label: isAr ? "أسطول المركبات" : "Vehicles", icon: "🚌" },
     { id: "bookings", label: isAr ? "سجل الحجوزات والدفع" : "Bookings & Payments", icon: "🎟️", badge: [...dailyBookings, ...weeklyBookings].filter(b => b.payment_status !== "paid").length || undefined },
     { id: "offers", label: isAr ? "العروض الترويجية" : "Promotions & Offers", icon: "🎯" },
     { id: "private_trips", label: isAr ? "الرحلات الخاصة" : "Private Custom Trips", icon: "👑", badge: privateTrips.filter(p => p.status_order === "قيد الدراسة" || p.status_order === "اعتذر المرشد").length || undefined },
-    { id: "entities", label: isAr ? "المرافق والوجهات" : "Entities & Stays", icon: "🏛️" },
+    { id: "hotels", label: isAr ? "أماكن الإقامة والفنادق" : "Hotels & Stays", icon: "🏨" },
+    { id: "restaurants", label: isAr ? "المطاعم والمقاهي" : "Restaurants & Cafés", icon: "🍽️" },
+    { id: "landmarks", label: isAr ? "المعالم السياحية" : "Landmarks", icon: "🏛️" },
     { id: "reviews", label: isAr ? "التقييمات والمراجعات" : "Reviews & Ratings", icon: "⭐" },
     { id: "analytics", label: isAr ? "إحصائيات الأكثر حجزاً وتقييماً" : "Analytics & Stats", icon: "📈" },
     { id: "inquiries_chat", label: isAr ? "الاستفسارات والشات بوت" : "Inquiries & AI Chat", icon: "💬", badge: chatSessions.filter(s => s.unread).length || undefined },
@@ -1348,7 +1344,12 @@ function AdminDashboard() {
 
       {/* KPI Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label={isAr ? "شركات النقل" : "Transport Cos."} value={companies.length} hint={isAr ? `${companies.filter(c => c.status === "موثق").length} موثقة` : `${companies.filter(c => c.status === "موثق").length} Verified`} icon="🚌" tone="clay" />
+        <StatCard label={isAr ? "شركات النقل" : "Transport Cos."} value={companies.length} hint={(() => {
+          // Companies are «نشطة» or «موقوفة» (suspended by the admin); there is no «موثق» status for them
+          const suspended = companies.filter((c) => c.status === "موقوفة").length;
+          const active = companies.length - suspended;
+          return isAr ? `${active} نشطة${suspended ? ` · ${suspended} موقوفة` : ""}` : `${active} active${suspended ? ` · ${suspended} suspended` : ""}`;
+        })()} icon="🚌" tone="clay" />
         <StatCard label={isAr ? "السائقون المسجلون" : "Registered Drivers"} value={drivers.length} hint={isAr ? "مسجلون عبر شركات النقل" : "Registered via Transport Cos"} icon="🧑‍✈️" tone="sea" />
         <StatCard label={isAr ? "طلبات اعتماد المرشدين" : "Guide Verification Requests"} value={guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length} hint={isAr ? "وثائق بانتظار المراجعة" : "Pending documents review"} icon="🗺️" tone="sun" />
         <StatCard label={isAr ? "الرحلات الخاصة VIP" : "VIP Custom Trips"} value={privateTrips.length} hint={isAr ? `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} طلبات جديدة` : `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} New Requests`} icon="👑" tone="green" />
@@ -1414,14 +1415,14 @@ function AdminDashboard() {
           <div className="space-y-6">
             <SectionCard title="إجراءات سريعة للأدمن">
               <div className="grid grid-cols-2 gap-2">
-                <QuickAction icon={Bus} label="إضافة شركة نقل" onClick={() => setShowAddCompany(true)} />
-                <QuickAction icon={Compass} label="رحلة يومية" onClick={() => setShowAddTrip("daily")} />
-                <QuickAction icon={CalendarDays} label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
-                <QuickAction icon={BedDouble} label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
-                <QuickAction icon={UtensilsCrossed} label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
-                <QuickAction icon={Landmark} label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
-                <QuickAction icon={Tag} label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
-                <QuickAction icon={Gift} label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
+                <QuickAction icon="🚌" label="إضافة شركة نقل" onClick={() => setShowAddCompany(true)} />
+                <QuickAction icon="🧭" label="رحلة يومية" onClick={() => setShowAddTrip("daily")} />
+                <QuickAction icon="🗓️" label="رحلة أسبوعية" onClick={() => setShowAddTrip("weekly")} />
+                <QuickAction icon="🏨" label="إضافة فندق" onClick={() => setShowAddHotel(true)} />
+                <QuickAction icon="🍽️" label="إضافة مطعم" onClick={() => setShowAddRestaurant(true)} />
+                <QuickAction icon="🏛️" label="معلم سياحي" onClick={() => setShowAddAttraction(true)} />
+                <QuickAction icon="🎯" label="عرض يومي" onClick={() => setShowAddDailyOffer(true)} />
+                <QuickAction icon="🎁" label="عرض أسبوعي" onClick={() => setShowAddWeeklyOffer(true)} />
               </div>
             </SectionCard>
           </div>
@@ -1450,6 +1451,17 @@ function AdminDashboard() {
             </div>
           </div>
 
+          {showCameraScanner && (
+            <QrCameraScanner
+              onClose={() => setShowCameraScanner(false)}
+              onDetected={(code) => {
+                setShowCameraScanner(false);
+                setScanCode(code);
+                handleVerifyTicketCode(code);
+              }}
+            />
+          )}
+
           {/* Scanner Input Station */}
           <SectionCard title="🔍 إدخال أو مسح رمز التذكرة والباركود">
             <form
@@ -1466,12 +1478,17 @@ function AdminDashboard() {
                     value={scanCode}
                     onChange={(e) => setScanCode(e.target.value)}
                     placeholder="امسح الباركود بجهاز الماسح الضوئي أو اكتب رقم التذكرة (مثال: DL-68835 أو BK-D-101)..."
-                    className="w-full h-13 px-4 pl-12 rounded-2xl border-2 border-slate-200 focus:border-[#003580] focus:ring-4 focus:ring-blue-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
+                    className="w-full h-13 px-4 pl-28 sm:pl-32 rounded-2xl border-2 border-slate-200 focus:border-[#003580] focus:ring-4 focus:ring-blue-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
                     autoFocus
                   />
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
-                    📷
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCameraScanner(true)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 h-10 px-3 rounded-xl bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] text-xs font-black transition cursor-pointer flex items-center gap-1"
+                    title="مسح رمز QR بالكاميرا"
+                  >
+                    📷 <span className="hidden sm:inline">بالكاميرا</span>
+                  </button>
                 </div>
                 <button
                   type="submit"
@@ -1845,33 +1862,6 @@ function AdminDashboard() {
                               قبول ✓
                             </button>
                           )}
-                          {g.verification_status === "موثق" && (
-                            <button
-                              onClick={() => {
-                                // Admin preview / direct access to guide dashboard
-                                const guideUser = {
-                                  license_number: g.license_number,
-                                  full_name: g.full_name,
-                                  phone_number: g.phone_number,
-                                  email: g.email || `${g.license_number.toLowerCase()}@dalni.ly`,
-                                  verification_status: "موثق",
-                                  role: "guide",
-                                  years_of_experience: g.years_of_experience,
-                                  price_per_day: g.price_per_day,
-                                  avatar: g.avatar,
-                                };
-                                localStorage.setItem("dalni_user", JSON.stringify(guideUser));
-                                localStorage.setItem("dalni_role", "guide");
-                                window.dispatchEvent(new Event("storage"));
-                                window.open("/dashboard/guide", "_blank");
-                              }}
-                              className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1"
-                              title="فتح لوحة تحكم المرشد في نافذة جديدة"
-                            >
-                              <span>الداش بورد</span>
-                              <span>🧭</span>
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -2039,7 +2029,7 @@ function AdminDashboard() {
       {active === "trips" && (
         <div className="space-y-6 text-right">
           {/* Daily Trips */}
-          <SectionCard title="إدارة الرحلات اليومية (يومان في الأسبوع + حافلة 25 أو 50 راكب)" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black">+ رحلة يومية جديدة (يومان/أسبوع)</button>}>
+          <SectionCard title="🧭 إدارة الرحلات اليومية" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ رحلة يومية جديدة</button>}>
             <div className="space-y-4">
               {dailyTrips.map((d) => (
                 <div key={d.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
@@ -2095,7 +2085,7 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Trips */}
-          <SectionCard title="إدارة الرحلات الأسبوعية (يوم في الأسبوع + حافلة 25 أو 50 راكب)" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ رحلة أسبوعية جديدة (يوم/أسبوع)</button>}>
+          <SectionCard title="🗓️ إدارة الرحلات الأسبوعية (رحلات متعددة الأيام)" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ رحلة أسبوعية جديدة</button>}>
             <div className="space-y-4">
               {weeklyTrips.map((w) => (
                 <div key={w.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
@@ -2145,6 +2135,12 @@ function AdminDashboard() {
             </div>
           </SectionCard>
 
+        </div>
+      )}
+
+      {/* VEHICLES (own section) */}
+      {active === "vehicles" && (
+        <div className="space-y-6 text-right">
           {/* All Platform Vehicles Overview */}
           <SectionCard title="🚌 أسطول المركبات المتاحة بالمنصة (من كل الشركات المشتركة)">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-right">
@@ -2182,37 +2178,37 @@ function AdminDashboard() {
 
           {/* Daily Trips Bookings */}
           <SectionCard title="🎟️ حجوزات الرحلات اليومية">
-            <div className="overflow-x-auto text-right">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto text-right rounded-2xl border border-border">
+              <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-right text-xs text-muted-foreground border-b border-border">
-                    <th className="pb-3 font-bold">رقم الحجز</th>
-                    <th className="pb-3 font-bold">السائح</th>
-                    <th className="pb-3 font-bold">الرحلة اليومية</th>
-                    <th className="pb-3 font-bold">المقاعد</th>
-                    <th className="pb-3 font-bold">المبلغ الإجمالي</th>
-                    <th className="pb-3 font-bold">حالة الدفع</th>
-                    <th className="pb-3 font-bold">حالة الحضور</th>
-                    <th className="pb-3 font-bold">الإجراءات</th>
+                  <tr className="text-right text-xs text-slate-600 bg-slate-50 border-b border-border">
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">رقم الحجز</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">السائح</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">الرحلة اليومية</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">المقاعد</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">المبلغ الإجمالي</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">حالة الدفع</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">حالة الحضور</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {dailyBookings.map((b) => {
                     const trip = dailyTrips.find((t) => (t.daily_trip_id || t.id) === b.daily_trip_id);
                     return (
-                      <tr key={b.booking_daily_id}>
-                        <td className="py-3 font-mono text-xs font-bold text-primary">{b.booking_daily_id}</td>
-                        <td className="py-3 font-bold text-foreground">
+                      <tr key={b.booking_daily_id} className="odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-mono text-xs font-bold text-primary">{b.booking_daily_id}</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-bold text-foreground">
                           <div>{b.tourist_name || b.tourist_id}</div>
                         </td>
-                        <td className="py-3 text-xs font-bold text-slate-700">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 text-xs font-bold text-slate-700">
                           <div>{trip?.trip_title || trip?.title || b.daily_trip_id}</div>
                           {(b as any).trip_date && <div className="text-[11px] font-medium text-slate-500">📅 {String((b as any).trip_date).slice(0, 10)}</div>}
                           {String(b.booking_status || "").startsWith("ملغ") && <Badge tone="red">{b.booking_status}</Badge>}
                         </td>
-                        <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
-                        <td className="py-3 font-black text-emerald-600">{b.total_price} د.ل</td>
-                        <td className="py-3">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-bold">{b.number_of_seats} مقاعد</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-black text-emerald-600">{b.total_price} د.ل</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
                             onClick={() => handleTogglePaymentDaily(b.booking_daily_id)}
@@ -2223,7 +2219,7 @@ function AdminDashboard() {
                             </Badge>
                           </button>
                         </td>
-                        <td className="py-3">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
                             onClick={() => handleToggleAttendedDaily(b.booking_daily_id)}
@@ -2234,8 +2230,7 @@ function AdminDashboard() {
                             </Badge>
                           </button>
                         </td>
-                        <td className="py-3 flex items-center gap-2">
-                          <span className="text-xs font-bold text-blue-700">{b.booking_status}</span>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
                             onClick={() => {
@@ -2258,33 +2253,33 @@ function AdminDashboard() {
 
           {/* Weekly Trips Bookings */}
           <SectionCard title="🗓️ حجوزات الرحلات الأسبوعية">
-            <div className="overflow-x-auto text-right">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto text-right rounded-2xl border border-border">
+              <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-right text-xs text-muted-foreground border-b border-border">
-                    <th className="pb-3 font-bold">رقم الحجز</th>
-                    <th className="pb-3 font-bold">السائح</th>
-                    <th className="pb-3 font-bold">الرحلة الأسبوعية</th>
-                    <th className="pb-3 font-bold">المقاعد</th>
-                    <th className="pb-3 font-bold">المبلغ الإجمالي</th>
-                    <th className="pb-3 font-bold">حالة الدفع</th>
-                    <th className="pb-3 font-bold">حالة الحضور</th>
-                    <th className="pb-3 font-bold">الإجراءات</th>
+                  <tr className="text-right text-xs text-slate-600 bg-slate-50 border-b border-border">
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">رقم الحجز</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">السائح</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">الرحلة الأسبوعية</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">المقاعد</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">المبلغ الإجمالي</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">حالة الدفع</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">حالة الحضور</th>
+                    <th className="px-4 py-3 font-black whitespace-nowrap border-l border-border/60 last:border-l-0">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {weeklyBookings.map((b) => {
                     const trip = weeklyTrips.find((t) => (t.weekly_trip_id || t.id) === b.weekly_trip_id);
                     return (
-                      <tr key={b.booking_weekly_id}>
-                        <td className="py-3 font-mono text-xs font-bold text-primary">{b.booking_weekly_id}</td>
-                        <td className="py-3 font-bold text-foreground">
+                      <tr key={b.booking_weekly_id} className="odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-mono text-xs font-bold text-primary">{b.booking_weekly_id}</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-bold text-foreground">
                           <div>{b.tourist_name || b.tourist_id}</div>
                         </td>
-                        <td className="py-3 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.weekly_trip_id}</td>
-                        <td className="py-3 font-bold">{b.number_of_seats} مقاعد</td>
-                        <td className="py-3 font-black text-emerald-600">{b.total_price} د.ل</td>
-                        <td className="py-3">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 text-xs font-bold text-slate-700">{trip?.trip_title || trip?.title || b.weekly_trip_id}</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-bold">{b.number_of_seats} مقاعد</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-black text-emerald-600">{b.total_price} د.ل</td>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
                             onClick={() => handleTogglePaymentWeekly(b.booking_weekly_id)}
@@ -2295,7 +2290,7 @@ function AdminDashboard() {
                             </Badge>
                           </button>
                         </td>
-                        <td className="py-3">
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
                             onClick={() => handleToggleAttendedWeekly(b.booking_weekly_id)}
@@ -2306,8 +2301,7 @@ function AdminDashboard() {
                             </Badge>
                           </button>
                         </td>
-                        <td className="py-3 flex items-center gap-2">
-                          <span className="text-xs font-bold text-blue-700">{b.booking_status}</span>
+                        <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
                             onClick={() => {
@@ -2334,24 +2328,32 @@ function AdminDashboard() {
       {active === "offers" && (
         <div className="space-y-6 text-right">
           <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 text-xs font-semibold text-muted-foreground flex items-center justify-between">
-            <span>🎯 إدارة العروض الترويجية والخصومات الحصرية — ربط العروض بالرحلات اليومية والأسبوعية المسجلة في DelniDB مع نسبة الخصم وتاريخ الصلاحية.</span>
+            <span>🎯 إدارة العروض الترويجية والخصومات الحصرية — ربط العروض بالرحلات اليومية والأسبوعية مع نسبة الخصم وتاريخ الصلاحية.</span>
             <span className="px-3 py-1 bg-primary text-white rounded-xl text-xs font-black">
               {dailyOffers.length + weeklyOffers.length} عرض نشط
             </span>
           </div>
 
           {/* Daily Offers */}
-          <SectionCard title="🎯 عروض الرحلات اليومية" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-soft">+ إضافة عرض يومي</button>}>
-            {dailyOffers.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                لا توجد عروض رحلات يومية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة يومية الآن.
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {dailyOffers.map(o => {
+          <SectionCard title="🎯 عروض الرحلات اليومية" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة عرض يومي</button>}>
+            <CompactEntityList
+              items={dailyOffers}
+              emptyText="لا توجد عروض رحلات يومية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة يومية الآن."
+              summary={(o) => {
+                const trip = dailyTrips.find((t) => t.id === o.daily_trip_id);
+                const discount = Number(o.percent_discount || (o as any).discount_percentage || 0);
+                return {
+                  key: String(o.offer_daily_id || o.id),
+                  name: o.offer_title || o.title_offer || "عرض",
+                  sub: [discount ? `خصم ${discount}%` : "", trip?.title || (o as any).trip_title || "", (o.end_date || o.date_end) ? `حتى ${o.end_date || o.date_end}` : ""].filter(Boolean).join(" · "),
+                  image: trip?.photo || o.offer_image_url || (o as any).url_image_offer,
+                  icon: "🎯",
+                };
+              }}
+              details={(o) => {
                   const trip = dailyTrips.find(t => t.id === o.daily_trip_id);
-                  const img = o.offer_image_url || o.url_image_offer || trip?.photo;
-                  const discount = o.percent_discount || (o as any).discount_percentage || 15;
+                  const img = trip?.photo || o.offer_image_url || o.url_image_offer;
+                  const discount = Number(o.percent_discount || (o as any).discount_percentage || 0);
                   const originalPrice = trip?.price_per_seat || (o as any).price_per_seat;
                   const discountedPrice = originalPrice ? Math.round(originalPrice * (1 - discount / 100)) : null;
 
@@ -2382,23 +2384,30 @@ function AdminDashboard() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            )}
+              }}
+            />
           </SectionCard>
 
           {/* Weekly Offers */}
-          <SectionCard title="🎁 عروض الرحلات الأسبوعية" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black shadow-soft">+ إضافة عرض أسبوعي</button>}>
-            {weeklyOffers.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                لا توجد عروض رحلات أسبوعية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة أسبوعية الآن.
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {weeklyOffers.map(o => {
+          <SectionCard title="🎁 عروض الرحلات الأسبوعية" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة عرض أسبوعي</button>}>
+            <CompactEntityList
+              items={weeklyOffers}
+              emptyText="لا توجد عروض رحلات أسبوعية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة أسبوعية الآن."
+              summary={(o) => {
+                const trip = weeklyTrips.find((t) => t.id === o.weekly_trip_id);
+                const discount = Number(o.discount_percentage || o.percent_discount || 0);
+                return {
+                  key: String(o.offer_weekly_id || o.id),
+                  name: o.offer_title || "عرض",
+                  sub: [discount ? `خصم ${discount}%` : "", trip?.title || (o as any).trip_title || "", (o.end_date || o.date_end) ? `حتى ${o.end_date || o.date_end}` : ""].filter(Boolean).join(" · "),
+                  image: trip?.photo || o.offer_image_url || (o as any).url_image_offer,
+                  icon: "🎁",
+                };
+              }}
+              details={(o) => {
                   const trip = weeklyTrips.find(t => t.id === o.weekly_trip_id);
-                  const img = o.offer_image_url || trip?.photo;
-                  const discount = o.discount_percentage || o.percent_discount || 15;
+                  const img = trip?.photo || o.offer_image_url;
+                  const discount = Number(o.discount_percentage || o.percent_discount || 0);
                   const originalPrice = trip?.seat_per_price || (o as any).seat_per_price;
                   const discountedPrice = originalPrice ? Math.round(originalPrice * (1 - discount / 100)) : null;
 
@@ -2429,9 +2438,8 @@ function AdminDashboard() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            )}
+              }}
+            />
           </SectionCard>
         </div>
       )}
@@ -2672,9 +2680,10 @@ function AdminDashboard() {
       )}
 
       {/* ENTITIES */}
-      {active === "entities" && (
+      {(active === "hotels" || active === "restaurants" || active === "landmarks") && (
         <div className="space-y-6 text-right">
-          {/* Information Notice */}
+          {/* Information Notice (hotels and restaurants) */}
+          {active !== "landmarks" && (
           <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/70 text-xs font-semibold text-amber-900 flex items-center gap-3">
             <span className="text-2xl flex-shrink-0">🏛️</span>
             <div>
@@ -2682,7 +2691,9 @@ function AdminDashboard() {
               الفنادق والمطاعم في منصة دلّني هي أدلة استكشافية وتعريفية فقط (عرض المنشأة ونوع الطعام والتواصل المباشر مع المنشأة)، وهي غير قابلة للحجز المباشر للغرف أو الطاولات عبر المنصة. المعالم السياحية تظهر بصورة رئيسية واحدة مع خرائط Google Maps.
             </div>
           </div>
+          )}
 
+          {active === "hotels" && (
           <SectionCard
             title="🏨 دليل أماكن الإقامة والفنادق في ليبيا (فنادق فاخرة — منتجعات — شقق فندقية — مخيمات صحراوية)"
             action={
@@ -2694,193 +2705,87 @@ function AdminDashboard() {
               </button>
             }
           >
-            <div className="grid md:grid-cols-2 gap-4">
-              {hotels.map((h) => {
-                const propTypeLabel =
-                  h.property_type === "resort"
-                    ? "🏖️ منتجع سياحي"
-                    : h.property_type === "apartment"
-                    ? "🏢 شقق فندقية"
-                    : h.property_type === "heritage"
-                    ? "⛺ مخيمات صحراوية"
-                    : "🏨 فندق فاخر";
-                return (
-                  <div key={h.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                          <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#003580] text-[10px] font-black border border-blue-200">
-                            {propTypeLabel}
-                          </span>
-                          <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
-                            🏷️ خصم {h.discount_percentage ?? 0}% دلّني
-                          </span>
-                        </div>
-                        <h4 className="font-black text-[#003580] text-base">{h.name}</h4>
-                        <div className="text-xs font-bold text-amber-500 mt-0.5">{"★".repeat(h.stars)} ({h.stars} نجوم)</div>
-                        <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {h.city} — {h.address}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {h.partnership_status === "موقوف" ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-black border border-red-200">
-                            🔴 موقوف (مخفي من المنصة)
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
-                            🟢 نشط (معروض بالمنصة)
-                          </span>
-                        )}
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
-                          دليل تعريفي
-                        </span>
-                      </div>
-                    </div>
-
-                    {(h.contract_start_date || h.contract_end_date) && (
-                      <div className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-xl flex items-center gap-1.5 border border-slate-200">
-                        <span>📅 فترة العقد:</span>
-                        <span className="font-mono text-slate-900 font-bold">{h.contract_start_date || 'تاريخ التسجيل'}</span>
-                        <span>إلى</span>
-                        <span className="font-mono text-blue-900 font-black">{h.contract_end_date || 'مستمر'}</span>
-                      </div>
-                    )}
-
-                  {/* Main & Thumbnails Gallery (5 Photos) */}
-                  <div className="space-y-1.5">
-                    <img src={h.hotel_photo_1} alt={h.name} className="w-full h-40 rounded-xl object-cover border shadow-2xs" />
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[h.hotel_photo_1, h.hotel_photo_2, h.hotel_photo_3, h.hotel_photo_4, h.hotel_photo_5].map((imgUrl, idx) => (
-                        <div key={idx} className="h-10 rounded-lg overflow-hidden border border-border bg-muted/30">
-                          <img src={imgUrl || h.hotel_photo_1} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bio Description */}
-                  {h.description && (
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs leading-relaxed text-slate-800 font-semibold">
-                      <span className="font-bold text-slate-900 block mb-0.5">📝 نبذة الفندق والمميزات:</span>
-                      {h.description}
-                    </div>
-                  )}
-
-                  {/* Working Hours & Check-in */}
-                  {h.working_hours && (
-                    <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 bg-amber-50/60 p-2 rounded-xl border border-amber-200/60">
-                      <span>⏰</span>
-                      <span className="text-amber-950 font-bold">{h.working_hours}</span>
-                    </div>
-                  )}
-
-                  {/* Google Maps Location */}
-                  {h.google_maps_url && (
-                    <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs font-bold text-blue-900">
-                      <span className="flex items-center gap-1">📍 موقع الفندق الجغرافي:</span>
-                      <a href={h.google_maps_url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-black hover:bg-blue-700 transition">
-                        🗺️ فتح في خرائط جوجل ↗
-                      </a>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center pt-2 border-t border-border/60 text-xs text-muted-foreground">
-                    <span className="font-bold text-foreground">📞 {h.phone}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditingHotel(h)} className="px-3.5 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
-                    </div>
-                  </div>
-                </div>
-              ); })}
-            </div>
+            <CompactEntityList
+              items={hotels}
+              emptyText="لا توجد أماكن إقامة مسجلة بعد"
+              summary={(h) => ({
+                key: h.id,
+                name: h.name,
+                sub: `${h.city} · ${"★".repeat(h.stars)} · خصم ${h.discount_percentage ?? 0}%`,
+                image: h.hotel_photo_1,
+                icon: "🏨",
+                suspended: h.partnership_status === "موقوف",
+              })}
+              details={(h) => (
+                <FacilityDetails
+                  photos={[h.hotel_photo_1, h.hotel_photo_2, h.hotel_photo_3, h.hotel_photo_4, h.hotel_photo_5]}
+                  description={h.description}
+                  facts={[
+                    { label: "النوع", value: h.property_type === "resort" ? "منتجع سياحي" : h.property_type === "apartment" ? "شقق فندقية" : h.property_type === "heritage" ? "مخيم صحراوي" : "فندق" },
+                    { label: "التصنيف", value: `${"★".repeat(h.stars)} (${h.stars} نجوم)` },
+                    { label: "المدينة", value: h.city },
+                    { label: "الهاتف", value: h.phone },
+                    { label: "الخصم لرواد دلّني", value: h.discount_percentage ? `${h.discount_percentage}%` : "لا يوجد" },
+                    { label: "أوقات الاستقبال", value: h.working_hours || "" },
+                    { label: "فترة العقد", value: h.contract_start_date || h.contract_end_date ? `${h.contract_start_date || "—"} ← ${h.contract_end_date || "مستمر"}` : "" },
+                    { label: "الحالة", value: h.partnership_status === "موقوف" ? "موقوف (مخفي من المنصة)" : "نشط (معروض بالمنصة)" },
+                  ]}
+                  mapUrl={h.google_maps_url}
+                  onEdit={() => setEditingHotel(h)}
+                />
+              )}
+            />
           </SectionCard>
+          )}
 
-          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-gradient-sun text-gold-foreground rounded-xl text-xs font-black">+ إضافة مطعم/مقهى بالدليل</button>}>
-            <div className="grid md:grid-cols-2 gap-4">
-              {restaurants.map((r) => (
-                <div key={r.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-xs">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-black text-foreground text-base">{r.name}</h4>
-                      <div className="text-xs font-bold text-emerald-700 mt-0.5">🍲 {r.type} · ⭐ {r.rating_avg}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5 font-semibold">📍 {r.city} — {r.address}</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {r.partnership_status === "موقوف" ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-black border border-red-200">
-                          🔴 موقوف (مخفي من المنصة)
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
-                          🟢 نشط (معروض بالمنصة)
-                        </span>
-                      )}
-                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
-                        دليل تعريفي
-                      </span>
-                    </div>
-                  </div>
-
-                  {(r.contract_start_date || r.contract_end_date) && (
-                    <div className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-xl flex items-center gap-1.5 border border-slate-200">
-                      <span>📅 فترة العقد:</span>
-                      <span className="font-mono text-slate-900 font-bold">{r.contract_start_date || 'تاريخ التسجيل'}</span>
-                      <span>إلى</span>
-                      <span className="font-mono text-blue-900 font-black">{r.contract_end_date || 'مستمر'}</span>
-                    </div>
-                  )}
-
-                  {/* Main & Thumbnails Gallery (5 Photos) */}
-                  <div className="space-y-1.5">
-                    <img src={r.facility_image_1} alt={r.name} className="w-full h-40 rounded-xl object-cover border shadow-2xs" />
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[r.facility_image_1, r.facility_image_2, r.facility_image_3, r.facility_image_4, r.facility_image_5].map((imgUrl, idx) => (
-                        <div key={idx} className="h-10 rounded-lg overflow-hidden border border-border bg-muted/30">
-                          <img src={imgUrl || r.facility_image_1} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bio Description */}
-                  {r.description && (
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs leading-relaxed text-slate-800 font-semibold">
-                      <span className="font-bold text-slate-900 block mb-0.5">📜 نبذة الوجبات والخدمات:</span>
-                      {r.description}
-                    </div>
-                  )}
-
-                  {/* Working Hours */}
-                  {r.working_hours && (
-                    <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 bg-amber-50/60 p-2 rounded-xl border border-amber-200/60">
-                      <span>⏰</span>
-                      <span className="text-amber-950 font-bold">ساعات العمل: {r.working_hours}</span>
-                    </div>
-                  )}
-
-                  {/* Google Maps Location */}
-                  {r.google_maps_url && (
-                    <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs font-bold text-blue-900">
-                      <span className="flex items-center gap-1">📍 موقع المطعم/المقهى على الخريطة:</span>
-                      <a href={r.google_maps_url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-black hover:bg-blue-700 transition">
-                        🗺️ فتح في خرائط جوجل ↗
-                      </a>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center pt-2 border-t border-border/60 text-xs text-muted-foreground">
-                    <span className="font-bold text-foreground">📞 {r.phone}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditingRestaurant(r)} className="px-3.5 py-1.5 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition">تعديل</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {active === "restaurants" && (
+          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة مطعم/مقهى بالدليل</button>}>
+            <CompactEntityList
+              items={restaurants}
+              emptyText="لا توجد مطاعم أو مقاهٍ مسجلة بعد"
+              summary={(r) => ({
+                key: r.id,
+                name: r.name,
+                sub: `${r.city} · ${r.type}`,
+                image: r.facility_image_1,
+                icon: "🍽️",
+                suspended: r.partnership_status === "موقوف",
+              })}
+              details={(r) => (
+                <FacilityDetails
+                  photos={[r.facility_image_1, r.facility_image_2, r.facility_image_3, r.facility_image_4, r.facility_image_5]}
+                  description={r.description}
+                  facts={[
+                    { label: "النوع", value: r.type },
+                    { label: "المدينة", value: r.city },
+                    { label: "الهاتف", value: r.phone },
+                    { label: "ساعات العمل", value: r.working_hours || "" },
+                    { label: "الخصم لرواد دلّني", value: r.discount_percentage ? `${r.discount_percentage}%` : "لا يوجد" },
+                    { label: "التقييم", value: r.rating_avg ? `⭐ ${r.rating_avg}` : "لا توجد تقييمات" },
+                    { label: "فترة العقد", value: r.contract_start_date || r.contract_end_date ? `${r.contract_start_date || "—"} ← ${r.contract_end_date || "مستمر"}` : "" },
+                    { label: "الحالة", value: r.partnership_status === "موقوف" ? "موقوف (مخفي من المنصة)" : "نشط (معروض بالمنصة)" },
+                  ]}
+                  mapUrl={r.google_maps_url}
+                  onEdit={() => setEditingRestaurant(r)}
+                />
+              )}
+            />
           </SectionCard>
+          )}
 
-          <SectionCard title="🏛️ المعالم والوجهات السياحية المعتمدة (برقم البلدية ID + خريطة Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-gradient-sea text-white rounded-xl text-xs font-black shadow-glow cursor-pointer hover:opacity-95 transition">+ إضافة وتوثيق معلم</button>}>
-            <div className="grid md:grid-cols-2 gap-4">
-              {attractions.map((a) => {
+          {active === "landmarks" && (
+          <SectionCard title="🏛️ المعالم والوجهات السياحية المعتمدة (برقم البلدية ID + خريطة Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة وتوثيق معلم</button>}>
+            <CompactEntityList
+              items={attractions}
+              emptyText="لا توجد معالم سياحية مسجلة بعد"
+              summary={(a) => ({
+                key: a.id,
+                name: a.name,
+                sub: [a.city, a.category].filter(Boolean).join(" · "),
+                image: a.place_image || (a as any).photo,
+                icon: "🏛️",
+              })}
+              details={(a) => {
                 const munId = a.place_id || a.municipality_code || a.id;
                 return (
                   <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-2xs hover:shadow-xs transition">
@@ -2937,9 +2842,10 @@ function AdminDashboard() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
+              }}
+            />
           </SectionCard>
+          )}
         </div>
       )}
 
@@ -2982,38 +2888,41 @@ function AdminDashboard() {
               </div>
             </SectionCard>
             <SectionCard title="⭐ الأعلى تقييماً">
-              <div className="space-y-3">
-                {[
-                  { name: "مغامرة أوباري وبحيرات الصحراء", rate: 4.95, type: "رحلة أسبوعية" },
-                  { name: "جولة لبدة الكبرى اليومية", rate: 4.90, type: "رحلة يومية" },
-                  { name: "مطعم السراياء التراثي", rate: 4.90, type: "مطعم" },
-                  { name: "فندق الفندق الكبير طرابلس", rate: 4.85, type: "فندق 5 نجوم" },
-                  { name: "المرشد سالم القذافي", rate: 4.90, type: "مرشد معتمد" },
-                ].map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-3 rounded-xl bg-muted/40">
-                    <div>
-                      <div className="font-black text-sm text-foreground">{item.name}</div>
-                      <div className="text-xs text-muted-foreground">{item.type}</div>
+              {(() => {
+                // Tourists' real ratings (average of their reviews) across trips, restaurants, hotels and guides
+                const rated = [
+                  ...dailyTrips.map((t) => ({ name: t.title, rate: Number(t.rating_avg) || 0, count: Number((t as any).reviews_count) || 0, type: "رحلة يومية" })),
+                  ...weeklyTrips.map((t) => ({ name: t.title, rate: Number(t.rating_avg) || 0, count: Number((t as any).reviews_count) || 0, type: "رحلة أسبوعية" })),
+                  ...restaurants.map((r) => ({ name: r.name, rate: Number(r.rating_avg) || 0, count: Number((r as any).reviews_count) || 0, type: "مطعم / مقهى" })),
+                  ...hotels.map((h) => ({ name: h.name, rate: Number(h.rating_avg) || 0, count: Number((h as any).reviews_count) || 0, type: "فندق" })),
+                  ...guides.map((g) => ({ name: g.full_name, rate: Number((g as any).rating_avg) || 0, count: Number((g as any).reviews_count) || 0, type: "مرشد سياحي" })),
+                ]
+                  .filter((x) => x.rate > 0)
+                  .sort((a, b) => b.rate - a.rate || b.count - a.count)
+                  .slice(0, 5);
+                if (rated.length === 0) {
+                  return (
+                    <div className="p-6 text-center text-xs font-bold text-muted-foreground rounded-2xl border border-dashed border-border">
+                      لا توجد تقييمات من السياح بعد. ستظهر هنا الرحلات والمنشآت والمرشدون الأعلى تقييماً فور تقييمهم.
                     </div>
-                    <div className="text-gold-foreground font-black text-xs">⭐ {item.rate}/5</div>
+                  );
+                }
+                return (
+                  <div className="space-y-3">
+                    {rated.map((item, idx) => (
+                      <div key={`${item.type}-${item.name}-${idx}`} className="flex justify-between items-center p-3 rounded-xl bg-muted/40">
+                        <div>
+                          <div className="font-black text-sm text-foreground">#{idx + 1} - {item.name}</div>
+                          <div className="text-xs text-muted-foreground">{item.type} · {item.count} تقييم</div>
+                        </div>
+                        <div className="text-gold-foreground font-black text-xs">⭐ {item.rate.toFixed(1)}/5</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </SectionCard>
           </div>
-          <SectionCard title="🏨 الفنادق الأكثر حجزاً">
-            <div className="grid md:grid-cols-2 gap-4">
-              {hotels.map(h => (
-                <div key={h.id} className="p-4 rounded-xl border border-border flex justify-between items-center">
-                  <div>
-                    <h4 className="font-black text-foreground text-sm">{h.name}</h4>
-                    <div className="text-xs text-muted-foreground">📍 {h.city} · ⭐ {h.rating_avg}</div>
-                  </div>
-                  <Badge tone="sea">{h.bookings_count} ليلة</Badge>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
         </div>
       )}
 
@@ -3217,10 +3126,127 @@ function AdminDashboard() {
 }
 
 /* ============ QUICK ACTION ============ */
-function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick?: () => void }) {
+/* Details of a hotel / restaurant inside the compact list: photo strip, fact tiles, description, actions */
+function FacilityDetails({
+  photos,
+  description,
+  facts,
+  mapUrl,
+  onEdit,
+}: {
+  photos: (string | undefined)[];
+  description?: string;
+  facts: { label: string; value: string }[];
+  mapUrl?: string;
+  onEdit: () => void;
+}) {
+  const shown = photos.filter((p): p is string => Boolean(p));
+  return (
+    <div className="pt-1 space-y-4 border-t border-slate-100">
+      {shown.length > 0 && (
+        <div className="grid grid-cols-5 gap-2 pt-3">
+          {shown.map((src, i) => (
+            <a key={i} href={src} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-xl overflow-hidden ring-1 ring-slate-200 hover:ring-[#003580]/40 transition">
+              <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+            </a>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {facts.filter((f) => f.value).map((f) => (
+          <div key={f.label} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
+            <div className="text-[10px] font-bold text-slate-500">{f.label}</div>
+            <div className="text-xs font-black text-[#0F172A] mt-0.5 truncate" title={f.value}>{f.value}</div>
+          </div>
+        ))}
+      </div>
+      {description && <p className="text-xs text-slate-600 leading-relaxed">{description}</p>}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {mapUrl && (
+          <a href={mapUrl} target="_blank" rel="noreferrer" className="px-3.5 h-9 rounded-xl bg-white border border-slate-200 text-[#003580] text-xs font-black hover:bg-slate-50 transition inline-flex items-center gap-1.5">
+            🗺️ الموقع على الخريطة
+          </a>
+        )}
+        <button type="button" onClick={onEdit} className="px-4 h-9 rounded-xl bg-[#003580] hover:bg-blue-900 text-white text-xs font-black transition cursor-pointer">
+          ✏️ تعديل البيانات
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Compact admin list (hotels, restaurants, landmarks): one short row per item; the full card opens on click.
+   Only the first rows show until "show more" is pressed. */
+function CompactEntityList<T>({
+  items,
+  summary,
+  details,
+  emptyText,
+  limit = 2,
+}: {
+  items: T[];
+  summary: (item: T) => { key: string; name: string; sub: string; image?: string; icon: string; suspended?: boolean };
+  details: (item: T) => ReactNode;
+  emptyText: string;
+  limit?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+
+  if (items.length === 0) {
+    return <div className="p-6 text-center text-xs font-bold text-muted-foreground rounded-2xl border border-dashed border-border">{emptyText}</div>;
+  }
+  const visible = showAll ? items : items.slice(0, limit);
+  return (
+    <div className="space-y-2.5">
+      {visible.map((item) => {
+        const s = summary(item);
+        const open = openKey === s.key;
+        return (
+          <div key={s.key} className={`rounded-2xl border bg-white transition ${open ? "border-[#003580]/40 shadow-sm" : "border-border hover:border-[#003580]/30 hover:shadow-2xs"}`}>
+            <button
+              type="button"
+              onClick={() => setOpenKey(open ? null : s.key)}
+              aria-expanded={open}
+              className="w-full flex items-center gap-3 p-3 text-right cursor-pointer"
+            >
+              {s.image ? (
+                <img src={s.image} alt="" loading="lazy" className="w-12 h-12 rounded-xl object-cover border border-slate-200 flex-shrink-0" />
+              ) : (
+                <span className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-xl flex-shrink-0">{s.icon}</span>
+              )}
+              <span className="flex-1 min-w-0">
+                <span className="block font-black text-sm text-[#0F172A] truncate">{s.name}</span>
+                <span className="block text-[11px] text-muted-foreground font-semibold truncate mt-0.5">{s.sub}</span>
+              </span>
+              {s.suspended !== undefined && (
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border flex-shrink-0 ${s.suspended ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                  {s.suspended ? "موقوف" : "نشط"}
+                </span>
+              )}
+              <span className={`text-xs font-black text-[#003580] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
+            </button>
+            {open && <div className="px-3 pb-3">{details(item)}</div>}
+          </div>
+        );
+      })}
+      {items.length > limit && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="w-full py-2.5 rounded-xl border border-dashed border-[#003580]/30 text-[#003580] text-xs font-black hover:bg-[#003580]/5 transition cursor-pointer"
+        >
+          {showAll ? "عرض أقل ▲" : `عرض المزيد (${items.length - limit}) ▼`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function QuickAction({ icon, label, onClick }: { icon: string; label: string; onClick?: () => void }) {
   return (
     <button onClick={onClick} className="p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition text-right w-full group">
-      <Icon className="w-5 h-5 text-primary" strokeWidth={1.75} aria-hidden="true" />
+      <div className="text-xl group-hover:scale-110 transition-transform" aria-hidden="true">{icon}</div>
       <div className="text-xs font-bold text-foreground mt-2 leading-tight">{label}</div>
     </button>
   );
@@ -4238,90 +4264,70 @@ function GuideVerificationModal({
       maxWidth="max-w-2xl sm:max-w-3xl"
     >
       <div className="space-y-4 text-right">
-        {/* Guide Information Summary Card */}
-        <div className="p-4 rounded-2xl bg-slate-50 border border-border text-xs space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
-            <div className="flex items-center gap-3">
-              {guide.avatar ? (
-                <img
-                  src={guide.avatar}
-                  alt={guide.full_name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-primary/20 shadow-xs"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xl border-2 border-primary/20">
-                  {guide.full_name ? guide.full_name.charAt(0) : "م"}
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-muted-foreground text-xs">اسم المرشد: </span>
-                  <span className="font-black text-foreground text-base">{guide.full_name}</span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  مرشد سياحي معتمد ومسجل
-                </div>
+        {/* Guide summary */}
+        <div className="rounded-2xl border border-border bg-white overflow-hidden">
+          <div className="p-4 bg-gradient-to-l from-slate-50 to-white flex flex-wrap items-center gap-3 border-b border-border/70">
+            {guide.avatar ? (
+              <img
+                src={guide.avatar}
+                alt={guide.full_name}
+                className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-2xs"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-xl">
+                {guide.full_name ? guide.full_name.charAt(0) : "م"}
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-muted-foreground">رقم الترخيص: </span>
-              <span className="font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
-                {guide.license_number}
-              </span>
-            </div>
-            <div>
-              <span className="font-bold text-muted-foreground">الحالة الحالية: </span>
-              <Badge tone={guide.verification_status === "موثق" ? "green" : guide.verification_status === "مرفوض" ? "red" : "sun"}>
-                {guide.verification_status || "بانتظار التوثيق"}
-              </Badge>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-[#0F172A] text-base truncate">{guide.full_name}</div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                <span className="font-mono text-[11px] font-black text-[#003580] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
+                  🪪 {guide.license_number}
+                </span>
+                <Badge tone={guide.verification_status === "موثق" ? "green" : guide.verification_status === "مرفوض" ? "red" : "sun"}>
+                  {guide.verification_status || "بانتظار التوثيق"}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-muted-foreground">
-            {guide.email && (
-              <div>
-                <b>البريد الإلكتروني:</b> <span className="text-foreground font-bold">{guide.email}</span>
-              </div>
-            )}
-            <div>
-              <b>رقم الهاتف:</b> <span className="text-foreground font-bold">{guide.phone_number}</span>
+          <div className="p-4 space-y-4 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { label: "📞 الهاتف", value: guide.phone_number },
+                { label: "✉️ البريد الإلكتروني", value: guide.email },
+                { label: "🧭 سنوات الخبرة", value: guide.years_of_experience ? `${guide.years_of_experience} سنوات` : null },
+                { label: "💰 السعر اليومي", value: (guide.daily_rate || guide.price_per_day) ? `${guide.daily_rate || guide.price_per_day} د.ل` : null },
+                { label: "🟢 حالة التوافر", value: guide.availability_status || "متاح" },
+              ].map((row) => (
+                <div key={row.label} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
+                  <div className="text-[10px] font-bold text-muted-foreground">{row.label}</div>
+                  <div className="text-[13px] font-black text-[#0F172A] mt-0.5 truncate" title={row.value || ""}>{row.value || "—"}</div>
+                </div>
+              ))}
+              {(() => {
+                const expired = !!guide.license_expiry_date && guide.license_expiry_date <= new Date().toLocaleDateString("en-CA");
+                return (
+                  <div className={`p-2.5 rounded-xl border min-w-0 ${!guide.license_expiry_date ? "bg-amber-50 border-amber-200" : expired ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-100"}`}>
+                    <div className="text-[10px] font-bold text-muted-foreground">📅 انتهاء الترخيص</div>
+                    <div className={`text-[13px] font-black mt-0.5 ${!guide.license_expiry_date ? "text-amber-700" : expired ? "text-red-700" : "text-[#0F172A]"}`}>
+                      {guide.license_expiry_date ? `${guide.license_expiry_date}${expired ? " (منتهٍ)" : ""}` : "غير مسجل"}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
+
             <div>
-              <b>سنوات الخبرة:</b> <span className="text-foreground font-bold">{guide.years_of_experience} سنوات</span>
-            </div>
-            <div>
-              <b>تاريخ انتهاء الترخيص:</b>{" "}
-              {guide.license_expiry_date ? (
-                <span className={`font-bold ${guide.license_expiry_date <= new Date().toLocaleDateString("en-CA") ? "text-red-600" : "text-foreground"}`}>
-                  {guide.license_expiry_date}
-                  {guide.license_expiry_date <= new Date().toLocaleDateString("en-CA") ? " (منتهٍ)" : ""}
-                </span>
-              ) : (
-                <span className="text-amber-700 font-bold">غير مسجل</span>
-              )}
-            </div>
-            <div>
-              <b>حالة التوافر:</b> <span className="text-foreground font-bold">{guide.availability_status || "متاح"}</span>
-            </div>
-            {guide.rejection_reason && (
-              <div className="sm:col-span-2">
-                <b>سبب الرفض السابق:</b> <span className="text-red-700 font-bold">{guide.rejection_reason}</span>
-              </div>
-            )}
-            <div>
-              <b>السعر اليومي المقترح:</b>{" "}
-              <span className="text-emerald-700 font-bold">{(guide.daily_rate || guide.price_per_day) ? `${guide.daily_rate || guide.price_per_day} د.ل / اليوم` : "السعر غير محدد"}</span>
-            </div>
-            <div className="sm:col-span-2 space-y-1">
-              <b>المعالم السياحية والآثار المعتمدة لخبرته:</b>
-              <div className="flex flex-wrap gap-1.5 mt-1">
+              <div className="text-[11px] font-black text-slate-500 mb-1.5">🏛️ المعالم المعتمدة لخبرته</div>
+              <div className="flex flex-wrap gap-1.5">
                 {guide.places && guide.places.length > 0 ? (
                   guide.places.map((p: any) => (
-                    <span key={p.place_id || p.id} className="text-xs font-bold text-[#D96B27] bg-[#D96B27]/10 px-2 py-0.5 rounded-lg border border-[#D96B27]/30">
-                      🏛️ {p.place_name || p.name} {p.city ? `(${p.city})` : ""}
+                    <span key={p.place_id || p.id} className="text-[11px] font-bold text-[#B45309] bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                      {p.place_name || p.name}
                     </span>
                   ))
                 ) : (
@@ -4329,13 +4335,14 @@ function GuideVerificationModal({
                 )}
               </div>
             </div>
-            <div className="sm:col-span-2 space-y-1">
-              <b>أيام الجاهزية للجولات السياحية:</b>
-              <div className="flex flex-wrap gap-1.5 mt-1">
+
+            <div>
+              <div className="text-[11px] font-black text-slate-500 mb-1.5">📆 أيام العمل</div>
+              <div className="flex flex-wrap gap-1.5">
                 {Array.isArray(guide.working_days) && guide.working_days.length > 0 ? (
                   guide.working_days.map((day: string, idx: number) => (
-                    <span key={idx} className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                      📅 {day}
+                    <span key={idx} className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      {day}
                     </span>
                   ))
                 ) : (
@@ -4343,110 +4350,43 @@ function GuideVerificationModal({
                 )}
               </div>
             </div>
-          </div>
-          {guide.bio && (
-            <div className="pt-1 text-muted-foreground border-t border-border/40">
-              <b>نبذة عن المرشد:</b> {guide.bio}
-            </div>
-          )}
-        </div>
 
-        {/* Uploaded Document Review Section */}
-        <div className="p-4 rounded-2xl bg-white border border-border shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="font-black text-sm text-foreground flex items-center gap-2">
-              <span>📄</span>
-              <span>الملف والوثيقة المرفوعة من المرشد:</span>
-            </h4>
-            {guide.digital_certificate_file && (
-              <button
-                type="button"
-                onClick={handleOpenInNewTab}
-                className="text-xs text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>فتح الملف بالحجم الكامل في نافذة جديدة</span>
-                <span>↗</span>
-              </button>
+            {guide.bio && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 leading-relaxed text-slate-700">
+                <div className="text-[11px] font-black text-slate-500 mb-1">📝 نبذة عن المرشد</div>
+                {guide.bio}
+              </div>
             )}
           </div>
-
-          <div className="text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-xl">
-            <b>اسم المستند المرفق:</b> {guide.certificate || "وثيقة ترخيص"}
-          </div>
-
-          {/* Actual File Display */}
-          {guide.digital_certificate_file ? (
-            <div className="rounded-xl border border-border overflow-hidden bg-slate-900/5">
-              {isImage ? (
-                /* Display Uploaded Image */
-                <div className="p-3 flex flex-col items-center justify-center gap-2 bg-slate-100/50">
-                  <img
-                    src={guide.digital_certificate_file}
-                    alt="وثيقة المرشد المرفوعة"
-                    className="max-h-[420px] w-auto max-w-full rounded-lg object-contain shadow-md border bg-white"
-                  />
-                  <div className="text-[11px] text-muted-foreground font-medium pt-1">
-                    صورة المستند المرفقة من قبل المرشد (جاهزة للمراجعة)
-                  </div>
-                </div>
-              ) : isPdf ? (
-                /* Display Uploaded PDF */
-                <div className="flex flex-col">
-                  <iframe
-                    src={guide.digital_certificate_file}
-                    title="معاينة ملف PDF المرفوع"
-                    className="w-full h-[400px] border-0 bg-white"
-                  />
-                  <div className="p-2.5 bg-slate-100 border-t border-border flex justify-between items-center text-xs">
-                    <span className="font-bold text-foreground">ملف PDF مرفق من المرشد</span>
-                    <button
-                      type="button"
-                      onClick={handleOpenInNewTab}
-                      className="px-3 py-1.5 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition text-xs"
-                    >
-                      تكبير وقراءة الـ PDF ↗
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Fallback generic document link */
-                <div className="p-6 text-center space-y-2">
-                  <div className="text-3xl">📎</div>
-                  <div className="font-bold text-sm text-foreground">مستند مرفق بصيغة رقمية</div>
-                  <button
-                    type="button"
-                    onClick={handleOpenInNewTab}
-                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs"
-                  >
-                    عرض وتحميل المستند المرفق ↗
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* No file uploaded notice */
-            <div className="p-5 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 text-center space-y-2">
-              <div className="text-2xl">⚠️</div>
-              <div className="font-black text-amber-900 text-xs">
-                لم يقم هذا المرشد برفع ملف رقمي أثناء التسجيل
-              </div>
-              <p className="text-[11px] text-amber-800 max-w-md mx-auto">
-                قام المرشد بالتسجيل برقم الرخصة ({guide.license_number}) فقط دون إرفاق صورة أو مستند PDF من جهازه.
-              </p>
-            </div>
-          )}
         </div>
 
-        {/* Admin Instructions and Actions */}
-        <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/60 text-xs text-blue-950 space-y-1">
-          <div className="font-black flex items-center gap-1.5">
-            <span>💡</span>
-            <span>ماذا تفعل كمسؤول للمنصة (أدمن)؟</span>
+        {/* Uploaded licence document: a small row; the file opens full size on demand */}
+        {guide.digital_certificate_file ? (
+          <div className="p-3 rounded-2xl border border-border bg-white flex items-center gap-3">
+            {isImage ? (
+              <img src={guide.digital_certificate_file} alt="" className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
+            ) : (
+              <span className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 text-red-600 flex items-center justify-center text-[11px] font-black">
+                {isPdf ? "PDF" : "📎"}
+              </span>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-sm text-[#0F172A]">وثيقة الترخيص المرفوعة</div>
+              <div className="text-[11px] text-muted-foreground font-semibold">{isPdf ? "ملف PDF" : isImage ? "صورة" : "مستند مرفق"}</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenInNewTab}
+              className="px-3.5 py-2 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5"
+            >
+              🔍 تكبير وعرض
+            </button>
           </div>
-          <p className="text-[11px] leading-relaxed text-blue-900">
-            راجع الوثيقة المرفوعة وتأكد من صحة رقم الترخيص والاسم. عند الضغط على <b>[قبول واعتماد المرشد]</b>، يتغير حسابه إلى 'موثق' فوراً ويصبح معتمداً ومتاحاً في قائمة المرشدين العامة. عند الضغط على <b>[رفض الطلب]</b>، يُرفض الحساب.
-          </p>
-        </div>
+        ) : (
+          <div className="p-3 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 text-xs font-bold text-amber-900">
+            ⚠️ لم يرفع هذا المرشد وثيقة الترخيص (سجل برقم الرخصة {guide.license_number} فقط)
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2.5 justify-end pt-2 border-t border-border">
@@ -4457,31 +4397,6 @@ function GuideVerificationModal({
           >
             إلغاء وإغلاق
           </button>
-          {guide.verification_status === "موثق" && (
-            <button
-              type="button"
-              onClick={() => {
-                const guideUser = {
-                  license_number: guide.license_number,
-                  full_name: guide.full_name,
-                  phone_number: guide.phone_number,
-                  email: guide.email || `${guide.license_number.toLowerCase()}@dalni.ly`,
-                  verification_status: "موثق",
-                  role: "guide",
-                  years_of_experience: guide.years_of_experience,
-                  price_per_day: guide.price_per_day,
-                  avatar: guide.avatar,
-                };
-                localStorage.setItem("dalni_user", JSON.stringify(guideUser));
-                localStorage.setItem("dalni_role", "guide");
-                window.dispatchEvent(new Event("storage"));
-                window.open("/dashboard/guide", "_blank");
-              }}
-              className="px-4 h-10 border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-xl font-black text-xs transition cursor-pointer flex items-center gap-1.5"
-            >
-              <span>معاينة لوحة المرشد 🧭</span>
-            </button>
-          )}
           <button
             type="button"
             onClick={() => onVerify(guide.license_number, "مرفوض")}
@@ -4519,13 +4434,29 @@ function TripItineraryTimelineEditor({
   onChange,
   selectedRestaurant,
   mode = "time",
+  dayCount = 0,
 }: {
   steps: ItineraryStepItem[];
   onChange: (steps: ItineraryStepItem[]) => void;
   selectedRestaurant?: Restaurant | null;
   mode?: "time" | "days";
+  // Weekly trips: number of days between start and end date; the stations follow it (one per day)
+  dayCount?: number;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const fixedDays = mode === "days" && dayCount > 0;
+
+  // One station per trip day: extra days are added, days past the end date are dropped
+  useEffect(() => {
+    if (!fixedDays || steps.length === dayCount) return;
+    const next = Array.from({ length: dayCount }, (_, i) =>
+      steps[i] ? { ...steps[i], time: `اليوم ${i + 1}` } : {
+        title: `محطة اليوم ${i + 1}`,
+        time: `اليوم ${i + 1}`,
+        desc: "",
+      });
+    onChange(next);
+  }, [fixedDays, dayCount, steps, onChange]);
 
   const handleStepChange = (index: number, field: keyof ItineraryStepItem, val: string) => {
     const next = [...steps];
@@ -4558,20 +4489,24 @@ function TripItineraryTimelineEditor({
             <span>{mode === "days" ? "محطات وجدول الأيام خطوة بخطوة" : "محطات وخط سير الرحلة خطوة بخطوة"}</span>
           </h3>
           <p className="text-xs text-slate-500 font-bold mt-0.5">
-            {mode === "days"
-              ? `إمكانية إضافة محطات الأيام أو حذفها وتعديل خطة كل يوم بدقة (${steps.length} محطات/أيام حالية)`
+            {fixedDays
+              ? `محطة لكل يوم من أيام الرحلة: ${dayCount} أيام = ${dayCount} محطات (يتغير العدد تلقائياً مع تاريخي البداية والنهاية)`
+              : mode === "days"
+              ? "حدد تاريخ بداية ونهاية الرحلة، وتُنشأ محطة لكل يوم تلقائياً"
               : `إمكانية إضافة محطات أو حذف محطات وتعديل المواعيد والشرح بدقة (${steps.length} محطات حالية)`}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleAddStep}
-            className="px-3 py-1.5 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer flex items-center gap-1 shadow-xs"
-          >
-            <span>➕</span>
-            <span>{mode === "days" ? "إضافة محطة يوم" : "إضافة محطة"}</span>
-          </button>
+          {mode === "time" && (
+            <button
+              type="button"
+              onClick={handleAddStep}
+              className="px-3 py-1.5 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer flex items-center gap-1 shadow-xs"
+            >
+              <span>➕</span>
+              <span>إضافة محطة</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setIsEditing(!isEditing)}
@@ -4613,8 +4548,8 @@ function TripItineraryTimelineEditor({
                 {isEditing ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-black text-slate-700">المحطة رقم {idx + 1}</span>
-                      <button
+                      <span className="text-[11px] font-black text-slate-700">{mode === "days" ? `اليوم ${idx + 1}` : `المحطة رقم ${idx + 1}`}</span>
+                      {mode === "time" && <button
                         type="button"
                         onClick={() => handleDeleteStep(idx)}
                         className="px-2 py-0.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-[10px] font-black transition cursor-pointer flex items-center gap-1"
@@ -4622,7 +4557,7 @@ function TripItineraryTimelineEditor({
                       >
                         <span>🗑️</span>
                         <span>حذف المحطة</span>
-                      </button>
+                      </button>}
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2">
@@ -4665,14 +4600,16 @@ function TripItineraryTimelineEditor({
                     <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1">
                       <div className="flex items-center gap-2">
                         <h4 className="font-black text-xs sm:text-sm text-[#0F172A]">{step.title}</h4>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteStep(idx)}
-                          className="text-red-400 hover:text-red-600 text-xs px-1"
-                          title="حذف المحطة"
-                        >
-                          ✕
-                        </button>
+                        {mode === "time" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStep(idx)}
+                            className="text-red-400 hover:text-red-600 text-xs px-1"
+                            title="حذف المحطة"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                       <span className="text-[11px] font-black text-[#003580] bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-xs">
                         {step.time}
@@ -5385,6 +5322,38 @@ function TripHotelSelector({
 }
 
 // Guide working-day names <-> codes, shared by the trip create and edit modals
+/* Weekly trips: one station per trip day, and a guide must work every weekday the trip covers */
+const WEEKDAY_CODES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]; // Date.getDay() order
+
+function tripDayCount(start: string, end: string): number {
+  const s = new Date(`${String(start).slice(0, 10)}T00:00:00`);
+  const e = new Date(`${String(end).slice(0, 10)}T00:00:00`);
+  if (!start || !end || isNaN(s.getTime()) || isNaN(e.getTime()) || e < s) return 0;
+  return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+}
+
+function weekdayCodesBetween(start: string, end: string): string[] {
+  const days = tripDayCount(start, end);
+  const first = new Date(`${String(start).slice(0, 10)}T00:00:00`).getDay();
+  return Array.from(new Set(Array.from({ length: Math.min(days, 7) }, (_, i) => WEEKDAY_CODES[(first + i) % 7])));
+}
+
+// The guide's working days as codes (sun, mon, ...); null = every day
+function guideDayCodes(g: { working_days?: any }): string[] | null {
+  let days: any = g.working_days;
+  if (typeof days === "string") {
+    try {
+      days = JSON.parse(days);
+    } catch {
+      days = days.split(",");
+    }
+  }
+  if (!Array.isArray(days) || days.length === 0) return null;
+  const list = days.map((d: any) => String(d).trim().toLowerCase());
+  if (list.includes("all") || list.includes("جميع الأيام")) return null;
+  return list.map((d: string) => arabicToCodeMap[d.replace("الاثنين", "الإثنين")] || d);
+}
+
 const arabicToCodeMap: Record<string, string> = {
   "السبت": "sat",
   "الأحد": "sun",
@@ -5508,7 +5477,8 @@ function CreateTripModal({
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter((g) => {
-      if (g.verification_status === "مرفوض") return false;
+      // Only guides the admin approved can be given a trip
+      if (g.verification_status !== "موثق") return false;
 
       // City filter for weekly trips / daily trips if guide has city specified
       if (g.city) {
@@ -5536,6 +5506,12 @@ function CreateTripModal({
             if (!availableOnAllDays) return false;
           }
         }
+      }
+
+      // Weekly trips: the guide works on every weekday the trip covers (7+ days = the whole week)
+      if (!isDaily && !showAllGuides && startDate && endDate) {
+        const codes = guideDayCodes(g);
+        if (codes && !weekdayCodesBetween(startDate, endDate).every((c) => codes.includes(c))) return false;
       }
 
       // Weekly trips schedule filter: ensure guide is not already booked during this trip's dates
@@ -5764,7 +5740,7 @@ function CreateTripModal({
                       }`}
                     >
                       <span>📍 {aName}</span>
-                      {a.city && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                      {a.city && a.city !== aName && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
                       {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
                     </button>
                   );
@@ -5933,6 +5909,7 @@ function CreateTripModal({
           onChange={setItinerarySteps}
           selectedRestaurant={selectedPrimaryRestaurant}
           mode={isDaily ? "time" : "days"}
+          dayCount={isDaily ? 0 : tripDayCount(startDate, endDate)}
         />
 
         {/* 7. Tour Guide Selector Filtered by Working Days */}
@@ -6148,7 +6125,8 @@ function DailyTripEditModal({
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => {
-      if (g.verification_status === "مرفوض") return false;
+      // Only guides the admin approved can be given a trip
+      if (g.verification_status !== "موثق") return false;
       if (!showAllGuides && recurringDays.length > 0 && g.working_days) {
         let gDays: string[] = [];
         try {
@@ -6306,7 +6284,7 @@ function DailyTripEditModal({
                     }`}
                   >
                     <span>📍 {aName}</span>
-                    {a.city && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                    {a.city && a.city !== aName && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
                     {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
                   </button>
                 );
@@ -6569,7 +6547,14 @@ function WeeklyTripEditModal({
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter((g) => {
-      if (g.verification_status === "مرفوض") return false;
+      // Only guides the admin approved can be given a trip
+      if (g.verification_status !== "موثق") return false;
+
+      // The guide works on every weekday the trip covers (7+ days = the whole week)
+      if (startDate && endDate) {
+        const codes = guideDayCodes(g);
+        if (codes && !weekdayCodesBetween(startDate, endDate).every((c) => codes.includes(c))) return false;
+      }
 
       // Check conflict with other weekly trips during this trip's dates
       if (startDate) {
@@ -6776,6 +6761,7 @@ function WeeklyTripEditModal({
           onChange={setItinerarySteps}
           selectedRestaurant={selectedPrimaryRestaurant}
           mode="days"
+          dayCount={tripDayCount(startDate, endDate)}
         />
 
         <div>
@@ -7403,10 +7389,6 @@ function HotelModal({
       setErrorMsg("يرجى اختيار التصنيف الفندقي (عدد النجوم)");
       return;
     }
-    if (!address.trim() || address.trim().length < 4) {
-      setErrorMsg("يرجى إدخال العنوان التفصيلي بدقة");
-      return;
-    }
     const digitsOnly = phone.replace(/\D/g, "");
     if (!phone.trim() || digitsOnly.length < 8) {
       setErrorMsg("يرجى إدخال رقم هاتف اتصال معتمد وصحيح (8 أرقام على الأقل)");
@@ -7663,25 +7645,27 @@ function HotelModal({
           </div>
         </div>
 
-        <Field label="العنوان التفصيلي وموقع المنشأة *" value={address} onChange={v => { setAddress(v); setErrorMsg(null); }} />
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
           <div>
             <label className="text-xs font-bold text-foreground mb-1 block">
-              🏷️ نسبة الخصم المقدمة لرواد منصة دلّني (%) *
+              🏷️ نسبة الخصم لرواد منصة دلّني (%) — اتركها فارغة إن لم يوجد خصم
             </label>
             <div className="relative">
               <input
-                type="number"
-                min={0}
-                max={100}
+                type="text"
+                inputMode="numeric"
                 value={discountPct}
-                placeholder="مثال: 10"
-                onChange={e => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  // digits only, 0–100; an empty box means no discount
+                  const digits = e.target.value.replace(/[^0-9٠-٩]/g, "").replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+                  setDiscountPct(digits === "" ? "" : Math.min(100, Number(digits)));
+                }}
+                className="w-full h-10 ps-3 pe-9 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
               />
-              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-black pointer-events-none">%</span>
             </div>
           </div>
         </div>
@@ -7765,13 +7749,13 @@ function HotelModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية للكرت)" value={p1} onChange={setP1} />
-            <ImageFilePicker label="الصورة 2 (الغرف والأجنحة الفندقية)" value={p2} onChange={setP2} />
-            <ImageFilePicker label="الصورة 3 (الاستقبال والبهو والمطعم)" value={p3} onChange={setP3} />
-            <ImageFilePicker label="الصورة 4 (المرافق والمسابح والخدمات)" value={p4} onChange={setP4} />
+            <ImageFilePicker label="الصورة 1" value={p1} onChange={setP1} />
+            <ImageFilePicker label="الصورة 2" value={p2} onChange={setP2} />
+            <ImageFilePicker label="الصورة 3" value={p3} onChange={setP3} />
+            <ImageFilePicker label="الصورة 4" value={p4} onChange={setP4} />
           </div>
           <div className="max-w-md mx-auto">
-            <ImageFilePicker label="الصورة 5 (الإطلالة الخارجية والحدائق)" value={p5} onChange={setP5} />
+            <ImageFilePicker label="الصورة 5" value={p5} onChange={setP5} />
           </div>
         </div>
 
@@ -7818,7 +7802,7 @@ function RestaurantModal({
   const [address, setAddress] = useState(restaurant?.address || "");
   const [phone, setPhone] = useState(restaurant?.phone || "");
   const [status, setStatus] = useState<"نشط" | "موقوف">(restaurant?.partnership_status === "موقوف" ? "موقوف" : "نشط");
-  const [discountPct, setDiscountPct] = useState(restaurant?.discount_percentage ?? 20);
+  const [discountPct, setDiscountPct] = useState<number | "">(restaurant?.discount_percentage ?? "");
   const [workingHours, setWorkingHours] = useState(restaurant?.working_hours || "11:00 ص – 11:30 م");
   const [description, setDescription] = useState(restaurant?.description || "");
   const [mapsUrl, setMapsUrl] = useState(restaurant?.google_maps_url || "");
@@ -7915,8 +7899,8 @@ function RestaurantModal({
       setErrorMsg("يرجى إدخال اسم المطعم أو المقهى بدقة (3 أحرف على الأقل)");
       return;
     }
-    if (!city.trim() || !address.trim() || address.trim().length < 4) {
-      setErrorMsg("يرجى إدخال المدينة والعنوان التفصيلي بدقة");
+    if (!city.trim()) {
+      setErrorMsg("يرجى اختيار المدينة");
       return;
     }
     const digitsOnly = phone.replace(/\D/g, "");
@@ -8157,24 +8141,27 @@ function RestaurantModal({
           </div>
         </div>
 
-        <Field label="العنوان التفصيلي وموقع المنشأة *" value={address} onChange={v => { setAddress(v); setErrorMsg(null); }} />
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
           <div>
             <label className="text-xs font-bold text-foreground mb-1 block">
-              🏷️ نسبة الخصم المقدمة لرواد منصة دلّني (%) *
+              🏷️ نسبة الخصم لرواد منصة دلّني (%) — اتركها فارغة إن لم يوجد خصم
             </label>
             <div className="relative">
               <input
-                type="number"
-                min={0}
-                max={100}
+                type="text"
+                inputMode="numeric"
                 value={discountPct}
-                onChange={e => setDiscountPct(Number(e.target.value))}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-amber-600 bg-white font-mono"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  // digits only, 0–100; an empty box means no discount
+                  const digits = e.target.value.replace(/[^0-9٠-٩]/g, "").replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+                  setDiscountPct(digits === "" ? "" : Math.min(100, Number(digits)));
+                }}
+                className="w-full h-10 ps-3 pe-9 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
               />
-              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-black pointer-events-none">%</span>
             </div>
           </div>
         </div>
@@ -8258,13 +8245,13 @@ function RestaurantModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <ImageFilePicker label="الصورة 1 (الواجهة الرئيسية للكرت)" value={i1} onChange={setI1} />
-            <ImageFilePicker label="الصورة 2 (أطباق المأكولات والمشروبات)" value={i2} onChange={setI2} />
-            <ImageFilePicker label="الصورة 3 (الجلسات الداخلية والديكور)" value={i3} onChange={setI3} />
-            <ImageFilePicker label="الصورة 4 (الجلسات الخارجية أو الإطلالة)" value={i4} onChange={setI4} />
+            <ImageFilePicker label="الصورة 1" value={i1} onChange={setI1} />
+            <ImageFilePicker label="الصورة 2" value={i2} onChange={setI2} />
+            <ImageFilePicker label="الصورة 3" value={i3} onChange={setI3} />
+            <ImageFilePicker label="الصورة 4" value={i4} onChange={setI4} />
           </div>
           <div className="max-w-md mx-auto">
-            <ImageFilePicker label="الصورة 5 (الضيافة والتقديم)" value={i5} onChange={setI5} />
+            <ImageFilePicker label="الصورة 5" value={i5} onChange={setI5} />
           </div>
         </div>
 
@@ -8280,9 +8267,9 @@ function RestaurantModal({
           <button
             type="submit"
             disabled={saving}
-            className="px-6 h-11 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
+            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
-            <span>{saving ? "جارٍ الحفظ..." : "حفظ المطعم/المقهى بالدليل ✓"}</span>
+            <span>{saving ? "جارٍ الحفظ..." : "حفظ المطعم / المقهى ✓"}</span>
           </button>
         </div>
       </form>
@@ -8924,7 +8911,6 @@ function DailyOfferModal({
         </div>
 
         <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة وبوستر العرض اليومي" value={img} onChange={setImg} />
         </div>
 
         {/* Validation summary */}
@@ -9136,7 +9122,6 @@ function WeeklyOfferModal({
         </div>
 
         <div className="pt-2 border-t border-border">
-          <ImageFilePicker label="صورة وبوستر العرض الأسبوعي" value={img} onChange={setImg} />
         </div>
 
         {/* Validation summary */}
@@ -9417,7 +9402,8 @@ function TripImagesFiveManager({
 function ImageFilePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) { const r = new FileReader(); r.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); }; r.readAsDataURL(file); }
+    // Hotel, restaurant and landmark photos are shrunk before they are saved
+    if (file) fileToCompressedDataUrl(file).then((data) => data && onChange(data));
   };
   return (
     <div className="p-2.5 rounded-xl border border-border bg-muted/20 space-y-1.5 text-right">

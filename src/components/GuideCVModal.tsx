@@ -122,7 +122,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
                 <span>الخبرة</span>
               </div>
               <div className="text-xs sm:text-sm font-black text-[#0F172A] mt-1">
-                {guide.experienceYears || 10} سنوات
+                {guide.experienceYears ? `${guide.experienceYears} سنوات` : "—"}
               </div>
             </div>
 

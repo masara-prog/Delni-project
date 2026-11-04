@@ -19,7 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Dalni: CORS_ALLOWED_ORIGINS = comma-separated site origins (e.g. https://your-domain) in production.
+    // When it is empty: every origin in development (APP_ENV=local), none in production.
+    // The mobile app is not a browser, so CORS does not apply to it.
+    'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', (string) env('CORS_ALLOWED_ORIGINS', '')))))
+        ?: (env('APP_ENV', 'production') === 'local' ? ['*'] : []),
 
     'allowed_origins_patterns' => [],
 

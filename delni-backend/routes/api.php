@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\TripOfferController;
 use App\Http\Controllers\Api\PrivateTripController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\UploadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,12 +44,21 @@ Route::prefix('ai')->middleware('throttle:30,1')->group(function () {
 // --- Auth Routes (sign-in attempts are rate limited) ---
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
-    Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::post('/register/tourist', [AuthController::class, 'registerTourist'])->middleware('throttle:10,1');
     Route::post('/register/guide', [AuthController::class, 'registerGuide'])->middleware('throttle:10,1');
     Route::post('/guide/resubmit', [AuthController::class, 'resubmitGuide'])->middleware('throttle:10,1');
     Route::post('/tourist/update-profile', [AuthController::class, 'updateTouristProfile'])->middleware('role:tourist');
 });
+
+// --- The signed-in account (any role): who am I, and sign out (the token is expired on the server) ---
+Route::middleware('role:tourist,guide,transport,driver,admin')->group(function () {
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    // Files as multipart/form-data (fields "file" and "kind"); which kinds a role may upload is checked in UploadController
+    Route::post('/uploads', [UploadController::class, 'store'])->middleware('throttle:30,1');
+});
+// Licence and certificate documents are private: the admin only
+Route::get('/uploads/documents/{name}', [UploadController::class, 'document'])->middleware('role:admin');
 
 /*
 | Public reads (visitors). Lists return extra rows/fields only to the admin (?all=1, private documents).

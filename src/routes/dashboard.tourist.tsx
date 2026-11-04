@@ -1053,111 +1053,102 @@ function TouristDashboard() {
       {/* E-Ticket View Modal */}
       {ticketModal && (
         <Modal open={!!ticketModal} onClose={() => setTicketModal(null)} size="lg">
-          <div className="p-0 bg-white rounded-2xl overflow-hidden relative shadow-xl text-right" dir="rtl">
-            <div className="p-5 pb-0 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-[#1B5A78] text-white flex items-center justify-center text-xl font-bold shadow-xs">
-                  🎫
+          {(() => {
+            const cancelled = ticketModal.status === "ملغية";
+            const facts: { icon: string; label: string; value: string; sub?: string }[] = [
+              { icon: "🗓️", label: "التاريخ", value: ticketModal.date, sub: ticketModal.time || undefined },
+              { icon: "📍", label: "الانطلاق", value: ticketModal.pickup.replace(/^نقطة الانطلاق:\s*/, "") },
+              { icon: "🧭", label: "المرشد السياحي", value: ticketModal.guideName },
+              { icon: "🚌", label: "الناقل", value: ticketModal.companyName, sub: ticketModal.vehicleModel !== "غير محدد" ? ticketModal.vehicleModel : undefined },
+            ];
+            return (
+              <div className="bg-[#F4F1EA] p-3 sm:p-5 rounded-3xl text-right" dir="rtl">
+                <div className="relative bg-white rounded-[26px] overflow-hidden shadow-[0_20px_50px_-20px_rgba(15,23,42,0.45)]">
+                  {/* Header band */}
+                  <div className="relative px-5 sm:px-6 py-5 bg-gradient-to-l from-[#0F172A] via-[#003580] to-[#1B5A78] text-white">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-blue-100">
+                          <span className="px-2 py-0.5 rounded-full bg-white/15">🎫 تذكرة إلكترونية</span>
+                          <span className="px-2 py-0.5 rounded-full bg-white/15">{ticketModal.type}</span>
+                        </div>
+                        <h3 className="mt-2 text-lg sm:text-xl font-black leading-snug">{ticketModal.tripName}</h3>
+                        <div className="mt-1 text-[11px] text-blue-100 font-semibold">منصة دلّني · السياحة الليبية بأبهى صورها</div>
+                      </div>
+                      <span className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-black ${cancelled ? "bg-red-500/90 text-white" : "bg-emerald-400 text-[#0F172A]"}`}>
+                        {cancelled ? `✕ ${ticketModal.statusLabel || "ملغية"}` : "✓ مؤكدة"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row">
+                    {/* Details */}
+                    <div className="flex-1 p-5 sm:p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        {facts.map((f) => (
+                          <div key={f.label} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 min-w-0">
+                            <div className="text-[10px] font-bold text-slate-500">{f.icon} {f.label}</div>
+                            <div className="text-[13px] font-black text-[#0F172A] mt-0.5 leading-snug break-words">{f.value}</div>
+                            {f.sub && <div className="text-[11px] text-slate-500 font-semibold">{f.sub}</div>}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#1ABC9C]/10 border border-[#1ABC9C]/20">
+                        <div>
+                          <div className="text-[10px] font-bold text-[#0E8C74]">👥 المقاعد</div>
+                          <div className="text-base font-black text-[#0F172A]">{ticketModal.seats} {ticketModal.seats === 1 ? "مقعد" : "مقاعد"}</div>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-[10px] font-bold text-[#0E8C74]">💰 الإجمالي</div>
+                          <div className="text-base font-black text-[#0F172A]">{ticketModal.price}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Perforation */}
+                    <div className="relative sm:w-0 h-0 sm:h-auto border-t-2 sm:border-t-0 sm:border-r-2 border-dashed border-slate-200 mx-5 sm:mx-0 sm:my-5">
+                      <span className="absolute -top-3 -right-8 sm:-right-3 sm:-top-8 w-6 h-6 rounded-full bg-[#F4F1EA]" />
+                      <span className="absolute -top-3 -left-8 sm:-right-3 sm:left-auto sm:top-auto sm:-bottom-8 w-6 h-6 rounded-full bg-[#F4F1EA]" />
+                    </div>
+
+                    {/* QR stub */}
+                    <div className="sm:w-56 p-5 sm:p-6 flex flex-col items-center justify-center text-center gap-2">
+                      <div className={`w-40 h-40 rounded-2xl bg-white border border-slate-200 p-2 shadow-sm ${cancelled ? "opacity-30 grayscale" : ""}`}>
+                        {qrCodeDataUrl ? (
+                          <img src={qrCodeDataUrl} alt={`QR: ${ticketModal.code}`} className="w-full h-full object-contain" />
+                        ) : (
+                          <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
+                        )}
+                      </div>
+                      <div className="font-mono text-[11px] font-black text-[#003580] tracking-wider select-all">{ticketModal.code}</div>
+                      <div className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                        {cancelled ? "هذه التذكرة ملغاة ولا يمكن استخدامها" : "اعرض الرمز عند نقطة الانطلاق أو بمقر الشركة لتأكيد الحجز"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-[11px] text-slate-500 font-semibold">💡 يُرجى التواجد بنقطة الانطلاق قبل 30 دقيقة من الموعد</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => window.print()}
+                        className="px-4 h-10 rounded-full bg-white border border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-100 transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> طباعة
+                      </button>
+                      <button
+                        onClick={() => setTicketModal(null)}
+                        className="px-5 h-10 rounded-full bg-[#003580] hover:bg-[#0F172A] text-white font-black text-xs transition cursor-pointer"
+                      >
+                        إغلاق
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 tracking-tight">التذكرة الإلكترونية</h3>
-                  <p className="text-xs text-slate-500 font-medium">منصة دلني لخدمات السياحة والرحلات في ليبيا</p>
-                </div>
               </div>
-              <div className="text-left">
-                <span className="font-mono text-xs px-3 py-1 rounded-lg bg-stone-100 text-[#1B5A78] border border-stone-200 font-bold block">
-                  {ticketModal.code}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-5 mt-2 relative">
-              <div className="flex flex-col lg:flex-row gap-5">
-                <div className="w-full lg:w-48 shrink-0 flex flex-col items-center justify-center bg-stone-50 border border-stone-200 rounded-2xl p-4 text-center">
-                  <div className="w-32 h-32 bg-white rounded-xl shadow-xs border border-stone-200 p-1 flex items-center justify-center mb-2 overflow-hidden">
-                    {qrCodeDataUrl ? (
-                      <img
-                        src={qrCodeDataUrl}
-                        alt={`QR Code: ${ticketModal.code}`}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
-                    )}
-                  </div>
-                  <div className="text-[10px] text-slate-600 font-bold mb-1.5">
-                    امسح الرمز لتأكيد الحجز بمقر الشركة
-                  </div>
-                  <div className="w-full py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-black">
-                    ✅ {ticketModal.status}
-                  </div>
-                </div>
-
-                <div className="flex-1 space-y-3.5">
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900">{ticketModal.tripName}</h4>
-                    <span className="inline-block text-[11px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-medium border border-stone-200 mt-1">
-                      {ticketModal.type}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <div className="text-[10px] text-slate-400 font-bold">🗓️ التاريخ والوقت</div>
-                      <div className="font-bold text-slate-800">{ticketModal.date}{ticketModal.time ? ` (${ticketModal.time})` : ""}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-400 font-bold">📍 نقطة الانطلاق</div>
-                      <div className="font-medium text-slate-800 leading-tight">{ticketModal.pickup}</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
-                    <div>
-                      <div className="text-[10px] text-slate-400 font-bold">🚌 الناقل والمركبة</div>
-                      <div className="font-bold text-slate-700">{ticketModal.companyName}</div>
-                      <div className="text-[11px] text-slate-500">{ticketModal.vehicleModel}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-400 font-bold">👨‍✈️ المرشد السياحي</div>
-                      <div className="font-bold text-slate-700">{ticketModal.guideName}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{ticketModal.guideLicense}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                    <div>
-                      <div className="text-[10px] text-slate-400 font-bold">👥 المقاعد والتكلفة</div>
-                      <div className="font-bold text-slate-800">{ticketModal.seats} مقاعد · <span className="text-[#1B5A78]">{ticketModal.price}</span></div>
-                    </div>
-                    <div className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                      🛡️ تأمين معتمد لكافة الركاب
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-stone-50 border-t border-stone-200 p-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs text-slate-500 font-medium">
-                💡 يُرجى التواجد بنقطة الانطلاق قبل 30 دقيقة من الموعد.
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-slate-700 font-bold text-xs hover:bg-stone-50 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" /> طباعة
-                </button>
-                <button
-                  onClick={() => setTicketModal(null)}
-                  className="px-4 h-8 rounded-lg bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition cursor-pointer"
-                >
-                  إغلاق التذكرة
-                </button>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </Modal>
       )}
 

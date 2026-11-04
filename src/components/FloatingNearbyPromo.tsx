@@ -6,10 +6,22 @@ interface FloatingNearbyPromoProps {
   tripId: string;
   tripCity: string;
   tripTitle?: string;
-  destinationKeywords: string[];
+  // Cities of the landmarks the trip visits; offers are shown only for hotels / restaurants in these cities
+  landmarkCities: string[];
   platformHotels: any[];
   platformRestaurants: any[];
   isAr?: boolean;
+}
+
+// Same city whatever the spelling: صبراتة / صبراته, أ / ا, ى / ي
+function normalizeCity(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/\s+/g, " ");
 }
 
 interface PromoItem {
@@ -27,7 +39,7 @@ interface PromoItem {
 export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
   tripId,
   tripCity,
-  destinationKeywords,
+  landmarkCities,
   platformHotels = [],
   platformRestaurants = [],
   isAr = true,
@@ -42,13 +54,16 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
   // Filter real hotels and restaurants close to the trip's destination
   const nearbyPromos: PromoItem[] = useMemo(() => {
     const list: PromoItem[] = [];
-    const searchTerms = [tripCity, ...destinationKeywords].filter(Boolean).map(s => s.toLowerCase());
+    const cities = landmarkCities.map(normalizeCity).filter(Boolean);
+    const inTripCities = (city: unknown) => {
+      const c = normalizeCity(city);
+      return !!c && cities.some((t) => c === t || c.includes(t) || t.includes(c));
+    };
 
     // 1. Matching Hotels
     platformHotels.forEach((h: any) => {
-      const hCity = String(h.city || h.address || h.hotel_name || "").toLowerCase();
-      const isMatch = searchTerms.some(term => hCity.includes(term) || term.includes(hCity));
-      if (isMatch) {
+      if (h.partnership_status === "موقوف" || !inTripCities(h.city)) return;
+      {
         list.push({
           id: h.hotel_id || h.id || `h-${Math.random()}`,
           type: "hotel",
@@ -65,9 +80,8 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
 
     // 2. Matching Restaurants
     platformRestaurants.forEach((r: any) => {
-      const rCity = String(r.city || r.address || r.facility_name || "").toLowerCase();
-      const isMatch = searchTerms.some(term => rCity.includes(term) || term.includes(rCity));
-      if (isMatch) {
+      if (r.partnership_status === "موقوف" || !inTripCities(r.city)) return;
+      {
         list.push({
           id: r.facility_id || r.id || `r-${Math.random()}`,
           type: "restaurant",
@@ -83,7 +97,7 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
     });
 
     return list.slice(0, 6);
-  }, [platformHotels, platformRestaurants, tripCity, destinationKeywords]);
+  }, [platformHotels, platformRestaurants, tripCity, landmarkCities]);
 
   if (dismissed || nearbyPromos.length === 0) {
     return null;

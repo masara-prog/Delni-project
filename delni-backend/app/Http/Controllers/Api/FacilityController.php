@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use App\Models\RestaurantCafe;
+use App\Support\Base64Image;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class FacilityController extends Controller
             ->get()
             ->map(fn (Hotel $h) => $this->withList($h, 'amenities', 'amenity'));
 
-        return response()->json(['success' => true, 'data' => $hotels]);
+        return $this->listResponse($hotels);
     }
 
     public function saveHotel(Request $request): JsonResponse
@@ -49,7 +50,8 @@ class FacilityController extends Controller
             'hotel_id' => 'required|string|max:50',
             'hotel_name' => "{$required}|string|max:200",
             'city' => "{$required}|string|max:100",
-            'address_details' => "{$required}|string|max:500",
+            // The forms no longer ask for it (the Google Maps link gives the location); a new record stores its city
+            'address_details' => 'nullable|string|max:500',
             'phone_number' => "{$required}|string|max:20",
             'star_rating' => "{$required}|integer|between:1,5",
             'partnership_status' => 'nullable|string|max:100',
@@ -74,9 +76,10 @@ class FacilityController extends Controller
             'hotel_name', 'city', 'address_details', 'phone_number', 'star_rating', 'partnership_status',
             'property_type', 'google_maps_url', 'description', 'working_hours', 'discount_percentage', 'contract_end_date',
         ]);
-        $values += $this->changedPhotos($data, 'hotel_photo_');
+        $values += $this->changedPhotos($data, 'hotel_photo_', "hotel-{$id}", 'hotels');
         if (!$existing) {
             $values += [
+                'address_details' => trim((string) ($data['address_details'] ?? '')) ?: ($data['city'] ?? ''),
                 'partnership_status' => 'نشط',
                 'property_type' => 'hotel',
                 'contract_start_date' => $data['contract_start_date'] ?? now('Africa/Tripoli')->toDateString(),
@@ -106,7 +109,7 @@ class FacilityController extends Controller
             ->get()
             ->map(fn (RestaurantCafe $r) => $this->withList($r, 'features', 'feature'));
 
-        return response()->json(['success' => true, 'data' => $restaurants]);
+        return $this->listResponse($restaurants);
     }
 
     public function saveRestaurant(Request $request): JsonResponse
@@ -123,7 +126,8 @@ class FacilityController extends Controller
             'facility_name' => "{$required}|string|max:200",
             'facility_type' => "{$required}|string|max:100",
             'city' => "{$required}|string|max:100",
-            'address_details' => "{$required}|string|max:500",
+            // The forms no longer ask for it (the Google Maps link gives the location); a new record stores its city
+            'address_details' => 'nullable|string|max:500',
             'phone_number' => "{$required}|string|max:20",
             'partnership_status' => 'nullable|string|max:50',
             'google_maps_url' => 'nullable|string|max:500',
@@ -146,9 +150,10 @@ class FacilityController extends Controller
             'facility_name', 'facility_type', 'city', 'address_details', 'phone_number', 'partnership_status',
             'google_maps_url', 'description', 'working_hours', 'discount_percentage', 'contract_end_date',
         ]);
-        $values += $this->changedPhotos($data, 'facility_image_');
+        $values += $this->changedPhotos($data, 'facility_image_', "restaurant-{$id}", 'restaurants');
         if (!$existing) {
             $values += [
+                'address_details' => trim((string) ($data['address_details'] ?? '')) ?: ($data['city'] ?? ''),
                 'partnership_status' => 'نشط',
                 'discount_percentage' => 0,
                 'contract_start_date' => $data['contract_start_date'] ?? now('Africa/Tripoli')->toDateString(),
@@ -207,13 +212,13 @@ class FacilityController extends Controller
         return $values;
     }
 
-    // An empty photo slot keeps the stored image
-    private function changedPhotos(array $data, string $prefix): array
+    // An empty photo slot keeps the stored image; a new one is saved as a (compressed) file, not as text in the table
+    private function changedPhotos(array $data, string $prefix, string $owner, string $folder): array
     {
         $values = [];
         foreach (self::PHOTO_SLOTS as $i) {
             if (!empty($data[$prefix . $i])) {
-                $values[$prefix . $i] = $data[$prefix . $i];
+                $values[$prefix . $i] = Base64Image::store($data[$prefix . $i], "{$owner}-{$i}", $folder);
             }
         }
         return $values;

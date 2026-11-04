@@ -37,7 +37,7 @@ class PlaceController extends Controller
         $places = $query->get();
         $highlights = $this->highlights($places->pluck('place_id')->all());
         $data = $places->map(fn ($p) => ['highlights' => $highlights[$p->place_id] ?? []] + $p->toArray())->values();
-        return response()->json(['success' => true, 'data' => $data]);
+        return $this->listResponse($data);
     }
 
     public function save(Request $request): JsonResponse

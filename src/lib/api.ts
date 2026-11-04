@@ -622,12 +622,11 @@ export async function apiLogin(params: {
         token: data.token,
       };
     } else if (data?.message) {
-      // A rejected guide gets the admin's reason and may resubmit the application (apiResubmitGuide)
+      // A rejected guide may resubmit the application (apiResubmitGuide)
       return {
         status: "error",
         message: data.message,
         can_resubmit: Boolean(data.can_resubmit),
-        rejection_reason: data.rejection_reason || null,
       };
     }
   } catch (laravelErr) {
@@ -966,10 +965,9 @@ export async function apiGetAdminDashboard(): Promise<any> {
   };
 }
 
-export async function apiVerifyGuide(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة", rejectionReason?: string) {
+export async function apiVerifyGuide(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة") {
   const saved = await laravelRequest("POST", `/guides/${encodeURIComponent(licenseNumber)}/verify`, {
     verification_status: status,
-    rejection_reason: rejectionReason,
   });
   if (!saved.ok) return { status: "error", message: saved.error };
   updateGuideVerification(licenseNumber, status);

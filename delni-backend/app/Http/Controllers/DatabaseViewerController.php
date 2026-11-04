@@ -105,7 +105,7 @@ class DatabaseViewerController extends Controller
         $rows = [];
         if ($selectedTable) {
             try {
-                $rows = DB::table($selectedTable)->limit(100)->get();
+                $rows = self::withoutSecrets(DB::table($selectedTable)->limit(100)->get());
             } catch (\Throwable $e) {
                 $rows = collect([]);
             }
@@ -134,7 +134,7 @@ class DatabaseViewerController extends Controller
         }
 
         $columns = $this->getColumnsForTable($tableName);
-        $rows = DB::table($tableName)->limit(100)->get();
+        $rows = self::withoutSecrets(DB::table($tableName)->limit(100)->get());
 
         return response()->json([
             'table' => $tableName,
@@ -142,5 +142,18 @@ class DatabaseViewerController extends Controller
             'rows' => $rows,
             'total' => count($rows),
         ]);
+    }
+
+    // Passwords, tokens and similar secrets are never shown, even in this development tool
+    private static function withoutSecrets($rows)
+    {
+        return $rows->map(function ($row) {
+            foreach (array_keys((array) $row) as $column) {
+                if (preg_match('/password|token|secret|remember/i', $column)) {
+                    $row->{$column} = '••••••';
+                }
+            }
+            return $row;
+        });
     }
 }
