@@ -92,6 +92,10 @@ class DatabaseViewerController extends Controller
      */
     public function index(Request $request)
     {
+        if (!in_array($request->ip(), ['127.0.0.1', '::1'], true)) {
+            abort(404);
+        }
+
         $tables = $this->getTablesWithCounts();
         $validNames = array_column($tables, 'name');
 
@@ -124,8 +128,12 @@ class DatabaseViewerController extends Controller
     /**
      * API: Get table schema and data in JSON for fast client-side switching
      */
-    public function tableData(string $tableName)
+    public function tableData(Request $request, string $tableName)
     {
+        if (!in_array($request->ip(), ['127.0.0.1', '::1'], true)) {
+            abort(404);
+        }
+
         $tables = $this->getTablesWithCounts();
         $validNames = array_column($tables, 'name');
 

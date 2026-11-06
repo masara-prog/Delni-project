@@ -93,6 +93,7 @@ class TripCatalogController extends Controller
                 'active_offer' => $offers[$dt->daily_trip_id] ?? null,
                 'destinations' => array_column($tripPlaces, 'place_name'),
                 'open_dates' => $openDates,
+                'blocked_dates' => $models[$dt->daily_trip_id]->guideBusyDates(),
                 'next_trip_date' => $openDates[0]['date'] ?? null,
             ];
         })->values()->all();
@@ -114,6 +115,9 @@ class TripCatalogController extends Controller
                 ->max('percent_discount');
             return $d + ['discount' => $discount, 'price' => round((float) $trip->price_per_seat * (1 - $discount / 100), 2)];
         }, $trip->openDates(DailyTrip::BOOKING_HORIZON_DAYS));
+        // Dates the guide is away on a private trip are listed closed (shown crossed out), never bookable
+        $dates = array_merge($dates, $trip->guideBusyDates());
+        usort($dates, fn ($a, $b) => strcmp($a['date'], $b['date']));
         return response()->json(['success' => true, 'data' => $dates]);
     }
 

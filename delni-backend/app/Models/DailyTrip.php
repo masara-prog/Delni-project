@@ -133,10 +133,56 @@ class DailyTrip extends Model
         if (!$this->runsOn($day)) {
             return 'هذه الرحلة لا تنطلق في يوم ' . self::DAY_NAMES[$day->dayOfWeek] . '. يرجى اختيار أحد أيام انطلاقها.';
         }
+        if ($this->guideBusyOn($day->toDateString())) {
+            return self::GUIDE_BUSY_REASON;
+        }
         if ($day->isSameDay($now) && $now->hour >= self::CLOSING_HOUR) {
             return 'عذراً، تم إغلاق الحجز على رحلة اليوم. يُقفل الحجز على الرحلات اليومية الساعة 7 صباحاً من يوم الرحلة.';
         }
         return null;
+    }
+
+    // The guide's private trips they accepted (the offer went to the tourist, or the tourist confirmed): the daily trip
+    // does not run on those dates. A cancelled or refused private trip gives its dates back.
+    public const GUIDE_BUSY_STATUSES = ['بانتظار تأكيد السائح', 'مؤكدة'];
+    public const GUIDE_BUSY_REASON = 'المرشد السياحي لهذه الرحلة في رحلة خاصة بهذا التاريخ، لذا لا تنطلق الرحلة اليومية فيه.';
+
+    private ?array $guideBusyRanges = null;
+
+    public function guideBusyOn(string $date): bool
+    {
+        if (!$this->guide_license_number) {
+            return false;
+        }
+        $this->guideBusyRanges ??= \Illuminate\Support\Facades\DB::table('private_trips')
+            ->where('guide_license_number', $this->guide_license_number)
+            ->whereIn('status_order', self::GUIDE_BUSY_STATUSES)
+            ->get(['preferred_start_date', 'duration_days'])
+            ->map(function ($t) {
+                $start = substr((string) $t->preferred_start_date, 0, 10);
+                return [$start, date('Y-m-d', strtotime($start . ' +' . max(0, (int) $t->duration_days - 1) . ' days'))];
+            })->all();
+        foreach ($this->guideBusyRanges as [$start, $end]) {
+            if ($start <= $date && $date <= $end) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // This month's run dates taken by the guide's private trips, listed so the booking window can show them crossed out
+    public function guideBusyDates(): array
+    {
+        $dates = [];
+        $day = now('Africa/Tripoli')->startOfDay();
+        $last = $day->copy()->endOfMonth();
+        for (; $day->lte($last); $day->addDay()) {
+            if ($this->runsOn($day) && $this->guideBusyOn($day->toDateString())) {
+                $dates[] = ['date' => $day->toDateString(), 'day' => self::DAY_NAMES[$day->dayOfWeek], 'seats_left' => 0,
+                    'closed' => true, 'reason' => self::GUIDE_BUSY_REASON];
+            }
+        }
+        return $dates;
     }
 
     // Seats still free on one run date: the capacity minus the seats of that date's bookings that were not cancelled

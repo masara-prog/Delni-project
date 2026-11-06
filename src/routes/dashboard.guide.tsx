@@ -138,8 +138,8 @@ function GuideDashboard() {
 
   // Fetch Live Data from DelniDB on mount
   useEffect(() => {
-    async function loadGuideData() {
-      setIsLoading(true);
+    async function loadGuideData(silent = false) {
+      if (!silent) setIsLoading(true);
       const session = getStoredSession();
       const lic = session.user?.license_number || session.user?.email;
       if (!lic) {
@@ -288,6 +288,13 @@ function GuideDashboard() {
       setIsLoading(false);
     }
     loadGuideData();
+    // Trips the admin assigns (private trips included) arrive while the dashboard is open:
+    // re-read them quietly whenever the guide comes back to this tab
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadGuideData(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   const [detailsTrip, setDetailsTrip] = useState<AssignedTrip | null>(null);
@@ -436,6 +443,7 @@ function GuideDashboard() {
       role="guide"
       roleLabel="مرشد سياحي معتمد"
       userName={guideInfo.full_name}
+      userAvatar={guideInfo.avatar || undefined}
       nav={nav}
       active={active}
       onNavigate={setActive}
@@ -444,6 +452,19 @@ function GuideDashboard() {
       <div className="rounded-3xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-sm mb-6 relative overflow-hidden text-right">
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#D96B27]/15 rounded-full blur-3xl pointer-events-none" />
         <div className="relative flex flex-wrap items-center gap-4 justify-between">
+          <div className="flex items-center gap-4">
+            {/* The guide's own photo, as tourists see it on the platform */}
+            {guideInfo.avatar ? (
+              <img
+                src={guideInfo.avatar}
+                alt={guideInfo.full_name}
+                className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover ring-4 ring-white/15 shadow-lg flex-shrink-0"
+              />
+            ) : (
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#003580] text-white grid place-items-center text-3xl font-black ring-4 ring-white/15 flex-shrink-0">
+                {(guideInfo.full_name || "?").charAt(0)}
+              </div>
+            )}
           <div>
             <div className="text-xs text-stone-400 font-medium">مرحباً بك 👋</div>
             <h1 className="text-xl md:text-2xl font-black mt-1 text-white tracking-tight">{guideInfo.full_name}</h1>
@@ -469,6 +490,7 @@ function GuideDashboard() {
                 </span>
               )}
             </div>
+          </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1437,8 +1459,24 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
     </div>
   );
 
-  const description = r.customer_requirements ? `متطلبات العميل: ${r.customer_requirements}` : "";
-  const cover = r.photo_1 || r.photo || r.trip_photo_1;
+  // The tourist's own words and the admin's notes are stored together ("... - ملاحظات الإدارة: ..."); an old
+  // notes value that is structured data (the stations as JSON) is not shown
+  const reqParts = String(r.customer_requirements || "").split(" - ").map((x: string) => x.trim()).filter(Boolean);
+  const isAdminNote = (x: string) => x.startsWith("ملاحظات الإدارة");
+  const looksLikeData = (x: string) => /^ملاحظات الإدارة:\s*[\[{]/.test(x);
+  const customerNeeds = Array.from(new Set(reqParts.filter((x: string) => !isAdminNote(x))));
+  const adminNotes = reqParts.filter((x: string) => isAdminNote(x) && !looksLikeData(x)).map((x: string) => x.replace(/^ملاحظات الإدارة:\s*/, ""));
+
+  // Header photos: the chosen landmarks' own pictures, cycling; the trip photo when it has no landmark pictures
+  const placePhotos: string[] = Array.isArray(r.places) ? r.places.map((pl: any) => pl.place_image).filter(Boolean) : [];
+  const fallbackCover = r.photo_1 || r.photo || r.trip_photo_1;
+  const headerPhotos: string[] = placePhotos.length > 0 ? placePhotos : fallbackCover ? [fallbackCover] : [];
+  const [photoIndex, setPhotoIndex] = useState(0);
+  useEffect(() => {
+    if (headerPhotos.length < 2 || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setPhotoIndex((i) => (i + 1) % headerPhotos.length), 4000);
+    return () => window.clearInterval(timer);
+  }, [headerPhotos.length]);
   const shownStations = showAllStations ? stations : stations.slice(0, 2);
 
   return (
@@ -1448,9 +1486,34 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: trip photo with title */}
-        <div className="relative h-36 sm:h-40 bg-gradient-to-l from-[#1B5A78] to-[#0F172A] overflow-hidden rounded-t-3xl">
-          {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+        <div className="relative h-48 sm:h-56 bg-gradient-to-l from-[#1B5A78] to-[#0F172A] overflow-hidden rounded-t-3xl">
+          {headerPhotos.map((src, i) => (
+            <img
+              key={src + i}
+              src={src}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                opacity: i === photoIndex ? 1 : 0,
+                transform: i === photoIndex ? "scale(1.08)" : "scale(1)",
+                transition: "opacity 1s ease-in-out, transform 5s ease-out",
+              }}
+            />
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+          {headerPhotos.length > 1 && (
+            <div className="absolute top-4 right-4 flex gap-1.5">
+              {headerPhotos.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setPhotoIndex(i)}
+                  aria-label={`الصورة ${i + 1}`}
+                  className={`h-1.5 rounded-full transition-all ${i === photoIndex ? "w-6 bg-white" : "w-1.5 bg-white/50"}`}
+                />
+              ))}
+            </div>
+          )}
           <button onClick={onClose} className="absolute top-3 left-3 p-1.5 rounded-full bg-white/90 hover:bg-white text-stone-700" aria-label="إغلاق">
             <X className="w-4 h-4" />
           </button>
@@ -1472,8 +1535,31 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
         </div>
 
         <div className="p-5 space-y-5">
-          {description && description.trim() !== String(trip.trip_name || "").trim() && (
-            <p className="text-xs text-stone-700 leading-relaxed bg-[#F4F8FA] border border-[#1B5A78]/10 rounded-xl p-3">{description}</p>
+          {(customerNeeds.length > 0 || adminNotes.length > 0) && (
+            <div className="grid gap-2.5">
+              {customerNeeds.length > 0 && (
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-[#FFF7ED] to-white border border-[#D96B27]/20 p-4 pr-5">
+                  <span className="absolute right-0 top-0 bottom-0 w-1.5 bg-[#D96B27]" aria-hidden="true" />
+                  <div className="flex items-center gap-2 text-[11px] font-black text-[#B4541A] mb-1.5">
+                    <span className="w-6 h-6 rounded-lg bg-[#D96B27]/15 grid place-items-center">💬</span>
+                    متطلبات العميل
+                  </div>
+                  <ul className="space-y-1">
+                    {customerNeeds.map((x, i) => (
+                      <li key={i} className="text-sm font-bold text-[#0F172A] leading-relaxed">« {x} »</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {adminNotes.length > 0 && (
+                <div className="rounded-2xl bg-[#F4F8FA] border border-[#1B5A78]/10 p-3.5">
+                  <div className="text-[11px] font-black text-[#1B5A78] mb-1">🛈 ملاحظات الإدارة</div>
+                  {adminNotes.map((x, i) => (
+                    <p key={i} className="text-xs text-stone-700 leading-relaxed">{x}</p>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">

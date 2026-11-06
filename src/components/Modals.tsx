@@ -1192,6 +1192,8 @@ export type ScheduledTrip = {
   // An offer running on this date: the seat price before it and its discount
   originalPrice?: number;
   discount?: number;
+  // A run date that cannot be booked at all (the guide is away on a private trip), shown crossed out with the reason
+  closedReason?: string;
   tripTitle?: string;
   kind?: string;
 };
@@ -1292,7 +1294,7 @@ export function TripScheduleModal({
   // A daily trip runs every week: its bookable dates and the seats left on each come from the server
   const isDaily = kind === "daily" || trip?.type === "daily";
   const dailyTripId: string = trip?.daily_trip_id || trip?.id || tripId || customSchedules?.[0]?.tripId || "";
-  const [dailyDates, setDailyDates] = useState<{ date: string; day: string; seats_left: number; discount?: number; price?: number }[] | null>(null);
+  const [dailyDates, setDailyDates] = useState<{ date: string; day: string; seats_left: number; discount?: number; price?: number; closed?: boolean; reason?: string }[] | null>(null);
   useEffect(() => {
     if (!open || !isDaily || !dailyTripId) return;
     setDailyDates(null);
@@ -1328,6 +1330,7 @@ export function TripScheduleModal({
       price: d.price ?? realPrice,
       originalPrice: d.discount ? realPrice : undefined,
       discount: d.discount || undefined,
+      closedReason: d.closed ? d.reason || (isAr ? "غير متاح" : "Not available") : undefined,
       tripTitle: realTitle,
       kind: "daily",
     }));
@@ -1431,14 +1434,14 @@ export function TripScheduleModal({
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-black text-[#0B132B]">{s.date}</span>
+                        <span className={`font-black text-[#0B132B] ${s.closedReason ? "line-through" : ""}`}>{s.date}</span>
                         <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#0D9488]/10 text-[#0D9488] font-bold border border-[#0D9488]/20">{s.time}</span>
-                        {full && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">{isAr ? "مكتمل" : "Full"}</span>}
+                        {full && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">{s.closedReason ? (isAr ? "غير متاح" : "Not available") : (isAr ? "مكتمل" : "Full")}</span>}
                       </div>
                       <div className="mt-1 flex items-center gap-4 text-xs text-[#526078]">
                         <span>🧭 {s.guide}</span>
                         <span className={avail <= 3 ? "text-[#D96B27] font-bold" : ""}>
-                          {full ? (isAr ? "لا توجد مقاعد" : "No seats left") : (isAr ? `${avail} مقعد متاح` : `${avail} seats available`)}
+                          {s.closedReason ? s.closedReason : full ? (isAr ? "لا توجد مقاعد" : "No seats left") : (isAr ? `${avail} مقعد متاح` : `${avail} seats available`)}
                         </span>
                       </div>
                     </div>

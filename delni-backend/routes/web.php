@@ -14,13 +14,6 @@ Route::get('/', function () {
 | It is never available in production.
 */
 if (config('app.db_viewer_enabled') && app()->environment('local')) {
-    Route::middleware(function ($request, $next) {
-        if (!in_array($request->ip(), ['127.0.0.1', '::1'], true)) {
-            abort(404);
-        }
-        return $next($request);
-    })->group(function () {
-        Route::get('/db-viewer', [DatabaseViewerController::class, 'index'])->name('db.viewer');
-        Route::get('/db-viewer/api/table/{tableName}', [DatabaseViewerController::class, 'tableData'])->name('db.viewer.table');
-    });
+    Route::get('/db-viewer', [DatabaseViewerController::class, 'index'])->name('db.viewer');
+    Route::get('/db-viewer/api/table/{tableName}', [DatabaseViewerController::class, 'tableData'])->name('db.viewer.table');
 }

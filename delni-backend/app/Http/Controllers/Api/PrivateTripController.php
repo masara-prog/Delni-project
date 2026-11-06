@@ -241,7 +241,7 @@ class PrivateTripController extends Controller
                 return $this->error($error, 422);
             }
             [$error, $warning] = $this->guideFitness($guide, $start, $end, null,
-                DB::table('places_trip_private')->where('private_trip_id', $tripId)->pluck('place_id')->all());
+                DB::table('places_trip_private')->where('private_trip_id', $tripId)->pluck('place_id')->all(), true);
             if ($error) {
                 return $this->error($error, 422);
             }
@@ -268,7 +268,9 @@ class PrivateTripController extends Controller
             $values['vehicle_plate'] = $plate;
         }
         $notes = trim((string) ($data['admin_notes'] ?? ''));
-        if ($notes !== '' && !str_contains((string) $trip->customer_requirements, $notes)) {
+        // The stations travel in their own field; a notes value that is structured data (JSON) is not a note for the tourist
+        $isData = $notes !== '' && in_array($notes[0], ['[', '{'], true) && json_decode($notes) !== null;
+        if ($notes !== '' && !$isData && !str_contains((string) $trip->customer_requirements, $notes)) {
             $values['customer_requirements'] = trim(($trip->customer_requirements ? $trip->customer_requirements . ' - ' : '') . "ملاحظات الإدارة: {$notes}");
         }
 
@@ -349,6 +351,18 @@ class PrivateTripController extends Controller
         $accepted = $data['decision'] === 'accept';
         if ($accepted && substr((string) $trip->preferred_start_date, 0, 10) <= now('Africa/Tripoli')->toDateString()) {
             return $this->error('تاريخ بدء هذه الرحلة قد حلّ أو مضى، ولا يمكن قبولها.', 409);
+        }
+        // Accepting takes the guide off their daily trips on these dates: refused if tourists booked one of them
+        // since the admin sent the schedule (the admin is told to reassign that daily trip first)
+        if ($accepted) {
+            $start = substr((string) $trip->preferred_start_date, 0, 10);
+            $end = date('Y-m-d', strtotime($start . ' +' . max(0, (int) $trip->duration_days - 1) . ' days'));
+            if ($conflict = $this->scheduleConflict($trip->guide_license_number, null, $start, $end, null, ['private', $tripId])) {
+                $this->notify("admin-priv-guide-conflict-{$tripId}-" . now('Africa/Tripoli')->format('YmdHi'), 'admin', null, 'private_trip',
+                    "⚠️ تعذر قبول المرشد للرحلة الخاصة (#{$tripId})",
+                    "حاول المرشد ({$trip->guide_name}) قبول الرحلة الخاصة (#{$tripId}) لكن: {$conflict}", '/dashboard/admin');
+                return $this->error($conflict . ' تم إبلاغ الإدارة.', 409);
+            }
         }
         DB::transaction(function () use ($tripId, $trip, $accepted, $data) {
             DB::table('private_trips')->where('private_trip_id', $tripId)

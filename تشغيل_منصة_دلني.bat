@@ -40,7 +40,7 @@ echo.
 where php >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo [1/2] جاري تشغيل خادم لارفيل (Port 8000)...
-    start "خادم دلني - Laravel API (Port 8000)" cmd /k "chcp 65001 >nul && cd /d "%BACKEND_DIR%\public" && echo جاري تشغيل لارفيل على المنفذ 8000... && php -d zend_extension=opcache -d opcache.enable_cli=1 -d opcache.validate_timestamps=1 -d opcache.revalidate_freq=0 -S 127.0.0.1:8000 ..\vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php"
+    start "خادم دلني - Laravel API (Port 8000)" cmd /k "chcp 65001 >nul && cd /d "%BACKEND_DIR%" && echo جاري تشغيل لارفيل على المنفذ 8000... && php artisan serve --port=8000"
 ) else (
     echo [!] لم يتم العثور على PHP: خادم لارفيل ضروري لتشغيل المنصة وحفظ البيانات. يرجى تثبيت XAMPP أو PHP.
 )

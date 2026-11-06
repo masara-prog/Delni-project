@@ -24,6 +24,16 @@ import {
   Columns3,
 } from "lucide-react";
 
+// The driver's initials in a round badge (the platform stores no driver photo)
+function driverInitials(name: string): string {
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w.charAt(0))
+    .join(" ");
+}
+
 export const Route = createFileRoute("/transport")({
   head: () => ({
     meta: [
@@ -93,6 +103,8 @@ function TransportPage() {
   // Data Sources (Fallback local + Live Sync with SQL Server)
   const [rawCompanies, setRawCompanies] = useState<any[]>([]);
   const [rawVehicles, setRawVehicles] = useState<any[]>([]);
+  // The vehicles could not be read from the Laravel server (shown instead of an empty fleet)
+  const [vehiclesFailed, setVehiclesFailed] = useState(false);
   const [rawDrivers, setRawDrivers] = useState<any[]>([]);
 
   useEffect(() => {
@@ -106,7 +118,7 @@ function TransportPage() {
     let isMounted = true;
     async function fetchLiveData() {
       try {
-        const compRes = await fetch(`${LARAVEL_API_URL}/transport/companies`, { signal: AbortSignal.timeout(3000) });
+        const compRes = await fetch(`${LARAVEL_API_URL}/transport/companies`, { signal: AbortSignal.timeout(10000) });
         if (compRes.ok) {
           const compData = await compRes.json();
           if (compData.success && Array.isArray(compData.data) && isMounted) {
@@ -116,17 +128,22 @@ function TransportPage() {
       } catch {}
 
       try {
-        const vehRes = await fetch(`${LARAVEL_API_URL}/transport/vehicles`, { signal: AbortSignal.timeout(3000) });
+        const vehRes = await fetch(`${LARAVEL_API_URL}/transport/vehicles`, { signal: AbortSignal.timeout(10000) });
         if (vehRes.ok) {
           const vehData = await vehRes.json();
           if (vehData.success && Array.isArray(vehData.data) && isMounted) {
             setRawVehicles(vehData.data);
+            setVehiclesFailed(false);
           }
+        } else if (isMounted) {
+          setVehiclesFailed(true);
         }
-      } catch {}
+      } catch {
+        if (isMounted) setVehiclesFailed(true);
+      }
 
       try {
-        const drvRes = await fetch(`${LARAVEL_API_URL}/transport/drivers`, { signal: AbortSignal.timeout(3000) });
+        const drvRes = await fetch(`${LARAVEL_API_URL}/transport/drivers`, { signal: AbortSignal.timeout(10000) });
         if (drvRes.ok) {
           const drvData = await drvRes.json();
           if (drvData.success && Array.isArray(drvData.data) && isMounted) {
@@ -248,9 +265,7 @@ function TransportPage() {
             .replace(/سارية\s*المفعول\s*حتى\s*\d{4}/g, "ساري المفعول")
             .replace(/\b202\d\b/g, "")
             .trim()
-        : isAr
-        ? "تأمين شامل ساري المفعول"
-        : "Comprehensive Insurance";
+        : "";
 
       return {
         id: v.plate_number || `VEH-${idx}`,
@@ -261,8 +276,8 @@ function TransportPage() {
         categoryLabelAr: catLabels[cat]?.ar || cat,
         categoryLabelEn: catLabels[cat]?.en || cat,
         vehicleStatus: v.vehicle_status || (isAr ? "جاهزة" : "Ready"),
-        seats: Number(v.seating_capacity) || (cat === "ميني باص" ? 15 : 45),
-        pricePerDay: Number(v.daily_rate) || 350,
+        seats: Number(v.seating_capacity) || 0,
+        pricePerDay: Number(v.daily_rate) || 0,
         insuranceDetails: cleanInsurance,
         insuranceDocument: v.insurance_image || v.insurance_document || "/assets/test-enhanced.jpg",
         photos: v.vehicle_image ? [v.vehicle_image] : [defaultPhoto],
@@ -542,10 +557,16 @@ function TransportPage() {
               🚌
             </div>
             <h4 className="text-base font-black text-[#003580] mb-1">
-              {isAr ? "لا توجد مركبات مطابقة للبحث" : "No matching vehicles found"}
+              {vehiclesFailed && rawVehicles.length === 0
+                ? (isAr ? "تعذر تحميل أسطول المركبات" : "Could not load the fleet")
+                : (isAr ? "لا توجد مركبات مطابقة للبحث" : "No matching vehicles found")}
             </h4>
             <p className="text-xs text-slate-500 mb-4">
-              {isAr ? "جرّب تغيير التصنيف أو اختيار مدينة أخرى." : "Try resetting your category or city filter."}
+              {vehiclesFailed && rawVehicles.length === 0
+                ? (isAr
+                    ? `لم نتمكن من الوصول إلى خادم المنصة (${LARAVEL_API_URL}). تأكد من تشغيل الخادم ومن إمكانية الوصول إليه من هذا الجهاز ثم أعد تحميل الصفحة.`
+                    : `The platform server (${LARAVEL_API_URL}) could not be reached. Check it is running and reachable from this device, then reload.`)
+                : (isAr ? "جرّب تغيير التصنيف أو اختيار مدينة أخرى." : "Try resetting your category or city filter.")}
             </p>
             <button
               onClick={() => {
@@ -642,7 +663,7 @@ function TransportPage() {
                             <div className="text-[9px] font-bold text-slate-400">{isAr ? "السعة" : "Seats"}</div>
                             <div className="font-black text-slate-800 text-xs flex items-center justify-center gap-1 mt-0.5">
                               <Users className="w-3 h-3 text-[#D96B27]" />
-                              <span>{v.seats}</span>
+                              <span>{v.seats || "—"}</span>
                             </div>
                           </div>
                           <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200">
@@ -661,11 +682,11 @@ function TransportPage() {
 
                         {/* Dedicated Driver Snippet */}
                         <div className="mt-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
-                            v.hasDriver ? "bg-orange-100 text-[#D96B27]" : "bg-slate-200 text-slate-500"
-                          }`}>
-                            🧑‍✈️
-                          </div>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ring-2 ring-white shadow-sm ${
+                          v.hasDriver ? "bg-gradient-to-br from-[#003580] to-[#0D5C96] text-white" : "bg-slate-200 text-slate-500"
+                        }`} aria-hidden="true">
+                          {v.hasDriver ? driverInitials(v.driverName) : "—"}
+                        </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-[9px] font-bold text-slate-400">{isAr ? "السائق المعتمد" : "Driver"}</div>
                             <div className={`text-[11px] font-black truncate ${v.hasDriver ? "text-slate-900" : "text-amber-800"}`}>
@@ -680,7 +701,7 @@ function TransportPage() {
                         <div>
                           <div className="text-[9px] font-bold text-slate-400">{isAr ? "التسعير الاسترشادي" : "Tour Rate"}</div>
                           <div className="text-base font-black text-[#003580]">
-                            {v.pricePerDay} <span className="text-[10px] font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
+                            {v.pricePerDay || "—"} <span className="text-[10px] font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
                           </div>
                         </div>
 
@@ -773,7 +794,7 @@ function TransportPage() {
                           <div className="text-[10px] font-bold text-slate-400">{isAr ? "السعة" : "Seats"}</div>
                           <div className="font-black text-slate-800 flex items-center justify-center gap-1 mt-0.5">
                             <Users className="w-3.5 h-3.5 text-[#D96B27]" />
-                            <span>{v.seats}</span>
+                            <span>{v.seats || "—"}</span>
                           </div>
                         </div>
                         <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
@@ -791,10 +812,10 @@ function TransportPage() {
                       </div>
 
                       <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
-                          v.hasDriver ? "bg-orange-100 text-[#D96B27]" : "bg-slate-200 text-slate-500"
-                        }`}>
-                          🧑‍✈️
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ring-2 ring-white shadow-sm ${
+                          v.hasDriver ? "bg-gradient-to-br from-[#003580] to-[#0D5C96] text-white" : "bg-slate-200 text-slate-500"
+                        }`} aria-hidden="true">
+                          {v.hasDriver ? driverInitials(v.driverName) : "—"}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-[10px] font-bold text-slate-400">{isAr ? "السائق المعتمد" : "Driver"}</div>
@@ -809,7 +830,7 @@ function TransportPage() {
                       <div>
                         <div className="text-[10px] font-bold text-slate-400">{isAr ? "التسعير الاسترشادي" : "Tour Rate"}</div>
                         <div className="text-lg font-black text-[#003580]">
-                          {v.pricePerDay} <span className="text-xs font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
+                          {v.pricePerDay || "—"} <span className="text-xs font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
                         </div>
                       </div>
 
@@ -970,7 +991,7 @@ function TransportPage() {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl text-white text-xs font-bold">
-                        📍 {selectedVehicle.city} · 👥 {selectedVehicle.seats} مقعد
+                        📍 {selectedVehicle.city}{selectedVehicle.seats ? ` · 👥 ${selectedVehicle.seats} مقعد` : ""}
                       </div>
                     </div>
 
@@ -978,7 +999,7 @@ function TransportPage() {
                       <div>
                         <div className="text-[11px] font-bold text-slate-500">{isAr ? "التسعير الاسترشادي للرحلات" : "Tour Rate"}</div>
                         <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-3xl font-black text-[#003580]">{selectedVehicle.pricePerDay}</span>
+                          <span className="text-3xl font-black text-[#003580]">{selectedVehicle.pricePerDay || "—"}</span>
                           <span className="text-xs font-bold text-slate-500">{isAr ? "د.ل / يوم" : "LYD / day"}</span>
                         </div>
                         <div className="text-xs text-emerald-700 font-bold mt-1">✓ فحص فني ساري وتأمين ركاب</div>
@@ -1010,7 +1031,7 @@ function TransportPage() {
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
                         <div className="text-[10px] text-slate-400 font-bold">{isAr ? "سعة المقاعد" : "Seats"}</div>
-                        <div className="font-black text-slate-900 mt-0.5">{selectedVehicle.seats} مقعد</div>
+                        <div className="font-black text-slate-900 mt-0.5">{selectedVehicle.seats ? `${selectedVehicle.seats} مقعد` : "—"}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
                         <div className="text-[10px] text-slate-400 font-bold">{isAr ? "الفئة والتصنيف" : "Category"}</div>
@@ -1036,7 +1057,7 @@ function TransportPage() {
                         <ShieldCheck className="w-5 h-5 text-blue-700 shrink-0" />
                         <div>
                           <div className="font-black text-blue-900">{isAr ? "وثيقة التأمين والركاب" : "Insurance"}</div>
-                          <div className="text-[11px] text-blue-800">{selectedVehicle.insuranceDetails}</div>
+                          <div className="text-[11px] text-blue-800">{selectedVehicle.insuranceDetails || (isAr ? "لم تُسجل تفاصيل التأمين" : "No insurance details recorded")}</div>
                         </div>
                       </div>
                       <button

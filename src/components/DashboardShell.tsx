@@ -30,6 +30,7 @@ export function DashboardShell({
   role,
   roleLabel,
   userName,
+  userAvatar,
   nav,
   active,
   onNavigate,
@@ -38,6 +39,8 @@ export function DashboardShell({
   role: string;
   roleLabel: string;
   userName: string;
+  // The account's own photo; the first letter of the name is shown when there is none
+  userAvatar?: string;
   nav: NavItem[];
   active: string;
   onNavigate: (id: string) => void;
@@ -128,9 +131,13 @@ export function DashboardShell({
             )}
             <NotificationBell />
             <div className="flex items-center gap-2.5 px-3 border-x border-border">
-              <div className="w-9 h-9 rounded-full bg-gradient-sea text-white grid place-items-center font-black text-sm shadow-soft">
-                {userName.charAt(0)}
-              </div>
+              {userAvatar ? (
+                <img src={userAvatar} alt={userName} className="w-9 h-9 rounded-full object-cover shadow-soft ring-2 ring-white" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-sea text-white grid place-items-center font-black text-sm shadow-soft">
+                  {userName.charAt(0)}
+                </div>
+              )}
               <div className="hidden md:block">
                 <div className="text-sm font-black text-foreground leading-none">{userName}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">{roleLabel}</div>
@@ -186,9 +193,13 @@ export function DashboardShell({
             {/* User card */}
             <div className="mb-5 p-3.5 rounded-2xl" style={{ background: "rgba(197,160,89,0.08)", border: "1px solid rgba(197,160,89,0.18)" }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-sun text-gold-foreground grid place-items-center font-black text-base shadow-gold flex-shrink-0">
-                  {userName.charAt(0)}
-                </div>
+                {userAvatar ? (
+                  <img src={userAvatar} alt={userName} className="w-10 h-10 rounded-xl object-cover shadow-gold flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-gradient-sun text-gold-foreground grid place-items-center font-black text-base shadow-gold flex-shrink-0">
+                    {userName.charAt(0)}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <div className="text-sm font-black text-white leading-tight truncate">{userName}</div>
                   <div className="text-[11px] mt-0.5" style={{ color: "rgba(197,160,89,0.8)" }}>{roleLabel}</div>

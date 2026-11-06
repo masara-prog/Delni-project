@@ -5,7 +5,8 @@ import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/co
 import { useLanguage } from "@/lib/i18n";
 import { 
   getStoredSession, 
-  apiGetAdminDashboard, 
+  apiGetAdminDashboard,
+  apiGetPrivateTrips, 
   apiVerifyGuide, 
   apiCreateDailyTrip,
   apiUpdateDailyTrip,
@@ -87,6 +88,13 @@ export const formatTripDate = (rawDate?: string | null): string => {
     return String(rawDate);
   }
 };
+
+// A landmark's name, with its city only when the city differs (landmarks are often named after their city)
+function placeLabel(pl: any): string {
+  const name = String(pl?.place_name || pl?.name || pl?.city || "").trim();
+  const city = String(pl?.city || "").trim();
+  return city && city !== name ? `${name} (${city})` : name;
+}
 
 export const Route = createFileRoute("/dashboard/admin")({
   head: () => ({
@@ -853,6 +861,35 @@ function AdminDashboard() {
     fetchAdminData();
   }, []);
 
+  // New private-trip requests and bookings arrive while the dashboard is open: re-read them every 30 seconds
+  // and whenever the tab comes back into view, so the admin never has to reload the page to see them.
+  useEffect(() => {
+    let busy = false;
+    const refresh = async () => {
+      if (busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const [privateRows, bookings] = await Promise.all([
+          apiGetPrivateTrips(),
+          Promise.all([laravelRequest<any[]>("GET", "/bookings/daily"), laravelRequest<any[]>("GET", "/bookings/weekly")]),
+        ]);
+        if (Array.isArray(privateRows)) setPrivateTrips(privateRows);
+        if (bookings[0].ok && Array.isArray(bookings[0].data)) setDailyBookings(bookings[0].data);
+        if (bookings[1].ok && Array.isArray(bookings[1].data)) setWeeklyBookings(bookings[1].data);
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = window.setInterval(refresh, 30000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
 
 
   const handleCreateTrip = async (type: "daily" | "weekly", data: any) => {
@@ -1063,7 +1100,7 @@ function AdminDashboard() {
       vehicle_plate: updatedTrip.vehicle_plate || undefined,
       hotel_ids: updatedTrip.hotel_ids,
       stations: updatedTrip.stations,
-      admin_notes: plan || undefined,
+      // The stations travel in their own field; the plan is not a note for the tourist
     });
     if (!res.success) {
       alert("❌ لم يتم حفظ مراجعة الرحلة الخاصة.\n" + res.error);
@@ -2514,7 +2551,7 @@ function AdminDashboard() {
                           pt.places.map((pl: any, pidx: number) => (
                             <span key={pidx} className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold text-xs flex items-center gap-1 shadow-2xs">
                               <span>🏛️</span>
-                              <span>{pl.place_name || pl.name} ({pl.city})</span>
+                              <span>{placeLabel(pl)}</span>
                             </span>
                           ))
                         ) : (
@@ -2528,7 +2565,7 @@ function AdminDashboard() {
                       <div className="text-xs text-amber-950 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60 font-semibold leading-relaxed">
                         <span className="font-black text-amber-900 block mb-1">📝 متطلبات وملاحظات السائح:</span>
                         <span>
-                          {Array.from(new Set(pt.customer_requirements.split(" - ").map(s => s.trim()))).filter(Boolean).join(" • ")}
+                          {Array.from(new Set(pt.customer_requirements.split(" - ").map(s => s.trim()))).filter((s) => s && !/^ملاحظات الإدارة:\s*[\[{]/.test(s)).join(" • ")}
                         </span>
                       </div>
                     )}
@@ -2537,7 +2574,16 @@ function AdminDashboard() {
                     {pt.assigned_vehicle && (
                       <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs">
                         <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="p-1.5 rounded-lg bg-blue-100 text-blue-900 text-base">🚍</span>
+                          {pt.vehicle_image ? (
+                            <img
+                              src={pt.vehicle_image}
+                              alt={pt.vehicle_model || "المركبة"}
+                              loading="lazy"
+                              className="w-16 h-12 rounded-lg object-cover border border-blue-200 bg-white"
+                            />
+                          ) : (
+                            <span className="p-1.5 rounded-lg bg-blue-100 text-blue-900 text-base">🚍</span>
+                          )}
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-black text-blue-950">
@@ -6858,28 +6904,70 @@ function EvaluatePrivateTripModal({
   const durationDays = trip.duration_days || 1;
   const isMultiDay = durationDays > 1;
 
-  // Tourist preferred guide or existing assigned guide
-  const initialGuideLic = trip.guide_license_number || trip.assigned_guide || guides[0]?.license_number || "";
+  // The trip's dates and landmarks decide which guides can take it
+  const tripStart = String(trip.preferred_start_date || "").slice(0, 10);
+  const tripEnd = tripStart
+    ? (() => {
+        const d = new Date(`${tripStart}T00:00:00`);
+        d.setDate(d.getDate() + Math.max(0, durationDays - 1));
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })()
+    : "";
+  const tripPlaceIds: string[] = (trip.place_ids && trip.place_ids.length > 0
+    ? trip.place_ids
+    : (trip.places || []).map((p: any) => p.place_id)
+  ).filter(Boolean);
+
+  // Verified guides who are not on leave and work at one of the trip's landmarks at least. Working days do not
+  // exclude anyone: the guide decides (accepting closes their daily trips on those dates), the admin only sees a note.
+  const eligibleGuides = useMemo(
+    () =>
+      guides.filter((g) => {
+        if (g.verification_status !== "موثق") return false;
+        if (g.availability_status === "إجازة") return false;
+        const gPlaces: string[] = (g.place_ids && g.place_ids.length > 0 ? g.place_ids : (g.places || []).map((p: any) => p.place_id)) || [];
+        return tripPlaceIds.length === 0 || tripPlaceIds.some((id) => gPlaces.includes(id));
+      }),
+    [guides, tripPlaceIds.join(",")],
+  );
+
+  // Trip days outside a guide's working days, in Arabic (empty = the guide works every trip day)
+  const offDays = (g: Guide): string[] => {
+    if (!tripStart || !tripEnd) return [];
+    const codes = guideDayCodes(g);
+    if (!codes) return [];
+    return weekdayCodesBetween(tripStart, tripEnd).filter((c) => !codes.includes(c)).map((c) => codeToArabicMap[c] || c);
+  };
+
+  // The tourist's preferred guide (or the one already assigned) when they fit; nothing is picked for the admin otherwise
+  const requestedGuide = trip.guide_license_number || trip.assigned_guide || "";
+  const initialGuideLic = eligibleGuides.some((g) => g.license_number === requestedGuide) ? requestedGuide : "";
   const [guide, setGuide] = useState(initialGuideLic);
-  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || trip.vehicle_plate || vehicles[0]?.plate_number || "");
+  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || trip.vehicle_plate || "");
   const [servicesFee, setServicesFee] = useState(
     trip.additional_expenses !== undefined && trip.additional_expenses !== null && Number(trip.additional_expenses) > 0
       ? String(trip.additional_expenses)
-      : "150"
+      : ""
   ); // الخدمات المقدمة (ضيافة، تصاريح، لوجستيات)
   const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>(trip.hotel_ids || (trip.hotels ? trip.hotels.map((h: any) => h.hotel_id || h.id) : []));
 
-  const selectedGuide = guides.find((g) => g.license_number === guide) || guides[0];
-  const selectedVehicle = vehicles.find((v) => v.plate_number === vehicle) || vehicles[0];
+  const selectedGuide = guides.find((g) => g.license_number === guide);
+  const selectedVehicle = vehicles.find((v) => v.plate_number === vehicle);
   const guideDailyRate = Number(selectedGuide?.daily_rate) || 0;
-  const vehicleDailyRate = selectedVehicle?.daily_rate || 500;
+  const vehicleDailyRate = Number(selectedVehicle?.daily_rate) || 0;
   const servCost = Number(servicesFee) || 0;
 
   const totalGuideCost = guideDailyRate * durationDays;
   const totalVehicleCost = vehicleDailyRate * durationDays;
   const autoCalculatedTotal = totalGuideCost + totalVehicleCost + servCost;
 
-  const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : String(autoCalculatedTotal));
+  const [price, setPrice] = useState(trip.quoted_price ? String(trip.quoted_price) : autoCalculatedTotal > 0 ? String(autoCalculatedTotal) : "");
+  // The total follows the calculation (guide + vehicle per day + services) until the admin types their own figure;
+  // a trip already quoted keeps its price
+  const [priceEdited, setPriceEdited] = useState(Boolean(trip.quoted_price));
+  useEffect(() => {
+    if (!priceEdited) setPrice(autoCalculatedTotal > 0 ? String(autoCalculatedTotal) : "");
+  }, [autoCalculatedTotal, priceEdited]);
   const [inspectVehicle, setInspectVehicle] = useState<VehicleDetailsData | null>(null);
 
   // Initialize itinerary stations matching Daily (mode="time") or Weekly (mode="days")
@@ -6901,48 +6989,17 @@ function EvaluatePrivateTripModal({
       } catch {}
     }
 
-    // Default hourly stops for 1-day trip
+    // No ready-made text: one empty stop per day (or one stop for a one-day trip) for the admin to write
     if (!isMultiDay) {
-      return [
-        {
-          time: "08:30 ص",
-          title: `نقطة التجمع والانطلاق (${trip.customer_description || "الرحلة الخاصة"})`,
-          desc: "التجمع ومقابلة المرشد السياحي المعتمد وصعود مركبة النقل الخاصة والانطلاق نحو الوجهة.",
-        },
-        {
-          time: "10:30 ص",
-          title: `المحطة السياحية الأولى: استكشاف معالم ${trip.customer_description || "الموقع الأثري"}`,
-          desc: "جولة ميدانية استكشافية برفقة المرشد السياحي المعتمد مع شرح تاريخي وتوثيقي للموقع والتقاط الصور.",
-        },
-        {
-          time: "02:00 م",
-          title: "استراحة وتناول وجبة الغداء التقليدية",
-          desc: "استراحة ضيافة وتناول وجبة طعام ليبية أصيلة بمطعم سياحي معتمد بالمنطقة المزارة.",
-        },
-        {
-          time: "05:00 م",
-          title: "المحطة الختامية والعودة بسلامة الله",
-          desc: "اختتام فعاليات البرنامج الخاص والعودة بالمركبة المخصصة إلى نقطة الانطلاق.",
-        },
-      ];
+      return [{ time: "", title: "", desc: "" }];
     }
-
-    // Default day-by-day stops for multi-day trip
-    return Array.from({ length: durationDays }).map((_, i) => ({
-      time: `اليوم ${i + 1}`,
-      title:
-        i === 0
-          ? `محطة اليوم 1 - الانطلاق نحو ${trip.customer_description || "الوجهة السياحية"}`
-          : i === durationDays - 1
-          ? `محطة اليوم ${durationDays} - الجولة الختامية والعودة بسلامة الله`
-          : `محطة اليوم ${i + 1} - استكشاف المعالم والأنشطة الميدانية`,
-      desc: `برنامج ومسار اليوم ${i + 1} يشمل الجولات الميدانية التراثية مع المرشد السياحي وسيارة النقل المخصصة والإقامة والخدمات.`,
-    }));
+    return Array.from({ length: durationDays }).map((_, i) => ({ time: `اليوم ${i + 1}`, title: "", desc: "" }));
   }, [trip.stations, trip.admin_itinerary_plan, isMultiDay, durationDays, trip.customer_description]);
 
   const [itinerarySteps, setItinerarySteps] = useState<ItineraryStepItem[]>(initialSteps);
 
   const applyAutoPrice = () => {
+    setPriceEdited(false);
     setPrice(String(autoCalculatedTotal));
   };
 
@@ -6951,8 +7008,16 @@ function EvaluatePrivateTripModal({
       alert("يرجى إدخال سعر معتمد صالح للرحلة الخاصة.");
       return;
     }
+    if (!guide) {
+      alert("يرجى اختيار المرشد السياحي للرحلة.");
+      return;
+    }
     if (itinerarySteps.length === 0) {
       alert("يرجى إضافة محطة واحدة على الأقل في خط سير الرحلة.");
+      return;
+    }
+    if (itinerarySteps.some((st) => !String(st.title || "").trim())) {
+      alert("يرجى كتابة عنوان لكل محطة في خط سير الرحلة.");
       return;
     }
 
@@ -7018,7 +7083,7 @@ function EvaluatePrivateTripModal({
               trip.places.map((pl: any, idx: number) => (
                 <span key={idx} className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold text-xs flex items-center gap-1">
                   <span>📍</span>
-                  <span>{pl.place_name || pl.name} ({pl.city})</span>
+                  <span>{placeLabel(pl)}</span>
                 </span>
               ))
             ) : (
@@ -7033,7 +7098,7 @@ function EvaluatePrivateTripModal({
             <div className="text-xs text-amber-950 bg-amber-50/90 p-3 rounded-xl border border-amber-200 leading-relaxed font-semibold">
               <b className="text-amber-900 block mb-1">📝 متطلبات وملاحظات السائح:</b>
               <span>
-                {Array.from(new Set(trip.customer_requirements.split(" - ").map(s => s.trim()))).filter(Boolean).join(" • ")}
+                {Array.from(new Set(trip.customer_requirements.split(" - ").map(s => s.trim()))).filter((s) => s && !/^ملاحظات الإدارة:\s*[\[{]/.test(s)).join(" • ")}
               </span>
             </div>
           )}
@@ -7049,15 +7114,22 @@ function EvaluatePrivateTripModal({
             onChange={(e) => setGuide(e.target.value)}
             className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-right focus:bg-white transition"
           >
-            {guides.map((g) => (
+            <option value="">{eligibleGuides.length > 0 ? "اختر المرشد السياحي..." : "لا يوجد مرشد مناسب لمعالم وأيام هذه الرحلة"}</option>
+            {eligibleGuides.map((g) => (
               <option key={g.license_number} value={g.license_number}>
+                {offDays(g).length > 0 ? `⚠ خارج أيام عمله: ${offDays(g).join("، ")} — ` : ""}
                 {g.full_name} ({g.license_number}) — {g.daily_rate ? `${g.daily_rate} د.ل / اليوم` : "السعر غير محدد"} {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح المفضل)" : ""}
               </option>
             ))}
           </select>
-          {trip.guide_license_number && (
-            <p className="text-[11px] text-emerald-700 font-bold mt-1">
-              ✓ تم تثبيت المرشد ({trip.guide_license_number}) بناءً على رغبة واختيار السائح المسبق.
+          <p className="text-[11px] text-slate-500 font-semibold mt-1">
+            تظهر أسماء المرشدين المعتمدين الذين يعملون في معلم واحد على الأقل من معالم الرحلة ({eligibleGuides.length} مرشد). الرحلة تُرسل للمرشد ليوافق أو يعتذر، وعند موافقته تُغلق أيامها تلقائياً في رحلاته اليومية.
+          </p>
+          {requestedGuide && (
+            <p className={`text-[11px] font-bold mt-1 ${initialGuideLic ? "text-emerald-700" : "text-amber-700"}`}>
+              {initialGuideLic
+                ? `✓ تم تثبيت المرشد (${requestedGuide}) بناءً على اختيار السائح.`
+                : `⚠ المرشد الذي اختاره السائح (${requestedGuide}) لا يعمل في أي من معالم هذه الرحلة أو أنه في إجازة، يرجى اختيار مرشد آخر.`}
             </p>
           )}
         </div>
@@ -7072,6 +7144,7 @@ function EvaluatePrivateTripModal({
             onChange={(e) => setVehicle(e.target.value)}
             className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-right focus:bg-white transition"
           >
+            <option value="">اختر المركبة...</option>
             {vehicles.map((v) => (
               <option key={v.plate_number} value={v.plate_number}>
                 {v.vehicle_type} ({v.plate_number}) — {v.company_name} — سعة {v.capacity || "—"} ركاب — {v.daily_rate} د.ل / اليوم
@@ -7219,7 +7292,20 @@ function EvaluatePrivateTripModal({
           </div>
         </div>
 
-        <Field label="السعر الإجمالي النهائي المعروض للسائح (د.ل) *" type="number" value={price} onChange={setPrice} />
+        <Field
+          label="السعر الإجمالي النهائي المعروض للسائح (د.ل) *"
+          type="number"
+          value={price}
+          onChange={(v: string) => {
+            setPrice(v);
+            setPriceEdited(true);
+          }}
+        />
+        <p className="text-[11px] font-semibold -mt-2 text-slate-500">
+          {priceEdited
+            ? "تم تعديل السعر يدوياً. اضغط «تطبيق السعر المحسوب» للعودة إلى الحساب التلقائي."
+            : "يُحسب السعر تلقائياً من أجر المرشد وسعر المركبة لكل يوم ومصروفات الخدمات، ويمكنك تعديله."}
+        </p>
 
         {/* REUSED ITINERARY TIMELINE EDITOR */}
         <div className="pt-2 border-t border-border">
@@ -7387,9 +7473,8 @@ function HotelModal({
       setErrorMsg("يرجى اختيار التصنيف الفندقي (عدد النجوم)");
       return;
     }
-    const digitsOnly = phone.replace(/\D/g, "");
-    if (!phone.trim() || digitsOnly.length < 8) {
-      setErrorMsg("يرجى إدخال رقم هاتف اتصال معتمد وصحيح (8 أرقام على الأقل)");
+    if (!LIBYAN_MOBILE_OR_LANDLINE.test(phone.trim())) {
+      setErrorMsg("رقم الهاتف يجب أن يبدأ بـ 09 أو 021 ويتكون من 10 أرقام (مثال: 0912345678 أو 0213330044)");
       return;
     }
     if (!contractEndDate) {
@@ -7643,18 +7728,18 @@ function HotelModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" allowLandline value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
           <div>
             <label className="text-xs font-bold text-foreground mb-1 block">
-              🏷️ نسبة الخصم لرواد منصة دلّني (%) — اتركها فارغة إن لم يوجد خصم
+              🏷️ نسبة خصم رواد دلّني (%)
             </label>
             <div className="relative">
               <input
                 type="text"
                 inputMode="numeric"
                 value={discountPct}
-                placeholder="0"
+                placeholder="اتركها فارغة إن لم يوجد خصم"
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => {
                   // digits only, 0–100; an empty box means no discount
@@ -7901,9 +7986,8 @@ function RestaurantModal({
       setErrorMsg("يرجى اختيار المدينة");
       return;
     }
-    const digitsOnly = phone.replace(/\D/g, "");
-    if (!phone.trim() || digitsOnly.length < 8) {
-      setErrorMsg("يرجى إدخال رقم هاتف اتصال معتمد وصحيح (8 أرقام على الأقل)");
+    if (!LIBYAN_MOBILE_OR_LANDLINE.test(phone.trim())) {
+      setErrorMsg("رقم الهاتف يجب أن يبدأ بـ 09 أو 021 ويتكون من 10 أرقام (مثال: 0912345678 أو 0213330044)");
       return;
     }
     if (!contractEndDate) {
@@ -8139,18 +8223,18 @@ function RestaurantModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <LibyanPhoneField label="رقم الهاتف للتواصل والواتساب *" allowLandline value={phone} onChange={v => { setPhone(v); setErrorMsg(null); }} />
           <div>
             <label className="text-xs font-bold text-foreground mb-1 block">
-              🏷️ نسبة الخصم لرواد منصة دلّني (%) — اتركها فارغة إن لم يوجد خصم
+              🏷️ نسبة خصم رواد دلّني (%)
             </label>
             <div className="relative">
               <input
                 type="text"
                 inputMode="numeric"
                 value={discountPct}
-                placeholder="0"
+                placeholder="اتركها فارغة إن لم يوجد خصم"
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => {
                   // digits only, 0–100; an empty box means no discount
@@ -9437,16 +9521,26 @@ function ModalShell({ title, children, onClose, maxWidth = "max-w-lg" }: { title
   );
 }
 
-function LibyanPhoneField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+// A mobile number (09 + 8 digits); places that answer a landline (hotels, restaurants) may also give a Tripoli
+// landline (021 + 7 digits). Digits only, at most 10: the field stops at the tenth digit.
+const LIBYAN_MOBILE = /^09\d{8}$/;
+const LIBYAN_MOBILE_OR_LANDLINE = /^(09\d{8}|021\d{7})$/;
+
+function LibyanPhoneField({ label, value, onChange, allowLandline = false }: { label: string; value: string; onChange: (v: string) => void; allowLandline?: boolean }) {
   const [error, setError] = useState("");
-  const handleChange = (val: string) => {
+  const rule = allowLandline ? LIBYAN_MOBILE_OR_LANDLINE : LIBYAN_MOBILE;
+  const message = allowLandline
+    ? "يجب أن يبدأ بـ 09 أو 021 ويتكون من 10 أرقام (مثال: 0912345678 أو 0213330044)"
+    : "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)";
+  const handleChange = (raw: string) => {
+    const val = raw.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/\D/g, "").slice(0, 10);
     onChange(val);
-    setError(val && !/^09\d{8}$/.test(val) ? "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)" : "");
+    setError(val && !rule.test(val) ? message : "");
   };
   return (
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
-      <input type="tel" pattern="^09\d{8}$" required title="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام" value={value} onChange={e => handleChange(e.target.value)} placeholder="09..." className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
+      <input type="tel" inputMode="numeric" maxLength={10} pattern={allowLandline ? "^(09\\d{8}|021\\d{7})$" : "^09\\d{8}$"} required title={message} value={value} onChange={e => handleChange(e.target.value)} placeholder={allowLandline ? "09... / 021..." : "09..."} className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
       {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );

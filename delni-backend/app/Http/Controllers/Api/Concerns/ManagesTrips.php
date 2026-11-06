@@ -199,11 +199,33 @@ trait ManagesTrips
         foreach ($daily as $t) {
             $tDays = ($runDays[$t->daily_trip_id] ?? collect())->pluck('day_of_week')->map([$this, 'normalizeDayName'])->all();
             $shared = $tDays ? array_intersect($days, $tDays) : $days; // no stored days = every day
-            if ($shared) {
-                return "{$who($t)} لرحلة يومية أخرى ({$t->trip_title}) تنطلق يوم " . implode(' و', array_values($shared)) . '.';
+            if (!$shared) {
+                continue;
             }
+            // A private trip only takes the guide off the daily trip's run dates inside its range (they close when the
+            // guide accepts, see DailyTrip::guideBusyOn). It is refused only when tourists already booked one of those dates.
+            $guideOnly = $exclude[0] === 'private' && $start && $end && $guide !== null && $t->guide_license_number === $guide
+                && !($plate !== null && $t->vehicle_plate === $plate);
+            if ($guideOnly) {
+                $booked = $this->bookedDailyDates($t->daily_trip_id, substr($start, 0, 10), substr($end, 0, 10));
+                if ($booked) {
+                    return "المرشد المختار لديه حجوزات سياح في رحلته اليومية ({$t->trip_title}) بتاريخ " . implode('، ', $booked)
+                        . '، ضمن أيام هذه الرحلة الخاصة. يرجى إسناد تلك الرحلة اليومية لمرشد آخر أولاً أو اختيار مرشد آخر.';
+                }
+                continue;
+            }
+            return "{$who($t)} لرحلة يومية أخرى ({$t->trip_title}) تنطلق يوم " . implode(' و', array_values($shared)) . '.';
         }
         return null;
+    }
+
+    // Run dates (Y-m-d) of a daily trip between $start and $end that have bookings not cancelled
+    private function bookedDailyDates(string $dailyTripId, string $start, string $end): array
+    {
+        return DB::table('bookings_daily')->where('daily_trip_id', $dailyTripId)
+            ->where('trip_date', '>=', $start)->where('trip_date', '<=', $end)
+            ->where('booking_status', 'not like', 'ملغ%')
+            ->pluck('trip_date')->map(fn ($d) => substr((string) $d, 0, 10))->unique()->sort()->values()->all();
     }
 
     /**
@@ -211,7 +233,7 @@ trait ManagesTrips
      * trip ends, a trip day outside the guide's working days); the warning only informs the admin (landmarks outside their expertise).
      * A range trip gives $start..$end; a daily trip gives its weekdays (it runs every week, so its end is open).
      */
-    private function guideFitness(string $guide, ?string $start, ?string $end, ?array $weekdays, ?array $placeIds): array
+    private function guideFitness(string $guide, ?string $start, ?string $end, ?array $weekdays, ?array $placeIds, bool $requireOnePlace = false): array
     {
         $g = DB::table('tour_guides')->where('license_number', $guide)
             ->first(['full_name', 'availability_status', DB::raw('CONVERT(VARCHAR(10), license_expiry_date, 23) as license_expiry_date')]);
@@ -230,17 +252,25 @@ trait ManagesTrips
         $workDays = DB::table('guide_working_days')->where('license_number', $guide)->pluck('day_of_week')->map([$this, 'normalizeDayName'])->all();
         $tripDays = $weekdays !== null ? array_map([$this, 'normalizeDayName'], $weekdays) : $this->weekdaysBetween($start, $end);
         $outside = $workDays ? array_values(array_diff($tripDays, $workDays)) : [];
+        $warning = null;
         if ($outside) {
-            return ["المرشد ({$g->full_name}) لا يعمل يوم " . implode(' و', $outside) . '، وهو من أيام الرحلة. يرجى اختيار مرشد آخر أو تعديل أيام الرحلة.', null];
+            // A private trip goes to the guide to accept or decline, so their working days only inform the admin
+            if (!$requireOnePlace) {
+                return ["المرشد ({$g->full_name}) لا يعمل يوم " . implode(' و', $outside) . '، وهو من أيام الرحلة. يرجى اختيار مرشد آخر أو تعديل أيام الرحلة.', null];
+            }
+            $warning = "تنبيه: يوم " . implode(' و', $outside) . " خارج أيام عمل المرشد ({$g->full_name})، والقرار له بالموافقة أو الاعتذار.";
         }
 
-        $warning = null;
         if ($placeIds) {
             $known = DB::table('guide_places')->where('license_number', $guide)->pluck('place_id')->all();
+            // A private trip needs a guide who works at one of its landmarks at least
+            if ($requireOnePlace && !array_intersect($placeIds, $known)) {
+                return ["المرشد ({$g->full_name}) لا يعمل في أي من معالم هذه الرحلة. يرجى اختيار مرشد من مرشدي هذه المعالم.", null];
+            }
             $unknown = array_values(array_diff($placeIds, $known));
             if ($known && $unknown) {
                 $names = DB::table('places_tourist')->whereIn('place_id', $unknown)->pluck('city')->all();
-                $warning = "تنبيه: المعالم (" . implode('، ', $names) . ") ليست ضمن معالم خبرة المرشد ({$g->full_name}).";
+                $warning = $this->joinWarnings($warning, "تنبيه: المعالم (" . implode('، ', $names) . ") ليست ضمن معالم خبرة المرشد ({$g->full_name}).");
             }
         }
         return [null, $warning];
