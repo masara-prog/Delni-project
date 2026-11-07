@@ -434,6 +434,9 @@ class TransportController extends Controller
                 $this->notifyVehicleAssigned($license, $plate);
             }
         });
+        if (Actor::role() === 'driver' && $values['operational_status'] === 'إجازة' && $existing->operational_status !== 'إجازة') {
+            $this->notifyDriverLeave($existing);
+        }
 
         return response()->json(['success' => true, 'message' => 'تم حفظ بيانات السائق بنجاح',
             'data' => Driver::find($license)], 201);
@@ -461,6 +464,25 @@ class TransportController extends Controller
             '🚍 تخصيص مركبة جديدة لك',
             "خصصت لك شركة النقل المركبة رقم ({$plate}). يمكنك الاطلاع على تفاصيلها من لوحتك.",
             '/dashboard/driver?tab=vehicle');
+    }
+
+    // A driver who goes on leave leaves their vehicle without a driver: the company is asked to assign another one, and the admin is informed
+    private function notifyDriverLeave(Driver $driver): void
+    {
+        $plate = $driver->assigned_vehicle_plate;
+        $trips = count($driver->assignedTrips());
+        $vehicle = $plate ? "المركبة ({$plate})" : 'لا توجد مركبة مسندة إليه حالياً';
+        $action = $plate ? 'يرجى إسناد سائق آخر لهذه المركبة' . ($trips ? " قبل موعد رحلاتها القادمة ({$trips})" : '') . '.' : '';
+        $stamp = now('Africa/Tripoli')->format('YmdHis');
+        $company = TransportationCompany::find($driver->contract_number);
+        $this->notify("driver-leave-{$driver->driver_license_number}-{$stamp}", 'transport', $driver->contract_number, 'assignment',
+            '🧳 سائق في إجازة: يلزم تغيير سائق المركبة',
+            trim("غيّر السائق ({$driver->full_name}) حالته إلى «إجازة». {$vehicle}. {$action}"),
+            '/dashboard/transport?tab=drivers');
+        $this->notify("driver-leave-admin-{$driver->driver_license_number}-{$stamp}", 'admin', null, 'assignment',
+            '🧳 سائق في إجازة',
+            trim("السائق ({$driver->full_name}) لدى شركة (" . ($company?->company_name ?? $driver->contract_number) . ") في إجازة. {$vehicle}." . ($plate ? ' طُلب من الشركة إسناد سائق بديل.' : '')),
+            '/dashboard/admin?tab=companies');
     }
 
     // Returns an Arabic error message, or null when the driver fields are valid and unique
