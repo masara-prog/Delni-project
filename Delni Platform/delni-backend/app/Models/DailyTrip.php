@@ -1,0 +1,212 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class DailyTrip extends Model
+{
+    // guide_approval_status: like weekly trips, the trip is published only once its guide accepts it (NULL = trips from before this step)
+    public const GUIDE_PENDING = WeeklyTrip::GUIDE_PENDING;
+    public const GUIDE_APPROVED = WeeklyTrip::GUIDE_APPROVED;
+    public const GUIDE_DECLINED = WeeklyTrip::GUIDE_DECLINED;
+
+    protected $table = 'daily_trips';
+    protected $primaryKey = 'daily_trip_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'daily_trip_id',
+        'trip_title',
+        'price_per_seat',
+        'is_active',
+        'max_capacity',
+        'available_seats',
+        'guide_license_number',
+        'departure_city',
+        'vehicle_plate',
+        'restaurant_id',
+        'photo_1',
+        'photo_2',
+        'photo_3',
+        'photo_4',
+        'photo_5',
+        'guide_approval_status',
+    ];
+    // available_seats is not used for daily trips: seats are counted per run date (seatsLeft)
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'price_per_seat' => 'decimal:2',
+        'max_capacity' => 'integer',
+        'available_seats' => 'integer',
+    ];
+
+    public function guide()
+    {
+        return $this->belongsTo(TourGuide::class, 'guide_license_number', 'license_number');
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
+    }
+
+    public function vehicles()
+    {
+        return $this->belongsTo(Vehicle::class, 'vehicle_plate', 'plate_number');
+    }
+
+    public function restaurant()
+    {
+        return $this->belongsTo(RestaurantCafe::class, 'restaurant_id', 'facility_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(BookingDaily::class, 'daily_trip_id', 'daily_trip_id');
+    }
+
+    public function offers()
+    {
+        return $this->hasMany(OfferDailyTrip::class, 'daily_trip_id', 'daily_trip_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(ReviewDailyTrip::class, 'daily_trip_id', 'daily_trip_id');
+    }
+
+    public function places()
+    {
+        return $this->belongsToMany(PlaceTourist::class, 'places_trip_daily', 'daily_trip_id', 'place_id');
+    }
+
+    public function days()
+    {
+        return $this->hasMany(DailyTripDay::class, 'daily_trip_id', 'daily_trip_id');
+    }
+
+    public function stations()
+    {
+        return $this->hasMany(DailyTripStation::class, 'daily_trip_id', 'daily_trip_id')->orderBy('station_order');
+    }
+
+    // Weekday names in Carbon's dayOfWeek order (0 = Sunday)
+    private const DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    // Run dates open for booking one calendar month at a time: the current month only (the next month opens on its 1st).
+    // Kept as the most dates any month can list.
+    public const BOOKING_HORIZON_DAYS = 31;
+    // Booking for a date closes at 07:00 Libya time on that date
+    private const CLOSING_HOUR = 7;
+
+    private static function normalizeDay(?string $day): string
+    {
+        return str_replace('إ', 'ا', trim((string) $day));
+    }
+
+    // The trip runs every week on its stored days (no stored days = every day)
+    public function runsOn(\Carbon\CarbonInterface $date): bool
+    {
+        $this->runDays ??= $this->days()->pluck('day_of_week')->map(fn ($d) => self::normalizeDay($d))->all();
+        return empty($this->runDays) || in_array(self::normalizeDay(self::DAY_NAMES[$date->dayOfWeek]), $this->runDays, true);
+    }
+
+    private ?array $runDays = null;
+
+    // Why the trip can't be booked for this date (Y-m-d), or null when it can
+    public function bookingClosedReason(string $date): ?string
+    {
+        if ($this->guide_approval_status !== null && $this->guide_approval_status !== self::GUIDE_APPROVED) {
+            return 'هذه الرحلة اليومية غير متاحة للحجز بعد، فهي بانتظار موافقة المرشد السياحي.';
+        }
+        $now = now('Africa/Tripoli');
+        $day = \Carbon\Carbon::parse($date, 'Africa/Tripoli')->startOfDay();
+        if ($day->lt($now->copy()->startOfDay())) {
+            return 'لا يمكن الحجز في تاريخ مضى.';
+        }
+        if ($day->gt($now->copy()->endOfMonth())) {
+            return 'الحجز متاح لأيام الشهر الحالي فقط، وتُفتح مواعيد الشهر القادم مع بدايته.';
+        }
+        if (!$this->runsOn($day)) {
+            return 'هذه الرحلة لا تنطلق في يوم ' . self::DAY_NAMES[$day->dayOfWeek] . '. يرجى اختيار أحد أيام انطلاقها.';
+        }
+        if ($this->guideBusyOn($day->toDateString())) {
+            return self::GUIDE_BUSY_REASON;
+        }
+        if ($day->isSameDay($now) && $now->hour >= self::CLOSING_HOUR) {
+            return 'عذراً، تم إغلاق الحجز على رحلة اليوم. يُقفل الحجز على الرحلات اليومية الساعة 7 صباحاً من يوم الرحلة.';
+        }
+        return null;
+    }
+
+    // The guide's private trips they accepted (the offer went to the tourist, or the tourist confirmed): the daily trip
+    // does not run on those dates. A cancelled or refused private trip gives its dates back.
+    public const GUIDE_BUSY_STATUSES = ['بانتظار تأكيد السائح', 'مؤكدة'];
+    public const GUIDE_BUSY_REASON = 'المرشد السياحي لهذه الرحلة في رحلة خاصة بهذا التاريخ، لذا لا تنطلق الرحلة اليومية فيه.';
+
+    private ?array $guideBusyRanges = null;
+
+    public function guideBusyOn(string $date): bool
+    {
+        if (!$this->guide_license_number) {
+            return false;
+        }
+        $this->guideBusyRanges ??= \Illuminate\Support\Facades\DB::table('private_trips')
+            ->where('guide_license_number', $this->guide_license_number)
+            ->whereIn('status_order', self::GUIDE_BUSY_STATUSES)
+            ->get(['preferred_start_date', 'duration_days'])
+            ->map(function ($t) {
+                $start = substr((string) $t->preferred_start_date, 0, 10);
+                return [$start, date('Y-m-d', strtotime($start . ' +' . max(0, (int) $t->duration_days - 1) . ' days'))];
+            })->all();
+        foreach ($this->guideBusyRanges as [$start, $end]) {
+            if ($start <= $date && $date <= $end) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // This month's run dates taken by the guide's private trips, listed so the booking window can show them crossed out
+    public function guideBusyDates(): array
+    {
+        $dates = [];
+        $day = now('Africa/Tripoli')->startOfDay();
+        $last = $day->copy()->endOfMonth();
+        for (; $day->lte($last); $day->addDay()) {
+            if ($this->runsOn($day) && $this->guideBusyOn($day->toDateString())) {
+                $dates[] = ['date' => $day->toDateString(), 'day' => self::DAY_NAMES[$day->dayOfWeek], 'seats_left' => 0,
+                    'closed' => true, 'reason' => self::GUIDE_BUSY_REASON];
+            }
+        }
+        return $dates;
+    }
+
+    // Seats still free on one run date: the capacity minus the seats of that date's bookings that were not cancelled
+    public function seatsLeft(string $date): int
+    {
+        $taken = (int) \Illuminate\Support\Facades\DB::table('bookings_daily')
+            ->where('daily_trip_id', $this->daily_trip_id)->where('trip_date', $date)
+            ->where('booking_status', 'not like', 'ملغ%')->sum('number_of_seats');
+        return max(0, (int) $this->max_capacity - $taken);
+    }
+
+    // This month's remaining run dates that can still be booked, with their free seats:
+    // [['date' => 'Y-m-d', 'day' => 'السبت', 'seats_left' => 12], ...] (a full date stays listed with 0 seats)
+    public function openDates(int $limit = self::BOOKING_HORIZON_DAYS): array
+    {
+        $dates = [];
+        $day = now('Africa/Tripoli')->startOfDay();
+        $last = $day->copy()->endOfMonth();
+        for (; $day->lte($last) && count($dates) < $limit; $day->addDay()) {
+            $date = $day->toDateString();
+            if ($this->bookingClosedReason($date) === null) {
+                $dates[] = ['date' => $date, 'day' => self::DAY_NAMES[$day->dayOfWeek], 'seats_left' => $this->seatsLeft($date)];
+            }
+        }
+        return $dates;
+    }
+}
