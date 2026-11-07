@@ -2,8 +2,8 @@
    DELNI PLATFORM - CANONICAL DATABASE SCHEMA (MICROSOFT SQL SERVER)
    Database: DelniDB
    Target Engine: Microsoft SQL Server 2019 / 2022 / Azure SQL
-   Tables: 41 Tables
-   Primary Keys: 41
+   Tables: 42 Tables
+   Primary Keys: 42
    Foreign Keys: 50
    Order of Execution:
      1. CREATE TABLE (All 41 tables created first)
@@ -1195,3 +1195,25 @@ IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_daily_trips_resta
     ALTER TABLE dbo.[daily_trips] ADD CONSTRAINT [FK_daily_trips_restaurant] FOREIGN KEY ([restaurant_id]) REFERENCES dbo.[restaurants_cafes]([facility_id]) ON DELETE SET NULL;
 GO
 
+-- ----------------------------------------------------------------------------
+-- Table: dbo.[support_messages]  (added 2026-11-07, see upgrade_2026-11-07.sql)
+-- Description: Support chat messages between an account (or a visitor) and the administration
+-- ----------------------------------------------------------------------------
+IF OBJECT_ID('dbo.[support_messages]', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.[support_messages] (
+        [id] BIGINT IDENTITY(1, 1) NOT NULL,
+        [session_id] NVARCHAR(100) NOT NULL,
+        [sender_id] NVARCHAR(100) NULL,
+        [sender_role] NVARCHAR(20) NOT NULL,
+        [recipient_id] NVARCHAR(100) NULL,
+        [recipient_role] NVARCHAR(20) NOT NULL,
+        [body] NVARCHAR(MAX) NOT NULL,
+        [is_read] BIT NOT NULL DEFAULT ((0)),
+        [created_at] DATETIME NOT NULL,
+        CONSTRAINT [PK_support_messages] PRIMARY KEY ([id])
+    );
+    CREATE INDEX [support_messages_session_id_created_at_index] ON dbo.[support_messages] ([session_id], [created_at]);
+    CREATE INDEX [support_messages_recipient_role_is_read_index] ON dbo.[support_messages] ([recipient_role], [is_read]);
+END;
+GO
