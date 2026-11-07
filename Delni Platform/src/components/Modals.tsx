@@ -1342,6 +1342,8 @@ export function TripScheduleModal({
     const end = String(trip.endDate).split("T")[0];
     const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1;
     const realAvail = trip?.availableSeats ?? trip?.available_seats ?? realSeats;
+    const o = trip?.activeOffer;
+    const weeklyOffer = o && start >= o.start_date && start <= o.end_date && Number(o.discount) > 0 ? { discount: Number(o.discount) } : null;
     schedules = [
       {
         id: realId,
@@ -1351,7 +1353,10 @@ export function TripScheduleModal({
         seats: realSeats,
         taken: Math.max(0, realSeats - Number(realAvail)),
         guide: realGuide,
-        price: realPrice,
+        // an offer running on the start date lowers the seat price (the server prices the booking the same way)
+        price: weeklyOffer ? Math.round(realPrice * (1 - weeklyOffer.discount / 100)) : realPrice,
+        originalPrice: weeklyOffer ? realPrice : undefined,
+        discount: weeklyOffer?.discount,
         tripTitle: realTitle,
         kind: "weekly",
       },
@@ -2238,7 +2243,7 @@ export function PrivateTripModal({
 
     const touristId = session?.user?.tourist_id || session?.user?.id || session?.user?.username || null;
     const placesNames = selectedLandmarks.map((l) => l.name).join(" • ");
-    const placesWithCities = selectedLandmarks.map((l) => `${l.name} (${l.city})`).join("، ");
+    const placesWithCities = selectedLandmarks.map((l) => (l.city && l.city !== l.name ? `${l.name} (${l.city})` : l.name)).join("، ");
 
     const guideRequirement = selectedGuide
       ? `المرشد المفضل: ${selectedGuide.name} [ترخيص: ${selectedGuide.licenseNumber} - ${selectedGuide.gender === "female" ? "مرشدة" : "مرشد"}]. `

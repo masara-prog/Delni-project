@@ -466,6 +466,13 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
   const guide = "guide" in t && t.guide ? t.guide : null;
 
   const priceFormatted = t.type === "daily" ? `${t.price} د.ل` : t.type === "weekly" ? `${t.seatPrice} د.ل` : t.sampleDays;
+  // Running offer: a weekly trip is discounted when it starts inside the offer period;
+  // a daily trip on its run dates inside the period (the booking window prices each date)
+  const offer = "activeOffer" in t ? t.activeOffer : undefined;
+  const basePrice = t.type === "daily" ? Number(t.price) : t.type === "weekly" ? Number(t.seatPrice) : 0;
+  const offerApplies = !!offer && (t.type === "daily" || (t.type === "weekly" && !!t.startDate
+    && t.startDate.slice(0, 10) >= offer.start_date && t.startDate.slice(0, 10) <= offer.end_date));
+  const offerPrice = offerApplies && basePrice ? Math.round(basePrice * (1 - offer!.discount / 100)) : null;
 
   return {
     departurePoint,
@@ -479,6 +486,9 @@ export function getTripFullInfo(t: Trip, isAr: boolean) {
     guide,
     restaurant: restaurantData,
     priceFormatted,
+    basePrice,
+    offerPrice,
+    offerDiscount: offerApplies ? offer!.discount : 0,
     isPrivate,
   };
 }
@@ -869,7 +879,15 @@ function TripDetailsView({
           <div className="lg:col-span-4 flex items-center justify-between lg:justify-end gap-5 pt-5 lg:pt-0 border-t lg:border-t-0 lg:border-s border-[#E8E2D6] lg:ps-10">
             <div>
               <div className="text-xs font-medium text-slate-500">{isAr ? "السعر للمقعد" : "Price per seat"}</div>
-              <div className="mt-0.5 text-2xl sm:text-3xl font-bold text-[#003580] tabular-nums tracking-tight">{info.priceFormatted}</div>
+              {info.offerPrice ? (
+                <div className="mt-0.5 flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-bold text-[#C2410C] tabular-nums tracking-tight">{info.offerPrice} د.ل</span>
+                  <span className="text-sm font-bold text-slate-400 line-through tabular-nums">{info.basePrice}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#D96B27]/10 text-[#C2410C] text-[11px] font-black">-{info.offerDiscount}%</span>
+                </div>
+              ) : (
+                <div className="mt-0.5 text-2xl sm:text-3xl font-bold text-[#003580] tabular-nums tracking-tight">{info.priceFormatted}</div>
+              )}
             </div>
             <button
               type="button"
@@ -1370,9 +1388,23 @@ function TripDetailsView({
                 <span className="text-xs font-medium text-slate-500 block mb-1">
                   {isAr ? "السعر للمقعد" : "Price per seat"}
                 </span>
-                <div className="text-3xl font-bold text-[#003580] tabular-nums tracking-tight">
-                  {info.priceFormatted}
-                </div>
+                {info.offerPrice ? (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-[#C2410C] tabular-nums tracking-tight">{info.offerPrice} د.ل</span>
+                      <span className="text-base font-bold text-slate-400 line-through tabular-nums">{info.basePrice} د.ل</span>
+                    </div>
+                    <div className="mt-1 text-xs font-black text-emerald-700">
+                      {isAr
+                        ? `وفّر ${info.basePrice - info.offerPrice} د.ل بخصم ${info.offerDiscount}%${trip.type === "daily" ? " على مواعيد فترة العرض" : ""}`
+                        : `Save ${info.basePrice - info.offerPrice} LYD (${info.offerDiscount}% off)`}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-3xl font-bold text-[#003580] tabular-nums tracking-tight">
+                    {info.priceFormatted}
+                  </div>
+                )}
                 <div className="text-xs text-slate-500 leading-relaxed mt-2">
                   {isAr ? "يشمل النقل السياحي، التذاكر، وجبة الغداء، والمرشد المعتمد." : "Includes VIP transport, museum passes, lunch, and certified guide."}
                 </div>

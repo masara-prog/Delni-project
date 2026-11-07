@@ -142,6 +142,14 @@ class PrivateTripController extends Controller
         if ($guide && (GuideController::scheduledTripCounts([$guide])[$guide] ?? 0) > 0) {
             return $this->error('المرشد المختار مرتبط برحلات يومية أو أسبوعية ولا يستقبل رحلات خاصة، يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة', 422);
         }
+        // The chosen guide must be free for every day of this trip (no other private trip overlapping it)
+        if ($guide) {
+            $start = substr($data['preferred_start_date'], 0, 10);
+            $end = date('Y-m-d', strtotime($start . ' +' . max(0, (int) $data['duration_days'] - 1) . ' days'));
+            if ($conflict = $this->scheduleConflict($guide, null, $start, $end, null, ['private', ''])) {
+                return $this->error($conflict . ' يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة.', 422);
+            }
+        }
 
         $id = 'PRV-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
         DB::transaction(function () use ($id, $data, $tourist, $placeIds, $guide) {
@@ -246,6 +254,15 @@ class PrivateTripController extends Controller
         // Private trips go only to guides who are not on a daily or weekly trip
         if ($guide && (GuideController::scheduledTripCounts([$guide])[$guide] ?? 0) > 0) {
             return $this->error('هذا المرشد مسند لرحلة يومية أو أسبوعية، والرحلات الخاصة تُسند فقط للمرشدين غير المرتبطين برحلات. يرجى اختيار مرشد متاح.', 422);
+        }
+        // Nor on another private trip in the same days
+        if ($guide) {
+            $start = substr((string) ($data['preferred_start_date'] ?? $trip->preferred_start_date), 0, 10);
+            $days = (int) ($data['duration_days'] ?? $trip->duration_days);
+            $end = date('Y-m-d', strtotime($start . ' +' . max(0, $days - 1) . ' days'));
+            if ($conflict = $this->scheduleConflict($guide, null, $start, $end, null, ['private', $tripId])) {
+                return $this->error($conflict . ' يرجى اختيار مرشد آخر.', 422);
+            }
         }
         // The schedule goes to the guide before the tourist
         if ($data['status_order'] === self::QUOTED) {

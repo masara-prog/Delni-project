@@ -978,7 +978,7 @@ function GuideDashboard() {
                         }`}
                       >
                         <MapPin className={`w-3.5 h-3.5 ${isChecked ? "text-[#1B5A78]" : "text-stone-400"}`} />
-                        <span className="text-xs flex-1 truncate">{place.place_name}{place.city ? ` (${place.city})` : ""}</span>
+                        <span className="text-xs flex-1 truncate">{place.place_name}{place.city && place.city !== place.place_name ? ` (${place.city})` : ""}</span>
                         {isChecked && <Check className="w-3.5 h-3.5 text-[#1B5A78]" />}
                       </div>
                     );

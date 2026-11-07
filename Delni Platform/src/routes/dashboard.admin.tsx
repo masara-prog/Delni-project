@@ -2274,6 +2274,24 @@ function AdminDashboard() {
                     <span>💰 سعر التأجير اليومي:</span>
                     <span>{v.daily_rate} د.ل / اليوم</span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedVehicleForModal({
+                        plate_number: v.plate_number,
+                        vehicle_type: v.vehicle_type,
+                        capacity: v.capacity || v.seating_capacity || undefined,
+                        daily_rate: v.daily_rate || undefined,
+                        vehicle_status: v.status || undefined,
+                        company_name: v.company_name || undefined,
+                        vehicle_image: (v as any).vehicle_image || undefined,
+                        category: (v as any).category || undefined,
+                      })
+                    }
+                    className="w-full h-9 rounded-xl bg-[#003580] hover:bg-blue-900 text-white text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    👁️ تفاصيل المركبة
+                  </button>
                 </div>
               ))}
             </div>
@@ -6952,7 +6970,7 @@ function WeeklyTripEditModal({
                       isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
                   >
-                    🏛️ {name} {attr.city ? `(${attr.city})` : ""} {isSelected && "✓"}
+                    🏛️ {name} {attr.city && attr.city !== name ? `(${attr.city})` : ""} {isSelected && "✓"}
                   </button>
                 );
               })
@@ -9270,7 +9288,7 @@ function DailyOfferModal({
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             إلغاء
           </button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sea text-white font-black text-xs shadow-glow">
+          <button type="submit" className="px-5 h-10 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md transition cursor-pointer">
             حفظ العرض اليومي
           </button>
         </div>
@@ -9481,7 +9499,7 @@ function WeeklyOfferModal({
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             إلغاء
           </button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-gradient-sun text-gold-foreground font-black text-xs shadow-glow">
+          <button type="submit" className="px-5 h-10 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md transition cursor-pointer">
             حفظ العرض الأسبوعي
           </button>
         </div>
