@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../api_service.dart';
 import '../../core/app_state.dart';
 import '../../core/format.dart';
@@ -244,11 +243,19 @@ class _TicketCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _HeaderChip(context.tr('🎫 تذكرة إلكترونية', '🎫 E-ticket')),
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    _HeaderChip(context.tr('🎫 تذكرة إلكترونية', '🎫 E-ticket')),
+                                    _HeaderChip(b.kind == 'weekly' ? context.tr('أسبوعية', 'Weekly') : context.tr('يومية', 'Daily')),
+                                  ],
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              _HeaderChip(b.kind == 'weekly' ? context.tr('أسبوعية', 'Weekly') : context.tr('يومية', 'Daily')),
-                              const Spacer(),
                               StatusBadge(label: context.sv(b.status), tone: tone, icon: icon, dense: true),
                             ],
                           ),
@@ -280,16 +287,11 @@ class _TicketCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
-                      child: QrImageView(data: b.id, size: 46, padding: EdgeInsets.zero, backgroundColor: Colors.white),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(context.tr('رقم التذكرة', 'Ticket number'), style: AppText.caption.copyWith(fontSize: 10.5)),
                           Text(b.id, textDirection: TextDirection.ltr, style: AppText.label.copyWith(fontSize: 12.5, letterSpacing: 0.4)),
                           Text(context.tr('اضغط لعرض التذكرة كاملة', 'Tap to open the full ticket'),
                               style: AppText.caption.copyWith(fontSize: 11, color: AppColors.primary)),
@@ -533,38 +535,34 @@ Future<void> _showTicket(BuildContext context, Booking b, VoidCallback onChanged
                   ),
                   const SizedBox(height: 6),
                   const _Perforation(),
-                  // QR stub
+                  // Ticket number stub (the ticket is identified by its number only)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
                     child: Column(
                       children: [
+                        Text(ctx.tr('رقم التذكرة', 'Ticket number'), style: AppText.caption.copyWith(fontSize: 11.5)),
+                        const SizedBox(height: 6),
                         Opacity(
-                          opacity: b.isCancelled ? 0.3 : 1,
+                          opacity: b.isCancelled ? 0.4 : 1,
                           child: Container(
-                            padding: const EdgeInsets.all(8),
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(18),
+                              color: AppColors.primarySoft,
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: AppColors.border),
                             ),
-                            child: QrImageView(
-                              data: b.id,
-                              size: 168,
-                              backgroundColor: Colors.white,
-                              eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.navy),
-                              dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.navy),
-                            ),
+                            child: SelectableText(b.id,
+                                textAlign: TextAlign.center,
+                                textDirection: TextDirection.ltr,
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.primary, letterSpacing: 1.2)),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        SelectableText(b.id,
-                            textDirection: TextDirection.ltr,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.primary, letterSpacing: 1)),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           b.isCancelled
                               ? ctx.tr('هذه التذكرة ملغاة ولا يمكن استخدامها', 'This ticket is cancelled and cannot be used')
-                              : ctx.tr('اعرض الرمز عند نقطة الانطلاق أو بمقر الشركة لتأكيد الحجز', 'Show this code at the departure point or the office to confirm your booking'),
+                              : ctx.tr('اذكر رقم التذكرة عند نقطة الانطلاق أو بمقر الشركة لتأكيد الحجز', 'Give this ticket number at the departure point or the office to confirm your booking'),
                           textAlign: TextAlign.center,
                           style: AppText.caption.copyWith(fontSize: 11.5),
                         ),

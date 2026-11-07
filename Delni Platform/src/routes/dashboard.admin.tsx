@@ -66,7 +66,6 @@ import type {
 } from "@/lib/dbSchema";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
 import { fileToCompressedDataUrl } from "@/lib/imageCompress";
-import { QrCameraScanner } from "@/components/QrCameraScanner";
 import { splitTripNotes } from "@/lib/privateTripNotes";
 
 export const formatTripDate = (rawDate?: string | null): string => {
@@ -535,6 +534,13 @@ function mapDailyTripRow(d: any): any {
 };
 }
 
+// Arabic weekday name of a "YYYY-MM-DD" date ("" when the date is missing or invalid)
+const weekdayOf = (date?: string): string => {
+  const d = date ? new Date(`${String(date).slice(0, 10)}T12:00:00`) : null;
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"][d.getDay()];
+};
+
 function mapWeeklyTripRow(w: any): any {
   return {
     id: w.weekly_trip_id,
@@ -555,7 +561,8 @@ function mapWeeklyTripRow(w: any): any {
     rating_avg: Number(w.rating_avg) || 0,
     start_date: w.start_date || "",
     end_date: w.end_date || "",
-    weekly_day: "الجمعة",
+    // The weekday the trip starts on, from its start date (weekly trips have no fixed weekday of their own)
+    weekly_day: weekdayOf(w.start_date),
     guide_license: w.guide_license_number || "",
     guide_license_number: w.guide_license_number || "",
     guide_approval_status: w.guide_approval_status || "",
@@ -1366,7 +1373,6 @@ function AdminDashboard() {
 
   /* ---- TICKET SCANNER & VERIFICATION (DelniDB e-ticket validation) ---- */
   const [scanCode, setScanCode] = useState("");
-  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [scannedTicket, setScannedTicket] = useState<any | null>(null);
   const [scanStatusMsg, setScanStatusMsg] = useState<{ type: "success" | "error" | "info"; msg: string } | null>(null);
 
@@ -1426,7 +1432,7 @@ function AdminDashboard() {
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "📊" },
     // Badges count only items waiting for the admin (hidden at zero)
-    { id: "scanner", label: isAr ? "مسح الباركود وتأكيد التذاكر" : "QR Ticket Scanner", icon: "📷" },
+    { id: "scanner", label: isAr ? "تأكيد التذاكر برقم التذكرة" : "Ticket check-in", icon: "🎫" },
     { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌" },
     { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
     { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length || undefined },
@@ -1553,11 +1559,11 @@ function AdminDashboard() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-lg">📷</span>
-                  <h2 className="text-xl font-black">محطة مسح الباركود وتأكيد التذاكر الإلكترونية</h2>
+                  <span className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-lg">🎫</span>
+                  <h2 className="text-xl font-black">مكتب تأكيد التذاكر الإلكترونية</h2>
                 </div>
                 <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium leading-relaxed">
-                  عند حضور السائح لمقر الشركة أو نقطة الانطلاق، امسح رمز الـ QR من شاشة هاتف السائح بواسطة قارئ الباركود أو كاميرا الهاتف، أو أدخل رقم التذكرة لمطابقة بيانات الحجز وتأكيد الدفع والتسجيل فورياً.
+                  عند حضور السائح لمقر الشركة أو نقطة الانطلاق، أدخل رقم التذكرة الظاهر في تذكرته لمطابقة بيانات الحجز وتأكيد الدفع والتسجيل فورياً.
                 </p>
               </div>
               <div className="shrink-0 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-center">
@@ -1567,19 +1573,8 @@ function AdminDashboard() {
             </div>
           </div>
 
-          {showCameraScanner && (
-            <QrCameraScanner
-              onClose={() => setShowCameraScanner(false)}
-              onDetected={(code) => {
-                setShowCameraScanner(false);
-                setScanCode(code);
-                handleVerifyTicketCode(code);
-              }}
-            />
-          )}
-
           {/* Scanner Input Station */}
-          <SectionCard title="🔍 إدخال أو مسح رمز التذكرة والباركود">
+          <SectionCard title="🔍 إدخال رقم التذكرة">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1593,18 +1588,10 @@ function AdminDashboard() {
                     type="text"
                     value={scanCode}
                     onChange={(e) => setScanCode(e.target.value)}
-                    placeholder="امسح الباركود بجهاز الماسح الضوئي أو اكتب رقم التذكرة (مثال: DL-68835 أو BK-D-101)..."
-                    className="w-full h-13 px-4 pl-28 sm:pl-32 rounded-2xl border-2 border-slate-200 focus:border-[#003580] focus:ring-4 focus:ring-blue-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
+                    placeholder="اكتب رقم التذكرة (مثال: BKW-261107183218-4814)..."
+                    className="w-full h-13 px-4 rounded-2xl border-2 border-slate-200 focus:border-[#003580] focus:ring-4 focus:ring-blue-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
                     autoFocus
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowCameraScanner(true)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 h-10 px-3 rounded-xl bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] text-xs font-black transition cursor-pointer flex items-center gap-1"
-                    title="مسح رمز QR بالكاميرا"
-                  >
-                    📷 <span className="hidden sm:inline">بالكاميرا</span>
-                  </button>
                 </div>
                 <button
                   type="submit"
@@ -2214,7 +2201,7 @@ function AdminDashboard() {
                       {w.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
                       {w.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
                       <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black">
-                        🗓️ كل {w.weekly_day || "جمعة"} (يوم في الأسبوع)
+                        🗓️ تبدأ يوم {w.weekly_day || weekdayOf(w.start_date) || "—"}
                       </span>
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
                         🚍 حافلة {w.bus_capacity || 25} راكب

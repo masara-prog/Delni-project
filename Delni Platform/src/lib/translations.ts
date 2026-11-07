@@ -3,7 +3,7 @@ export type Language = 'ar' | 'en';
 export const translations = {
   ar: {
     // Navbar & Common
-    platform_name: "ليبيا رحلات Pro",
+    platform_name: "دلني",
     home: "الرئيسية",
     trips: "الرحلات السياحية",
     hotels: "أماكن الإقامة",
@@ -34,7 +34,7 @@ export const translations = {
     per_night: "لليلة",
 
     // Hero & Landing Page
-    hero_title: "استكشف سحر وسر جمال ليبيا مع رحلات Pro",
+    hero_title: "استكشف سحر وسر جمال ليبيا مع دلني",
     hero_subtitle: "منصتك الأولى الشاملة لحجز الرحلات الصحراوية، الفنادق الفاخرة، وسائل النقل والتنقلات مع مرشدين معتمدين.",
     explore_trips: "استكشف الرحلات",
     view_hotels: "استعرض الفنادق",
@@ -50,7 +50,7 @@ export const translations = {
     footer_desc: "المنصة السياحية المتكاملة الأولى في ليبيا لحجز وتأمين الرحلات والفنادق والنقل بكفاءة عالية.",
     quick_links: "روابط سريعة",
     contact_us: "تواصل معنا",
-    all_rights_reserved: "جميع الحقوق محفوظة © 2026 ليبيا رحلات Pro",
+    all_rights_reserved: "جميع الحقوق محفوظة © 2026 دلني",
 
     // Chatbot
     chat_title: "المساعد السياحي الذكي",
@@ -72,7 +72,7 @@ export const translations = {
   },
   en: {
     // Navbar & Common
-    platform_name: "Libya Journeys Pro",
+    platform_name: "Delni",
     home: "Home",
     trips: "Trips & Tours",
     hotels: "Stays & Hotels",
@@ -103,7 +103,7 @@ export const translations = {
     per_night: "per night",
 
     // Hero & Landing Page
-    hero_title: "Explore the Hidden Magic of Libya with Journeys Pro",
+    hero_title: "Explore the Hidden Magic of Libya with Delni",
     hero_subtitle: "Your premier all-in-one platform to book desert safaris, luxury hotels, transportation & certified local guides.",
     explore_trips: "Explore Tours",
     view_hotels: "View Hotels",
@@ -119,7 +119,7 @@ export const translations = {
     footer_desc: "Libya's premier integrated tourism platform for booking tours, stays, and transportation with top quality.",
     quick_links: "Quick Links",
     contact_us: "Contact Us",
-    all_rights_reserved: "All rights reserved © 2026 Libya Journeys Pro",
+    all_rights_reserved: "All rights reserved © 2026 Delni",
 
     // Chatbot
     chat_title: "Smart Travel Assistant",

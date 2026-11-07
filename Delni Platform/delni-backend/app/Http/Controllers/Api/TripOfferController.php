@@ -137,8 +137,9 @@ class TripOfferController extends Controller
         }
         $yesterday = now('Africa/Tripoli')->subDay()->toDateString();
         $values = ['end_date' => $yesterday];
-        if (substr((string) $offer->start_date, 0, 10) > $yesterday) {
-            $values['start_date'] = $yesterday;
+        // The tables require end_date > start_date, so an offer that starts today (or later) is moved to start the day before
+        if (substr((string) $offer->start_date, 0, 10) >= $yesterday) {
+            $values['start_date'] = now('Africa/Tripoli')->subDays(2)->toDateString();
         }
         DB::table($table)->where($key, $offerId)->update($values);
         return response()->json(['success' => true, 'message' => "تم إنهاء عرض الرحلة {$label}، ولن يظهر للسياح بعد الآن"]);

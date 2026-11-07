@@ -1,0 +1,6 @@
+{
+    "The given data was invalid.": "البيانات المدخلة غير صحيحة.",
+    "(and :count more error)": "(وخطأ آخر)",
+    "(and :count more errors)": "(و :count أخطاء أخرى)",
+    "Too Many Attempts.": "محاولات كثيرة متتالية، يرجى الانتظار دقيقة ثم إعادة المحاولة."
+}

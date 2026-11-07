@@ -35,13 +35,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     final email = _email.text.trim();
-    final pass = _password.text.trim();
+    final pass = _password.text; // sent as typed, like the platform
     String? error;
     if (email.isEmpty) {
       error = context.tr('يرجى إدخال البريد الإلكتروني', 'Please enter your email');
     } else if (!isValidEmail(email)) {
       error = context.tr('يرجى إدخال بريد إلكتروني صحيح (example@delni.ly)', 'Please enter a valid email (example@delni.ly)');
-    } else if (pass.isEmpty) {
+    } else if (pass.trim().isEmpty) {
       error = context.tr('يرجى إدخال كلمة المرور', 'Please enter your password');
     }
     if (error != null) {

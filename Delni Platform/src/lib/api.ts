@@ -656,6 +656,8 @@ export function apiLogout() {
 }
 
 export function getStoredSession() {
+  // Pages are first rendered on the server, where there is no localStorage: nobody is signed in there
+  if (typeof window === "undefined") return { token: null, role: null, user: null };
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   const role = localStorage.getItem(STORAGE_KEYS.ROLE);
   const userJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
@@ -777,6 +779,7 @@ export async function apiUpdateTouristProfile(params: {
   email: string;
   phone_number: string;
   password?: string;
+  current_password?: string; // required by the server when a new password is set
 }): Promise<ApiResponse> {
   // The session is only updated after DelniDB confirms the change
   const saved = await laravelRequest("POST", "/auth/tourist/update-profile", params);
