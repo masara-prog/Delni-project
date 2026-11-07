@@ -9,8 +9,8 @@ set "HWADB=C:\Program Files (x86)\HonorSuite\hwtools\hwtransport.exe"
 set "SDKADB=%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
 set "ADB=%SDKADB%"
 if exist "%HWADB%" set "ADB=%HWADB%"
-rem The platform (website + Laravel) is the folder that contains this app
-for %%I in ("%~dp0..") do set "PLATFORM=%%~fI"
+rem The platform (website + Laravel) is the "Delni Platform" folder next to this app
+for %%I in ("%~dp0..\Delni Platform") do set "PLATFORM=%%~fI"
 
 echo.
 echo [1/5] Checking the Laravel server on port 8000 and the website on port 8080...
