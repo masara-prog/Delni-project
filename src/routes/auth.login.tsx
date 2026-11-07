@@ -147,18 +147,20 @@ function LoginPage() {
           </div>
         ))}
 
-        {/* Logo only (no text) over the photos */}
-        <Link to="/" className="absolute top-8 right-8 z-20 w-fit" aria-label="الصفحة الرئيسية">
-          <Logo size="lg" showText={false} />
-        </Link>
-
         {/* Crisp Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/40 to-transparent z-1" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#D96B27]/20 via-transparent to-transparent z-1" />
 
         <div className="relative z-10 h-full flex flex-col justify-between p-10 xl:p-12 text-white">
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm transition-all duration-300">
+          {/* The logo, then the place shown in the photo right under it (never covered by the logo) */}
+          <div className="flex flex-col items-start gap-4">
+            <Link to="/" className="w-fit" aria-label="الصفحة الرئيسية">
+              <Logo size="lg" showText={false} />
+            </Link>
+            <span
+              key={currentSlide.titleAr}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/30 backdrop-blur-sm border border-white/30 text-xs font-bold text-white shadow-sm animate-in fade-in slide-in-from-top-1 duration-500"
+            >
               <MapPin className="w-4 h-4 text-[#D96B27]" />
               <span>{currentSlide.titleAr}</span>
             </span>

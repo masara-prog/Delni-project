@@ -1077,6 +1077,12 @@ export async function apiReviewPrivateTrip(id: string, payload: any): Promise<Sa
   return saved.ok ? { success: true, data: saved.data, warning: saved.body?.warning || undefined } : { success: false, error: saved.error };
 }
 
+// Each vehicle with whether it is fully available for the private trip's whole period (and why not)
+export async function apiGetPrivateTripVehicleOptions(id: string): Promise<{ plate_number: string; available: boolean; reason: string | null }[] | null> {
+  const res = await laravelRequest<any[]>("GET", `/private-trips/${encodeURIComponent(id)}/vehicle-options`);
+  return res.ok && Array.isArray(res.data) ? res.data : null;
+}
+
 export async function apiDecidePrivateTrip(id: string, touristId: string, decision: "مؤكدة" | "ملغاة من السائح"): Promise<SaveResult<any>> {
   const saved = await laravelRequest("POST", `/private-trips/${encodeURIComponent(id)}/decision`, { tourist_id: touristId, decision });
   return saved.ok ? { success: true, data: saved.data } : { success: false, error: saved.error };

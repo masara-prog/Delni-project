@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getOrCreateUserSession, sendUserMessage, type ChatSession } from "@/lib/supportChat";
+import { getOrCreateUserSession, sendUserMessage, pullUserSession, type ChatSession } from "@/lib/supportChat";
 import { useLanguage } from "@/lib/i18n";
 
 export function DashboardSupportChatModal({
@@ -29,6 +29,9 @@ export function DashboardSupportChatModal({
 
     const currentSession = getOrCreateUserSession(sessionId, userName, userRole);
     setSession(currentSession);
+    // Replies from the administration come from DelniDB
+    pullUserSession(sessionId, userName, userRole);
+    const poll = window.setInterval(() => pullUserSession(sessionId, userName, userRole), 6000);
 
     const handleSync = (e: any) => {
       const all: ChatSession[] = e?.detail || [];
@@ -52,6 +55,7 @@ export function DashboardSupportChatModal({
     window.addEventListener("storage", handleStorage);
 
     return () => {
+      window.clearInterval(poll);
       window.removeEventListener("dalni_chat_sync", handleSync);
       window.removeEventListener("storage", handleStorage);
     };

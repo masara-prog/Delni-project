@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { splitTripNotes } from "@/lib/privateTripNotes";
 import { useState, useEffect } from "react";
 import { platformConfirm } from "@/components/PlatformAlert";
 import { fileToCompressedDataUrl } from "@/lib/imageCompress";
@@ -1461,11 +1462,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
 
   // The tourist's own words and the admin's notes are stored together ("... - ملاحظات الإدارة: ..."); an old
   // notes value that is structured data (the stations as JSON) is not shown
-  const reqParts = String(r.customer_requirements || "").split(" - ").map((x: string) => x.trim()).filter(Boolean);
-  const isAdminNote = (x: string) => x.startsWith("ملاحظات الإدارة");
-  const looksLikeData = (x: string) => /^ملاحظات الإدارة:\s*[\[{]/.test(x);
-  const customerNeeds = Array.from(new Set(reqParts.filter((x: string) => !isAdminNote(x))));
-  const adminNotes = reqParts.filter((x: string) => isAdminNote(x) && !looksLikeData(x)).map((x: string) => x.replace(/^ملاحظات الإدارة:\s*/, ""));
+  const { customerNeeds, adminNotes } = splitTripNotes(r.customer_requirements);
 
   // Header photos: the chosen landmarks' own pictures, cycling; the trip photo when it has no landmark pictures
   const placePhotos: string[] = Array.isArray(r.places) ? r.places.map((pl: any) => pl.place_image).filter(Boolean) : [];

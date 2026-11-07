@@ -138,6 +138,10 @@ class PrivateTripController extends Controller
         if ($preferred?->availability_status === 'إجازة') {
             return $this->error('المرشد المختار في إجازة حالياً، يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة', 422);
         }
+        // Guides on a daily or weekly trip are not offered for private trips
+        if ($guide && (GuideController::scheduledTripCounts([$guide])[$guide] ?? 0) > 0) {
+            return $this->error('المرشد المختار مرتبط برحلات يومية أو أسبوعية ولا يستقبل رحلات خاصة، يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة', 422);
+        }
 
         $id = 'PRV-' . now('Africa/Tripoli')->format('ymdHis') . '-' . random_int(1000, 9999);
         DB::transaction(function () use ($id, $data, $tourist, $placeIds, $guide) {
@@ -171,6 +175,35 @@ class PrivateTripController extends Controller
     }
 
     // Admin: price, schedule (guide, vehicle, hotels, stations) and send to the tourist, or reject
+    /**
+     * The vehicles the admin can give this private trip: only those fully available for its whole period (ready, company
+     * active with a contract covering the trip, a driver who is working with a valid licence, enough seats, no other trip).
+     */
+    public function vehicleOptions(string $tripId): JsonResponse
+    {
+        $trip = DB::table('private_trips')->where('private_trip_id', $tripId)->first();
+        if (!$trip) {
+            return $this->error('طلب الرحلة الخاصة غير موجود', 404);
+        }
+        $start = substr((string) $trip->preferred_start_date, 0, 10);
+        $end = date('Y-m-d', strtotime($start . ' +' . max(0, (int) $trip->duration_days - 1) . ' days'));
+        $options = [];
+        foreach (DB::table('vehicles')->pluck('plate_number') as $plate) {
+            $plate = (string) $plate;
+            [$error, $warning] = $this->vehicleFitness($plate, $start, $end);
+            $reason = $error
+                ?? $this->capacityError($plate, (int) $trip->number_of_companions)
+                ?? $warning
+                ?? $this->scheduleConflict(null, $plate, $start, $end, null, ['private', $tripId]);
+            $options[] = [
+                'plate_number' => $plate,
+                'available' => $reason === null,
+                'reason' => $reason === null ? null : preg_replace('/^تنبيه:\s*/u', '', $reason),
+            ];
+        }
+        return response()->json(['success' => true, 'data' => $options, 'period' => ['start' => $start, 'end' => $end]]);
+    }
+
     public function review(Request $request, string $tripId): JsonResponse
     {
         $trip = DB::table('private_trips')->where('private_trip_id', $tripId)->first();
@@ -210,6 +243,10 @@ class PrivateTripController extends Controller
         if ($guide && DB::table('tour_guides')->where('license_number', $guide)->value('verification_status') !== 'موثق') {
             return $this->error('لا يمكن إسناد الرحلة لمرشد غير معتمد من الإدارة', 422);
         }
+        // Private trips go only to guides who are not on a daily or weekly trip
+        if ($guide && (GuideController::scheduledTripCounts([$guide])[$guide] ?? 0) > 0) {
+            return $this->error('هذا المرشد مسند لرحلة يومية أو أسبوعية، والرحلات الخاصة تُسند فقط للمرشدين غير المرتبطين برحلات. يرجى اختيار مرشد متاح.', 422);
+        }
         // The schedule goes to the guide before the tourist
         if ($data['status_order'] === self::QUOTED) {
             if (!$guide) {
@@ -246,11 +283,11 @@ class PrivateTripController extends Controller
                 return $this->error($error, 422);
             }
             if ($tripPlate) {
+                // A private trip takes only a vehicle that is fully ready for its whole period (driver included)
                 [$error, $vehicleWarning] = $this->vehicleFitness($tripPlate, $start, $end);
-                if ($error) {
-                    return $this->error($error, 422);
+                if ($error ?? $vehicleWarning) {
+                    return $this->error(preg_replace('/^تنبيه:\s*/u', '', $error ?? $vehicleWarning) . ' يرجى اختيار مركبة متاحة كلياً.', 422);
                 }
-                $warning = $this->joinWarnings($warning, $vehicleWarning);
             }
         }
 

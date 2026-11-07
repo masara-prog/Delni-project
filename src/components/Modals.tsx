@@ -1944,7 +1944,8 @@ export function PrivateTripModal({
         .then((res) => {
           if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
             // A guide on leave takes no new trips, so they are not offered as the preferred guide
-            setDbGuides(res.data.filter((g: any) => g.availability_status !== "إجازة"));
+            // Only guides free for private trips: not on leave and not on any daily or weekly trip
+            setDbGuides(res.data.filter((g: any) => g.availability_status !== "إجازة" && g.available_for_private !== false));
           }
         })
         .catch(() => {});
@@ -1967,23 +1968,7 @@ export function PrivateTripModal({
       languages: { code: string; nameAr: string; nameEn: string }[];
     }>();
 
-    TOUR_GUIDES_DATA.forEach((g) => {
-      map.set(g.licenseNumber, {
-        licenseNumber: g.licenseNumber,
-        name: g.name,
-        gender: g.gender || "male",
-        avatar: g.avatar,
-        title: g.title,
-        experienceYears: g.experienceYears,
-        rating: g.rating,
-        reviewsCount: g.reviewsCount,
-        pricePerDay: g.pricePerDay,
-        primaryRegion: g.primaryRegion,
-        operatingRegions: g.operatingRegions || [],
-        languages: g.languages || [{ code: "AR", nameAr: "العربية", nameEn: "Arabic" }],
-      });
-    });
-
+    // Real guides from the platform only (the sample list is not offered: the server accepts registered guides only)
     dbGuides.forEach((g) => {
       const lic = g.license_number || g.licenseNumber;
       if (!lic) return;

@@ -46,7 +46,7 @@ const landmarkSamples = [
 ];
 
 import { useLanguage } from "@/lib/i18n";
-import { getOrCreateUserSession, sendUserMessage, type ChatSession } from "@/lib/supportChat";
+import { getOrCreateUserSession, sendUserMessage, pullUserSession, type ChatSession } from "@/lib/supportChat";
 
 const now = () => new Date().toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" });
 
@@ -82,6 +82,9 @@ export function FloatingChat() {
     const { name, role, id } = getSessionInfo();
     const cur = getOrCreateUserSession(id, name, role);
     setSupportSession(cur);
+    // Replies from the administration come from DelniDB
+    pullUserSession(id, name, role);
+    const poll = window.setInterval(() => pullUserSession(id, name, role), 6000);
 
     const handleSync = (e: any) => {
       const all: ChatSession[] = e?.detail || [];
@@ -103,6 +106,7 @@ export function FloatingChat() {
     window.addEventListener("storage", handleStorage);
 
     return () => {
+      window.clearInterval(poll);
       window.removeEventListener("dalni_chat_sync", handleSync);
       window.removeEventListener("storage", handleStorage);
     };

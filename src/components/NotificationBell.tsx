@@ -23,6 +23,14 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useLanguage } from "@/lib/i18n";
 
+// Same cleanup as the mobile app: no leading emoji / code in the title; codes keep their left-to-right order in the body
+const CODE_RE = /(?:BK[DW]|PRV)-[0-9-]+/;
+const notifCode = (n: { title?: string; body?: string }) => (`${n.title || ""} ${n.body || ""}`.match(CODE_RE) || [])[0] || null;
+const cleanNotifTitle = (t: string) =>
+  String(t || "").replace(/^[^\p{L}\p{N}(]+/u, "").replace(/\s*\(#?(?:BK[DW]|PRV)-[0-9-]+\)/g, "").trim();
+const cleanNotifBody = (b: string) =>
+  String(b || "").replace(/\(#?((?:BK[DW]|PRV)-[0-9-]+)\)/g, "⁦$1⁩").replace(/#/g, "").replace(/\s+/g, " ").trim();
+
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -214,7 +222,7 @@ export function NotificationBell() {
                           !item.read ? "text-[#0F172A] font-black" : "text-slate-700 font-bold"
                         }`}
                       >
-                        {item.title}
+                        {cleanNotifTitle(item.title)}
                       </h5>
                       <span className="text-[10px] text-slate-400 font-semibold shrink-0 whitespace-nowrap">
                         {item.time}
@@ -222,8 +230,13 @@ export function NotificationBell() {
                     </div>
 
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                      {item.body}
+                      {cleanNotifBody(item.body)}
                     </p>
+                    {notifCode(item) && (
+                      <span dir="ltr" className="mt-1.5 inline-block rounded-md bg-blue-50 px-2 py-0.5 font-mono text-[10px] font-black text-[#003580]">
+                        {notifCode(item)}
+                      </span>
+                    )}
 
                     {item.link && (
                       <div className="mt-1.5 flex items-center gap-1 text-[10px] text-primary font-bold">

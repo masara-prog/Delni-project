@@ -164,8 +164,38 @@ class TransportController extends Controller
         if (!$driver->assigned_vehicle_plate) {
             return $this->error('لا توجد مركبة مسندة إليك، فلا يمكن تحديث مرحلة رحلة', 409);
         }
+        // Stages are reported on a trip day only (a trip of the driver's vehicle runs today)
+        if (!$this->vehicleRunsToday($driver->assigned_vehicle_plate)) {
+            return $this->error('لا توجد رحلة لمركبتك اليوم؛ تتفعل مراحل الرحلة في يوم الرحلة المحدد فقط', 409);
+        }
         $driver->forceFill(['current_trip_stage' => $stage])->save();
         return response()->json(['success' => true, 'message' => "تم تحديث مرحلة الرحلة: {$stage}", 'data' => ['current_trip_stage' => $stage]]);
+    }
+
+    // Whether a trip assigned to the vehicle runs today: an active daily trip on today's weekday, a weekly trip
+    // (accepted by its guide) covering today, or a confirmed private trip covering today
+    private function vehicleRunsToday(string $plate): bool
+    {
+        $today = now('Africa/Tripoli');
+        $date = $today->toDateString();
+        $names = ['الاحد', 'الاثنين', 'الثلاثاء', 'الاربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        $norm = fn ($d) => str_replace(['إ', 'أ', 'آ'], 'ا', trim((string) $d));
+        $approved = fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', 'وافق المرشد');
+
+        $daily = DB::table('daily_trips')->where('vehicle_plate', $plate)->where('is_active', true)->where($approved)->pluck('daily_trip_id');
+        foreach ($daily as $id) {
+            $days = DB::table('daily_trip_days')->where('daily_trip_id', $id)->pluck('day_of_week')->map($norm)->all();
+            if (!$days || in_array($names[$today->dayOfWeek], $days, true)) {
+                return true;
+            }
+        }
+        if (DB::table('weekly_trips')->where('vehicle_plate', $plate)->where('is_active', true)->where($approved)
+            ->where('start_date', '<=', $date)->where('end_date', '>=', $date)->exists()) {
+            return true;
+        }
+        return DB::table('private_trips')->where('vehicle_plate', $plate)->where('status_order', 'مؤكدة')
+            ->where('preferred_start_date', '<=', $date)
+            ->whereRaw('DATEADD(day, duration_days - 1, preferred_start_date) >= ?', [$date])->exists();
     }
 
     /* ===================== Vehicles ===================== */

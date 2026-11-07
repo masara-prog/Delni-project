@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\PrivateTripController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\SupportMessageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -85,6 +86,15 @@ Route::get('/notifications/unread-count', [NotificationController::class, 'unrea
 Route::post('/notifications', [NotificationController::class, 'store'])->middleware('throttle:30,1');
 Route::post('/notifications/read', [NotificationController::class, 'markRead']);
 
+// --- Support chat (support_messages): an account or a visitor writes to the administration; the admin answers ---
+Route::get('/support/messages', [SupportMessageController::class, 'index']);
+Route::post('/support/messages', [SupportMessageController::class, 'store'])->middleware('throttle:20,1');
+Route::middleware('role:admin')->group(function () {
+    Route::get('/support/sessions', [SupportMessageController::class, 'sessions']);
+    Route::post('/support/sessions/{sessionId}/reply', [SupportMessageController::class, 'reply']);
+    Route::post('/support/sessions/{sessionId}/read', [SupportMessageController::class, 'markRead']);
+});
+
 // --- Tourist ---
 Route::middleware('role:tourist,admin')->group(function () {
     Route::get('/tourists/{touristId}', [TouristController::class, 'show']);
@@ -142,6 +152,7 @@ Route::middleware('role:admin')->group(function () {
     Route::post('/offers/{kind}', [TripOfferController::class, 'save'])->whereIn('kind', ['daily', 'weekly']);
     Route::post('/offers/{kind}/{offerId}/end', [TripOfferController::class, 'end'])->whereIn('kind', ['daily', 'weekly']);
     Route::post('/private-trips/{tripId}/review', [PrivateTripController::class, 'review']);
+    Route::get('/private-trips/{tripId}/vehicle-options', [PrivateTripController::class, 'vehicleOptions']);
 
     Route::post('/places', [PlaceController::class, 'save']);
     Route::post('/guides/{licenseNumber}/verify', [GuideController::class, 'verify']);

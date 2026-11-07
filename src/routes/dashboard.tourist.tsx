@@ -1032,7 +1032,7 @@ function TouristDashboard() {
             <LibyanPhoneField
               label="رقم الهاتف"
               value={touristInfo.phone_number}
-              onChange={(v) => setTouristInfo({ ...touristInfo, phone_number: v })}
+              onChange={(v) => setTouristInfo({ ...touristInfo, phone_number: v.replace(/\D/g, "").slice(0, 10) })}
             />
 
             <Field

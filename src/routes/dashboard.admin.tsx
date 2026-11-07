@@ -23,6 +23,7 @@ import {
   apiGetDailyOffers,
   apiGetWeeklyOffers,
   apiReviewPrivateTrip,
+  apiGetPrivateTripVehicleOptions,
   getAllGuides, 
   getTransportCompanies,
   saveTransportCompanies,
@@ -42,7 +43,7 @@ import {
   apiSaveRestaurant
 } from "@/lib/api";
 import { TOUR_GUIDES_DATA, formatWorkingDays, REGIONS_MAP, formatOperatingRegions } from "@/lib/guidesData";
-import { getChatSessions as getAllChatSessions, saveChatSessions, sendAdminReply } from "@/lib/supportChat";
+import { getChatSessions as getAllChatSessions, saveChatSessions, sendAdminReply, pullAdminSessions, markAdminSessionRead } from "@/lib/supportChat";
 
 // Conversations opened by platform users (the admin's own test conversations are not shown)
 const getChatSessions = () => getAllChatSessions().filter((s) => !s.id.startsWith("session-admin-") && s.recipient_role !== "admin");
@@ -66,6 +67,7 @@ import type {
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
 import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 import { QrCameraScanner } from "@/components/QrCameraScanner";
+import { splitTripNotes } from "@/lib/privateTripNotes";
 
 export const formatTripDate = (rawDate?: string | null): string => {
   if (!rawDate) return "غير محدد";
@@ -90,6 +92,35 @@ export const formatTripDate = (rawDate?: string | null): string => {
 };
 
 // A landmark's name, with its city only when the city differs (landmarks are often named after their city)
+// The tourist's needs and the admin's notes as two tidy lists (never the raw stored text)
+function TripNotesBox({ raw }: { raw: unknown }) {
+  const { customerNeeds, adminNotes } = splitTripNotes(raw);
+  if (customerNeeds.length === 0 && adminNotes.length === 0) return null;
+  const Group = ({ title, icon, items, tone }: { title: string; icon: string; items: string[]; tone: "amber" | "blue" }) => (
+    <div className={tone === "amber" ? "rounded-xl border border-amber-200/70 bg-amber-50/60 p-3" : "rounded-xl border border-blue-200/70 bg-blue-50/50 p-3"}>
+      <div className={`flex items-center gap-1.5 text-[11px] font-black mb-2 ${tone === "amber" ? "text-amber-900" : "text-blue-900"}`}>
+        <span aria-hidden="true">{icon}</span>
+        <span>{title}</span>
+        <span className="mr-auto rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-slate-500">{items.length}</span>
+      </div>
+      <ul className="space-y-1.5">
+        {items.map((it, i) => (
+          <li key={i} className="flex items-start gap-2 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold leading-relaxed text-slate-800 shadow-2xs">
+            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${tone === "amber" ? "bg-amber-500" : "bg-blue-500"}`} aria-hidden="true" />
+            <span className="min-w-0 break-words">{it}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+  return (
+    <div className={`grid gap-2 ${customerNeeds.length > 0 && adminNotes.length > 0 ? "sm:grid-cols-2" : ""}`}>
+      {customerNeeds.length > 0 && <Group title="متطلبات السائح" icon="📝" items={customerNeeds} tone="amber" />}
+      {adminNotes.length > 0 && <Group title="ملاحظات الإدارة" icon="🗂️" items={adminNotes} tone="blue" />}
+    </div>
+  );
+}
+
 function placeLabel(pl: any): string {
   const name = String(pl?.place_name || pl?.name || pl?.city || "").trim();
   const city = String(pl?.city || "").trim();
@@ -414,6 +445,8 @@ function mapGuideRow(g: any): Guide {
     total_tours_completed: Number(g.total_tours_completed) || 0,
     license_expiry_date: g.license_expiry_date ? String(g.license_expiry_date).slice(0, 10) : null,
     availability_status: g.availability_status || "متاح",
+    // From /guides: a guide on a daily or weekly trip is not offered for private trips
+    available_for_private: g.available_for_private !== false,
   } as Guide;
 }
 
@@ -754,6 +787,8 @@ function AdminDashboard() {
   const [editingDailyTrip, setEditingDailyTrip] = useState<DailyTrip | null>(null);
   const [editingWeeklyTrip, setEditingWeeklyTrip] = useState<WeeklyTrip | null>(null);
   const [evaluatingPrivateTrip, setEvaluatingPrivateTrip] = useState<PrivateTripRequest | null>(null);
+  // Private-trip cards are compact; the full details open on demand
+  const [openPrivateTripId, setOpenPrivateTripId] = useState<string | null>(null);
   const [selectedVehicleForModal, setSelectedVehicleForModal] = useState<VehicleDetailsData | null>(null);
   const [showAddHotel, setShowAddHotel] = useState(false);
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
@@ -1110,7 +1145,21 @@ function AdminDashboard() {
     setEvaluatingPrivateTrip(null);
 
     if (res.data?.status_order === "بانتظار رد المرشد") {
-      alert(`✅ تم اعتماد جدول المحطات وتسعيرة الرحلة (${price} د.ل) وإرسالها للمرشد للموافقة عليها.\nبعد موافقة المرشد يصل العرض للسائح تلقائياً، وإذا اعتذر يصلك إشعار لتعيين مرشد آخر.${res.warning ? "\n\n" + res.warning : ""}`);
+      // One idea per line: what happened, what comes next, then each warning as its own point
+      const notes = String(res.warning || "")
+        .split(/\s*تنبيه:\s*/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      alert(
+        [
+          `✅ أُرسلت الرحلة للمرشد للموافقة عليها`,
+          `💰 التسعيرة المعتمدة: ${price} د.ل`,
+          ``,
+          `• بعد موافقة المرشد يصل العرض للسائح تلقائياً.`,
+          `• إذا اعتذر المرشد يصلك إشعار لتعيين مرشد آخر.`,
+          ...(notes.length ? [``, `⚠️ للعلم:`, ...notes.map((n) => `• ${n}`)] : []),
+        ].join("\n"),
+      );
     } else if (status === "مرفوضة من الأدمن") {
       alert(`تم تسجيل رفض طلب الرحلة الخاصة (#${id}).`);
     }
@@ -1150,8 +1199,12 @@ function AdminDashboard() {
     };
     window.addEventListener("dalni_chat_sync", handleChatSync);
     window.addEventListener("storage", handleStorageSync);
+    // Conversations are stored in DelniDB (support_messages): load them and keep them fresh
+    pullAdminSessions();
+    const chatPoll = window.setInterval(() => pullAdminSessions(), 10000);
 
     return () => {
+      window.clearInterval(chatPoll);
       window.removeEventListener("dalni_chat_sync", handleChatSync);
       window.removeEventListener("storage", handleStorageSync);
     };
@@ -1280,6 +1333,34 @@ function AdminDashboard() {
   };
   const handleTogglePaymentDaily = (id: string) => updateBooking("daily", id, "payment");
   const handleToggleAttendedDaily = (id: string) => updateBooking("daily", id, "attendance");
+
+  // Bookings log filters: one trip's bookings, payment, attendance, status and a quick search
+  const [bkTrip, setBkTrip] = useState("");
+  const [bkPay, setBkPay] = useState<"all" | "paid" | "unpaid">("all");
+  const [bkAttend, setBkAttend] = useState<"all" | "yes" | "no">("all");
+  const [bkStatus, setBkStatus] = useState<"all" | "active" | "cancelled">("all");
+  const [bkQuery, setBkQuery] = useState("");
+  const bookingMatches = (b: any, kind: "daily" | "weekly") => {
+    const tripId = kind === "daily" ? b.daily_trip_id : b.weekly_trip_id;
+    if (bkTrip && bkTrip !== `${kind}:${tripId}`) return false;
+    const paid = b.payment_status === "paid";
+    if (bkPay === "paid" && !paid) return false;
+    if (bkPay === "unpaid" && paid) return false;
+    if (bkAttend === "yes" && !b.attended) return false;
+    if (bkAttend === "no" && b.attended) return false;
+    const cancelled = String(b.booking_status || "").startsWith("ملغ");
+    if (bkStatus === "active" && cancelled) return false;
+    if (bkStatus === "cancelled" && !cancelled) return false;
+    const q = bkQuery.trim();
+    if (q) {
+      const id = String(kind === "daily" ? b.booking_daily_id : b.booking_weekly_id);
+      if (!id.includes(q) && !String(b.tourist_name || "").includes(q) && !String(b.tourist_id || "").includes(q)) return false;
+    }
+    return true;
+  };
+  const filteredDaily = dailyBookings.filter((b) => bookingMatches(b, "daily"));
+  const filteredWeekly = weeklyBookings.filter((b) => bookingMatches(b, "weekly"));
+  const bkFiltersOn = !!bkTrip || bkPay !== "all" || bkAttend !== "all" || bkStatus !== "all" || !!bkQuery.trim();
   const handleTogglePaymentWeekly = (id: string) => updateBooking("weekly", id, "payment");
   const handleToggleAttendedWeekly = (id: string) => updateBooking("weekly", id, "attendance");
 
@@ -2211,8 +2292,91 @@ function AdminDashboard() {
             </div>
           </div>
 
+          {/* Filters: pick one trip to see only its bookings, then narrow by payment / attendance / status */}
+          <div className="p-4 rounded-2xl border border-border bg-white space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
+              <label className="space-y-1">
+                <span className="text-[11px] font-black text-slate-600">🧭 الرحلة</span>
+                <select
+                  value={bkTrip}
+                  onChange={(e) => setBkTrip(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:bg-white"
+                >
+                  <option value="">كل الرحلات ({dailyBookings.length + weeklyBookings.length} حجز)</option>
+                  <optgroup label="الرحلات اليومية">
+                    {dailyTrips
+                      .map((t) => ({ t, n: dailyBookings.filter((b) => b.daily_trip_id === (t.daily_trip_id || t.id)).length }))
+                      .filter((x) => x.n > 0)
+                      .map(({ t, n }) => (
+                        <option key={`d-${t.daily_trip_id || t.id}`} value={`daily:${t.daily_trip_id || t.id}`}>
+                          {t.trip_title || t.title} ({n} حجز)
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="الرحلات الأسبوعية">
+                    {weeklyTrips
+                      .map((t) => ({ t, n: weeklyBookings.filter((b) => b.weekly_trip_id === (t.weekly_trip_id || t.id)).length }))
+                      .filter((x) => x.n > 0)
+                      .map(({ t, n }) => (
+                        <option key={`w-${t.weekly_trip_id || t.id}`} value={`weekly:${t.weekly_trip_id || t.id}`}>
+                          {t.trip_title || t.title} ({n} حجز)
+                        </option>
+                      ))}
+                  </optgroup>
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-black text-slate-600">🔎 بحث</span>
+                <input
+                  value={bkQuery}
+                  onChange={(e) => setBkQuery(e.target.value)}
+                  placeholder="رقم الحجز أو اسم السائح"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:bg-white"
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              {([
+                ["💳 الدفع", bkPay, setBkPay, [["all", "الكل"], ["unpaid", "غير مدفوع"], ["paid", "مدفوع"]]],
+                ["✅ الحضور", bkAttend, setBkAttend, [["all", "الكل"], ["no", "لم يحضر"], ["yes", "حضر"]]],
+                ["📌 الحالة", bkStatus, setBkStatus, [["all", "الكل"], ["active", "سارية"], ["cancelled", "ملغاة"]]],
+              ] as const).map(([label, value, setter, options]) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <span className="font-black text-slate-600">{label}:</span>
+                  <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+                    {options.map(([v, l]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => (setter as (x: any) => void)(v)}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${value === v ? "bg-[#003580] text-white shadow-xs" : "text-slate-600 hover:bg-white"}`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {bkFiltersOn && (
+                <button
+                  type="button"
+                  onClick={() => { setBkTrip(""); setBkPay("all"); setBkAttend("all"); setBkStatus("all"); setBkQuery(""); }}
+                  className="mr-auto px-3 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 font-black cursor-pointer"
+                >
+                  ✕ مسح الفلاتر
+                </button>
+              )}
+            </div>
+            <div className="text-[11px] font-bold text-slate-500">
+              النتيجة: {filteredDaily.length + filteredWeekly.length} حجز ·{" "}
+              {[...filteredDaily, ...filteredWeekly].filter((b) => !String(b.booking_status || "").startsWith("ملغ")).reduce((n, b: any) => n + Number(b.number_of_seats || b.seats || 0), 0)} مقعد ساري ·{" "}
+              {[...filteredDaily, ...filteredWeekly].filter((b) => b.payment_status !== "paid" && !String(b.booking_status || "").startsWith("ملغ")).length} بانتظار الدفع
+            </div>
+          </div>
+
           {/* Daily Trips Bookings */}
-          <SectionCard title="🎟️ حجوزات الرحلات اليومية">
+          {!bkTrip.startsWith("weekly:") && (
+          <SectionCard title={`🎟️ حجوزات الرحلات اليومية (${filteredDaily.length})`}>
             <div className="overflow-x-auto text-right rounded-2xl border border-border">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -2228,10 +2392,21 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {dailyBookings.map((b) => {
+                  {filteredDaily.length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs font-bold text-slate-400">لا توجد حجوزات مطابقة للفلاتر</td></tr>
+                  )}
+                  {filteredDaily.map((b) => {
                     const trip = dailyTrips.find((t) => (t.daily_trip_id || t.id) === b.daily_trip_id);
+                    // A cancelled booking stays listed, crossed out and faded, so it is never mistaken for a live one
+                    const cancelled = String(b.booking_status || "").startsWith("ملغ");
                     return (
-                      <tr key={b.booking_daily_id} className="odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors">
+                      <tr
+                        key={b.booking_daily_id}
+                        className={cancelled
+                          ? "bg-red-50/60 text-slate-400 line-through decoration-red-400/80 opacity-70"
+                          : "odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors"}
+                        title={cancelled ? `حجز ملغى (${b.booking_status})` : undefined}
+                      >
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-mono text-xs font-bold text-primary">{b.booking_daily_id}</td>
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-bold text-foreground">
                           <div>{b.tourist_name || b.tourist_id}</div>
@@ -2268,14 +2443,17 @@ function AdminDashboard() {
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
+                            disabled={cancelled}
                             onClick={() => {
                               setScanCode(b.booking_daily_id);
                               handleVerifyTicketCode(b.booking_daily_id);
                               setActive("scanner");
                             }}
-                            className="px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"
+                            className={cancelled
+                              ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
+                              : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
-                            📷 مسح وتحقق
+                            {cancelled ? "✕ حجز ملغى" : "📷 مسح وتحقق"}
                           </button>
                         </td>
                       </tr>
@@ -2285,9 +2463,11 @@ function AdminDashboard() {
               </table>
             </div>
           </SectionCard>
+          )}
 
           {/* Weekly Trips Bookings */}
-          <SectionCard title="🗓️ حجوزات الرحلات الأسبوعية">
+          {!bkTrip.startsWith("daily:") && (
+          <SectionCard title={`🗓️ حجوزات الرحلات الأسبوعية (${filteredWeekly.length})`}>
             <div className="overflow-x-auto text-right rounded-2xl border border-border">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -2303,10 +2483,21 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {weeklyBookings.map((b) => {
+                  {filteredWeekly.length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs font-bold text-slate-400">لا توجد حجوزات مطابقة للفلاتر</td></tr>
+                  )}
+                  {filteredWeekly.map((b) => {
                     const trip = weeklyTrips.find((t) => (t.weekly_trip_id || t.id) === b.weekly_trip_id);
+                    // A cancelled booking stays listed, crossed out and faded, so it is never mistaken for a live one
+                    const cancelled = String(b.booking_status || "").startsWith("ملغ");
                     return (
-                      <tr key={b.booking_weekly_id} className="odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors">
+                      <tr
+                        key={b.booking_weekly_id}
+                        className={cancelled
+                          ? "bg-red-50/60 text-slate-400 line-through decoration-red-400/80 opacity-70"
+                          : "odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors"}
+                        title={cancelled ? `حجز ملغى (${b.booking_status})` : undefined}
+                      >
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-mono text-xs font-bold text-primary">{b.booking_weekly_id}</td>
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-bold text-foreground">
                           <div>{b.tourist_name || b.tourist_id}</div>
@@ -2339,14 +2530,17 @@ function AdminDashboard() {
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0">
                           <button
                             type="button"
+                            disabled={cancelled}
                             onClick={() => {
                               setScanCode(b.booking_weekly_id);
                               handleVerifyTicketCode(b.booking_weekly_id);
                               setActive("scanner");
                             }}
-                            className="px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"
+                            className={cancelled
+                              ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
+                              : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
-                            📷 مسح وتحقق
+                            {cancelled ? "✕ حجز ملغى" : "📷 مسح وتحقق"}
                           </button>
                         </td>
                       </tr>
@@ -2356,6 +2550,7 @@ function AdminDashboard() {
               </table>
             </div>
           </SectionCard>
+          )}
         </div>
       )}
 
@@ -2501,8 +2696,10 @@ function AdminDashboard() {
                 const isPendingTourist = pt.status_order === "بانتظار تأكيد السائح" || pt.status_order?.includes("موافقة");
                 const isCancelled = pt.status_order?.includes("ملغاة") || pt.status_order?.includes("مرفوضة");
 
+                const isOpen = openPrivateTripId === pt.private_trip_id;
+                const placesCount = Array.isArray(pt.places) ? pt.places.length : 0;
                 return (
-                  <div key={pt.private_trip_id} className="p-5 rounded-2xl border border-border bg-white space-y-3.5 shadow-xs">
+                  <div key={pt.private_trip_id} className={`rounded-2xl border bg-white shadow-xs transition ${isOpen ? "border-[#003580]/30 p-5 space-y-3.5" : "border-border p-4 space-y-2.5"} ${isCancelled ? "opacity-70" : ""}`}>
                     <div className="flex justify-between items-start flex-wrap gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -2516,9 +2713,14 @@ function AdminDashboard() {
                             #{pt.private_trip_id}
                           </span>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-3 font-bold">
+                        <div className="text-[11px] text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-bold">
+                          <span>📅 {formatTripDate(pt.preferred_start_date)}</span>
+                          <span>⏱️ {pt.duration_days} {pt.duration_days > 1 ? "أيام" : "يوم"}</span>
+                          <span>👥 {pt.number_of_companions}</span>
+                          {placesCount > 0 && <span>🏛️ {placesCount} {placesCount > 1 ? "معالم" : "معلم"}</span>}
+                          {pt.quoted_price && <span className="text-emerald-700 font-black">💰 {pt.quoted_price} د.ل</span>}
                           <span>
-                            👨‍✈️ المرشد السياحي المطلوب:{" "}
+                            👨‍✈️{" "}
                             <span className="text-primary font-black">
                               {pt.guide_name ? `${pt.guide_name} (${pt.guide_license_number || ""})` : (pt.guide_license_number || "غير محدد (بمعرفة الإدارة)")}
                             </span>
@@ -2540,6 +2742,7 @@ function AdminDashboard() {
                       </Badge>
                     </div>
 
+                    {isOpen && (<>
                     {/* Clean Destination Landmarks Tags */}
                     <div className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl font-medium border border-slate-100 space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2561,14 +2764,7 @@ function AdminDashboard() {
                     </div>
 
                     {/* Tourist Requirements and Notes (Deduplicated) */}
-                    {pt.customer_requirements && (
-                      <div className="text-xs text-amber-950 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60 font-semibold leading-relaxed">
-                        <span className="font-black text-amber-900 block mb-1">📝 متطلبات وملاحظات السائح:</span>
-                        <span>
-                          {Array.from(new Set(pt.customer_requirements.split(" - ").map(s => s.trim()))).filter((s) => s && !/^ملاحظات الإدارة:\s*[\[{]/.test(s)).join(" • ")}
-                        </span>
-                      </div>
-                    )}
+                    <TripNotesBox raw={pt.customer_requirements} />
 
                     {/* Assigned Vehicle Rich Card with View Specs Modal Button */}
                     {pt.assigned_vehicle && (
@@ -2676,11 +2872,12 @@ function AdminDashboard() {
                       </div>
                     )}
 
-                    {!parsedSteps && pt.admin_itinerary_plan && (
+                    {!parsedSteps && pt.admin_itinerary_plan && !/^\s*[[{]/.test(pt.admin_itinerary_plan) && (
                       <div className="text-xs bg-emerald-50/70 border border-emerald-200 p-2.5 rounded-xl text-emerald-950 font-semibold">
                         <b>خطة البرنامج:</b> {pt.admin_itinerary_plan}
                       </div>
                     )}
+                    </>)}
 
                     {/* Actions and Cancellation Notice */}
                     <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-100 flex-wrap">
@@ -2703,6 +2900,15 @@ function AdminDashboard() {
                       </div>
 
                       <div className="flex items-center gap-2 mr-auto">
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          onClick={() => setOpenPrivateTripId(isOpen ? null : pt.private_trip_id)}
+                          className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-black cursor-pointer flex items-center gap-1 transition"
+                        >
+                          <span>{isOpen ? "إخفاء التفاصيل" : "التفاصيل"}</span>
+                          <span aria-hidden="true" className={`transition-transform ${isOpen ? "rotate-180" : ""}`}>▾</span>
+                        </button>
                         {!isCancelled && (
                           <button
                             type="button"
@@ -2993,6 +3199,7 @@ function AdminDashboard() {
                     key={s.id}
                     onClick={() => {
                       setActiveChatId(s.id);
+                      markAdminSessionRead(s.id);
                       const updated = chatSessions.map(x => x.id === s.id ? { ...x, unread: false } : x);
                       setChatSessions(updated);
                       saveChatSessions(updated);
@@ -6920,16 +7127,24 @@ function EvaluatePrivateTripModal({
 
   // Verified guides who are not on leave and work at one of the trip's landmarks at least. Working days do not
   // exclude anyone: the guide decides (accepting closes their daily trips on those dates), the admin only sees a note.
+  // Private trips go only to verified guides who are not on leave and not on any daily or weekly trip;
+  // the admin may pick any of them, then the guide accepts or declines
+  const assignedGuideLic = String(trip.guide_license_number || trip.assigned_guide || "");
   const eligibleGuides = useMemo(
     () =>
       guides.filter((g) => {
+        if (g.license_number === assignedGuideLic && trip.status_order !== "قيد الدراسة" && trip.status_order !== "اعتذر المرشد") return true; // keep the current assignment visible
         if (g.verification_status !== "موثق") return false;
         if (g.availability_status === "إجازة") return false;
-        const gPlaces: string[] = (g.place_ids && g.place_ids.length > 0 ? g.place_ids : (g.places || []).map((p: any) => p.place_id)) || [];
-        return tripPlaceIds.length === 0 || tripPlaceIds.some((id) => gPlaces.includes(id));
+        return (g as any).available_for_private !== false;
       }),
-    [guides, tripPlaceIds.join(",")],
+    [guides, assignedGuideLic, trip.status_order],
   );
+  // Landmarks of the trip the guide does not work at (a note for the admin, not a filter)
+  const outsidePlaces = (g: Guide): boolean => {
+    const gPlaces: string[] = (g.place_ids && g.place_ids.length > 0 ? g.place_ids : (g.places || []).map((p: any) => p.place_id)) || [];
+    return tripPlaceIds.length > 0 && !tripPlaceIds.some((id) => gPlaces.includes(id));
+  };
 
   // Trip days outside a guide's working days, in Arabic (empty = the guide works every trip day)
   const offDays = (g: Guide): string[] => {
@@ -6943,7 +7158,26 @@ function EvaluatePrivateTripModal({
   const requestedGuide = trip.guide_license_number || trip.assigned_guide || "";
   const initialGuideLic = eligibleGuides.some((g) => g.license_number === requestedGuide) ? requestedGuide : "";
   const [guide, setGuide] = useState(initialGuideLic);
-  const [vehicle, setVehicle] = useState(trip.assigned_vehicle || trip.vehicle_plate || "");
+  // The vehicle already assigned to the trip, whatever field it came in
+  const assignedPlate = String(trip.assigned_vehicle || trip.vehicle_plate || (trip as any).assigned_vehicle_plate || "");
+  const [vehicle, setVehicle] = useState(assignedPlate);
+  // Only vehicles fully available for the whole trip period are offered (checked by the server)
+  const [vehicleOptions, setVehicleOptions] = useState<{ plate_number: string; available: boolean; reason: string | null }[] | null>(null);
+  const [showUnavailable, setShowUnavailable] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    apiGetPrivateTripVehicleOptions(trip.private_trip_id).then((opts) => {
+      if (!alive || !opts) return;
+      setVehicleOptions(opts);
+      // A previously assigned vehicle that is no longer fully available must be replaced
+      if (assignedPlate && !opts.some((o) => o.plate_number === assignedPlate && o.available)) setVehicle("");
+    });
+    return () => { alive = false; };
+  }, [trip.private_trip_id]);
+  const availablePlates = vehicleOptions ? new Set(vehicleOptions.filter((o) => o.available).map((o) => o.plate_number)) : null;
+  const offeredVehicles = availablePlates ? vehicles.filter((v) => availablePlates.has(String(v.plate_number))) : vehicles;
+  const unavailableVehicles = (vehicleOptions || []).filter((o) => !o.available);
+  const assignedUnavailable = assignedPlate ? unavailableVehicles.find((o) => o.plate_number === assignedPlate) : undefined;
   const [servicesFee, setServicesFee] = useState(
     trip.additional_expenses !== undefined && trip.additional_expenses !== null && Number(trip.additional_expenses) > 0
       ? String(trip.additional_expenses)
@@ -7094,14 +7328,7 @@ function EvaluatePrivateTripModal({
           </div>
 
           {/* Clean Tourist Requirements */}
-          {trip.customer_requirements && (
-            <div className="text-xs text-amber-950 bg-amber-50/90 p-3 rounded-xl border border-amber-200 leading-relaxed font-semibold">
-              <b className="text-amber-900 block mb-1">📝 متطلبات وملاحظات السائح:</b>
-              <span>
-                {Array.from(new Set(trip.customer_requirements.split(" - ").map(s => s.trim()))).filter((s) => s && !/^ملاحظات الإدارة:\s*[\[{]/.test(s)).join(" • ")}
-              </span>
-            </div>
-          )}
+          <TripNotesBox raw={trip.customer_requirements} />
         </div>
 
         {/* Tourist Selected Guide Display & Confirmation */}
@@ -7114,22 +7341,24 @@ function EvaluatePrivateTripModal({
             onChange={(e) => setGuide(e.target.value)}
             className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-right focus:bg-white transition"
           >
-            <option value="">{eligibleGuides.length > 0 ? "اختر المرشد السياحي..." : "لا يوجد مرشد مناسب لمعالم وأيام هذه الرحلة"}</option>
+            <option value="">{eligibleGuides.length > 0 ? "اختر المرشد السياحي..." : "لا يوجد مرشد متاح حالياً (كل المرشدين مسندون لرحلات يومية أو أسبوعية)"}</option>
             {eligibleGuides.map((g) => (
               <option key={g.license_number} value={g.license_number}>
+                {g.license_number === assignedGuideLic ? "✓ المسند حالياً — " : ""}
                 {offDays(g).length > 0 ? `⚠ خارج أيام عمله: ${offDays(g).join("، ")} — ` : ""}
+                {outsidePlaces(g) ? "⚠ لا يعمل في معالم الرحلة — " : ""}
                 {g.full_name} ({g.license_number}) — {g.daily_rate ? `${g.daily_rate} د.ل / اليوم` : "السعر غير محدد"} {g.license_number === trip.guide_license_number ? "⭐ (اختيار السائح المفضل)" : ""}
               </option>
             ))}
           </select>
           <p className="text-[11px] text-slate-500 font-semibold mt-1">
-            تظهر أسماء المرشدين المعتمدين الذين يعملون في معلم واحد على الأقل من معالم الرحلة ({eligibleGuides.length} مرشد). الرحلة تُرسل للمرشد ليوافق أو يعتذر، وعند موافقته تُغلق أيامها تلقائياً في رحلاته اليومية.
+            تظهر فقط أسماء المرشدين المعتمدين المتاحين، أي غير المسندين لرحلات يومية أو أسبوعية ({eligibleGuides.length} مرشد). يمكنك اختيار أي منهم، وتُرسل الرحلة للمرشد ليوافق أو يعتذر.
           </p>
           {requestedGuide && (
             <p className={`text-[11px] font-bold mt-1 ${initialGuideLic ? "text-emerald-700" : "text-amber-700"}`}>
               {initialGuideLic
                 ? `✓ تم تثبيت المرشد (${requestedGuide}) بناءً على اختيار السائح.`
-                : `⚠ المرشد الذي اختاره السائح (${requestedGuide}) لا يعمل في أي من معالم هذه الرحلة أو أنه في إجازة، يرجى اختيار مرشد آخر.`}
+                : `⚠ المرشد الذي اختاره السائح (${requestedGuide}) غير متاح للرحلات الخاصة (مسند لرحلات يومية أو أسبوعية أو في إجازة)، يرجى اختيار مرشد آخر.`}
             </p>
           )}
         </div>
@@ -7144,13 +7373,48 @@ function EvaluatePrivateTripModal({
             onChange={(e) => setVehicle(e.target.value)}
             className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-right focus:bg-white transition"
           >
-            <option value="">اختر المركبة...</option>
-            {vehicles.map((v) => (
+            <option value="">{vehicleOptions === null ? "جاري فحص جاهزية المركبات..." : offeredVehicles.length === 0 ? "لا توجد مركبة متاحة كلياً في فترة الرحلة" : "اختر المركبة..."}</option>
+            {assignedPlate && !assignedUnavailable && !vehicles.some((v) => String(v.plate_number) === assignedPlate) && (
+              <option value={assignedPlate}>
+                {(trip as any).vehicle_model || "المركبة"} ({assignedPlate}) — المسندة حالياً
+              </option>
+            )}
+            {offeredVehicles.map((v) => (
               <option key={v.plate_number} value={v.plate_number}>
                 {v.vehicle_type} ({v.plate_number}) — {v.company_name} — سعة {v.capacity || "—"} ركاب — {v.daily_rate} د.ل / اليوم
               </option>
             ))}
           </select>
+          {vehicleOptions && (
+            <p className="text-[11px] font-bold text-slate-500">
+              ✓ تظهر فقط المركبات المتاحة كلياً طوال فترة الرحلة ({offeredVehicles.length} من {vehicleOptions.length}): جاهزة، سائقها على رأس عمله ورخصته سارية، مقاعدها تكفي، وغير مسندة لرحلة أخرى.
+            </p>
+          )}
+          {assignedUnavailable && (
+            <p className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              ⚠ المركبة المسندة سابقاً ({assignedPlate}) لم تعد متاحة: {assignedUnavailable.reason} — يرجى اختيار مركبة أخرى.
+            </p>
+          )}
+          {unavailableVehicles.length > 0 && (
+            <div className="text-[11px]">
+              <button type="button" onClick={() => setShowUnavailable((v) => !v)} className="font-bold text-slate-500 hover:text-slate-700 cursor-pointer">
+                {showUnavailable ? "▴ إخفاء" : "▾ عرض"} المركبات غير المتاحة وسببها ({unavailableVehicles.length})
+              </button>
+              {showUnavailable && (
+                <ul className="mt-1.5 space-y-1">
+                  {unavailableVehicles.map((o) => {
+                    const v = vehicles.find((x) => String(x.plate_number) === o.plate_number);
+                    return (
+                      <li key={o.plate_number} className="flex gap-2 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-slate-600 font-semibold">
+                        <span className="font-black text-slate-800 shrink-0">{v?.vehicle_type || "مركبة"} ({o.plate_number})</span>
+                        <span className="min-w-0">{o.reason}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Live Vehicle Preview Card with Inspect Modal Trigger */}
           {selectedVehicle && (

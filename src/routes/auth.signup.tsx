@@ -178,8 +178,8 @@ function SignupPage() {
       return false;
     }
     const cleanPassport = tourist.passport.trim();
-    if (!cleanPassport || cleanPassport.length < 6) {
-      setErrorMsg("رقم جواز السفر / الرقم الوطني يجب أن يحتوي على 6 خانات على الأقل.");
+    if (!/^[A-Z0-9]{6,10}$/.test(cleanPassport)) {
+      setErrorMsg("رقم جواز السفر / الرقم الوطني من 6 إلى 10 خانات (حروف إنجليزية كبيرة وأرقام فقط).");
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -577,7 +577,7 @@ function SignupPage() {
                   label="رقم الهاتف للتواصل"
                   type="tel"
                   value={tourist.phone}
-                  onChange={(v) => setTourist({ ...tourist, phone: v })}
+                  onChange={(v) => setTourist({ ...tourist, phone: onlyPhoneDigits(v) })}
                   onKeyDown={handleEnterKeyNext}
                   placeholder="0912345678"
                   required
@@ -586,7 +586,7 @@ function SignupPage() {
                 <Field
                   label="رقم جواز السفر / الرقم الوطني"
                   value={tourist.passport}
-                  onChange={(v) => setTourist({ ...tourist, passport: v })}
+                  onChange={(v) => setTourist({ ...tourist, passport: idChars(v) })}
                   onKeyDown={handleEnterKeyNext}
                   placeholder="A12345678"
                   required
@@ -767,7 +767,7 @@ function SignupPage() {
                       label="رقم الهاتف للتواصل"
                       type="tel"
                       value={guide.phone}
-                      onChange={(v) => setGuide({ ...guide, phone: v })}
+                      onChange={(v) => setGuide({ ...guide, phone: onlyPhoneDigits(v) })}
                       onKeyDown={handleEnterKeyNext}
                       placeholder="0912345678"
                       required
@@ -1248,6 +1248,10 @@ function SignupPage() {
   </div>
   );
 }
+
+// Same input rules as the mobile app: a Libyan mobile is 10 digits; a passport / national ID is 6-10 letters and digits
+const onlyPhoneDigits = (v: string) => v.replace(/\D/g, "").slice(0, 10);
+const idChars = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
 
 function Field({
   label,

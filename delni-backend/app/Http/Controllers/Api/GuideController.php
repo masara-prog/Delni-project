@@ -105,6 +105,29 @@ class GuideController extends Controller
     /**
      * Adds landmarks of expertise, working days, regions and ratings (from the guide's daily/weekly trip reviews).
      */
+    /**
+     * Daily trips (active, not declined by the guide) and weekly trips (active, not ended, not declined) per guide.
+     * A guide with any of them is not offered for private trips.
+     */
+    public static function scheduledTripCounts(array $licenses): array
+    {
+        if (!$licenses) {
+            return [];
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        $notDeclined = fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', '<>', 'اعتذر المرشد');
+        $daily = DB::table('daily_trips')->whereIn('guide_license_number', $licenses)->where('is_active', true)->where($notDeclined)
+            ->groupBy('guide_license_number')->selectRaw('guide_license_number, COUNT(*) as total')->pluck('total', 'guide_license_number');
+        $weekly = DB::table('weekly_trips')->whereIn('guide_license_number', $licenses)->where('is_active', true)
+            ->where('end_date', '>=', $today)->where($notDeclined)
+            ->groupBy('guide_license_number')->selectRaw('guide_license_number, COUNT(*) as total')->pluck('total', 'guide_license_number');
+        $counts = [];
+        foreach ($licenses as $lic) {
+            $counts[$lic] = (int) ($daily[$lic] ?? 0) + (int) ($weekly[$lic] ?? 0);
+        }
+        return $counts;
+    }
+
     private function withDetails($guides): array
     {
         $licenses = $guides->pluck('license_number')->all();
@@ -143,8 +166,9 @@ class GuideController extends Controller
                     ->whereRaw('DATEADD(day, duration_days - 1, preferred_start_date) < ?', [$today])->select('guide_license_number')),
             'done'
         )->groupBy('guide_license_number')->selectRaw('guide_license_number, COUNT(*) as total')->pluck('total', 'guide_license_number');
+        $scheduled = $this->scheduledTripCounts($licenses);
         $isAdmin = Actor::isAdmin();
-        return $guides->map(function (TourGuide $g) use ($places, $days, $regions, $ratings, $isAdmin, $completed) {
+        return $guides->map(function (TourGuide $g) use ($places, $days, $regions, $ratings, $isAdmin, $completed, $scheduled) {
             $lic = $g->license_number;
             $myPlaces = ($places[$lic] ?? collect())->map(fn ($p) => (array) $p)->values();
             $rating = $ratings[$lic] ?? null;
@@ -157,6 +181,9 @@ class GuideController extends Controller
                 'rating_avg' => $rating ? round((float) $rating->rating_avg, 1) : 0,
                 'reviews_count' => $rating ? (int) $rating->reviews_count : 0,
                 'total_tours_completed' => (int) ($completed[$lic] ?? 0),
+                // Guides on a daily or weekly trip are kept for those trips: they are not offered for private trips
+                'scheduled_trips_count' => (int) ($scheduled[$lic] ?? 0),
+                'available_for_private' => ($scheduled[$lic] ?? 0) === 0 && $g->availability_status !== TourGuide::ON_LEAVE,
             ];
         })->values()->all();
     }

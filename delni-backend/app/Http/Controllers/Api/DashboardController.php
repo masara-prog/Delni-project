@@ -194,33 +194,68 @@ class DashboardController extends Controller
         if ($plate) {
             $today = now('Africa/Tripoli')->toDateString();
             // A daily trip shows its next run date and the passengers booked on that date
-            foreach (DailyTrip::with('days')->where('vehicle_plate', $plate)->where('is_active', true)->get() as $t) {
+            foreach (DailyTrip::with(['days', 'places', 'stations', 'guide'])->where('vehicle_plate', $plate)->where('is_active', true)->get() as $t) {
                 $next = $t->openDates(1)[0] ?? null;
                 $trips[] = ['kind' => 'يومية', 'id' => $t->daily_trip_id, 'title' => $t->trip_title,
                     'schedule' => ($t->days->pluck('day_of_week')->implode('، ') ?: 'يومياً') . ($next ? " — الرحلة القادمة {$next['date']}" : ''),
-                    'departure_city' => $t->departure_city, 'passengers' => $next ? $t->max_capacity - $next['seats_left'] : 0];
+                    'departure_city' => $t->departure_city, 'passengers' => $next ? $t->max_capacity - $next['seats_left'] : 0,
+                    // The next day it runs (today included), whether or not seats are still open: the app enables
+                    // the stage buttons on that day only
+                    'start_date' => $this->nextRunDay($t->days->pluck('day_of_week')->all()),
+                    'end_date' => $this->nextRunDay($t->days->pluck('day_of_week')->all())] + $this->driverTripExtras($t);
             }
-            foreach (WeeklyTrip::where('vehicle_plate', $plate)->where('is_active', true)->where('end_date', '>=', $today)
+            foreach (WeeklyTrip::with(['places', 'stations', 'guide'])->where('vehicle_plate', $plate)->where('is_active', true)->where('end_date', '>=', $today)
                 ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', WeeklyTrip::GUIDE_APPROVED))->orderBy('start_date')->get() as $t) {
                 $trips[] = ['kind' => 'أسبوعية', 'id' => $t->weekly_trip_id, 'title' => $t->trip_title,
                     'schedule' => $t->start_date->format('Y-m-d') . ' إلى ' . $t->end_date->format('Y-m-d'),
-                    'departure_city' => $t->departure_city, 'passengers' => $t->max_capacity - $t->available_seats];
+                    'departure_city' => $t->departure_city, 'passengers' => $t->max_capacity - $t->available_seats,
+                    'start_date' => $t->start_date->format('Y-m-d'), 'end_date' => $t->end_date->format('Y-m-d')] + $this->driverTripExtras($t);
             }
-            foreach (PrivateTrip::where('vehicle_plate', $plate)->where('status_order', 'مؤكدة')
+            foreach (PrivateTrip::with(['places', 'stations', 'guide'])->where('vehicle_plate', $plate)->where('status_order', 'مؤكدة')
                 ->where('preferred_start_date', '>=', $today)->orderBy('preferred_start_date')->get() as $t) {
                 $trips[] = ['kind' => 'خاصة', 'id' => $t->private_trip_id, 'title' => 'رحلة خاصة',
                     'schedule' => $t->preferred_start_date->format('Y-m-d') . " لمدة {$t->duration_days} أيام",
-                    'departure_city' => null, 'passengers' => (int) $t->number_of_companions];
+                    'departure_city' => null, 'passengers' => (int) $t->number_of_companions,
+                    'start_date' => $t->preferred_start_date->format('Y-m-d'),
+                    'end_date' => $t->preferred_start_date->copy()->addDays(max(1, (int) $t->duration_days) - 1)->format('Y-m-d')] + $this->driverTripExtras($t);
             }
         }
 
         return response()->json([
             'success' => true,
             'driver' => collect($driver->toArray())->except(['contract_number', 'assigned_vehicle'])->all()
-                + ['company_name' => $driver->company()->value('company_name')],
+                + ['company_name' => $driver->company()->value('company_name'), 'company_phone' => $driver->company()->value('phone_number')],
             'vehicle' => $driver->assignedVehicle ? collect($driver->assignedVehicle->toArray())->except('contract_number')->all() : null,
             'trips' => $trips,
         ]);
+    }
+
+    // What the driver sees about a trip besides its schedule: photos, landmarks (with their pictures), the program
+    // and the guide to coordinate with. Nothing about prices or the tourists' personal data.
+    private function driverTripExtras($t): array
+    {
+        $photos = array_values(array_filter([$t->photo_1 ?? null, $t->photo_2 ?? null, $t->photo_3 ?? null, $t->photo_4 ?? null, $t->photo_5 ?? null]));
+        return [
+            'photos' => $photos,
+            'places' => $t->places->map(fn ($p) => ['place_name' => $p->place_name ?? $p->city, 'city' => $p->city, 'place_image' => $p->place_image])->values(),
+            'stations' => $t->stations->values(),
+            'guide' => $t->guide ? ['full_name' => $t->guide->full_name, 'phone_number' => $t->guide->phone_number] : null,
+        ];
+    }
+
+    // Next date (Y-m-d, from today) falling on one of the weekdays (Arabic names); every day when none are stored
+    private function nextRunDay(array $weekdays): string
+    {
+        $norm = fn ($d) => str_replace(['إ', 'أ', 'آ'], 'ا', trim((string) $d));
+        $wanted = array_map($norm, $weekdays);
+        $names = ['الاحد', 'الاثنين', 'الثلاثاء', 'الاربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        $day = now('Africa/Tripoli')->startOfDay();
+        for ($i = 0; $i < 7; $i++, $day->addDay()) {
+            if (!$wanted || in_array($names[$day->dayOfWeek], $wanted, true)) {
+                return $day->toDateString();
+            }
+        }
+        return now('Africa/Tripoli')->toDateString();
     }
 
     /**

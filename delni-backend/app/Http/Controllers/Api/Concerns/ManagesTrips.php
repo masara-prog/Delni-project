@@ -263,10 +263,6 @@ trait ManagesTrips
 
         if ($placeIds) {
             $known = DB::table('guide_places')->where('license_number', $guide)->pluck('place_id')->all();
-            // A private trip needs a guide who works at one of its landmarks at least
-            if ($requireOnePlace && !array_intersect($placeIds, $known)) {
-                return ["المرشد ({$g->full_name}) لا يعمل في أي من معالم هذه الرحلة. يرجى اختيار مرشد من مرشدي هذه المعالم.", null];
-            }
             $unknown = array_values(array_diff($placeIds, $known));
             if ($known && $unknown) {
                 $names = DB::table('places_tourist')->whereIn('place_id', $unknown)->pluck('city')->all();
