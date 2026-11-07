@@ -33,8 +33,10 @@ class TransportController extends Controller
     public const VEHICLE_STATUSES = ['جاهزة', 'في رحلة', 'صيانة', 'خارج الخدمة'];
     private const PUBLIC_DRIVER_FIELDS = ['driver_license_number', 'full_name', 'contract_number', 'company_name',
         'assigned_vehicle_plate', 'operational_status', 'current_trip_stage'];
-    // What a driver may change in their own record; the company keeps the rest
-    private const DRIVER_SELF_FIELDS = ['full_name', 'phone_number', 'email', 'operational_status'];
+    // What a driver may change in their own record; the company keeps the rest (name, phone, email are official data)
+    private const DRIVER_SELF_FIELDS = ['operational_status'];
+    private const DRIVER_SELF_STATUSES = ['متاح', 'إجازة'];
+    private const ACCOUNT_STATUSES = ['نشط', Driver::SUSPENDED];
 
     /* ===================== Companies ===================== */
 
@@ -157,19 +159,52 @@ class TransportController extends Controller
         if (!$driver) {
             return $this->error('حساب السائق غير موجود', 404);
         }
-        $stage = (string) $request->input('stage', '');
-        if (!in_array($stage, Driver::TRIP_STAGES, true)) {
+        $stage = $request->input('stage');
+        if (!is_string($stage) || !in_array($stage, Driver::TRIP_STAGES, true)) {
             return $this->error('مرحلة الرحلة غير صحيحة', 422);
         }
         if (!$driver->assigned_vehicle_plate) {
             return $this->error('لا توجد مركبة مسندة إليك، فلا يمكن تحديث مرحلة رحلة', 409);
         }
-        // Stages are reported on a trip day only (a trip of the driver's vehicle runs today)
-        if (!$this->vehicleRunsToday($driver->assigned_vehicle_plate)) {
-            return $this->error('لا توجد رحلة لمركبتك اليوم؛ تتفعل مراحل الرحلة في يوم الرحلة المحدد فقط', 409);
+        // Stages follow the order of a real trip (see Driver::STAGE_TRANSITIONS); repeating the current stage is harmless
+        $current = $driver->current_trip_stage ?: 'في الانتظار';
+        $next = Driver::STAGE_TRANSITIONS[$current] ?? [];
+        if ($stage !== $current && !in_array($stage, $next, true)) {
+            return $this->error("لا يمكن الانتقال من مرحلة «{$current}» إلى «{$stage}». المرحلة التالية: «" . implode('» أو «', $next) . '»', 422);
         }
-        $driver->forceFill(['current_trip_stage' => $stage])->save();
-        return response()->json(['success' => true, 'message' => "تم تحديث مرحلة الرحلة: {$stage}", 'data' => ['current_trip_stage' => $stage]]);
+        // A trip can only start when one is assigned to the vehicle, on that trip's day, and with a valid driving licence
+        if ($current === 'في الانتظار' && $stage === 'تم الانطلاق') {
+            if (!$driver->assignedTrips()) {
+                return $this->error('لا توجد رحلة مسندة لمركبتك حالياً، فلا يمكن بدء رحلة', 409);
+            }
+            if (!$this->vehicleRunsToday($driver->assigned_vehicle_plate)) {
+                return $this->error('لا توجد رحلة لمركبتك اليوم؛ تتفعل مراحل الرحلة في يوم الرحلة المحدد فقط', 409);
+            }
+            $today = now('Africa/Tripoli')->toDateString();
+            if ($driver->license_date_valid && $driver->license_date_valid->format('Y-m-d') < $today) {
+                return $this->error('رخصة قيادتك منتهية منذ ' . $driver->license_date_valid->format('Y-m-d') . '، فلا يمكن بدء رحلة قبل تجديدها وتحديثها لدى شركة النقل', 409);
+            }
+        }
+
+        // The driver's and the vehicle's statuses follow the trip: "في رحلة" on the road, back to normal when it is completed
+        DB::transaction(function () use ($driver, $stage) {
+            $onTrip = in_array($stage, Driver::ON_TRIP_STAGES, true);
+            $values = ['current_trip_stage' => $stage];
+            if ($onTrip) {
+                $values['operational_status'] = 'في رحلة';
+            } elseif ($stage === 'مكتملة' && $driver->operational_status === 'في رحلة') {
+                $values['operational_status'] = 'متاح';
+            }
+            $driver->forceFill($values)->save();
+            $vehicle = Vehicle::where('plate_number', $driver->assigned_vehicle_plate);
+            if ($onTrip) {
+                (clone $vehicle)->where('vehicle_status', 'جاهزة')->update(['vehicle_status' => 'في رحلة']);
+            } elseif ($stage === 'مكتملة') {
+                (clone $vehicle)->where('vehicle_status', 'في رحلة')->update(['vehicle_status' => 'جاهزة']);
+            }
+        });
+        return response()->json(['success' => true, 'message' => "تم تحديث مرحلة الرحلة: {$stage}",
+            'data' => ['current_trip_stage' => $stage, 'operational_status' => $driver->operational_status]]);
     }
 
     // Whether a trip assigned to the vehicle runs today: an active daily trip on today's weekday, a weekly trip
@@ -289,28 +324,36 @@ class TransportController extends Controller
             }
         }
 
-        DB::transaction(function () use ($plate, $values, $driverInfo, $newDriver, $data) {
+        if ($driverInfo !== null) {
+            $linked = $newDriver ? null : ($driverInfo['licenseNumber'] ?? null);
+            if ($error = $this->driverChangeDuringTrip($linked ? Driver::find($linked) : null, $plate, $linked)) {
+                return $this->error($error, 409);
+            }
+        }
+
+        $unassign = ['assigned_vehicle_plate' => null, 'current_trip_stage' => null];
+        DB::transaction(function () use ($plate, $values, $driverInfo, $newDriver, $data, $unassign) {
             Vehicle::updateOrCreate(['plate_number' => $plate], $values);
 
             if ($driverInfo === null) {
                 return;
             }
             if ($newDriver) {
-                Driver::where('assigned_vehicle_plate', $plate)->update(['assigned_vehicle_plate' => null]);
+                Driver::where('assigned_vehicle_plate', $plate)->update($unassign);
                 $driver = Driver::create($this->driverValues($newDriver, $data['contract_number'], $plate, true));
                 $this->notifyVehicleAssigned($driver->driver_license_number, $plate);
             } elseif (!empty($driverInfo['licenseNumber'])) {
                 // One dedicated driver per vehicle
                 Driver::where('assigned_vehicle_plate', $plate)
                     ->where('driver_license_number', '<>', $driverInfo['licenseNumber'])
-                    ->update(['assigned_vehicle_plate' => null]);
+                    ->update($unassign);
                 $previousPlate = Driver::where('driver_license_number', $driverInfo['licenseNumber'])->value('assigned_vehicle_plate');
-                Driver::where('driver_license_number', $driverInfo['licenseNumber'])->update(['assigned_vehicle_plate' => $plate]);
                 if ($previousPlate !== $plate) {
+                    Driver::where('driver_license_number', $driverInfo['licenseNumber'])->update(['assigned_vehicle_plate' => $plate, 'current_trip_stage' => null]);
                     $this->notifyVehicleAssigned($driverInfo['licenseNumber'], $plate);
                 }
             } else {
-                Driver::where('assigned_vehicle_plate', $plate)->update(['assigned_vehicle_plate' => null]);
+                Driver::where('assigned_vehicle_plate', $plate)->update($unassign);
             }
         });
 
@@ -344,6 +387,13 @@ class TransportController extends Controller
             if (!$existing) {
                 return $this->error('حساب السائق غير موجود', 404);
             }
+            $status = $input['operational_status'] ?? null;
+            if ($status !== null && !in_array($status, self::DRIVER_SELF_STATUSES, true)) {
+                return $this->error('الحالة التشغيلية يجب أن تكون «متاح» أو «إجازة»', 422);
+            }
+            if ($status !== null && $status !== $existing->operational_status && $existing->isOnTrip()) {
+                return $this->error('لا يمكن تغيير حالتك أثناء رحلة جارية؛ تعود حالتك إلى «متاح» تلقائياً عند اكتمال الرحلة', 409);
+            }
             $input = array_merge($existing->toArray(), array_intersect_key($input, array_flip(self::DRIVER_SELF_FIELDS)), ['isNew' => false]);
         }
         if ($existing && !empty($input['isNew'])) {
@@ -359,15 +409,25 @@ class TransportController extends Controller
             return $this->error('هذا السائق مسجل لدى شركة نقل أخرى', 403);
         }
 
-        // Only keep a plate that really exists; "غير مسند" and similar mean no vehicle
+        // Only keep a plate that really exists ("غير مسند" and similar mean no vehicle), and only one of the company's own vehicles
         $plate = trim((string) ($input['assigned_vehicle_plate'] ?? ''));
-        $plate = $plate !== '' && Vehicle::find($plate) ? $plate : null;
+        $vehicle = $plate !== '' ? Vehicle::find($plate) : null;
+        if ($vehicle && $vehicle->contract_number !== $input['contract_number']) {
+            return $this->error('المركبة المختارة ليست من مركبات هذه الشركة', 403);
+        }
+        $plate = $vehicle ? $plate : null;
+        if ($error = $this->driverChangeDuringTrip($existing, $plate, $license)) {
+            return $this->error($error, 409);
+        }
 
         $values = $this->driverValues($input, $input['contract_number'], $plate, !$existing);
+        if ($existing && $existing->assigned_vehicle_plate !== $plate) {
+            $values['current_trip_stage'] = null; // the stage belonged to the previous vehicle's trip
+        }
         DB::transaction(function () use ($license, $values, $plate, $existing) {
             if ($plate) {
                 Driver::where('assigned_vehicle_plate', $plate)->where('driver_license_number', '<>', $license)
-                    ->update(['assigned_vehicle_plate' => null]);
+                    ->update(['assigned_vehicle_plate' => null, 'current_trip_stage' => null]);
             }
             Driver::updateOrCreate(['driver_license_number' => $license], $values);
             if ($plate && (!$existing || $existing->assigned_vehicle_plate !== $plate)) {
@@ -380,6 +440,19 @@ class TransportController extends Controller
     }
 
     /* ===================== Helpers ===================== */
+
+    // A driver on the road keeps their vehicle until the trip is completed: neither of them can be moved meanwhile
+    private function driverChangeDuringTrip(?Driver $driver, ?string $plate, ?string $license): ?string
+    {
+        if ($driver && $driver->isOnTrip() && $driver->assigned_vehicle_plate !== $plate) {
+            return "السائق ({$driver->full_name}) في رحلة جارية الآن، فلا يمكن نقله إلى مركبة أخرى قبل اكتمال الرحلة";
+        }
+        $current = $plate ? Driver::where('assigned_vehicle_plate', $plate)->get()->first(fn (Driver $d) => $d->driver_license_number !== $license) : null;
+        if ($current && $current->isOnTrip()) {
+            return "سائق المركبة ({$current->full_name}) في رحلة جارية بها الآن، فلا يمكن تغيير سائقها قبل اكتمال الرحلة";
+        }
+        return null;
+    }
 
     // Tells the driver which vehicle they now drive (from the driver form or the vehicle form)
     private function notifyVehicleAssigned(string $license, string $plate): void
@@ -402,14 +475,39 @@ class TransportController extends Controller
         if ($license === '' || $name === '' || $phone === '' || $nid === '') {
             return 'بيانات السائق غير مكتملة (رقم الرخصة، الاسم، الهاتف، الرقم الوطني)';
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // The same format rules as the company's form, so a direct request cannot store what the form refuses.
+        // Phone and national id are checked when entered or changed (older records keep their stored values).
+        $old = $existingLicense ? Driver::find($existingLicense) : null;
+        if (!$old && (!ctype_digit($license) || strlen($license) > 50)) {
+            return 'رقم رخصة القيادة يجب أن يتكون من أرقام فقط (50 رقماً على الأكثر)';
+        }
+        if (mb_strlen($name) > 150) {
+            return 'اسم السائق يجب ألا يزيد على 150 حرفاً';
+        }
+        if ($phone !== $old?->phone_number && !preg_match('/^09\d{8}$/', $phone)) {
+            return 'رقم هاتف السائق يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)';
+        }
+        if ($nid !== $old?->national_id_or_passport && !preg_match('/^\d{12}$/', $nid)) {
+            return 'الرقم الوطني للسائق يجب أن يتكون من 12 رقماً بالضبط (أرقام فقط)';
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) {
             return 'يرجى إدخال بريد إلكتروني صحيح للسائق، فهو المستخدم في تسجيل الدخول';
+        }
+        $date = $d['license_date_valid'] ?? null;
+        if (!empty($date) && (!preg_match('/^(\d{4})-(\d{2})-(\d{2})/', (string) $date, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1]))) {
+            return 'تاريخ صلاحية رخصة القيادة غير صحيح';
+        }
+        if (isset($d['operational_status']) && !in_array($d['operational_status'], Driver::OPERATIONAL_STATUSES, true)) {
+            return 'الحالة التشغيلية يجب أن تكون: متاح أو في رحلة أو إجازة';
+        }
+        if (isset($d['account_status']) && !in_array($d['account_status'], self::ACCOUNT_STATUSES, true)) {
+            return 'حالة حساب السائق يجب أن تكون: نشط أو موقوف';
         }
         if (!$existingLicense && !$this->newPassword($d['password'] ?? null)) {
             return 'كلمة المرور مطلوبة لحساب السائق الجديد (6 خانات على الأقل)';
         }
         // The driving licence must be valid: required for a new driver, and a newly entered expiry date must lie in the future
-        $oldValid = $existingLicense ? Driver::find($existingLicense)?->license_date_valid?->format('Y-m-d') : null;
+        $oldValid = $old?->license_date_valid?->format('Y-m-d');
         if (!$existingLicense && empty($d['license_date_valid'])) {
             return 'تاريخ صلاحية رخصة القيادة مطلوب';
         }
@@ -431,7 +529,7 @@ class TransportController extends Controller
     {
         $values = [
             'driver_license_number' => trim((string) $d['driver_license_number']),
-            'full_name' => trim((string) $d['full_name']),
+            'full_name' => trim(strip_tags((string) $d['full_name'])),
             'phone_number' => trim((string) $d['phone_number']),
             'national_id_or_passport' => trim((string) $d['national_id_or_passport']),
             'license_date_valid' => $d['license_date_valid'] ?? null,
@@ -467,6 +565,9 @@ class TransportController extends Controller
             return $this->error('كلمة المرور الجديدة يجب أن تتكون من 6 خانات على الأقل', 422);
         }
         $account->forceFill(['password' => Hash::make($new)])->save();
+        // Sessions opened elsewhere with the old password end; the session that made the change stays signed in
+        $current = Actor::user()?->currentAccessToken();
+        $account->tokens()->when($current?->id, fn ($q, $id) => $q->where('id', '<>', $id))->delete();
         return response()->json(['success' => true, 'message' => 'تم تغيير كلمة المرور بنجاح']);
     }
 

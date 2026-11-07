@@ -874,7 +874,7 @@ class _DriverTripScreen extends StatelessWidget {
   }
 }
 
-/// The five stages as a timeline: only the next stage can be chosen, after a confirmation.
+/// The five stages as a timeline: only the stages that may follow the current one can be chosen, after a confirmation.
 class _StagesScreen extends StatefulWidget {
   final DriverTrip trip;
   final String initialStage;
@@ -912,9 +912,9 @@ class _StagesScreenState extends State<_StagesScreen> {
   @override
   Widget build(BuildContext context) {
     final stages = DriverDashboard.stages;
-    final current = stages.indexOf(_stage).clamp(0, stages.length - 1);
-    // Forward one step at a time; after "completed" the next run starts again from "waiting"
-    final nextIndex = current == stages.length - 1 ? 0 : current + 1;
+    final current = stages.indexOf(_stage.isEmpty ? stages.first : _stage).clamp(0, stages.length - 1);
+    // The same order as the server (Driver::STAGE_TRANSITIONS)
+    final allowed = DriverDashboard.stageTransitions[stages[current]] ?? const <String>[];
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('مراحل الرحلة', 'Trip stages'))),
       body: ListView(
@@ -922,18 +922,18 @@ class _StagesScreenState extends State<_StagesScreen> {
         children: [
           Text(widget.trip.title.isEmpty ? widget.trip.id : widget.trip.title, style: AppText.h2),
           const SizedBox(height: 4),
-          Text(context.tr('اضغط على المرحلة التالية عند الوصول إليها، وتأكد قبل الحفظ.', 'Tap the next stage when you reach it, and confirm before saving.'), style: AppText.bodyMuted),
+          Text(context.tr('اضغط على إحدى المراحل المتاحة (باللون الأزرق) عند الوصول إليها، وتأكد قبل الحفظ.', 'Tap one of the available stages (in blue) when you reach it, and confirm before saving.'), style: AppText.bodyMuted),
           const SizedBox(height: Gap.lg),
           for (var i = 0; i < stages.length; i++)
             _StageRow(
               icon: _icons[i],
               label: context.sv(stages[i]),
-              done: i < current,
+              done: i < current && !allowed.contains(stages[i]),
               current: i == current,
-              isNext: i == nextIndex,
+              isNext: allowed.contains(stages[i]),
               last: i == stages.length - 1,
               saving: _saving == stages[i],
-              onTap: i == nextIndex && _saving == null ? () => _choose(stages[i]) : null,
+              onTap: allowed.contains(stages[i]) && _saving == null ? () => _choose(stages[i]) : null,
             ),
         ],
       ),

@@ -148,6 +148,10 @@ class AuthController extends Controller
                 $user = Driver::where('email', $login)->first();
 
                 if ($user && Passwords::matches($password, $user->password)) {
+                    // A driver suspended by the company, or working for a suspended company, cannot sign in
+                    if ($blocked = $user->blockedReason()) {
+                        return response()->json(['status' => 'error', 'message' => $blocked], 403);
+                    }
                     $token = $user->createToken('driver-token', ['role:driver'], self::tokenExpiresAt())->plainTextToken;
                     return response()->json([
                         'status' => 'success',

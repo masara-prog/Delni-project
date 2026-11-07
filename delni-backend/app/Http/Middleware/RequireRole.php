@@ -40,6 +40,9 @@ class RequireRole
         if ($role === 'transport' && $user->verification_status === 'موقوفة') {
             return $this->forbidden('حساب شركة النقل موقوف من قبل إدارة المنصة');
         }
+        if ($role === 'driver' && ($blocked = $user->blockedReason())) {
+            return $this->forbidden($blocked);
+        }
 
         $id = Actor::id();
         foreach (self::ROUTE_IDS as $param) {

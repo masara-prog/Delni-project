@@ -519,9 +519,9 @@ export function apiChangeCompanyPassword(contractNumber: string, currentPassword
 }
 
 // The driver reports the current stage of the trip on their vehicle (drivers.current_trip_stage)
-export async function apiUpdateDriverTripStage(licenseNumber: string, stage: string): Promise<SaveResult<null>> {
+export async function apiUpdateDriverTripStage(licenseNumber: string, stage: string): Promise<SaveResult<{ current_trip_stage: string; operational_status?: string } | null>> {
   const res = await laravelRequest("POST", `/transport/drivers/${encodeURIComponent(licenseNumber)}/trip-stage`, { stage });
-  return res.ok ? { success: true, data: null } : { success: false, error: res.error };
+  return res.ok ? { success: true, data: res.data ?? null } : { success: false, error: res.error };
 }
 
 export type DriverTrip = { kind: string; id: string; title: string; schedule: string; departure_city: string | null; passengers: number };
@@ -639,6 +639,15 @@ export async function apiLogin(params: {
 
 export function apiLogout() {
   if (typeof window !== "undefined") {
+    // Revoke the token on the server too, so a copied token stops working after sign-out (keepalive: the page navigates away)
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    if (token) {
+      fetch(`${LARAVEL_API_URL}/auth/logout`, {
+        method: "POST",
+        keepalive: true,
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.ROLE);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);

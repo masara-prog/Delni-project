@@ -1026,6 +1026,16 @@ class DriverDashboard {
   /// Stages accepted by POST /transport/drivers/{license}/trip-stage (Driver::TRIP_STAGES).
   static const stages = ['في الانتظار', 'تم الانطلاق', 'في الطريق - استراحة', 'وصلنا الوجهة', 'مكتملة'];
 
+  /// Stage => the stages that may follow it (Driver::STAGE_TRANSITIONS on the server): a rest or the destination can
+  /// lead back to driving, and a completed trip starts over.
+  static const stageTransitions = {
+    'في الانتظار': ['تم الانطلاق'],
+    'تم الانطلاق': ['في الطريق - استراحة', 'وصلنا الوجهة'],
+    'في الطريق - استراحة': ['تم الانطلاق', 'وصلنا الوجهة'],
+    'وصلنا الوجهة': ['تم الانطلاق', 'مكتملة'],
+    'مكتملة': ['في الانتظار'],
+  };
+
   factory DriverDashboard.fromJson(Map<String, dynamic> j) {
     final d = jMap(j['driver']);
     final v = jMap(j['vehicle']);
