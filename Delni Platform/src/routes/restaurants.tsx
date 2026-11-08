@@ -787,6 +787,15 @@ function RestaurantsPage() {
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const [customRestaurants, setCustomRestaurants] = useState<Restaurant[]>([]);
 
+  // a search sent from the home page search box (?q=...)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      setSearchQuery(q);
+      setSelectedCategory("all");
+    }
+  }, []);
+
   useEffect(() => {
     const loadCustom = async () => {
       try {

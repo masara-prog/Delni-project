@@ -280,46 +280,6 @@ END;
 GO
 
 -- ----------------------------------------------------------------------------
--- Table: dbo.[offers_facilities]
--- Description: Records and manages data for offers_facilities
--- ----------------------------------------------------------------------------
-IF OBJECT_ID('dbo.[offers_facilities]', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.[offers_facilities] (
-        [facility_offer_id] VARCHAR(50) NOT NULL,
-        [facility_id] VARCHAR(50) NOT NULL,
-        [description] TEXT NOT NULL,
-        [offer_title] VARCHAR(100) NOT NULL,
-        [offer_image_url] VARCHAR(255) NOT NULL,
-        [discount_percentage] DECIMAL(5, 2) NOT NULL,
-        [start_date] DATE NOT NULL,
-        [end_date] DATE NOT NULL,
-        [badge] VARCHAR(50) NULL
-    );
-END;
-GO
-
--- ----------------------------------------------------------------------------
--- Table: dbo.[offers_hotels]
--- Description: Records and manages data for offers_hotels
--- ----------------------------------------------------------------------------
-IF OBJECT_ID('dbo.[offers_hotels]', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.[offers_hotels] (
-        [id_offer] VARCHAR(50) NOT NULL,
-        [title_offer] VARCHAR(100) NOT NULL,
-        [description] TEXT NOT NULL,
-        [percent_discount] INT NOT NULL,
-        [offer_image] VARCHAR(255) NOT NULL,
-        [hotel_id] VARCHAR(50) NOT NULL,
-        [date_start] DATE NOT NULL,
-        [date_end] DATE NOT NULL,
-        [badge] VARCHAR(50) NULL
-    );
-END;
-GO
-
--- ----------------------------------------------------------------------------
 -- Table: dbo.[offers_weekly_trips]
 -- Description: Records and manages data for offers_weekly_trips
 -- ----------------------------------------------------------------------------
@@ -881,22 +841,6 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__offers_d__2393AA988ADF9EC2')
     ALTER TABLE dbo.[offers_daily_trips] ADD CONSTRAINT [PK__offers_d__2393AA988ADF9EC2] PRIMARY KEY ([offer_daily_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__offers_fa__facil__1EA48E88')
-    ALTER TABLE dbo.[offers_facilities] ADD CONSTRAINT [FK__offers_fa__facil__1EA48E88] FOREIGN KEY ([facility_id]) REFERENCES dbo.[restaurants_cafes]([facility_id]) ON DELETE CASCADE;
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__offers_f__C9723AFD917C000C')
-    ALTER TABLE dbo.[offers_facilities] ADD CONSTRAINT [PK__offers_f__C9723AFD917C000C] PRIMARY KEY ([facility_offer_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__offers_ho__hotel__1F98B2C1')
-    ALTER TABLE dbo.[offers_hotels] ADD CONSTRAINT [FK__offers_ho__hotel__1F98B2C1] FOREIGN KEY ([hotel_id]) REFERENCES dbo.[hotels]([hotel_id]) ON DELETE CASCADE;
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__offers_h__DB2ECACE90A2BE2D')
-    ALTER TABLE dbo.[offers_hotels] ADD CONSTRAINT [PK__offers_h__DB2ECACE90A2BE2D] PRIMARY KEY ([id_offer]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__offers_we__weekl__208CD6FA')

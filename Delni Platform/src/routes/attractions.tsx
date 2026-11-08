@@ -100,6 +100,14 @@ function AttractionsPage() {
   const [tripSystemFilter, setTripSystemFilter] = useState<"all" | "daily" | "private" | "unesco">("all");
   const [sortBy, setSortBy] = useState<"rating" | "reviews" | "name">("rating");
 
+  // a search sent from the home page search box (?q=...)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, []);
+
   // Dynamic touristic cities from DelniDB
   const [dbPlaces, setDbPlaces] = useState<any[]>([]);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);

@@ -859,6 +859,15 @@ function HotelsPage() {
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
   const [likedHotels, setLikedHotels] = useState<Record<string, boolean>>({});
 
+  // a search sent from the home page search box (?q=...)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      setSearchQuery(q);
+      setPropertyType("all");
+    }
+  }, []);
+
   const hotelsListingRef = useRef<HTMLElement>(null);
   const hotelsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -997,6 +1006,17 @@ function HotelsPage() {
     ],
     [language],
   );
+
+  // real number of listed places per category (suspended ones are not shown on the platform)
+  const typeCount = (type: string) => {
+    const n = hotels.filter((h) => h.partnership_status !== "موقوف" && h.propertyType === type).length;
+    if (!isAr) return n === 0 ? "None yet" : `${n} listed`;
+    if (n === 0) return "لا توجد أماكن بعد";
+    if (n === 1) return "مكان واحد";
+    if (n === 2) return "مكانان";
+    if (n <= 10) return `${n} أماكن`;
+    return `${n} مكان`;
+  };
 
   const filtered = useMemo(() => {
     if (propertyType === "none") return [];
@@ -1172,7 +1192,7 @@ function HotelsPage() {
                 {
                   id: "hotel",
                   title: isAr ? "فنادق فاخرة" : "Luxury Hotels",
-                  count: isAr ? "24 مكان متاح" : "24 available",
+                  count: typeCount("hotel"),
                   img: "/assets/ai_hotel.jpg",
                   badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
                   badgeBg: "bg-[#003580]",
@@ -1180,7 +1200,7 @@ function HotelsPage() {
                 {
                   id: "resort",
                   title: isAr ? "منتجعات سياحية" : "Touristic Resorts",
-                  count: isAr ? "10 أماكن متاحة" : "10 available",
+                  count: typeCount("resort"),
                   img: "/assets/hotel_resort.jpg",
                   badge: isAr ? "استجمام وشواطئ" : "Leisure & Beach",
                   badgeBg: "bg-teal-700",
@@ -1188,7 +1208,7 @@ function HotelsPage() {
                 {
                   id: "apartment",
                   title: isAr ? "شقق فندقية" : "Hotel Apartments",
-                  count: isAr ? "16 مكان متاح" : "16 available",
+                  count: typeCount("apartment"),
                   img: "/assets/dest-tripoli.jpg",
                   badge: isAr ? "خصوصية عائلية" : "Family Suites",
                   badgeBg: "bg-indigo-700",
@@ -1196,7 +1216,7 @@ function HotelsPage() {
                 {
                   id: "heritage",
                   title: isAr ? "مخيمات صحراوية" : "Desert Camps",
-                  count: isAr ? "12 مكان متاح" : "12 available",
+                  count: typeCount("heritage"),
                   img: "/assets/dest-ghadames-alleys.jpg",
                   badge: isAr ? "تخييم وسفاري" : "Desert Safari",
                   badgeBg: "bg-amber-700",
@@ -1276,7 +1296,7 @@ function HotelsPage() {
                 {
                   id: "hotel",
                   title: isAr ? "فنادق فاخرة (5 نجوم)" : "Luxury Hotels",
-                  count: isAr ? "24 مكان متاح للحجز المباشر" : "24 available",
+                  count: typeCount("hotel"),
                   img: "/assets/ai_hotel.jpg",
                   badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
                   badgeBg: "bg-[#003580]",
@@ -1285,7 +1305,7 @@ function HotelsPage() {
                 {
                   id: "resort",
                   title: isAr ? "منتجعات سياحية واستجمام" : "Touristic Resorts",
-                  count: isAr ? "10 أماكن متاحة للحجز المباشر" : "10 available",
+                  count: typeCount("resort"),
                   img: "/assets/hotel_resort.jpg",
                   badge: isAr ? "استجمام وشواطئ" : "Leisure & Beach",
                   badgeBg: "bg-teal-700",
@@ -1294,7 +1314,7 @@ function HotelsPage() {
                 {
                   id: "apartment",
                   title: isAr ? "شقق فندقية وأجنحة عائلية" : "Hotel Apartments",
-                  count: isAr ? "16 مكان متاح للحجز المباشر" : "16 available",
+                  count: typeCount("apartment"),
                   img: "/assets/dest-tripoli.jpg",
                   badge: isAr ? "خصوصية عائلية" : "Family Suites",
                   badgeBg: "bg-indigo-700",
@@ -1303,7 +1323,7 @@ function HotelsPage() {
                 {
                   id: "heritage",
                   title: isAr ? "مخيمات صحراوية وسفاري" : "Desert Camps & Safari",
-                  count: isAr ? "12 مكان متاح للحجز المباشر" : "12 available",
+                  count: typeCount("heritage"),
                   img: "/assets/dest-ghadames-alleys.jpg",
                   badge: isAr ? "تخييم وسفاري" : "Desert Safari",
                   badgeBg: "bg-amber-700",

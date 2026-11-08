@@ -172,6 +172,7 @@ export type DailyTrip = {
   targetPersons: number;
   availableSeats: number;
   daysOfWeek: string;
+  openDates?: string[]; // bookable run dates of this month
   departure: "طرابلس" | "بنغازي";
   entertainment?: string;
   // The trip's current or next promotional offer (applies to run dates inside its period)
@@ -1851,6 +1852,16 @@ function TripsPage() {
   const [selectedDepartures, setSelectedDepartures] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
+  // a period sent from the home page search box (?from=&to=): only trips running inside it are shown
+  const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const q = p.get("q");
+    if (q) { setSearchInput(q); setAppliedQuery(q); }
+    const from = p.get("from") || "";
+    const to = p.get("to") || "";
+    if (from || to) setDateRange({ from, to });
+  }, []);
 
   // Dedicated Full Trip Details View State
   const [activeTripDetails, setActiveTripDetails] = useState<Trip | null>(null);
@@ -1933,6 +1944,7 @@ function TripsPage() {
             targetPersons: t.max_capacity || 25,
             availableSeats: t.available_seats !== undefined ? t.available_seats : (t.max_capacity || 25),
             daysOfWeek: t.recurring_days ? `أيام: ${t.recurring_days}` : "السبت,الثلاثاء",
+            openDates: Array.isArray(t.open_dates) ? t.open_dates.map((d: any) => String(d.date)) : [],
             departure: (t.departure_city && t.departure_city.includes("بنغازي") ? "بنغازي" : "طرابلس") as "طرابلس" | "بنغازي",
             entertainment: "توقف واستراحة ضيافة، وجلسات تصوير تذكارية",
             activeOffer: t.active_offer || undefined,
@@ -2153,6 +2165,7 @@ function TripsPage() {
     setSelectedDepartures([]);
     setSearchInput("");
     setAppliedQuery("");
+    setDateRange(null);
     scrollToGallery();
   };
 
@@ -2166,6 +2179,17 @@ function TripsPage() {
       if (selectedDepartures.length > 0) {
         if (t.type === "daily" || t.type === "weekly") {
           if (!selectedDepartures.includes(t.departure)) return false;
+        }
+      }
+      // Period Filter: a daily trip with a run date inside it, a weekly trip that starts inside it
+      if (dateRange) {
+        const inRange = (d: string) => (!dateRange.from || d >= dateRange.from) && (!dateRange.to || d <= dateRange.to);
+        if (t.type === "daily") {
+          if (!(t.openDates || []).some(inRange)) return false;
+        } else if (t.type === "weekly") {
+          if (!t.startDate || !inRange(t.startDate.slice(0, 10))) return false;
+        } else {
+          return false;
         }
       }
       // Search Query Filter
@@ -2187,7 +2211,7 @@ function TripsPage() {
       }
       return true;
     });
-  }, [allTrips, selectedTypes, selectedDepartures, appliedQuery]);
+  }, [allTrips, selectedTypes, selectedDepartures, appliedQuery, dateRange]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2325,6 +2349,18 @@ function TripsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-xl border border-[#E8E2D6] text-[#0F172A] space-y-4">
           
+          {dateRange && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-black text-emerald-800">
+              <span>
+                📅 {isAr ? "الرحلات التي تنطلق" : "Trips running"}
+                {dateRange.from ? (isAr ? ` من ${dateRange.from}` : ` from ${dateRange.from}`) : ""}
+                {dateRange.to ? (isAr ? ` إلى ${dateRange.to}` : ` to ${dateRange.to}`) : ""}
+              </span>
+              <button type="button" onClick={() => setDateRange(null)} className="px-3 h-7 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-100 cursor-pointer">
+                {isAr ? "إلغاء فلتر التاريخ ✕" : "Clear dates ✕"}
+              </button>
+            </div>
+          )}
           {/* Top Bar: Search Input & Result Count */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Box */}

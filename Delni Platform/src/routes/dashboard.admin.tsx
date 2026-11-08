@@ -60,7 +60,6 @@ import type {
   PlaceTourist as DbPlaceTourist,
   OfferDailyTrip,
   OfferWeeklyTrip,
-  OfferFacility,
   BookingDaily,
   BookingWeekly,
 } from "@/lib/dbSchema";

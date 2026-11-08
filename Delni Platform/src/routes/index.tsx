@@ -1,5 +1,5 @@
 import { platformConfirm } from "@/components/PlatformAlert";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destTripoli from "@/assets/dest-tripoli.jpg";
@@ -347,24 +347,48 @@ function FloatingStat({ icon, value, label }: { icon: React.ReactNode; value: st
 
 function SearchCard() {
   const { language, t } = useLanguage();
-  const [tab, setTab] = useState<"attractions" | "trips" | "stays" | "restaurants" | "guides" | "cars">("attractions");
+  const isAr = language === "ar";
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<"attractions" | "trips" | "stays" | "restaurants" | "guides" | "cars">("trips");
+  const [query, setQuery] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [dateError, setDateError] = useState("");
+  const today = new Date().toLocaleDateString("en-CA");
   const tabs = [
-    { id: "attractions", label: language === 'ar' ? "معالم ليبيا" : "Timeless Landmarks", icon: <Icon.Sparkle className="w-4 h-4" />, to: "/attractions" },
-    { id: "trips", label: language === 'ar' ? "الرحلات السياحية" : "Trips & Tours", icon: <Icon.Compass className="w-4 h-4" />, to: "/trips" },
-    { id: "stays", label: language === 'ar' ? "الفنادق والإقامة" : "Stays & Hotels", icon: <Icon.Bed className="w-4 h-4" />, to: "/hotels" },
-    { id: "restaurants", label: language === 'ar' ? "المطاعم والمقاهي" : "Dining & Cafes", icon: <Icon.Utensils className="w-4 h-4" />, to: "/restaurants" },
-    { id: "guides", label: language === 'ar' ? "المرشدون السياحيون" : "Tour Guides", icon: <Icon.Users className="w-4 h-4" />, to: "/guides" },
-    { id: "cars", label: language === 'ar' ? "المركبات والنقل" : "Transport & Vehicles", icon: <Icon.Car className="w-4 h-4" />, to: "/transport" },
+    { id: "attractions", label: isAr ? "معالم ليبيا" : "Timeless Landmarks", icon: <Icon.Sparkle className="w-4 h-4" />, to: "/attractions", hint: isAr ? "اسم المعلم أو المدينة..." : "Landmark or city..." },
+    { id: "trips", label: isAr ? "الرحلات السياحية" : "Trips & Tours", icon: <Icon.Compass className="w-4 h-4" />, to: "/trips", hint: isAr ? "اسم الرحلة، مدينة، أو معلم..." : "Trip, city or landmark..." },
+    { id: "stays", label: isAr ? "الفنادق والإقامة" : "Stays & Hotels", icon: <Icon.Bed className="w-4 h-4" />, to: "/hotels", hint: isAr ? "اسم الفندق أو المدينة..." : "Hotel or city..." },
+    { id: "restaurants", label: isAr ? "المطاعم والمقاهي" : "Dining & Cafes", icon: <Icon.Utensils className="w-4 h-4" />, to: "/restaurants", hint: isAr ? "اسم المطعم أو المدينة..." : "Restaurant or city..." },
+    { id: "guides", label: isAr ? "المرشدون السياحيون" : "Tour Guides", icon: <Icon.Users className="w-4 h-4" />, to: "/guides", hint: isAr ? "اسم المرشد، مدينة، أو لغة..." : "Guide, city or language..." },
+    { id: "cars", label: isAr ? "المركبات والنقل" : "Transport & Vehicles", icon: <Icon.Car className="w-4 h-4" />, to: "/transport", hint: isAr ? "نوع المركبة أو الشركة..." : "Vehicle or company..." },
   ] as const;
+  const active = tabs.find((x) => x.id === tab)!;
+  // dates only mean something for trips (when a trip runs); the other sections are searched by name / city
+  const withDates = tab === "trips";
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (withDates && from && to && to < from) {
+      setDateError(isAr ? "تاريخ النهاية قبل تاريخ البداية" : "End date is before start date");
+      return;
+    }
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (withDates && from) params.set("from", from);
+    if (withDates && to) params.set("to", to);
+    const qs = params.toString();
+    navigate({ href: active.to + (qs ? `?${qs}` : "") });
+  };
 
   return (
-    <div className="bg-white rounded-3xl shadow-card p-2 md:p-3">
+    <form onSubmit={submit} className="bg-white rounded-3xl shadow-card p-2 md:p-3">
       <div className="flex gap-1.5 p-1.5 mb-2 overflow-x-auto no-scrollbar">
         {tabs.map((tItem) => (
-          <Link
+          <button
+            type="button"
             key={tItem.id}
-            to={tItem.to}
-            onClick={() => setTab(tItem.id)}
+            onClick={() => { setTab(tItem.id); setDateError(""); }}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black whitespace-nowrap transition duration-300 cursor-pointer ${
               tab === tItem.id
                 ? "bg-[#003580] text-white shadow-md border border-[#003580] scale-105"
@@ -374,44 +398,61 @@ function SearchCard() {
           >
             {tItem.icon}
             <span>{tItem.label}</span>
-          </Link>
+          </button>
         ))}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-        <SearchField 
-          className="md:col-span-4" 
-          icon={<Icon.Pin className="w-5 h-5" />} 
-          label={language === 'ar' ? "الوجهة" : "Destination"} 
-          placeholder={t('search_placeholder')} 
+        <SearchField
+          className={withDates ? "md:col-span-4" : "md:col-span-10"}
+          icon={<Icon.Pin className="w-5 h-5" />}
+          label={isAr ? `ابحث في ${active.label}` : `Search ${active.label}`}
+          placeholder={active.hint || t("search_placeholder")}
+          value={query}
+          onChange={setQuery}
           iconColor="bg-blue-600/10 text-blue-600 border-blue-500/25"
         />
-        <SearchField 
-          className="md:col-span-3" 
-          icon={<Icon.Cal className="w-5 h-5" />} 
-          label={language === 'ar' ? "بداية الرحلة" : "Start Date"} 
-          placeholder={language === 'ar' ? "اختر التاريخ" : "Select date"} 
-          type="date" 
-          iconColor="bg-emerald-500/10 text-emerald-600 border-emerald-500/25"
-        />
-        <SearchField 
-          className="md:col-span-3" 
-          icon={<Icon.Cal className="w-5 h-5" />} 
-          label={language === 'ar' ? "نهاية الرحلة" : "End Date"} 
-          placeholder={language === 'ar' ? "اختر التاريخ" : "Select date"} 
-          type="date" 
-          iconColor="bg-blue-600/10 text-blue-600 border-blue-500/25"
-        />
+        {withDates && (
+          <>
+            <SearchField
+              className="md:col-span-3"
+              icon={<Icon.Cal className="w-5 h-5" />}
+              label={isAr ? "من تاريخ" : "From"}
+              placeholder=""
+              type="date"
+              min={today}
+              value={from}
+              onChange={(v) => { setFrom(v); setDateError(""); }}
+              iconColor="bg-emerald-500/10 text-emerald-600 border-emerald-500/25"
+            />
+            <SearchField
+              className="md:col-span-3"
+              icon={<Icon.Cal className="w-5 h-5" />}
+              label={isAr ? "إلى تاريخ" : "To"}
+              placeholder=""
+              type="date"
+              min={from || today}
+              value={to}
+              onChange={(v) => { setTo(v); setDateError(""); }}
+              iconColor="bg-blue-600/10 text-blue-600 border-blue-500/25"
+            />
+          </>
+        )}
         <div className="md:col-span-2 flex">
-          <Link
-            to={tab === "stays" ? "/hotels" : tab === "cars" ? "/transport" : tab === "restaurants" ? "/restaurants" : tab === "guides" ? "/guides" : tab === "attractions" ? "/attractions" : "/trips"}
-            className="w-full h-full min-h-[56px] rounded-2xl bg-[#003580] hover:bg-[#002866] text-white font-black text-base shadow-md hover:-translate-y-0.5 transition flex items-center justify-center gap-2"
+          <button
+            type="submit"
+            className="w-full h-full min-h-[56px] rounded-2xl bg-[#003580] hover:bg-[#002866] text-white font-black text-base shadow-md hover:-translate-y-0.5 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <Icon.Search className="w-5 h-5" />
-            {t('search_button')}
-          </Link>
+            {t("search_button")}
+          </button>
         </div>
       </div>
-    </div>
+      {withDates && (
+        <p className={`px-3 pt-2 text-[11px] font-bold ${dateError ? "text-red-600" : "text-slate-500"}`}>
+          {dateError || (isAr ? "اختر الفترة التي تناسبك لتظهر الرحلات التي تنطلق خلالها (اختياري)." : "Pick a period to see the trips that run in it (optional).")}
+        </p>
+      )}
+    </form>
   );
 }
 
@@ -422,6 +463,9 @@ function SearchField({
   type = "text",
   className = "",
   iconColor = "bg-[#D96B27]/10 text-[#D96B27] border-[#D96B27]/25",
+  value,
+  onChange,
+  min,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -429,6 +473,9 @@ function SearchField({
   type?: string;
   className?: string;
   iconColor?: string;
+  value: string;
+  onChange: (v: string) => void;
+  min?: string;
 }) {
   return (
     <label className={`group flex items-center gap-3 p-3 rounded-2xl border border-border hover:border-primary/50 hover:bg-muted/40 transition cursor-pointer ${className}`}>
@@ -438,6 +485,9 @@ function SearchField({
         <input
           type={type}
           placeholder={placeholder}
+          value={value}
+          min={min}
+          onChange={(e) => onChange(e.target.value)}
           className="w-full bg-transparent outline-none text-sm font-bold text-foreground placeholder:text-muted-foreground/60 py-0.5"
         />
       </div>

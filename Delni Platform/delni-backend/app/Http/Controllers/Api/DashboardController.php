@@ -14,7 +14,6 @@ use App\Models\BookingWeekly;
 use App\Models\Vehicle;
 use App\Models\OfferDailyTrip;
 use App\Models\OfferWeeklyTrip;
-use App\Models\OfferFacility;
 use App\Models\Hotel;
 use App\Models\RestaurantCafe;
 use App\Models\PlaceTourist;
@@ -337,7 +336,6 @@ class DashboardController extends Controller
             'weekly_bookings' => BookingWeekly::with(['tourist', 'weeklyTrip'])->get(),
             'daily_offers' => OfferDailyTrip::all(),
             'weekly_offers' => OfferWeeklyTrip::all(),
-            'facility_offers' => OfferFacility::all(),
             'hotels' => Hotel::all(),
             'restaurants' => RestaurantCafe::all(),
             'places' => PlaceTourist::all(),

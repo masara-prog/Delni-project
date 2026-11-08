@@ -39,11 +39,6 @@ class RestaurantCafe extends Model
         'contract_end_date' => 'date:Y-m-d',
     ];
 
-    public function offers()
-    {
-        return $this->hasMany(OfferFacility::class, 'facility_id', 'facility_id');
-    }
-
     public function reviews()
     {
         return $this->hasMany(ReviewFacility::class, 'facility_id', 'facility_id');

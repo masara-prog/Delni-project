@@ -136,6 +136,14 @@ function GuidesPage() {
   const [filterTab, setFilterTab] = useState<"all" | "gender" | "region">("all");
   const [workDaysFilter, setWorkDaysFilter] = useState<"all" | "full" | "weekend">("all");
 
+  // a search sent from the home page search box (?q=...)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, []);
+
   // Selected Guide Detail Modal State
   const [selectedGuide, setSelectedGuide] = useState<TourGuide | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());

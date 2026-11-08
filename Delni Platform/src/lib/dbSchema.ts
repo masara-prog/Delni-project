@@ -353,36 +353,6 @@ export interface OfferWeeklyTrip {
   badge?: string | null; // VARCHAR(50)
 }
 
-/* =========================================================
-   16. عروض الفنادق (Offers Hotels)
-   ========================================================= */
-export interface OfferHotel {
-  id_offer: string; // VARCHAR(50) PRIMARY KEY
-  title_offer: string; // VARCHAR(100)
-  description: string; // TEXT
-  percent_discount: number; // INT (CHECK 0..100)
-  offer_image: string; // VARCHAR(255)
-  hotel_id: string; // VARCHAR(50) FK -> Hotels
-  date_start: string; // DATE
-  date_end: string; // DATE
-  badge?: string | null; // VARCHAR(50)
-}
-
-/* =========================================================
-   17. عروض المطاعم والمقاهي (Offers Facilities)
-   ========================================================= */
-export interface OfferFacility {
-  facility_offer_id: string; // VARCHAR(50) PRIMARY KEY
-  facility_id: string; // VARCHAR(50) FK -> RestaurantsCafes
-  description: string; // TEXT
-  offer_title: string; // VARCHAR(100)
-  offer_image_url: string; // VARCHAR(255)
-  discount_percentage: number; // DECIMAL(5,2) (CHECK 0..100)
-  start_date: string; // DATE
-  end_date: string; // DATE
-  badge?: string | null; // VARCHAR(50)
-}
-
 // Note: Multi-vehicle trip allocation tables (daily_trip_vehicles, weekly_trip_vehicles, private_trip_vehicles) were removed as each trip directly assigns single vehicles.
 
 /* =========================================================

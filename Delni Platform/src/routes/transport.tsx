@@ -90,6 +90,14 @@ function TransportPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [city, setCity] = useState("all");
 
+  // a search sent from the home page search box (?q=...)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, []);
+
   // Display Mode: Slider (horizontal carousel) vs Grid (View All)
   const [isViewAll, setIsViewAll] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
