@@ -291,6 +291,7 @@ class ApiService {
     required String email,
     required String phone,
     String? newPassword,
+    String? currentPassword,
   }) async {
     if (!_isTourist) {
       return ApiResult(false, _m('يجب تسجيل الدخول بحساب سائح', 'Sign in with a tourist account'));
@@ -301,6 +302,8 @@ class ApiService {
       'email': email.trim().toLowerCase(),
       'phone_number': phone.trim(),
       if (newPassword != null && newPassword.isNotEmpty) 'password': newPassword,
+      // the server asks for the current password before it changes it
+      if (newPassword != null && newPassword.isNotEmpty) 'current_password': currentPassword ?? '',
     });
     if (result.success) {
       currentSession = currentSession!.copyWith(name: fullName.trim(), email: email.trim().toLowerCase(), phone: phone.trim());
@@ -376,7 +379,7 @@ class ApiService {
         body: json.encode({
           'role': role,
           'login': login.trim(),
-          'password': password.trim(),
+          'password': password,
         }),
       ).timeout(const Duration(seconds: 8));
 
@@ -431,7 +434,7 @@ class ApiService {
           'full_name': fullName.trim(),
           'email': email.trim().toLowerCase(),
           'phone_number': phone.trim(),
-          'password': password.trim(),
+          'password': password,
         }),
       ).timeout(const Duration(seconds: 8));
 
@@ -491,7 +494,7 @@ class ApiService {
           'full_name': fullName.trim(),
           'phone_number': phone.trim(),
           'email': email.trim().toLowerCase(),
-          'password': password.trim(),
+          'password': password,
           'price_per_day': pricePerDay,
           'years_of_experience': experienceYears,
           'gender': gender,

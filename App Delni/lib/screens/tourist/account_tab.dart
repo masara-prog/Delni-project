@@ -178,12 +178,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final _phone = TextEditingController(text: _session.phone);
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+  final _current = TextEditingController();
   bool _saving = false;
   String? _error;
 
   @override
   void dispose() {
-    for (final c in [_name, _email, _phone, _password, _confirm]) {
+    for (final c in [_name, _email, _phone, _password, _confirm, _current]) {
       c.dispose();
     }
     super.dispose();
@@ -201,6 +202,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       error = context.tr('كلمة المرور الجديدة يجب ألا تقل عن 8 خانات', 'The new password must be at least 8 characters');
     } else if (_password.text != _confirm.text) {
       error = context.tr('تأكيد كلمة المرور غير مطابق', 'Passwords do not match');
+    } else if (_password.text.isNotEmpty && _current.text.isEmpty) {
+      error = context.tr('يرجى إدخال كلمة المرور الحالية لتغيير كلمة المرور', 'Enter your current password to change it');
     }
     if (error != null) {
       setState(() => _error = error);
@@ -216,6 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email: _email.text,
       phone: normalizeDigits(_phone.text),
       newPassword: _password.text.isEmpty ? null : _password.text,
+      currentPassword: _current.text,
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -294,6 +298,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 AppTextField(label: context.tr('كلمة المرور الجديدة', 'New password'), controller: _password, icon: Icons.lock_outline_rounded, password: true),
                 const SizedBox(height: Gap.lg),
                 AppTextField(label: context.tr('تأكيد كلمة المرور', 'Confirm password'), controller: _confirm, icon: Icons.lock_outline_rounded, password: true),
+                const SizedBox(height: Gap.lg),
+                AppTextField(
+                  label: context.tr('كلمة المرور الحالية', 'Current password'),
+                  controller: _current,
+                  icon: Icons.key_rounded,
+                  password: true,
+                  helper: context.tr('مطلوبة عند تغيير كلمة المرور فقط', 'Needed only when you change the password'),
+                ),
               ],
             ),
           ),

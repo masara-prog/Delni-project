@@ -21,6 +21,11 @@ class AuthController extends Controller
 {
     use JsonApiResponses;
 
+    // Tourist field rules, the same as the platform (auth.signup.tsx) and the mobile app (widgets/common.dart)
+    private const PHONE_RULE = '/^09\d{8}$/';
+    private const PASSPORT_RULE = '/^[A-Za-z0-9]{6,10}$/';
+    private const MIN_PASSWORD = 8;
+
     /**
      * Unified Login for all 5 roles: tourist, guide, transport, driver, admin
      */
@@ -190,27 +195,31 @@ class AuthController extends Controller
     public function registerTourist(Request $request)
     {
         $validated = $request->validate([
-            'tourist_id' => 'required|string|max:50|unique:tourists,tourist_id',
-            'full_name' => 'required|string|max:150',
+            // The same rules as the platform's and the app's sign-up forms, so a direct request cannot bypass them
+            'tourist_id' => ['required', 'string', 'regex:' . self::PASSPORT_RULE, 'unique:tourists,tourist_id'],
+            'full_name' => 'required|string|min:3|max:150',
             'email' => 'required|email|max:100|unique:tourists,email',
-            'phone_number' => 'required|string|max:20|unique:tourists,phone_number',
-            'password' => 'required|string|min:6',
+            'phone_number' => ['required', 'string', 'regex:' . self::PHONE_RULE, 'unique:tourists,phone_number'],
+            'password' => 'required|string|min:' . self::MIN_PASSWORD,
         ], [
             'tourist_id.required' => 'رقم جواز السفر أو الرقم الوطني مطلوب',
+            'tourist_id.regex' => 'رقم جواز السفر / الرقم الوطني يجب أن يتكون من 6 إلى 10 خانات (أحرف إنجليزية أو أرقام)',
             'tourist_id.unique' => 'رقم جواز السفر / الرقم الوطني مسجل مسبقاً',
             'full_name.required' => 'الاسم الكامل مطلوب',
+            'full_name.min' => 'يرجى إدخال الاسم بالكامل (3 أحرف على الأقل)',
             'email.required' => 'البريد الإلكتروني مطلوب',
             'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
             'email.unique' => 'البريد الإلكتروني مسجل مسبقاً',
             'phone_number.required' => 'رقم الهاتف مطلوب',
+            'phone_number.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)',
             'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً',
             'password.required' => 'كلمة المرور مطلوبة',
-            'password.min' => 'كلمة المرور يجب أن لا تقل عن 6 أحرف',
+            'password.min' => 'كلمة المرور يجب ألا تقل عن 8 خانات',
         ]);
 
         $tourist = Tourist::create([
-            'tourist_id' => trim($validated['tourist_id']),
-            'full_name' => $validated['full_name'],
+            'tourist_id' => strtoupper(trim($validated['tourist_id'])),
+            'full_name' => trim($validated['full_name']),
             'email' => strtolower($validated['email']),
             'phone_number' => $validated['phone_number'],
             'password' => bcrypt($validated['password']),
@@ -235,22 +244,35 @@ class AuthController extends Controller
         $touristId = (string) $request->input('tourist_id');
         $validated = $request->validate([
             'tourist_id' => 'required|string|exists:tourists,tourist_id',
-            'full_name' => 'required|string|max:150',
+            'full_name' => 'required|string|min:3|max:150',
             'email' => ['required', 'email', 'max:100', Rule::unique('tourists', 'email')->ignore($touristId, 'tourist_id')],
-            'phone_number' => ['required', 'string', 'max:20', Rule::unique('tourists', 'phone_number')->ignore($touristId, 'tourist_id')],
-            'password' => 'nullable|string|min:6',
+            'phone_number' => ['required', 'string', 'regex:' . self::PHONE_RULE, Rule::unique('tourists', 'phone_number')->ignore($touristId, 'tourist_id')],
+            'password' => 'nullable|string|min:' . self::MIN_PASSWORD,
+            'current_password' => 'required_with:password|nullable|string',
         ], [
             'tourist_id.exists' => 'حساب السائح غير موجود',
             'full_name.required' => 'الاسم الكامل مطلوب',
+            'full_name.min' => 'يرجى إدخال الاسم بالكامل (3 أحرف على الأقل)',
             'email.required' => 'البريد الإلكتروني مطلوب',
             'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
             'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لحساب آخر',
             'phone_number.required' => 'رقم الهاتف مطلوب',
+            'phone_number.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)',
             'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً لحساب آخر',
-            'password.min' => 'كلمة المرور يجب أن لا تقل عن 6 أحرف',
+            'password.min' => 'كلمة المرور الجديدة يجب ألا تقل عن 8 خانات',
+            'current_password.required_with' => 'يرجى إدخال كلمة المرور الحالية لتغيير كلمة المرور',
         ]);
 
         $tourist = Tourist::where('tourist_id', $validated['tourist_id'])->firstOrFail();
+
+        // A new password needs the current one, so an open session on a lost phone cannot take over the account
+        if (!empty($validated['password']) && !Passwords::matches((string) $validated['current_password'], $tourist->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'كلمة المرور الحالية غير صحيحة',
+                'errors' => ['current_password' => ['كلمة المرور الحالية غير صحيحة']],
+            ], 422);
+        }
 
         $updateData = [
             'full_name' => $validated['full_name'],
@@ -263,6 +285,12 @@ class AuthController extends Controller
         }
 
         $tourist->update($updateData);
+
+        // After a password change every other session of this account ends; this device stays signed in
+        if (!empty($validated['password'])) {
+            $current = Actor::user()?->currentAccessToken();
+            $tourist->tokens()->when($current?->id, fn ($q, $id) => $q->where('id', '!=', $id))->delete();
+        }
 
         return response()->json([
             'status' => 'success',

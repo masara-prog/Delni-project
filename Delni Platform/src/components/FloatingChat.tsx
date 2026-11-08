@@ -129,8 +129,8 @@ export function FloatingChat() {
       from: "ai", 
       time: now(), 
       text: language === 'ar' 
-        ? "مرحباً بك في الذكاء الاصطناعي لمنصة ليبيا رحلات Pro 🤖👋\nأنا مساعدك الذكي لخدمات السياحة: يمكنك رفع صورة لمعلم سياحي للتعرف عليه، أو السؤال عن أي رحلة وفندق!"
-        : "Welcome to Libya Journeys Pro Smart AI 🤖👋\nI am your travel assistant: Feel free to ask about any trip, hotel, attraction, or upload a photo to identify landmarks!" 
+        ? "مرحباً بك في «ذكاء دلني» 🤖👋\nأنا مساعدك الذكي لخدمات السياحة: يمكنك رفع صورة لمعلم سياحي للتعرف عليه، أو السؤال عن أي رحلة وفندق!"
+        : "Welcome to Delni Smart AI 🤖👋\nI am your travel assistant: Feel free to ask about any trip, hotel, attraction, or upload a photo to identify landmarks!" 
     },
   ]);
 
@@ -214,7 +214,17 @@ export function FloatingChat() {
       // Intelligent local client-side response
       const lower = t.toLowerCase();
       let reply = "";
-      if (lower.includes("أوباري") || lower.includes("صحراء") || lower.includes("سفاري")) {
+      const has = (...words: string[]) => words.some((w) => lower.includes(w));
+      // Recommendations by interest: historical places, beaches and relaxation (the desert follows below)
+      if (has("تاريخ", "أثري", "أثرية", "آثار", "اثار", "تراث", "historic", "history", "ruins")) {
+        reply = language === 'ar'
+          ? "🏛️ أقترح عليك هذه المعالم التاريخية:\n• لبدة الكبرى (الخمس): أكبر مدينة رومانية محفوظة على المتوسط.\n• صبراتة: المسرح الروماني المطل على البحر.\n• شحات (قورينا) وأبولونيا في الجبل الأخضر: آثار إغريقية.\n• مدينة غدامس القديمة: «لؤلؤة الصحراء» المسجلة في اليونسكو.\n• المدينة القديمة وقوس ماركوس أوريليوس في طرابلس.\nتجد الرحلات اليومية إلى لبدة وصبراتة في صفحة الرحلات."
+          : "🏛️ Historical places I recommend:\n• Leptis Magna (Al Khums)\n• Sabratha and its seaside Roman theatre\n• Cyrene and Apollonia in the Green Mountain\n• The old town of Ghadames (UNESCO)\n• Tripoli's old town and the Arch of Marcus Aurelius\nDaily trips to Leptis and Sabratha are on the trips page.";
+      } else if (has("بحر", "شاطئ", "شواطئ", "استرخاء", "راحة", "ترفيه", "beach", "relax")) {
+        reply = language === 'ar'
+          ? "🏖️ للاسترخاء والترفيه أقترح:\n• شواطئ طرابلس والخمس وزوارة الهادئة.\n• منطقة رأس الهلال وسوسة في الجبل الأخضر حيث يلتقي البحر بالغابات.\n• جولة مسائية في المدينة القديمة بطرابلس مع المقاهي التراثية.\nيمكنك أيضاً طلب رحلة خاصة بالمعالم التي تختارها."
+          : "🏖️ For relaxing: the beaches of Tripoli, Al Khums and Zuwara; Ras Al Hilal and Susa in the Green Mountain; an evening in Tripoli's old town. You can also request a private trip.";
+      } else if (lower.includes("أوباري") || lower.includes("صحراء") || lower.includes("سفاري")) {
         reply = language === 'ar'
           ? "أهلاً بك! 🐪 بحيرات أوباري وصحراء فزان وجهة عالمية فريدة للتخييم وسفاري الكثبان الذهبية (أفضل موسم: نوفمبر - مارس). لدينا رحلات أسبوعية بسيارات دفع رباعي وسائقين محترفين."
           : "Welcome! The Ubari lakes and Fezzan desert are world-class destinations for camping and sand dune safaris. We offer weekly tours with 4WD vehicles and experienced drivers.";

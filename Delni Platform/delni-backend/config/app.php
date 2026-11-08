@@ -81,7 +81,7 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => 'ar', // the platform and the app are Arabic: validation messages come from lang/ar
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

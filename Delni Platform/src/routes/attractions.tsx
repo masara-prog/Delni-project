@@ -97,6 +97,8 @@ function AttractionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  // Category of the landmarks registered in DelniDB (places_tourist.category)
+  const [placeCategory, setPlaceCategory] = useState<string>("all");
   const [tripSystemFilter, setTripSystemFilter] = useState<"all" | "daily" | "private" | "unesco">("all");
   const [sortBy, setSortBy] = useState<"rating" | "reviews" | "name">("rating");
 
@@ -203,6 +205,12 @@ function AttractionsPage() {
     return ["all", ...rawCities];
   }, [dynamicCities, isAr]);
 
+  // Categories for the filter, taken from the registered landmarks themselves
+  const placeCategories = useMemo(
+    () => Array.from(new Set(dynamicCities.map((c) => c.categoryTag).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ar")),
+    [dynamicCities],
+  );
+
   // Filtered & displayed cities
   const displayedCities = useMemo(() => {
     let list = dynamicCities;
@@ -212,6 +220,9 @@ function AttractionsPage() {
         return itemCity === selectedCity || c.name === selectedCity || c.region === selectedCity;
       });
     }
+    if (placeCategory !== "all") {
+      list = list.filter((c) => c.categoryTag === placeCategory);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((c) => {
@@ -220,7 +231,7 @@ function AttractionsPage() {
       });
     }
     return list;
-  }, [dynamicCities, selectedCity, searchQuery, isAr]);
+  }, [dynamicCities, selectedCity, placeCategory, searchQuery, isAr]);
 
   // UNESCO World Heritage Sites & minimalist showcase state
   const unescoSites = useMemo(() => LIBYAN_ATTRACTIONS.filter((a) => a.isUnesco), []);
@@ -393,7 +404,7 @@ function AttractionsPage() {
           {/* Main Inputs Row (Simple Search & City Select with Booking.com Blue Theme) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-blue-100">
             {/* Search Input */}
-            <div className="lg:col-span-6 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
+            <div className="sm:col-span-2 lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
               <span className="text-blue-900 font-bold text-base">🔍</span>
               <div className="relative flex-1">
                 <label className="text-[10px] font-black text-[#003580] block mb-0.5">البحث عن مدينة أو معلم سياحي:</label>
@@ -413,7 +424,7 @@ function AttractionsPage() {
             </div>
 
             {/* City / Region Select */}
-            <div className="lg:col-span-6 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
+            <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
               <span className="text-blue-900 font-bold text-base">📍</span>
               <div className="flex-1">
                 <label className="text-[10px] font-black text-[#003580] block mb-0.5">اختر المدينة والمنطقة:</label>
@@ -425,6 +436,24 @@ function AttractionsPage() {
                   <option value="all">{isAr ? "جميع المدن والمناطق السياحية" : "All Cities & Destinations"}</option>
                   {cities.filter((c) => c !== "all").map((city) => (
                     <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Category Select (archaeological sites, oases, old cities...) */}
+            <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
+              <span className="text-blue-900 font-bold text-base">🏛️</span>
+              <div className="flex-1">
+                <label className="text-[10px] font-black text-[#003580] block mb-0.5">{isAr ? "تصنيف المعلم:" : "Landmark type:"}</label>
+                <select
+                  value={placeCategory}
+                  onChange={(e) => setPlaceCategory(e.target.value)}
+                  className="w-full h-7 text-xs font-bold text-[#0F172A] outline-none bg-transparent cursor-pointer"
+                >
+                  <option value="all">{isAr ? "جميع التصنيفات" : "All types"}</option>
+                  {placeCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>

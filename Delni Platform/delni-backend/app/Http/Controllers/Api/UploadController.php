@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Http\Controllers\Controller;
 use App\Support\Actor;
+use App\Support\Base64Image;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -76,12 +77,20 @@ class UploadController extends Controller
             return $this->error('الملف ليس صورة صالحة', 422);
         }
 
-        $name = $kind . '-' . bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+        $ext = $allowed[$mime];
         $dir = $isDocument ? storage_path('app/private/documents') : base_path('../public/uploads/' . $folder);
         if (!is_dir($dir)) {
             mkdir($dir, 0775, true);
         }
-        $file->move($dir, $name);
+        if (str_starts_with($mime, 'image/')) {
+            // Photos are scaled down (longest side 1600 px) before they are stored, so pages stay light on phones
+            [$bytes, $ext] = Base64Image::shrink((string) file_get_contents($realPath), $ext);
+            $name = $kind . '-' . bin2hex(random_bytes(16)) . '.' . $ext;
+            file_put_contents($dir . DIRECTORY_SEPARATOR . $name, $bytes);
+        } else {
+            $name = $kind . '-' . bin2hex(random_bytes(16)) . '.' . $ext;
+            $file->move($dir, $name);
+        }
 
         return response()->json([
             'success' => true,

@@ -23,6 +23,8 @@ trait JsonApiResponses
         'between' => ':attribute يجب أن يكون بين :min و :max',
         'date' => ':attribute ليس تاريخاً صحيحاً',
         'after_or_equal' => ':attribute لا يمكن أن يكون قبل تاريخ بداية العقد',
+        // a trip's start date (after_or_equal:today), not a contract date
+        'start_date.after_or_equal' => 'تاريخ بداية الرحلة لا يمكن أن يكون في تاريخ مضى',
         'email' => ':attribute غير صحيح',
         'array' => ':attribute يجب أن يكون قائمة',
         'boolean' => ':attribute يجب أن يكون نعم أو لا',

@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { Badge, DashboardShell, SectionCard, StatCard, type NavItem } from "@/components/DashboardShell";
 import { Modal, PrivateTripModal } from "@/components/Modals";
 import { useLanguage } from "@/lib/i18n";
-import { QrCode, Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Printer, X, Award } from "lucide-react";
-import QRCode from "qrcode";
+import { Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Printer, X, Award } from "lucide-react";
 import type { PrivateTrip } from "@/lib/dbSchema";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
 import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiGetPrivateTrips, apiDecidePrivateTrip, apiCancelBooking } from "@/lib/api";
@@ -84,24 +83,6 @@ function TouristDashboard() {
   const isAr = language === "ar";
   const [active, setActive] = useState("overview");
   const [ticketModal, setTicketModal] = useState<Ticket | null>(null);
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
-
-  useEffect(() => {
-    if (ticketModal?.code) {
-      QRCode.toDataURL(ticketModal.code, {
-        width: 320,
-        margin: 1,
-        color: {
-          dark: "#0F172A",
-          light: "#FFFFFF",
-        },
-      })
-        .then((url) => setQrCodeDataUrl(url))
-        .catch((err) => console.error("Error generating QR code:", err));
-    } else {
-      setQrCodeDataUrl("");
-    }
-  }, [ticketModal]);
 
   // Real Tourist Profile loaded dynamically from DelniDB session
   const [touristInfo, setTouristInfo] = useState(() => {
@@ -114,7 +95,8 @@ function TouristDashboard() {
       email: u.email || "",
       phone_number: u.phone_number || u.phone || "",
       national_id_or_passport: u.national_id_or_passport || u.passport || tid || "",
-      password: "••••••••",
+      password: "",
+      current_password: "",
     };
   });
 
@@ -195,7 +177,8 @@ function TouristDashboard() {
         email: u.email || "",
         phone_number: u.phone_number || u.phone || "",
         national_id_or_passport: u.national_id_or_passport || u.passport || tid || "",
-        password: "••••••••",
+        password: "",
+        current_password: "",
       });
 
       // Fetch live database bookings for this tourist
@@ -283,17 +266,28 @@ function TouristDashboard() {
       alert("الرجاء إدخال رقم هاتف ليبي صحيح (مثال: 0912345678)");
       return;
     }
+    const newPassword = touristInfo.password;
+    if (newPassword && newPassword.length < 8) {
+      alert("كلمة المرور الجديدة يجب ألا تقل عن 8 خانات");
+      return;
+    }
+    if (newPassword && !touristInfo.current_password) {
+      alert("يرجى إدخال كلمة المرور الحالية لتغيير كلمة المرور");
+      return;
+    }
     const res = await apiUpdateTouristProfile({
       tourist_id: touristInfo.tourist_id,
       full_name: touristInfo.full_name,
       email: touristInfo.email,
       phone_number: touristInfo.phone_number,
-      password: touristInfo.password && touristInfo.password !== "••••••••" ? touristInfo.password : undefined,
+      password: newPassword || undefined,
+      current_password: newPassword ? touristInfo.current_password : undefined,
     });
     if (res.status !== "success") {
       alert("❌ لم يتم حفظ التعديلات.\n" + res.message);
       return;
     }
+    setTouristInfo((t) => ({ ...t, password: "", current_password: "" }));
     alert("تم حفظ وتحديث بيانات حسابك بنجاح ✓");
   };
 
@@ -1043,6 +1037,16 @@ function TouristDashboard() {
               placeholder="اتركها فارغة إذا لم ترغب بتغييرها"
             />
 
+            {touristInfo.password && (
+              <Field
+                label="كلمة المرور الحالية"
+                type="password"
+                value={touristInfo.current_password}
+                onChange={(v) => setTouristInfo({ ...touristInfo, current_password: v })}
+                placeholder="مطلوبة لتأكيد تغيير كلمة المرور"
+              />
+            )}
+
             <button className="px-5 h-9 bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer mt-2">
               حفظ وتحديث بيانات الحساب ✓
             </button>
@@ -1111,18 +1115,17 @@ function TouristDashboard() {
                       <span className="absolute -top-3 -left-8 sm:-right-3 sm:left-auto sm:top-auto sm:-bottom-8 w-6 h-6 rounded-full bg-[#F4F1EA]" />
                     </div>
 
-                    {/* QR stub */}
+                    {/* Ticket number stub: the ticket is identified by its number only */}
                     <div className="sm:w-56 p-5 sm:p-6 flex flex-col items-center justify-center text-center gap-2">
-                      <div className={`w-40 h-40 rounded-2xl bg-white border border-slate-200 p-2 shadow-sm ${cancelled ? "opacity-30 grayscale" : ""}`}>
-                        {qrCodeDataUrl ? (
-                          <img src={qrCodeDataUrl} alt={`QR: ${ticketModal.code}`} className="w-full h-full object-contain" />
-                        ) : (
-                          <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
-                        )}
+                      <div className="text-[11px] text-slate-500 font-bold">رقم التذكرة</div>
+                      <div
+                        dir="ltr"
+                        className={`w-full rounded-2xl bg-[#EEF4FB] border border-slate-200 px-3 py-4 font-mono text-lg font-black text-[#003580] tracking-wider select-all break-all ${cancelled ? "opacity-40 line-through" : ""}`}
+                      >
+                        {ticketModal.code}
                       </div>
-                      <div className="font-mono text-[11px] font-black text-[#003580] tracking-wider select-all">{ticketModal.code}</div>
                       <div className="text-[10px] text-slate-500 font-semibold leading-relaxed">
-                        {cancelled ? "هذه التذكرة ملغاة ولا يمكن استخدامها" : "اعرض الرمز عند نقطة الانطلاق أو بمقر الشركة لتأكيد الحجز"}
+                        {cancelled ? "هذه التذكرة ملغاة ولا يمكن استخدامها" : "اذكر رقم التذكرة عند نقطة الانطلاق أو بمقر الشركة لتأكيد الحجز"}
                       </div>
                     </div>
                   </div>

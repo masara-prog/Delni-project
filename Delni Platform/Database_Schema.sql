@@ -89,7 +89,6 @@ BEGIN
     CREATE TABLE dbo.[daily_trips] (
         [daily_trip_id] VARCHAR(50) NOT NULL,
         [trip_title] NVARCHAR(200) NOT NULL,
-        [description] NVARCHAR(MAX) NOT NULL,
         [price_per_seat] DECIMAL(10, 2) NOT NULL,
         [is_active] BIT NOT NULL DEFAULT ((1)),
         [max_capacity] INT NOT NULL,
@@ -192,7 +191,6 @@ BEGIN
         [hotel_id] VARCHAR(50) NOT NULL,
         [hotel_name] NVARCHAR(200) NOT NULL,
         [city] NVARCHAR(100) NOT NULL,
-        [address_details] NVARCHAR(500) NOT NULL,
         [phone_number] VARCHAR(20) NOT NULL,
         [star_rating] INT NOT NULL,
         [partnership_status] NVARCHAR(100) NOT NULL,
@@ -442,7 +440,6 @@ BEGIN
         [facility_name] NVARCHAR(200) NOT NULL,
         [facility_type] NVARCHAR(100) NOT NULL,
         [city] NVARCHAR(100) NOT NULL,
-        [address_details] NVARCHAR(500) NOT NULL,
         [phone_number] VARCHAR(20) NULL,
         [description] NVARCHAR(MAX) NULL,
         [facility_image_1] NVARCHAR(MAX) NULL,
