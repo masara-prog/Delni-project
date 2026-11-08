@@ -27,8 +27,6 @@ class FacilityController extends Controller
     {
         $hotels = Hotel::query()
             ->with('amenities')
-            ->withCount('reviews as reviews_count')
-            ->withAvg('reviews as rating_avg', 'stars_rating')
             ->orderBy('hotel_name')
             ->get()
             ->map(fn (Hotel $h) => $this->withList($h, 'amenities', 'amenity'));
@@ -100,8 +98,6 @@ class FacilityController extends Controller
     {
         $restaurants = RestaurantCafe::query()
             ->with('features')
-            ->withCount('reviews as reviews_count')
-            ->withAvg('reviews as rating_avg', 'stars_rating')
             ->orderBy('facility_name')
             ->get()
             ->map(fn (RestaurantCafe $r) => $this->withList($r, 'features', 'feature'));
@@ -172,9 +168,6 @@ class FacilityController extends Controller
     {
         $row = $model->toArray();
         $row[$relation] = $model->{$relation}->pluck($column)->values()->all();
-        if (array_key_exists('rating_avg', $row)) {
-            $row['rating_avg'] = round((float) $row['rating_avg'], 1);
-        }
         return $row;
     }
 

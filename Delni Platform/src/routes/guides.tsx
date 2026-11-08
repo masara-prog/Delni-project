@@ -102,8 +102,8 @@ function GuidesPage() {
             rating: Number(g.rating_avg) || 0,
             reviewsCount: Number(g.reviews_count) || 0,
             pricePerDay: Number(g.price_per_day) || 0,
-            primaryRegion: g.primaryRegion || (opRegions[0] || "tripoli"),
-            operatingRegions: opRegions.length > 0 ? opRegions : ["tripoli"],
+            primaryRegion: g.primaryRegion || opRegions[0] || "",
+            operatingRegions: opRegions,
             languages: langs,
             bio: g.bio || "مرشد سياحي معتمد ومسجل في منصة دَلّني السياحية.",
             phone: g.phone_number || "",
@@ -386,14 +386,9 @@ function GuidesPage() {
                   className="w-full h-8 text-xs font-bold text-[#0F172A] outline-none bg-transparent cursor-pointer"
                 >
                   <option value="all">جميع المناطق والمدن</option>
-                  <option value="tripoli">طرابلس وضواحيها</option>
-                  <option value="leptis">لبدة الكبرى والخمس</option>
-                  <option value="sabratha">صبراتة والساحل الغربي</option>
-                  <option value="cyrene">شحات وقورينا (الجبل الأخضر)</option>
-                  <option value="benghazi">بنغازي والمنطقة الشرقية</option>
-                  <option value="ghadames">غدامس والواحات</option>
-                  <option value="ubari">أوباري وفزان</option>
-                  <option value="acacus">جبال أكاكوس وغات</option>
+                  {Array.from(new Set(guidesSource.flatMap((g) => g.operatingRegions || []))).sort().map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </div>
 

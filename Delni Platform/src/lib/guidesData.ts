@@ -55,7 +55,7 @@ export const REGIONS_MAP: Record<string, string> = {
 };
 
 export function formatOperatingRegions(regions?: string[] | string): string {
-  if (!regions) return "طرابلس وضواحيها";
+  if (!regions) return "لم تُحدد أماكن العمل بعد";
   let list: string[] = [];
   if (Array.isArray(regions)) {
     list = regions;
@@ -71,6 +71,6 @@ export function formatOperatingRegions(regions?: string[] | string): string {
   const translated = list
     .filter(Boolean)
     .map(r => REGIONS_MAP[r] || r);
-  return translated.length > 0 ? translated.join(" • ") : "طرابلس وضواحيها";
+  return translated.length > 0 ? translated.join(" • ") : "لم تُحدد أماكن العمل بعد";
 }
 

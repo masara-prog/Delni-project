@@ -53,14 +53,4 @@ class Tourist extends Model
     {
         return $this->hasMany(ReviewWeeklyTrip::class, 'tourist_id', 'tourist_id');
     }
-
-    public function hotelReviews()
-    {
-        return $this->hasMany(ReviewHotel::class, 'tourist_id', 'tourist_id');
-    }
-
-    public function facilityReviews()
-    {
-        return $this->hasMany(ReviewFacility::class, 'tourist_id', 'tourist_id');
-    }
 }

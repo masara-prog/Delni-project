@@ -3015,7 +3015,6 @@ function AdminDashboard() {
                     { label: "الهاتف", value: r.phone },
                     { label: "ساعات العمل", value: r.working_hours || "" },
                     { label: "الخصم لرواد دلّني", value: r.discount_percentage ? `${r.discount_percentage}%` : "لا يوجد" },
-                    { label: "التقييم", value: r.rating_avg ? `⭐ ${r.rating_avg}` : "لا توجد تقييمات" },
                     { label: "فترة العقد", value: r.contract_start_date || r.contract_end_date ? `${r.contract_start_date || "—"} ← ${r.contract_end_date || "مستمر"}` : "" },
                     { label: "الحالة", value: r.partnership_status === "موقوف" ? "موقوف (مخفي من المنصة)" : "نشط (معروض بالمنصة)" },
                   ]}
@@ -3143,12 +3142,10 @@ function AdminDashboard() {
             </SectionCard>
             <SectionCard title="⭐ الأعلى تقييماً">
               {(() => {
-                // Tourists' real ratings (average of their reviews) across trips, restaurants, hotels and guides
+                // Tourists' real ratings (average of their reviews) of trips and guides
                 const rated = [
                   ...dailyTrips.map((t) => ({ name: t.title, rate: Number(t.rating_avg) || 0, count: Number((t as any).reviews_count) || 0, type: "رحلة يومية" })),
                   ...weeklyTrips.map((t) => ({ name: t.title, rate: Number(t.rating_avg) || 0, count: Number((t as any).reviews_count) || 0, type: "رحلة أسبوعية" })),
-                  ...restaurants.map((r) => ({ name: r.name, rate: Number(r.rating_avg) || 0, count: Number((r as any).reviews_count) || 0, type: "مطعم / مقهى" })),
-                  ...hotels.map((h) => ({ name: h.name, rate: Number(h.rating_avg) || 0, count: Number((h as any).reviews_count) || 0, type: "فندق" })),
                   ...guides.map((g) => ({ name: g.full_name, rate: Number((g as any).rating_avg) || 0, count: Number((g as any).reviews_count) || 0, type: "مرشد سياحي" })),
                 ]
                   .filter((x) => x.rate > 0)
@@ -3157,7 +3154,7 @@ function AdminDashboard() {
                 if (rated.length === 0) {
                   return (
                     <div className="p-6 text-center text-xs font-bold text-muted-foreground rounded-2xl border border-dashed border-border">
-                      لا توجد تقييمات من السياح بعد. ستظهر هنا الرحلات والمنشآت والمرشدون الأعلى تقييماً فور تقييمهم.
+                      لا توجد تقييمات من السياح بعد. ستظهر هنا الرحلات والمرشدون الأعلى تقييماً فور تقييمهم.
                     </div>
                   );
                 }

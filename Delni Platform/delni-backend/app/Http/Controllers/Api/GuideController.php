@@ -141,7 +141,6 @@ class GuideController extends Controller
             ->select('gp.license_number', 'pt.place_id', 'pt.city as place_name', 'pt.city', 'pt.category', 'pt.place_image')
             ->get()->groupBy('license_number');
         $days = DB::table('guide_working_days')->whereIn('license_number', $licenses)->get()->groupBy('license_number');
-        $regions = DB::table('guide_operating_regions')->whereIn('license_number', $licenses)->get()->groupBy('license_number');
 
         $ratings = DB::query()->fromSub(
             DB::table('reviews_daily_trips as r')->join('daily_trips as t', 'r.daily_trip_id', '=', 't.daily_trip_id')
@@ -168,7 +167,7 @@ class GuideController extends Controller
         )->groupBy('guide_license_number')->selectRaw('guide_license_number, COUNT(*) as total')->pluck('total', 'guide_license_number');
         $scheduled = $this->scheduledTripCounts($licenses);
         $isAdmin = Actor::isAdmin();
-        return $guides->map(function (TourGuide $g) use ($places, $days, $regions, $ratings, $isAdmin, $completed, $scheduled) {
+        return $guides->map(function (TourGuide $g) use ($places, $days, $ratings, $isAdmin, $completed, $scheduled) {
             $lic = $g->license_number;
             $myPlaces = ($places[$lic] ?? collect())->map(fn ($p) => (array) $p)->values();
             $rating = $ratings[$lic] ?? null;
@@ -177,7 +176,8 @@ class GuideController extends Controller
                 'places' => $myPlaces->all(),
                 'place_ids' => $myPlaces->pluck('place_id')->all(),
                 'working_days' => ($days[$lic] ?? collect())->pluck('day_of_week')->values()->all(),
-                'operating_regions' => ($regions[$lic] ?? collect())->pluck('region')->values()->all(),
+                // the cities of the landmarks the guide works at
+                'operating_regions' => $myPlaces->pluck('city')->filter()->unique()->values()->all(),
                 'rating_avg' => $rating ? round((float) $rating->rating_avg, 1) : 0,
                 'reviews_count' => $rating ? (int) $rating->reviews_count : 0,
                 'total_tours_completed' => (int) ($completed[$lic] ?? 0),

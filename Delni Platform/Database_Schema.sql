@@ -129,19 +129,6 @@ END;
 GO
 
 -- ----------------------------------------------------------------------------
--- Table: dbo.[guide_operating_regions]
--- Description: Records and manages data for guide_operating_regions
--- ----------------------------------------------------------------------------
-IF OBJECT_ID('dbo.[guide_operating_regions]', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.[guide_operating_regions] (
-        [license_number] VARCHAR(50) NOT NULL,
-        [region] NVARCHAR(100) NOT NULL
-    );
-END;
-GO
-
--- ----------------------------------------------------------------------------
 -- Table: dbo.[guide_places]
 -- Description: Records and manages data for guide_places
 -- ----------------------------------------------------------------------------
@@ -488,40 +475,6 @@ END;
 GO
 
 -- ----------------------------------------------------------------------------
--- Table: dbo.[reviews_facilities]
--- Description: Records and manages data for reviews_facilities
--- ----------------------------------------------------------------------------
-IF OBJECT_ID('dbo.[reviews_facilities]', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.[reviews_facilities] (
-        [review_facility_id] VARCHAR(50) NOT NULL,
-        [tourist_id] VARCHAR(50) NOT NULL,
-        [facility_id] VARCHAR(50) NOT NULL,
-        [stars_rating] INT NOT NULL,
-        [comment_text] NVARCHAR(MAX) NULL,
-        [created_at] DATETIME NOT NULL DEFAULT (getdate())
-    );
-END;
-GO
-
--- ----------------------------------------------------------------------------
--- Table: dbo.[reviews_hotels]
--- Description: Records and manages data for reviews_hotels
--- ----------------------------------------------------------------------------
-IF OBJECT_ID('dbo.[reviews_hotels]', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.[reviews_hotels] (
-        [review_hotel_id] VARCHAR(50) NOT NULL,
-        [tourist_id] VARCHAR(50) NOT NULL,
-        [hotel_id] VARCHAR(50) NOT NULL,
-        [stars_rating] INT NOT NULL,
-        [comment_text] NVARCHAR(MAX) NULL,
-        [created_at] DATETIME NOT NULL DEFAULT (getdate())
-    );
-END;
-GO
-
--- ----------------------------------------------------------------------------
 -- Table: dbo.[reviews_weekly_trips]
 -- Description: Records and manages data for reviews_weekly_trips
 -- ----------------------------------------------------------------------------
@@ -764,14 +717,6 @@ IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ__drivers__AB6E
     ALTER TABLE dbo.[drivers] ADD CONSTRAINT [UQ__drivers__AB6E616498FDD5D7] UNIQUE ([email]);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_guide_operating_regions_guide')
-    ALTER TABLE dbo.[guide_operating_regions] ADD CONSTRAINT [FK_guide_operating_regions_guide] FOREIGN KEY ([license_number]) REFERENCES dbo.[tour_guides]([license_number]) ON DELETE CASCADE;
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_guide_operating_regions')
-    ALTER TABLE dbo.[guide_operating_regions] ADD CONSTRAINT [PK_guide_operating_regions] PRIMARY KEY ([license_number]);
-GO
-
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_guide_places_guide')
     ALTER TABLE dbo.[guide_places] ADD CONSTRAINT [FK_guide_places_guide] FOREIGN KEY ([license_number]) REFERENCES dbo.[tour_guides]([license_number]) ON DELETE CASCADE;
 GO
@@ -938,30 +883,6 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__reviews___0C52942457BD19DC')
     ALTER TABLE dbo.[reviews_daily_trips] ADD CONSTRAINT [PK__reviews___0C52942457BD19DC] PRIMARY KEY ([review_daily_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__reviews_f__facil__29221CFB')
-    ALTER TABLE dbo.[reviews_facilities] ADD CONSTRAINT [FK__reviews_f__facil__29221CFB] FOREIGN KEY ([facility_id]) REFERENCES dbo.[restaurants_cafes]([facility_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__reviews_f__touri__2A164134')
-    ALTER TABLE dbo.[reviews_facilities] ADD CONSTRAINT [FK__reviews_f__touri__2A164134] FOREIGN KEY ([tourist_id]) REFERENCES dbo.[tourists]([tourist_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__reviews___C984FBE8503DABA1')
-    ALTER TABLE dbo.[reviews_facilities] ADD CONSTRAINT [PK__reviews___C984FBE8503DABA1] PRIMARY KEY ([review_facility_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__reviews_h__hotel__2B0A656D')
-    ALTER TABLE dbo.[reviews_hotels] ADD CONSTRAINT [FK__reviews_h__hotel__2B0A656D] FOREIGN KEY ([hotel_id]) REFERENCES dbo.[hotels]([hotel_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__reviews_h__touri__2BFE89A6')
-    ALTER TABLE dbo.[reviews_hotels] ADD CONSTRAINT [FK__reviews_h__touri__2BFE89A6] FOREIGN KEY ([tourist_id]) REFERENCES dbo.[tourists]([tourist_id]);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK__reviews___EEA814FFE3A8777E')
-    ALTER TABLE dbo.[reviews_hotels] ADD CONSTRAINT [PK__reviews___EEA814FFE3A8777E] PRIMARY KEY ([review_hotel_id]);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK__reviews_w__touri__2CF2ADDF')

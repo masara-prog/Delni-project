@@ -73,17 +73,12 @@ class TourGuide extends Model
         return $this->hasMany(GuideWorkingDay::class, 'license_number', 'license_number');
     }
 
-    public function operatingRegions()
-    {
-        return $this->hasMany(GuideOperatingRegion::class, 'license_number', 'license_number');
-    }
-
     public function places()
     {
         return $this->belongsToMany(PlaceTourist::class, 'guide_places', 'license_number', 'place_id');
     }
 
-    // Replaces the guide's rows in guide_working_days / guide_operating_regions
+    // Replaces the guide's rows in guide_working_days
     public function replaceWorkingDays($value): void
     {
         $this->workingDays()->delete();
@@ -98,13 +93,5 @@ class TourGuide extends Model
         $ids = array_map(fn ($p) => is_array($p) ? ($p['place_id'] ?? $p['id'] ?? '') : $p, (array) $value);
         $valid = PlaceTourist::whereIn('place_id', ListInput::parse($ids))->pluck('place_id')->all();
         $this->places()->sync($valid);
-    }
-
-    public function replaceOperatingRegions($value): void
-    {
-        $this->operatingRegions()->delete();
-        foreach (ListInput::parse($value) as $region) {
-            $this->operatingRegions()->create(['region' => $region]);
-        }
     }
 }

@@ -52,8 +52,6 @@ class TouristController extends Controller
         $reviews = collect([
             ['reviews_daily_trips', 'daily_trips', 'daily_trip_id', 'trip_title', 'رحلة يومية'],
             ['reviews_weekly_trips', 'weekly_trips', 'weekly_trip_id', 'trip_title', 'رحلة أسبوعية'],
-            ['reviews_hotels', 'hotels', 'hotel_id', 'hotel_name', 'فندق'],
-            ['reviews_facilities', 'restaurants_cafes', 'facility_id', 'facility_name', 'مطعم/مقهى'],
         ])->flatMap(fn ($r) => DB::table("{$r[0]} as r")
             ->leftJoin("{$r[1]} as x", "r.{$r[2]}", '=', "x.{$r[2]}")
             ->where('r.tourist_id', $id)

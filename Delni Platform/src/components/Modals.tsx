@@ -1996,7 +1996,7 @@ export function PrivateTripModal({
           reviewsCount: Number(g.reviews_count) || Number(g.reviewsCount) || 0,
           pricePerDay: g.price_per_day || 180,
           primaryRegion: g.primaryRegion || "tripoli",
-          operatingRegions: Array.isArray(g.operating_regions) ? g.operating_regions : ["tripoli"],
+          operatingRegions: Array.isArray(g.operating_regions) ? g.operating_regions : [],
           languages: langs,
         });
       }
@@ -2707,13 +2707,9 @@ export function PrivateTripModal({
                       className="w-full h-8 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
                     >
                       <option value="all">{isAr ? "جميع المناطق" : "All Regions"}</option>
-                      <option value="tripoli">{isAr ? "طرابلس وضواحيها" : "Tripoli"}</option>
-                      <option value="leptis">{isAr ? "لبدة والخمس" : "Leptis Magna"}</option>
-                      <option value="sabratha">{isAr ? "صبراتة والساحل الغربي" : "Sabratha"}</option>
-                      <option value="cyrene">{isAr ? "شحات وقورينا (الجبل الأخضر)" : "Cyrene"}</option>
-                      <option value="ghadames">{isAr ? "غدامس والواحات" : "Ghadames"}</option>
-                      <option value="ubari">{isAr ? "أوباري والجنوب" : "Ubari / South"}</option>
-                      <option value="benghazi">{isAr ? "بنغازي والمنطقة الشرقية" : "Benghazi"}</option>
+                      {Array.from(new Set(allGuides.flatMap((g) => g.operatingRegions || []))).sort().map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
                     </select>
                   </div>
                 </div>

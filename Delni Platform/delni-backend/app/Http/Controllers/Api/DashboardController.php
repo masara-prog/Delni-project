@@ -84,7 +84,6 @@ class DashboardController extends Controller
                 'years_of_experience' => 'nullable|integer|min:2|max:40',
                 'bio' => 'nullable|string',
                 'price_per_day' => 'nullable|numeric|min:0',
-                'operating_regions' => 'nullable',
                 'working_days' => 'nullable',
                 'place_ids' => 'nullable|array',
                 'speaks_english' => 'nullable|boolean',
@@ -150,18 +149,14 @@ class DashboardController extends Controller
         // Working days, regions and landmarks live in their own tables, not as tour_guides columns
         $children = [
             'working_days' => $validated['working_days'] ?? null,
-            'operating_regions' => $validated['operating_regions'] ?? null,
             'place_ids' => $validated['place_ids'] ?? null,
         ];
-        unset($validated['working_days'], $validated['operating_regions'], $validated['place_ids']);
+        unset($validated['working_days'], $validated['place_ids']);
 
         DB::transaction(function () use ($guide, $validated, $children) {
             $guide->update(array_filter($validated, fn($v) => !is_null($v) && $v !== ''));
             if (!is_null($children['working_days'])) {
                 $guide->replaceWorkingDays($children['working_days']);
-            }
-            if (!is_null($children['operating_regions'])) {
-                $guide->replaceOperatingRegions($children['operating_regions']);
             }
             if (!is_null($children['place_ids'])) {
                 $guide->replacePlaces($children['place_ids']);

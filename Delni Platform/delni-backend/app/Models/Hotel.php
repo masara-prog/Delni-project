@@ -46,11 +46,6 @@ class Hotel extends Model
         return $this->belongsToMany(WeeklyTrip::class, 'hotels_trip_weekly', 'hotel_id', 'weekly_trip_id');
     }
 
-    public function reviews()
-    {
-        return $this->hasMany(ReviewHotel::class, 'hotel_id', 'hotel_id');
-    }
-
     public function amenities()
     {
         return $this->hasMany(HotelAmenity::class, 'hotel_id', 'hotel_id');

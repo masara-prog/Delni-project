@@ -46,11 +46,6 @@ export interface TourGuide {
   working_days?: string | null | string[];
 }
 
-export interface GuideOperatingRegion {
-  license_number: string; // VARCHAR(50) PK, FK -> TourGuides
-  region: string; // NVARCHAR(100) PK
-}
-
 export interface GuideWorkingDay {
   license_number: string; // VARCHAR(50) PK, FK -> TourGuides
   day_of_week: string; // NVARCHAR(50) PK
@@ -421,24 +416,3 @@ export interface ReviewWeeklyTrip {
   trip_title?: string;
 }
 
-export interface ReviewHotel {
-  review_hotel_id: string; // VARCHAR(50) PRIMARY KEY
-  tourist_id: string; // VARCHAR(50) FK
-  hotel_id: string; // VARCHAR(50) FK
-  stars_rating: number; // INT (CHECK 1..5)
-  comment_text?: string | null; // TEXT NULL
-  created_at: string; // DATETIME DEFAULT CURRENT_TIMESTAMP
-  tourist_name?: string;
-  hotel_name?: string;
-}
-
-export interface ReviewFacility {
-  review_facility_id: string; // VARCHAR(50) PRIMARY KEY
-  tourist_id: string; // VARCHAR(50) FK
-  facility_id: string; // VARCHAR(50) FK
-  stars_rating: number; // INT (CHECK 1..5)
-  comment_text?: string | null; // TEXT NULL
-  created_at: string; // DATETIME DEFAULT CURRENT_TIMESTAMP
-  tourist_name?: string;
-  facility_name?: string;
-}

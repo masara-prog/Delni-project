@@ -21,16 +21,17 @@ class ReviewController extends Controller
     private const TYPES = [
         'daily' => ['reviews_daily_trips', 'review_daily_id', 'daily_trip_id', 'daily_trips', 'trip_title', 'REV-D', 'الرحلة'],
         'weekly' => ['reviews_weekly_trips', 'review_weekly_id', 'weekly_trip_id', 'weekly_trips', 'trip_title', 'REV-W', 'الرحلة'],
-        'hotel' => ['reviews_hotels', 'review_hotel_id', 'hotel_id', 'hotels', 'hotel_name', 'REV-H', 'الفندق'],
-        'facility' => ['reviews_facilities', 'review_facility_id', 'facility_id', 'restaurants_cafes', 'facility_name', 'REV-F', 'المطعم/المقهى'],
     ];
 
     // ?type=daily|weekly|hotel|facility and the item id (trip_id / hotel_id / facility_id); no type = all reviews
     public function index(Request $request): JsonResponse
     {
         $type = $this->normalizeType($request->input('type'), $request);
+        if (!$type && $request->filled('type')) {
+            return response()->json(['success' => true, 'data' => []]); // a type that has no reviews (hotel / restaurant)
+        }
         $types = $type ? [$type] : array_keys(self::TYPES);
-        $itemId = $request->input('trip_id') ?? $request->input('hotel_id') ?? $request->input('facility_id') ?? $request->input('restaurant_id') ?? $request->input('id');
+        $itemId = $request->input('trip_id') ?? $request->input('id');
 
         $rows = collect();
         foreach ($types as $t) {
@@ -61,7 +62,7 @@ class ReviewController extends Controller
             return $this->error('نوع التقييم غير معروف', 422);
         }
         [$table, $reviewId, $itemColumn, $itemTable, , $prefix, $label] = self::TYPES[$type];
-        $itemId = $request->input($itemColumn) ?? $request->input('trip_id') ?? $request->input('hotel_id') ?? $request->input('facility_id');
+        $itemId = $request->input($itemColumn) ?? $request->input('trip_id');
         $request->merge(['item_id' => $itemId]);
 
         $data = $this->validateArabic($request, [
@@ -117,15 +118,6 @@ class ReviewController extends Controller
     private function normalizeType(?string $type, Request $request): ?string
     {
         $type = strtolower(trim((string) $type));
-        if (in_array($type, ['restaurant', 'cafe'], true)) {
-            return 'facility';
-        }
-        if ($type === '' && $request->filled('hotel_id')) {
-            return 'hotel';
-        }
-        if ($type === '' && ($request->filled('facility_id') || $request->filled('restaurant_id'))) {
-            return 'facility';
-        }
         return array_key_exists($type, self::TYPES) ? $type : null;
     }
 }
