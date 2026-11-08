@@ -349,7 +349,7 @@ function SearchCard() {
   const { language, t } = useLanguage();
   const isAr = language === "ar";
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"attractions" | "trips" | "stays" | "restaurants" | "guides" | "cars">("trips");
+  const tab = "trips"; // the tabs open their pages; the search box searches the trips
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -385,10 +385,9 @@ function SearchCard() {
     <form onSubmit={submit} className="bg-white rounded-3xl shadow-card p-2 md:p-3">
       <div className="flex gap-1.5 p-1.5 mb-2 overflow-x-auto no-scrollbar">
         {tabs.map((tItem) => (
-          <button
-            type="button"
+          <Link
             key={tItem.id}
-            onClick={() => { setTab(tItem.id); setDateError(""); }}
+            to={tItem.to}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black whitespace-nowrap transition duration-300 cursor-pointer ${
               tab === tItem.id
                 ? "bg-[#003580] text-white shadow-md border border-[#003580] scale-105"
@@ -398,7 +397,7 @@ function SearchCard() {
           >
             {tItem.icon}
             <span>{tItem.label}</span>
-          </button>
+          </Link>
         ))}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
