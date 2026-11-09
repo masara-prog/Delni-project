@@ -141,22 +141,17 @@ class LanguagePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = light ? Colors.white : AppColors.navy;
-    return Material(
-      color: light ? Colors.white.withValues(alpha: 0.18) : Colors.white,
-      shape: StadiumBorder(side: BorderSide(color: light ? Colors.white24 : AppColors.border)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: () => context.appLocale.toggle(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.language_rounded, size: 17, color: fg),
-              const SizedBox(width: 6),
-              Text(context.isAr ? 'English' : 'العربية', style: TextStyle(color: fg, fontSize: 12.5, fontWeight: FontWeight.w800)),
-            ],
-          ),
+    // Icon only: one tap switches Arabic <-> English
+    return Semantics(
+      button: true,
+      label: context.isAr ? 'English' : 'العربية',
+      child: Material(
+        color: light ? Colors.white.withValues(alpha: 0.18) : Colors.white,
+        shape: CircleBorder(side: BorderSide(color: light ? Colors.white24 : AppColors.border)),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => context.appLocale.toggle(),
+          child: SizedBox(width: 44, height: 44, child: Icon(Icons.translate_rounded, size: 20, color: fg)),
         ),
       ),
     );

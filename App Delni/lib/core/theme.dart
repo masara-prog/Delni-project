@@ -218,13 +218,17 @@ class AppTheme {
               color: s.contains(WidgetState.selected) ? AppColors.primary : AppColors.mutedText,
             )),
       ),
-      tabBarTheme: const TabBarThemeData(
+      // Soft rounded "pill" indicator instead of an underline
+      tabBarTheme: TabBarThemeData(
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.mutedText,
-        indicatorColor: AppColors.primary,
+        indicator: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(12)),
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+        splashBorderRadius: BorderRadius.circular(12),
         dividerColor: Colors.transparent,
-        labelStyle: TextStyle(fontFamily: fontFamily, fontSize: 13.5, fontWeight: FontWeight.w800),
-        unselectedLabelStyle: TextStyle(fontFamily: fontFamily, fontSize: 13.5, fontWeight: FontWeight.w600),
+        labelStyle: const TextStyle(fontFamily: fontFamily, fontSize: 13.5, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontFamily: fontFamily, fontSize: 13.5, fontWeight: FontWeight.w600),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.all(Colors.white),

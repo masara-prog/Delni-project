@@ -231,28 +231,15 @@ class LanguageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // One tap switches Arabic <-> English (same as the language button of the sign-in screens)
     final locale = context.appLocale;
     return MenuTile(
       icon: Icons.translate_rounded,
       title: context.tr('لغة التطبيق', 'App language'),
-      subtitle: context.tr('العربية أو الإنجليزية', 'Arabic or English'),
+      subtitle: context.tr('اضغط للتحويل إلى English', 'Tap to switch to العربية'),
       tone: Tone.neutral,
-      trailing: SegmentedButton<bool>(
-        showSelectedIcon: false,
-        style: SegmentedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-          selectedBackgroundColor: AppColors.primary,
-          selectedForegroundColor: Colors.white,
-          side: const BorderSide(color: AppColors.border),
-          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontWeight: FontWeight.w800, fontSize: 12),
-        ),
-        segments: const [
-          ButtonSegment(value: true, label: Text('ع')),
-          ButtonSegment(value: false, label: Text('EN')),
-        ],
-        selected: {locale.isArabic},
-        onSelectionChanged: (s) => locale.set(s.first ? AppLocale.arabic : AppLocale.english),
-      ),
+      onTap: locale.toggle,
+      trailing: const Icon(Icons.swap_horiz_rounded, color: AppColors.primary),
     );
   }
 }
