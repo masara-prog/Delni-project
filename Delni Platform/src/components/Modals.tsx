@@ -2927,7 +2927,7 @@ export function PrivateTripModal({
           ══════════════════════════════════════════════════════════════════════ */}
           {showAuthModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-amber-300 dark:border-amber-700 text-center space-y-4 animate-in zoom-in-95 duration-200" dir={dir}>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-md border border-amber-300 dark:border-amber-700 text-center space-y-4 animate-in zoom-in-95 duration-200" dir={dir}>
                 <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-xs">
                   🔒
                 </div>

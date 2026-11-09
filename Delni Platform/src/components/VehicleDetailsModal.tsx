@@ -55,7 +55,7 @@ export function VehicleDetailsModal({ vehicle, onClose }: VehicleDetailsModalPro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200" dir="rtl" onClick={onClose}>
       <div
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-right"
+        className="relative w-full max-w-xl bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden text-right"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

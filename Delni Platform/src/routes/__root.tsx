@@ -166,7 +166,7 @@ function NotFoundComponent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12" dir={isAr ? "rtl" : "ltr"}>
-      <div className="max-w-md w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+      <div className="max-w-md w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
         <div className="flex justify-center">
           <img src="/logo.png" alt="دلني" className="h-16 w-auto object-contain" />
         </div>
@@ -205,7 +205,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12" dir="rtl">
-      <div className="max-w-lg w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-2xl space-y-4">
+      <div className="max-w-lg w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
         <div className="flex justify-center">
           <img src="/logo.png" alt="منصة دلني" className="h-16 w-auto object-contain" />
         </div>

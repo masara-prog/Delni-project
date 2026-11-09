@@ -78,7 +78,7 @@ export function Footer() {
           </div>
 
           {/* Contact Information & Email */}
-          <div className="space-y-2 bg-black/40 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/30 text-right min-w-[260px] shadow-xl">
+          <div className="space-y-2 bg-black/40 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/30 text-right min-w-[260px] shadow-md">
             <h4 className="font-black text-xs text-amber-300 uppercase tracking-wider drop-shadow-sm">
               {isAr ? "معلومات التواصل والمدن" : "Contact & Cities"}
             </h4>

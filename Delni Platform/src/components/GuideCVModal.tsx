@@ -45,7 +45,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0F172A]/75 backdrop-blur-md grid place-items-center p-4 animate-in fade-in duration-200" dir="rtl">
-      <div className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-[#E8E2D6] my-auto max-h-[92vh] flex flex-col">
+      <div className="relative w-full max-w-xl bg-white rounded-[32px] shadow-md overflow-hidden border border-[#E8E2D6] my-auto max-h-[92vh] flex flex-col">
         {/* Cover Header Banner */}
         <div className="relative h-32 sm:h-36 bg-[#0F172A] p-6 flex items-start justify-between shrink-0">
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white text-xs font-black shadow-xs">
@@ -71,10 +71,10 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
                 <img
                   src={guide.avatar}
                   alt={guide.name}
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-white shadow-xl bg-white"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-white shadow-md bg-white"
                 />
               ) : (
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-100 border-4 border-white shadow-xl flex flex-col items-center justify-center text-slate-500">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-100 border-4 border-white shadow-md flex flex-col items-center justify-center text-slate-500">
                   <span className="text-3xl sm:text-4xl">👤</span>
                 </div>
               )}

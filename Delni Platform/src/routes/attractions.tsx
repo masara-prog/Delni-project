@@ -370,7 +370,7 @@ function AttractionsPage() {
             <span>{isAr ? "معالم ليبيا الخالدة وأسرار التاريخ" : "Immortal Landmarks of Libya & Ancient Wonders"}</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-xl tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-md tracking-tight leading-tight">
             {isAr ? "اكتشف أعظم آثار وحضارات ليبيا" : "Discover Libya's Greatest Historical Wonders"}
           </h1>
 
@@ -400,7 +400,7 @@ function AttractionsPage() {
 
       {/* Clean Filter Panel Floating Gracefully Below Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-md border border-[#E8E2D6] text-[#0F172A]">
           {/* Main Inputs Row (Simple Search & City Select with Booking.com Blue Theme) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* Search Input */}
@@ -670,38 +670,6 @@ function AttractionsPage() {
         </div>
         )}
 
-        {/* ── Custom Private Trips System Notice ── */}
-        <section className="bg-amber-50/80 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#D96B27]/10 text-[#D96B27] text-2xl font-black grid place-items-center shrink-0 border border-[#D96B27]/20 shadow-xs">
-              🧭
-            </div>
-            <div>
-              <h3 className="font-black text-sm sm:text-base text-[#0B132B] flex items-center gap-2">
-                <span>{isAr ? "تصميم وإنشاء الرحلات الخاصة للمعالم السياحية" : "Create & Customize Private Tours to Landmarks"}</span>
-                <span className="text-[11px] bg-[#D96B27]/10 text-[#D96B27] font-black px-2.5 py-0.5 rounded-full border border-[#D96B27]/20">
-                  {isAr ? "رحلات خاصة 100%" : "100% Private Tours"}
-                </span>
-              </h3>
-              <p className="text-xs text-[#526078] mt-1 leading-relaxed">
-                {isAr
-                  ? "صمم برنامج رحلتك الخاصة لزيارة أي معلم أثري أو طبيعي في ليبيا مع حرية تامة في اختيار نوع المركبة، السائق، المرشد السياحي المعتمد، وتوقيت الانطلاق المناسب لك."
-                  : "Design your custom private tour to visit any historical or natural landmark in Libya with full freedom to choose vehicle, driver, certified guide, and preferred schedule."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
-            <button
-              onClick={() => setPrivateTripModalOpen(true)}
-              className="w-full md:w-auto px-6 py-3 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-xs sm:text-sm shadow-soft transition flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
-            >
-              <span>🧭</span>
-              <span>{isAr ? "إنشاء رحلة خاصة الآن" : "Create Private Tour Now"}</span>
-            </button>
-          </div>
-        </section>
-
         {/* ── Pure Photo Cards Cities & Destinations Showcase ── */}
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8E2D6] pb-5">
@@ -772,7 +740,7 @@ function AttractionsPage() {
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
-                  className="min-w-[280px] sm:min-w-[310px] max-w-[330px] h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition duration-300 group shrink-0 select-none bg-stone-900"
+                  className="min-w-[280px] sm:min-w-[310px] max-w-[330px] h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-md hover:shadow-md border-2 border-white/80 cursor-pointer transition duration-300 group shrink-0 select-none bg-stone-900"
                 >
                   {/* Full Background Photo */}
                   <img
@@ -839,7 +807,7 @@ function AttractionsPage() {
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
-                  className="w-full h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition duration-300 group select-none bg-stone-900"
+                  className="w-full h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-md hover:shadow-md border-2 border-white/80 cursor-pointer transition duration-300 group select-none bg-stone-900"
                 >
                   {/* Full Background Photo */}
                   <img
@@ -907,7 +875,7 @@ function AttractionsPage() {
             <button
               type="button"
               onClick={() => setCityViewMode((prev) => (prev === "carousel" ? "grid" : "carousel"))}
-              className="px-8 py-3.5 rounded-full bg-white hover:bg-[#00736F] text-[#00736F] hover:text-white border-2 border-[#00736F] font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition duration-300 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              className="px-8 py-3.5 rounded-full bg-white hover:bg-[#00736F] text-[#00736F] hover:text-white border-2 border-[#00736F] font-black text-xs sm:text-sm shadow-md hover:shadow-md transition duration-300 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
             >
               <span className="text-base">{cityViewMode === "carousel" ? "✨" : "🔄"}</span>
               <span>

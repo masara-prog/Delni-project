@@ -136,7 +136,7 @@ export function RestaurantDetailsModal({
       >
         {/* ── MODAL CONTAINER (Compact, Exactly like HotelDetailsModal) ── */}
         <div
-          className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-3xl w-full z-10 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex flex-col my-auto transition-transform duration-300 scale-100 animate-in zoom-in-95 overflow-hidden"
+          className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-md max-w-3xl w-full z-10 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex flex-col my-auto transition-transform duration-300 scale-100 animate-in zoom-in-95 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Top Decorative Perk Strip */}
@@ -339,7 +339,7 @@ export function RestaurantDetailsModal({
           </div>
 
           {/* ── 3. BOTTOM ACTION BAR (Direct Dining Contact - Links Icon Removed) ── */}
-          <div className="bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 p-3 sm:px-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl z-30">
+          <div className="bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 p-3 sm:px-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md z-30">
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700 flex items-center justify-center text-base shrink-0">
                 🍽️
@@ -432,7 +432,7 @@ export function RestaurantDetailsModal({
             <img
               src={photos[activePhoto]}
               alt={restaurant.name}
-              className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
+              className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-md border border-white/10"
               onClick={(e) => e.stopPropagation()}
             />
           </div>

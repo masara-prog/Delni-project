@@ -783,7 +783,7 @@ function TripDetailsView({
             <button
               type="button"
               onClick={onBack}
-              className="group inline-flex items-center gap-2.5 h-11 ps-1.5 pe-5 rounded-full bg-white/95 hover:bg-white text-[#0F172A] text-sm font-black shadow-lg shadow-black/20 ring-1 ring-white/60 hover:shadow-xl transition-all duration-200 cursor-pointer"
+              className="group inline-flex items-center gap-2.5 h-11 ps-1.5 pe-5 rounded-full bg-white/95 hover:bg-white text-[#0F172A] text-sm font-black shadow-lg shadow-black/20 ring-1 ring-white/60 hover:shadow-md transition-all duration-200 cursor-pointer"
               aria-label={isAr ? "العودة إلى قائمة الرحلات" : "Back to tours"}
             >
               <span className="w-8 h-8 rounded-full bg-[#00736F] text-white flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
@@ -1045,7 +1045,7 @@ function TripDetailsView({
                       key={attr.placeId || aIdx}
                       type="button"
                       onClick={() => openLandmark(attr)}
-                      className="group relative h-48 rounded-2xl overflow-hidden text-right shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1ABC9C]/40"
+                      className="group relative h-48 rounded-2xl overflow-hidden text-right shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1ABC9C]/40"
                     >
                       <img
                         src={attr.image || destLeptisTheater}
@@ -1627,7 +1627,7 @@ function SpecialOffersSpotlight({
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-10">
       <div 
-        className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-xl relative overflow-hidden"
+        className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-md relative overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -1649,7 +1649,7 @@ function SpecialOffersSpotlight({
         {/* Single Rotating Large Image Card */}
         <div className="relative z-10">
           <div 
-            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-2xl border-4 border-white cursor-pointer transition duration-500"
+            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-md border-4 border-white cursor-pointer transition duration-500"
             onClick={handleNextOffer}
           >
             <img
@@ -1663,7 +1663,7 @@ function SpecialOffersSpotlight({
 
             {/* Prominent Corner Triangle Discount Ribbon on Top-Right */}
             <div className="absolute top-0 right-0 w-48 h-48 overflow-hidden z-30 pointer-events-none">
-              <div className="absolute transform rotate-45 bg-red-600 text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-2xl border-b-4 border-white/40 drop-shadow-xl tracking-wide">
+              <div className="absolute transform rotate-45 bg-red-600 text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-md border-b-4 border-white/40 drop-shadow-md tracking-wide">
                 {currentOffer.tag}
               </div>
             </div>
@@ -1827,7 +1827,7 @@ function CompactLocationHotelsFinder() {
             onClick={() => {
               sessionStorage.setItem("dallani_selected_city", selectedCity);
             }}
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-[#D96B27] hover:brightness-110 text-white shadow-xl transition flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-[#D96B27] hover:brightness-110 text-white shadow-md transition flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
             title={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
             aria-label={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
           >
@@ -2335,7 +2335,7 @@ function TripsPage() {
             <span>🧭</span>
             <span>{isAr ? "اكتشف دروب ليبيا الساحرة" : "Discover Libya's Enchanting Paths"}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black drop-shadow-xl tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black drop-shadow-md tracking-tight leading-tight">
             {isAr ? "الرحلات والتجارب السياحية المنظمة" : "All Organized Tours & Expeditions"}
           </h1>
           <p className="mt-2 text-white/95 max-w-2xl text-xs sm:text-sm font-semibold leading-relaxed drop-shadow-md">
@@ -2350,7 +2350,7 @@ function TripsPage() {
       {/* 1. FILTER PANEL (Floating Gracefully Over Hero Bottom)       */}
       {/* ============================================================ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-xl border border-[#E8E2D6] text-[#0F172A] space-y-4">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-md border border-[#E8E2D6] text-[#0F172A] space-y-4">
           
           {dateRange && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-black text-emerald-800">
@@ -2734,7 +2734,7 @@ function TripsPage() {
       {/* 6. CUSTOM PRIVATE TRIP VIP CALLOUT BOX (USER BUILDS IT)      */}
       {/* ============================================================ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="rounded-3xl bg-[#0B132B] text-white p-6 sm:p-10 shadow-2xl border border-white/20 relative overflow-hidden">
+        <div className="rounded-3xl bg-[#0B132B] text-white p-6 sm:p-10 shadow-md border border-white/20 relative overflow-hidden">
           {/* Decorative background accents */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-[#D96B27]/25 to-transparent rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-radial from-[#00736F]/40 to-transparent rounded-full blur-2xl pointer-events-none -ml-20 -mb-20" />
@@ -2761,7 +2761,7 @@ function TripsPage() {
               <button
                 type="button"
                 onClick={() => setPrivateOpen(true)}
-                className="px-8 py-4 rounded-2xl bg-[#D96B27] text-white font-black text-sm sm:text-base shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-2.5 border border-amber-300/40"
+                className="px-8 py-4 rounded-2xl bg-[#D96B27] text-white font-black text-sm sm:text-base shadow-md hover:shadow-md hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-2.5 border border-amber-300/40"
               >
                 <span>🧭</span>
                 <span>{isAr ? "صمّم رحلتك الخاصة الآن" : "Build Your Private Trip Now"}</span>
@@ -3026,7 +3026,7 @@ function TripCard({
       {/* Offer Badge — shown when this trip has an active offer */}
       {offer && (
         <div className="absolute top-16 left-0 z-20 pointer-events-none">
-          <div className="ps-3 pe-4 py-2 rounded-e-2xl bg-gradient-to-l from-[#E11D48] to-[#D96B27] text-white shadow-xl">
+          <div className="ps-3 pe-4 py-2 rounded-e-2xl bg-gradient-to-l from-[#E11D48] to-[#D96B27] text-white shadow-md">
             <div className="text-[11px] font-bold text-white/85 leading-none">{isAr ? "عرض لفترة محدودة" : "Limited offer"}</div>
             <div className="text-xl font-black leading-tight">{isAr ? `خصم ${offer.discountPercent}` : `${offer.discountPercent} OFF`}</div>
           </div>

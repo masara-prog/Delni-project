@@ -292,7 +292,7 @@ export function FloatingChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="مساعد الذكاء الاصطناعي"
-        className={`fixed bottom-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-[90] h-[52px] w-[150px] justify-center rounded-full bg-[#D96B27] text-white font-black shadow-2xl hover:scale-105 transition hidden md:flex items-center gap-2 border-2 border-white/50`}
+        className={`fixed bottom-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-[90] h-[52px] w-[150px] justify-center rounded-full bg-[#D96B27] text-white font-black shadow-md hover:scale-105 transition hidden md:flex items-center gap-2 border-2 border-white/50`}
       >
         <span className="relative flex items-center justify-center shrink-0 w-6 h-6 text-xl animate-bounce">🤖</span>
         <span className="text-xs font-black text-white drop-shadow text-center">
@@ -302,7 +302,7 @@ export function FloatingChat() {
       </button>
 
       {open && (
-        <div className={`fixed bottom-24 ${language === 'ar' ? 'left-6' : 'right-6'} z-[95] w-[94vw] max-w-md h-[78vh] max-h-[620px] bg-white text-[#0B132B] rounded-3xl shadow-2xl border border-[#E6E1D6] flex flex-col overflow-hidden animate-fade-up`} dir={dir}>
+        <div className={`fixed bottom-24 ${language === 'ar' ? 'left-6' : 'right-6'} z-[95] w-[94vw] max-w-md h-[78vh] max-h-[620px] bg-white text-[#0B132B] rounded-3xl shadow-md border border-[#E6E1D6] flex flex-col overflow-hidden animate-fade-up`} dir={dir}>
           <div className="bg-teal-50 p-4 border-b border-[#E6E1D6] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-[#00736F] p-0.5 shadow-md flex items-center justify-center text-xl text-white">

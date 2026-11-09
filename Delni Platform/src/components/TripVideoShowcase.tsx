@@ -721,7 +721,7 @@ export function TripVideoTrailerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="relative w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl bg-[#0B132B] border border-white/10">
+      <div className="relative w-full max-w-4xl rounded-3xl overflow-hidden shadow-md bg-[#0B132B] border border-white/10">
         <button
           onClick={onClose}
           className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 text-white grid place-items-center transition cursor-pointer text-sm font-bold shadow-md"

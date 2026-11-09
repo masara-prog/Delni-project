@@ -212,12 +212,12 @@ function Navbar() {
 
   return (
     <div className="absolute top-6 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12">
-      <Link to="/" className="flex items-center drop-shadow-xl hover:scale-105 transition-transform">
+      <Link to="/" className="flex items-center drop-shadow-md hover:scale-105 transition-transform">
         <Logo size="xl" showText={false} />
       </Link>
       <div className="flex items-center gap-3">
         {accountName ? (
-          <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-xl transition">
+          <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-md transition">
             <Link
               to={dashboardPath}
               className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Cairo',sans-serif] tracking-wide shadow-md hover:scale-105 transition border border-white/25 antialiased"
@@ -263,12 +263,12 @@ function Hero() {
   const { language, t } = useLanguage();
 
   const heroLandmarks = [
-    { img: "/assets/libya/sabratha-theatre.jpg", titleAr: "مسرح صبراتة الروماني على ساحل المتوسط", titleEn: "Sabratha Roman Theatre" },
-    { img: "/assets/libya/leptis-severus-arch.jpg", titleAr: "قوس سيبتيموس سيفيروس — لبدة الكبرى", titleEn: "Arch of Septimius Severus, Leptis Magna" },
-    { img: "/assets/libya/ubari-palm-lake.jpg", titleAr: "بحيرات أوباري — واحة وسط الرمال", titleEn: "Ubari Lakes Oasis" },
-    { img: "/assets/libya/ghadames-mosque.jpg", titleAr: "غدامس — لؤلؤة الصحراء والتراث العالمي", titleEn: "Ghadames, Pearl of the Desert" },
     { img: "/assets/libya/acacus-pillar.jpg", titleAr: "جبال أكاكوس وتكويناتها الصخرية", titleEn: "Tadrart Acacus Rock Formations" },
     { img: "/assets/libya/sabratha-turquoise-sea.jpg", titleAr: "مياه الساحل الليبي الفيروزية", titleEn: "Libya's Turquoise Coast" },
+    { img: "/assets/libya/ghadames-mosque.jpg", titleAr: "غدامس — لؤلؤة الصحراء والتراث العالمي", titleEn: "Ghadames, Pearl of the Desert" },
+    { img: "/assets/libya/leptis-aerial-green.jpg", titleAr: "لبدة الكبرى من الأعلى", titleEn: "Leptis Magna from above" },
+    { img: "/assets/libya/ubari-lake-dunes.jpg", titleAr: "بحيرات أوباري — واحة وسط الرمال", titleEn: "Ubari Lakes Oasis" },
+    { img: "/assets/libya/sabratha-temple-sea.jpg", titleAr: "معبد صبراتة على ساحل المتوسط", titleEn: "Sabratha temple by the sea" },
   ];
 
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -739,7 +739,7 @@ function CTABanner() {
                     e.preventDefault();
                     alert(language === 'ar' ? "تطبيق دلّني متوفر حالياً كنسخة ويب متجاوبة بالكامل. سيتم إطلاق تطبيقات الأندرويد والآيفون على المتاجر قريباً!" : "The Dallani app is currently available as a fully responsive web version. Android and iPhone apps will be launched in stores soon!");
                   }}
-                  className="px-8 py-4 rounded-full bg-[#D96B27] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-xl hover:scale-105 transition cursor-pointer flex items-center gap-2"
+                  className="px-8 py-4 rounded-full bg-[#D96B27] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-md hover:scale-105 transition cursor-pointer flex items-center gap-2"
                 >
                   <span>📱</span>
                   {language === 'ar' ? "حمّل التطبيق" : "Download App"}

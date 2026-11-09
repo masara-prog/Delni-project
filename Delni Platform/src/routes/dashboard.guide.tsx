@@ -1152,7 +1152,7 @@ function GuideDashboard() {
       {/* Certificate Lightbox Inspection Modal */}
       {previewCertificateModal && guideInfo.digital_certificate_file && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs grid place-items-center p-4 animate-overlay-in">
-          <div className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-2xl border border-stone-200 text-right animate-dialog-in">
+          <div className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-md border border-stone-200 text-right animate-dialog-in">
             <div className="p-3.5 border-b border-stone-200 flex items-center justify-between bg-stone-50">
               <button
                 type="button"
@@ -1490,7 +1490,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-center p-4 animate-overlay-in" onClick={onClose}>
       <div
-        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-3xl shadow-xl text-right border border-stone-200 animate-dialog-in"
+        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white rounded-3xl shadow-md text-right border border-stone-200 animate-dialog-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: trip photo with title */}

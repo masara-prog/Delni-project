@@ -158,7 +158,7 @@ export function NotificationBell() {
       {/* Notifications Dropdown Drawer */}
       {isOpen && (
         <div
-          className="absolute left-0 mt-2 w-80 sm:w-[390px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[120] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 font-['Cairo',sans-serif]"
+          className="absolute left-0 mt-2 w-80 sm:w-[390px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-md border border-slate-200 z-[120] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 font-['Cairo',sans-serif]"
           dir={isAr ? "rtl" : "ltr"}
         >
           {/* Header */}

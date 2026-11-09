@@ -81,7 +81,7 @@ function HotelOffersSpotlight({
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6">
       <div
         onClick={cycleNext}
-        className="group relative rounded-3xl bg-[#FFF9F5] border-2 border-[#E8E2D6] p-6 sm:p-10 shadow-lg hover:shadow-2xl transition duration-300 cursor-pointer overflow-hidden select-none"
+        className="group relative rounded-3xl bg-[#FFF9F5] border-2 border-[#E8E2D6] p-6 sm:p-10 shadow-lg hover:shadow-md transition duration-300 cursor-pointer overflow-hidden select-none"
       >
         {/* Ambient Glow */}
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-radial from-[#D96B27]/15 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -152,7 +152,7 @@ function HotelOffersSpotlight({
                 <img src={photo1} alt="Hotel view" className="w-full h-full object-cover" />
               </div>
               {/* Front active card */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-2xl rotate-0 hover:rotate-1 transition duration-300">
+              <div className="absolute inset-0 rounded-3xl overflow-hidden border-4 border-white shadow-md rotate-0 hover:rotate-1 transition duration-300">
                 <img src={photo0} alt={offer.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                 <div className="absolute bottom-4 right-4 left-4 flex items-center justify-between text-white text-xs font-bold">
@@ -234,7 +234,7 @@ function HotelDetailsView({
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-[#00736F] selection:text-white" dir={dir}>
       {/* ── 1. LUXURY TOP FLOATING NAVIGATION ── */}
-      <div className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40 shadow-2xl">
+      <div className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <button
             type="button"
@@ -268,7 +268,7 @@ function HotelDetailsView({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-24">
         
         {/* Luxury Hero Header Bar */}
-        <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-md backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#00736F]/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -330,7 +330,7 @@ function HotelDetailsView({
             </div>
 
             {/* Rating Box & Quick Action Pod */}
-            <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto bg-white/5 border border-white/15 p-4 rounded-3xl backdrop-blur-xl shadow-xl">
+            <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto bg-white/5 border border-white/15 p-4 rounded-3xl backdrop-blur-xl shadow-md">
               <FavoriteButton
                 itemType="hotel"
                 itemId={hotel.id}
@@ -358,7 +358,7 @@ function HotelDetailsView({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             
             {/* Featured Hero Photo (8 cols) - Fixed stable height & crisp presentation */}
-            <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[500px] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-2xl group cursor-pointer shrink-0"
+            <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[500px] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-md group cursor-pointer shrink-0"
               onClick={() => setLightboxOpen(true)}
             >
               {/* Ambient Blurred Background for perfect clarity & lighting */}
@@ -397,7 +397,7 @@ function HotelDetailsView({
                     e.stopPropagation();
                     setLightboxOpen(true);
                   }}
-                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-md transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>🔍</span>
                   <span>{isAr ? "تكبير واستعراض الشاشة الكاملة" : "Expand Fullscreen"}</span>
@@ -411,7 +411,7 @@ function HotelDetailsView({
                   e.stopPropagation();
                   prevPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة السابقة" : "Previous photo"}
               >
                 {dir === "rtl" ? "→" : "←"}
@@ -422,7 +422,7 @@ function HotelDetailsView({
                   e.stopPropagation();
                   nextPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة التالية" : "Next photo"}
               >
                 {dir === "rtl" ? "←" : "→"}
@@ -464,7 +464,7 @@ function HotelDetailsView({
                     onClick={() => setActivePhoto(idx)}
                     className={`relative h-28 sm:h-36 lg:h-[155px] rounded-3xl overflow-hidden cursor-pointer group transition duration-300 bg-slate-950 border ${
                       isSelected
-                        ? "border-amber-400 ring-2 ring-amber-400/50 scale-[1.02] shadow-xl"
+                        ? "border-amber-400 ring-2 ring-amber-400/50 scale-[1.02] shadow-md"
                         : "border-white/10 hover:border-white/40 opacity-80 hover:opacity-100"
                     }`}
                   >
@@ -546,7 +546,7 @@ function HotelDetailsView({
 
             {/* A. Property Overview */}
             {activeTab === "overview" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-4 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-4 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>🏨</span>
                   <h2>{isAr ? "نبذة عن الفندق والضيافة" : "About the Hotel & Stay"}</h2>
@@ -574,7 +574,7 @@ function HotelDetailsView({
 
             {/* B. Room Standards & Showcase */}
             {activeTab === "rooms" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>🛏️</span>
                   <h2>{isAr ? "خيارات وتجهيزات الغرف والأجنحة الفاخرة" : "Room Categories & Comfort"}</h2>
@@ -631,7 +631,7 @@ function HotelDetailsView({
 
             {/* C. Amenities */}
             {activeTab === "amenities" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>✨</span>
                   <h2>{isAr ? "المرافق والخدمات المتوفرة" : "Key Amenities & Facilities"}</h2>
@@ -655,7 +655,7 @@ function HotelDetailsView({
 
             {/* D. Location */}
             {activeTab === "location" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>📍</span>
                   <h2>{isAr ? "الموقع الجغرافي والمعالم المجاورة" : "Location & Surroundings"}</h2>
@@ -697,7 +697,7 @@ function HotelDetailsView({
           <div className="lg:col-span-4 sticky top-20 space-y-4">
             
             {/* VIP Dallani Pass Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-amber-500/20 border border-amber-400/30 p-6 shadow-2xl backdrop-blur-xl space-y-5">
+            <div className="relative overflow-hidden rounded-3xl bg-amber-500/20 border border-amber-400/30 p-6 shadow-md backdrop-blur-xl space-y-5">
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
               <div className="space-y-2">
@@ -719,7 +719,7 @@ function HotelDetailsView({
               <div className="space-y-3">
                 <a
                   href={`tel:${hotel.phone}`}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-md active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">📞</span>
                   <span>{isAr ? `اتصال فوري بالاستقبال (${hotel.phone})` : `Call Front Desk (${hotel.phone})`}</span>
@@ -731,7 +731,7 @@ function HotelDetailsView({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-md active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">💬</span>
                   <span>{isAr ? "مراسلة واستعلام عبر واتساب" : "WhatsApp VIP Inquiry"}</span>
@@ -805,21 +805,21 @@ function HotelDetailsView({
             <img
               src={photos[activePhoto]}
               alt={hotel.name}
-              className="max-h-[70vh] max-w-full rounded-3xl object-contain shadow-2xl border border-white/20"
+              className="max-h-[70vh] max-w-full rounded-3xl object-contain shadow-md border border-white/20"
             />
             
             {/* Chevrons */}
             <button
               type="button"
               onClick={prevPhoto}
-              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
+              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={nextPhoto}
-              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
+              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
@@ -1076,7 +1076,7 @@ function HotelsPage() {
 
       {/* ── 2. UNIFIED FLOATING FILTER PANEL (Matching Attractions & Guides) ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-md border border-[#E8E2D6] text-[#0F172A]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* Search Input */}
             <div className="lg:col-span-5 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
@@ -1224,7 +1224,7 @@ function HotelsPage() {
                 <div
                   key={prop.id}
                   onClick={() => setPropertyType(prop.id)}
-                  className="group relative h-60 sm:h-64 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 cursor-pointer border border-slate-200 hover:border-[#D96B27] flex flex-col justify-between p-5"
+                  className="group relative h-60 sm:h-64 rounded-3xl overflow-hidden shadow-md hover:shadow-md transition duration-300 cursor-pointer border border-slate-200 hover:border-[#D96B27] flex flex-col justify-between p-5"
                 >
                   <img
                     src={prop.img}
@@ -1257,7 +1257,7 @@ function HotelsPage() {
             (() => {
               if (propertyType === "all") {
                 return (
-                  <div className="relative w-full h-52 sm:h-60 rounded-3xl overflow-hidden shadow-xl border-2 border-[#D96B27] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-300">
+                  <div className="relative w-full h-52 sm:h-60 rounded-3xl overflow-hidden shadow-md border-2 border-[#D96B27] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-300">
                     <img
                       src="/assets/ai_hotel.jpg"
                       alt="All accommodations"
@@ -1333,7 +1333,7 @@ function HotelsPage() {
               if (!activeCat) return null;
 
               return (
-                <div className="relative w-full h-56 sm:h-64 rounded-3xl overflow-hidden shadow-xl border-2 border-[#D96B27] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-300">
+                <div className="relative w-full h-56 sm:h-64 rounded-3xl overflow-hidden shadow-md border-2 border-[#D96B27] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-300">
                   <img
                     src={activeCat.img}
                     alt={activeCat.title}

@@ -280,7 +280,7 @@ function GuidesPage() {
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
             <span>{isAr ? "المرشدون السياحيون المعتمدون" : "Certified Tour Guides"}</span>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-xl tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-md tracking-tight leading-tight">
             {isAr ? "المرشدون السياحيون في جميع مناطق ليبيا" : "Certified Tour Guides Across Libya"}
           </h1>
           <p className="text-white/95 max-w-2xl text-xs sm:text-sm md:text-base font-semibold leading-relaxed drop-shadow-md">
@@ -293,7 +293,7 @@ function GuidesPage() {
 
       {/* Clean Filter Panel Floating Gracefully Below Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-xl border border-[#E8E2D6] text-[#0F172A] space-y-4">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-md border border-[#E8E2D6] text-[#0F172A] space-y-4">
             {/* Sub Radio Options Row (Screenshot Style) */}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-xs font-bold text-[#0F172A]">
@@ -480,7 +480,7 @@ function GuidesPage() {
                   onClick={() => setSelectedGuide(guide)}
                   className={`${
                     viewMode === "grid" ? "w-full" : "w-72 sm:w-[285px] shrink-0 snap-start"
-                  } bg-white rounded-[24px] shadow-card hover:shadow-2xl hover:-translate-y-1.5 border border-[#E8E2D6] transition duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
+                  } bg-white rounded-[24px] shadow-card hover:shadow-md hover:-translate-y-1.5 border border-[#E8E2D6] transition duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
                 >
                   {/* Top Image Section with Guide Photo */}
                   <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100 flex items-center justify-center">
@@ -610,11 +610,11 @@ function GuidesPage() {
         )}
 
         {/* Guide Registration CTA Banner Card (Image 2 style) */}
-        <section className="bg-[#0B4F57] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl border border-white/10 mt-12">
+        <section className="bg-[#0B4F57] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-md border border-white/10 mt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
             {/* Left Image (Image 2 style Traveller/Guide) */}
             <div className="lg:col-span-4 flex justify-center">
-              <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden border-4 border-white/20 shadow-2xl transform -rotate-3 hover:rotate-0 transition duration-300">
+              <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden border-4 border-white/20 shadow-md transform -rotate-3 hover:rotate-0 transition duration-300">
                 <img
                   src="/assets/guide-mohammed.jpg"
                   alt="انضم كمرشد سياحي"
@@ -642,7 +642,7 @@ function GuidesPage() {
               <div className="pt-2 flex flex-wrap items-center gap-4">
                 <Link
                   to="/auth/signup"
-                  className="px-8 py-4 rounded-2xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-sm shadow-xl hover:scale-105 transition flex items-center gap-2 cursor-pointer"
+                  className="px-8 py-4 rounded-2xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-sm shadow-md hover:scale-105 transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>تسجيل الدخول / الانضمام كمرشد سياحي</span>
                   <span className="text-lg">🧭</span>

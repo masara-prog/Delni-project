@@ -812,7 +812,7 @@ function TransportDashboard() {
           onClick={() => setPreviewInsuranceDoc(null)}
         >
           <div
-            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-200 flex flex-col"
+            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-md border-2 border-slate-200 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 bg-[#00736F] text-white flex items-center justify-between">

@@ -416,7 +416,7 @@ function TransportPage() {
 
       {/* ── 2. UNIFIED FLOATING FILTER PANEL (Matching Hotels, Attractions & Restaurants) ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-md border border-[#E8E2D6] text-[#0F172A]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* 1. Search Input */}
             <div className="lg:col-span-5 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
@@ -603,7 +603,7 @@ function TransportPage() {
                   <div
                     key={v.id}
                     onClick={() => openVehicleModal(v, "specs")}
-                    className="w-[320px] sm:w-[350px] shrink-0 snap-start group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#00736F] shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                    className="w-[320px] sm:w-[350px] shrink-0 snap-start group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#00736F] shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                   >
                     {/* Photo Container */}
                     <div className="relative h-52 bg-slate-800 overflow-hidden">
@@ -740,7 +740,7 @@ function TransportPage() {
                 <div
                   key={v.id}
                   onClick={() => openVehicleModal(v, "specs")}
-                  className="group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#00736F] shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                  className="group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#00736F] shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                 >
                   {/* Photo Container */}
                   <div className="relative h-56 bg-slate-800 overflow-hidden">
@@ -864,7 +864,7 @@ function TransportPage() {
 
       {/* ── 4. VERIFIED TRANSPORT PARTNERS ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="bg-[#0B1E38] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="bg-[#0B1E38] rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
@@ -925,7 +925,7 @@ function TransportPage() {
             onClick={() => setSelectedVehicle(null)}
           />
 
-          <div className="relative bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto z-10 border-2 border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-3xl shadow-md max-w-3xl w-full max-h-[92vh] overflow-y-auto z-10 border-2 border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -1191,7 +1191,7 @@ function TransportPage() {
           onClick={() => setPreviewDocUrl(null)}
         >
           <div
-            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-200 flex flex-col"
+            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-md border-2 border-slate-200 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 bg-[#00736F] text-white flex items-center justify-between">

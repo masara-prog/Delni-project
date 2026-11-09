@@ -178,7 +178,7 @@ export function LandmarkDetailsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fade-in" dir={dir}>
-      <div className="bg-white rounded-3xl max-w-5xl w-full overflow-hidden shadow-2xl border border-slate-200 max-h-[94vh] flex flex-col relative text-slate-900 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl max-w-5xl w-full overflow-hidden shadow-md border border-slate-200 max-h-[94vh] flex flex-col relative text-slate-900 animate-in fade-in zoom-in-95 duration-200">
         
         {/* 1. Grand Hero Photo Showcase for the City Landmark */}
         <div className="relative h-72 sm:h-96 md:h-[420px] w-full overflow-hidden bg-slate-900 shrink-0 group">

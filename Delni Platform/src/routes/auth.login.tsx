@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { BusFront, CarFront, Check, Luggage, Map as MapIcon } from "lucide-react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destSabratah from "@/assets/dest-sabratah.png";
 import destCyrene from "@/assets/dest-cyrene.jpg";
@@ -77,10 +78,10 @@ function LoginPage() {
   const currentSlide = LANDMARK_SLIDES[slideIdx];
 
   const roles = [
-    { id: "tourist" as const, label: "سائح", desc: "تصفح واحجز رحلاتك", emoji: "🧳" },
-    { id: "guide" as const, label: "مرشد سياحي", desc: "أدر جولاتك ومواعيدك", emoji: "🗺️" },
-    { id: "transport" as const, label: "شركة نقل", desc: "أدر أسطولك وسائقيك", emoji: "🚌" },
-    { id: "driver" as const, label: "سائق", desc: "استقبل الرحلات المخصصة", emoji: "🚗" },
+    { id: "tourist" as const, label: "سائح", desc: "تصفح واحجز رحلاتك", icon: Luggage },
+    { id: "guide" as const, label: "مرشد سياحي", desc: "أدر جولاتك ومواعيدك", icon: MapIcon },
+    { id: "transport" as const, label: "شركة نقل", desc: "أدر أسطولك وسائقيك", icon: BusFront },
+    { id: "driver" as const, label: "سائق", desc: "استقبل رحلاتك المسندة", icon: CarFront },
   ];
 
   const handleRoleSelect = (rId: Role) => {
@@ -208,7 +209,6 @@ function LoginPage() {
           <div className="mb-6 text-right">
             <h1 className="text-3xl sm:text-4xl font-black text-[#0F172A] flex items-center justify-start gap-2 tracking-tight">
               <span>أهلاً بعودتك</span>
-              <span className="animate-wave inline-block origin-bottom-right">👋</span>
             </h1>
             <p className="text-[#718096] text-xs sm:text-sm font-semibold mt-2 text-right">
               اختر نوع حسابك وسجّل دخولك للمتابعة.
@@ -216,29 +216,40 @@ function LoginPage() {
           </div>
 
           {/* Role Selector Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6">
+          {/* Two balanced columns; the chosen account type has a teal frame and a check mark */}
+          <div className="grid grid-cols-2 gap-3 mb-6" role="radiogroup" aria-label="نوع الحساب">
             {roles.map((r) => {
               const isSelected = role === r.id;
+              const RoleIcon = r.icon;
               return (
                 <button
                   key={r.id}
                   type="button"
+                  role="radio"
+                  aria-checked={isSelected}
                   onClick={() => handleRoleSelect(r.id)}
-                  className={`p-3 rounded-[18px] bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
+                  className={`relative p-3.5 rounded-2xl text-right cursor-pointer flex items-center gap-3 border transition-[border-color,background-color,box-shadow] duration-200 ${
                     isSelected
-                      ? "border-2 border-[#0B4F57] shadow-sm ring-1 ring-[#0B4F57]/20 bg-teal-50/50"
-                      : "border border-[#E2E8F0] shadow-2xs hover:border-[#0B4F57]/40"
+                      ? "border-[#00736F] bg-[#00736F]/[0.06] shadow-[0_0_0_3px_rgba(0,115,111,0.12)]"
+                      : "border-[#E2E8F0] bg-white hover:border-[#00736F]/40"
                   }`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="font-black text-xs text-[#0F172A] truncate">
-                      {r.label}
-                    </div>
-                    <div className="text-[11px] text-[#718096] font-medium truncate mt-0.5">
-                      {r.desc}
-                    </div>
-                  </div>
-                  <span className="text-xl shrink-0">{r.emoji}</span>
+                  <span
+                    className={`w-11 h-11 shrink-0 rounded-xl grid place-items-center transition-colors duration-200 ${
+                      isSelected ? "bg-[#00736F] text-white" : "bg-[#00736F]/10 text-[#00736F]"
+                    }`}
+                  >
+                    <RoleIcon className="w-5 h-5" strokeWidth={1.9} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-black text-sm text-[#0F172A]">{r.label}</span>
+                    <span className="block text-xs text-[#64748B] font-semibold mt-0.5 leading-snug">{r.desc}</span>
+                  </span>
+                  {isSelected && (
+                    <span className="absolute top-2 end-2 w-5 h-5 rounded-full bg-[#00736F] text-white grid place-items-center">
+                      <Check className="w-3 h-3" strokeWidth={3} aria-hidden />
+                    </span>
+                  )}
                 </button>
               );
             })}

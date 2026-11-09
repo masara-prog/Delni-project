@@ -279,7 +279,7 @@ function SignupPage() {
               <div className="mt-6">
                 <Link
                   to="/trips"
-                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black shadow-lg hover:shadow-xl transition text-base cursor-pointer"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black shadow-lg hover:shadow-md transition text-base cursor-pointer"
                 >
                   استكشف الرحلات السياحية الآن 🧭
                 </Link>
@@ -298,7 +298,7 @@ function SignupPage() {
               <div className="mt-6 flex flex-col gap-2">
                 <Link
                   to="/auth/login"
-                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-base shadow-lg hover:shadow-xl transition cursor-pointer"
+                  className="w-full h-12 inline-flex items-center justify-center rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-base shadow-lg hover:shadow-md transition cursor-pointer"
                 >
                   الانتقال لتسجيل الدخول 🔑
                 </Link>
@@ -466,7 +466,7 @@ function SignupPage() {
             )}
 
             {submitted ? (
-              <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#E2E8F0] shadow-xl text-center space-y-5 animate-in fade-in zoom-in-95 duration-300">
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#E2E8F0] shadow-md text-center space-y-5 animate-in fade-in zoom-in-95 duration-300">
                 <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl shadow-inner font-black">
                   ✓
                 </div>
@@ -625,7 +625,7 @@ function SignupPage() {
 
               <button
                 type="submit"
-                className="w-full h-12 rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer mt-2 flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-2xl bg-[#D96B27] hover:bg-[#C2581A] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition cursor-pointer mt-2 flex items-center justify-center gap-2"
               >
                 <span>إنشاء الحساب والتسجيل الآن</span>
                 <span className="text-lg">←</span>

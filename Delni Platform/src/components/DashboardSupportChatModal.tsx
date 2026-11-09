@@ -94,7 +94,7 @@ export function DashboardSupportChatModal({
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full flex flex-col h-[600px] max-h-[90vh] overflow-hidden border border-slate-200 animate-in zoom-in-95"
+        className="relative bg-white rounded-3xl shadow-md max-w-lg w-full flex flex-col h-[600px] max-h-[90vh] overflow-hidden border border-slate-200 animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

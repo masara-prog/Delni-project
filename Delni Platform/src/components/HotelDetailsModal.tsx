@@ -134,7 +134,7 @@ export function HotelDetailsModal({
       >
         {/* ── MODAL CONTAINER WITH DELNI IDENTITY ── */}
         <div
-          className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-3xl w-full z-10 border border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex flex-col my-auto transition-transform duration-300 scale-100 animate-in zoom-in-95 overflow-hidden"
+          className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-md max-w-3xl w-full z-10 border border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex flex-col my-auto transition-transform duration-300 scale-100 animate-in zoom-in-95 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Top Brand & Partnership Strip (Matching Delni Petrol & Amber identity) */}
@@ -412,20 +412,20 @@ export function HotelDetailsModal({
             <img
               src={photos[activePhoto]}
               alt={hotel.name}
-              className="max-h-[72vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/20"
+              className="max-h-[72vh] max-w-full rounded-2xl object-contain shadow-md border border-white/20"
             />
             {/* Prev/Next */}
             <button
               type="button"
               onClick={() => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length)}
-              className="absolute left-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
+              className="absolute left-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={() => setActivePhoto((prev) => (prev + 1) % photos.length)}
-              className="absolute right-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
+              className="absolute right-3 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
