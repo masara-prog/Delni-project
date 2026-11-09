@@ -19,7 +19,8 @@ class GuideController extends Controller
 {
     use JsonApiResponses;
 
-    public const STATUSES = ['قيد المراجعة', 'موثق', 'مرفوض'];
+    // «موقوف»: an approved guide whose account the admin restricted (no sign-in on the platform or the app)
+    public const STATUSES = ['قيد المراجعة', 'موثق', 'مرفوض', 'موقوف'];
 
     // ?status=موثق limits the list (admin). Visitors see verified guides only, without their documents or email.
     public function index(Request $request): JsonResponse
@@ -69,6 +70,11 @@ class GuideController extends Controller
                     '🎉 تهانينا! تم توثيق واعتماد حسابك كمرشد سياحي',
                     "أهلاً بك يا ({$guide->full_name})! تمت مراجعة رخصتك ووثائقك واعتماد حسابك رسمياً من قبل إدارة منصة دَلّني. يمكنك الآن تسجيل الدخول وإدارة رحلاتك السياحية.",
                     '/dashboard/guide');
+            } elseif ($status === 'موقوف') {
+                $this->notify("guide_suspended_{$guide->license_number}_{$stamp}", 'guide', $guide->license_number, 'system',
+                    '⛔ تم تقييد حسابك كمرشد سياحي',
+                    "تم تقييد حسابك ({$guide->full_name}) من قبل إدارة منصة دَلّني، ولا يمكنك الدخول حتى تعيد الإدارة تفعيله. يرجى التواصل مع الإدارة.",
+                    '/auth/login');
             } elseif ($status === 'مرفوض') {
                 $this->notify("guide_rejected_{$guide->license_number}_{$stamp}", 'guide', $guide->license_number, 'system',
                     '❌ إشعار بخصوص طلب اعتماد حساب المرشد',
@@ -79,7 +85,11 @@ class GuideController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $status === 'موثق' ? 'تم اعتماد وتفعيل حساب المرشد السياحي بنجاح' : 'تم تحديث حالة المرشد بنجاح',
+            'message' => match ($status) {
+                'موثق' => 'تم اعتماد وتفعيل حساب المرشد السياحي بنجاح',
+                'موقوف' => 'تم تقييد حساب المرشد، ولا يمكنه الدخول إلى المنصة أو التطبيق حتى إعادة تفعيله',
+                default => 'تم تحديث حالة المرشد بنجاح',
+            },
             'data' => $this->withDetails(collect([$guide->fresh()]))[0],
         ]);
     }

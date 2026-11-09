@@ -830,7 +830,7 @@ function AdminDashboard() {
     setEditingCompany(null);
     return null;
   };
-  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
+  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض" | "موقوف") => {
     const targetGuide = guides.find(g => g.license_number === lic);
     const res = await apiVerifyGuide(lic, status);
     if (res.status !== "success") {
@@ -839,9 +839,12 @@ function AdminDashboard() {
     }
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
+    const name = targetGuide?.full_name || lic;
     alert(status === "موثق"
-      ? `✅ تم اعتماد وتفعيل حساب المرشد (${targetGuide?.full_name || lic}) بنجاح، ويمكنه الآن تسجيل الدخول ببريده الإلكتروني.`
-      : `❌ تم رفض طلب المرشد (${targetGuide?.full_name || lic}) وتحديث حالته بنجاح.`);
+      ? `✅ تم اعتماد وتفعيل حساب المرشد (${name}) بنجاح، ويمكنه الآن تسجيل الدخول ببريده الإلكتروني.`
+      : status === "موقوف"
+        ? `⛔ تم تقييد حساب المرشد (${name})، ولا يمكنه الدخول إلى المنصة أو التطبيق حتى تعيدي تفعيله.`
+        : `❌ تم رفض طلب المرشد (${name}) وتحديث حالته بنجاح.`);
   };
 
   // Transport directory, hotels and restaurants are read from DelniDB through Laravel only
@@ -4477,7 +4480,7 @@ function GuideVerificationModal({
 }: {
   guide: Guide;
   onClose: () => void;
-  onVerify: (lic: string, status: "موثق" | "مرفوض") => void;
+  onVerify: (lic: string, status: "موثق" | "مرفوض" | "موقوف") => void;
 }) {
   const isImage =
     guide.digital_certificate_file?.startsWith("data:image/") ||
@@ -4649,20 +4652,41 @@ function GuideVerificationModal({
           >
             إلغاء وإغلاق
           </button>
-          <button
-            type="button"
-            onClick={() => onVerify(guide.license_number, "مرفوض")}
-            className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
-          >
-            ❌ رفض الطلب
-          </button>
-          <button
-            type="button"
-            onClick={() => onVerify(guide.license_number, "موثق")}
-            className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
-          >
-            ✅ قبول واعتماد المرشد
-          </button>
+          {/* An approved guide can only be restricted; a restricted one reactivated; a new request accepted or rejected */}
+          {guide.verification_status === "موثق" ? (
+            <button
+              type="button"
+              onClick={() => onVerify(guide.license_number, "موقوف")}
+              className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+            >
+              ⛔ تقييد حساب المرشد
+            </button>
+          ) : guide.verification_status === "موقوف" ? (
+            <button
+              type="button"
+              onClick={() => onVerify(guide.license_number, "موثق")}
+              className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+            >
+              ✅ إعادة تفعيل الحساب
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onVerify(guide.license_number, "مرفوض")}
+                className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+              >
+                ❌ رفض الطلب
+              </button>
+              <button
+                type="button"
+                onClick={() => onVerify(guide.license_number, "موثق")}
+                className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+              >
+                ✅ قبول واعتماد المرشد
+              </button>
+            </>
+          )}
         </div>
       </div>
     </ModalShell>

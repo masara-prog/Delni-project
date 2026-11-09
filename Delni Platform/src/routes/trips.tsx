@@ -2181,13 +2181,16 @@ function TripsPage() {
           if (!selectedDepartures.includes(t.departure)) return false;
         }
       }
-      // Period Filter: a daily trip with a run date inside it, a weekly trip that starts inside it
+      // Period Filter: a daily trip with a run date inside it, a weekly trip running at any time inside it
+      // (one that started before the period and is still running counts too)
       if (dateRange) {
         const inRange = (d: string) => (!dateRange.from || d >= dateRange.from) && (!dateRange.to || d <= dateRange.to);
         if (t.type === "daily") {
           if (!(t.openDates || []).some(inRange)) return false;
         } else if (t.type === "weekly") {
-          if (!t.startDate || !inRange(t.startDate.slice(0, 10))) return false;
+          const start = (t.startDate || "").slice(0, 10);
+          const end = (t.endDate || t.startDate || "").slice(0, 10);
+          if (!start || (dateRange.to && start > dateRange.to) || (dateRange.from && end < dateRange.from)) return false;
         } else {
           return false;
         }
@@ -2206,7 +2209,7 @@ function TripsPage() {
             ? `${t.vehicle.model} ${t.vehicle.company} ${t.vehicle.driver}`
             : "";
         const hay =
-          `${t.title} ${t.description} ${attractionsText} ${guideText} ${vehicleText}`.toLowerCase();
+          `${t.title} ${t.description} ${"departure" in t ? t.departure : ""} ${attractionsText} ${guideText} ${vehicleText}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;

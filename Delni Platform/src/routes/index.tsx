@@ -27,7 +27,7 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import transportHero from "@/assets/transport-hero.jpg";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
-import { getStoredSession, clearStoredSession } from "@/lib/api";
+import { getStoredSession, clearStoredSession, apiGetPlaces } from "@/lib/api";
 
 
 
@@ -113,7 +113,7 @@ function HomePage() {
         <TrustStrip />
         <DepartureOffices />
         <WhyUs />
-        <Testimonials />
+        <LiveLandmarks />
         <CTABanner />
         <Footer />
       </div>
@@ -446,11 +446,8 @@ function SearchCard() {
           </button>
         </div>
       </div>
-      {withDates && (
-        <p className={`px-3 pt-2 text-[11px] font-bold ${dateError ? "text-red-600" : "text-slate-500"}`}>
-          {dateError || (isAr ? "اختر الفترة التي تناسبك لتظهر الرحلات التي تنطلق خلالها (اختياري)." : "Pick a period to see the trips that run in it (optional).")}
-        </p>
-      )}
+      {/* Only an error is shown under the bar (the hint sentence was removed) */}
+      {withDates && dateError && <p className="px-3 pt-2 text-[11px] font-bold text-red-600">{dateError}</p>}
     </form>
   );
 }
@@ -677,117 +674,67 @@ function WhyUs() {
   );
 }
 
-/* ---------- Testimonials ---------- */
-function Testimonials() {
+/* ---------- Live landmarks (read from DelniDB) ---------- */
+// Replaces the static testimonials: real landmarks from the database, each opening the landmarks page
+function LiveLandmarks() {
   const { language } = useLanguage();
-  const items = [
-    {
-      name: language === 'ar' ? "أحمد الفيتوري" : "Ahmed Al-Fitouri",
-      city: language === 'ar' ? "بنغازي" : "Benghazi",
-      role: language === 'ar' ? "مسافر / سائح" : "Traveler",
-      avatar: "أ",
-      stars: 5,
-      text: language === 'ar'
-        ? "تجربة رائعة! حجزت رحلة إلى أوباري عبر دلني وكل شيء كان منظماً — من السائق إلى الفندق. أنصح به بشدة."
-        : "Amazing experience! Booked an Ubari trip via Dallani and everything was organized — from driver to hotel. Highly recommend!",
-      gradient: "from-teal-500 to-sky-500",
-    },
-    {
-      name: language === 'ar' ? "سارة الطرابلسي" : "Sarah Al-Tripoli",
-      city: language === 'ar' ? "طرابلس" : "Tripoli",
-      role: language === 'ar' ? "مسافرة / عائلية" : "Family Traveler",
-      avatar: "س",
-      stars: 5,
-      text: language === 'ar'
-        ? "أسهل منصة استخدمتها لحجز فندق داخل ليبيا. الأسعار ممتازة والدعم الفني سريع جداً."
-        : "Easiest platform to book a hotel in Libya. Great prices and very fast support. Will definitely use again!",
-      gradient: "from-orange-500 to-amber-400",
-    },
-    {
-      name: "Omar M.",
-      city: language === 'ar' ? "مصراتة" : "Misrata",
-      role: language === 'ar' ? "مسافر / مغامرة" : "Adventure Seeker",
-      avatar: "O",
-      stars: 5,
-      text: language === 'ar'
-        ? "منصة رائعة لاكتشاف كنوز ليبيا الخفية. جولة الصحراء إلى أكاكوس لن تُنسى."
-        : "Great platform to discover hidden gems in Libya. The desert tour to Acacus Mountains was absolutely unforgettable.",
-      gradient: "from-violet-500 to-purple-600",
-    },
-    {
-      name: language === 'ar' ? "خالد المصراتي" : "Khaled Al-Misrati",
-      city: language === 'ar' ? "مصراتة" : "Misrata",
-      role: language === 'ar' ? "رجل أعمال" : "Business Traveler",
-      avatar: "خ",
-      stars: 5,
-      text: language === 'ar'
-        ? "استخدمت دلني لحجز سيارة خاصة وسائق احترافي. الخدمة ممتازة والتواصل سريع."
-        : "Used Dallani to book a private car with a professional driver. Excellent service and fast communication!",
-      gradient: "from-emerald-500 to-teal-500",
-    },
-    {
-      name: language === 'ar' ? "فاطمة الجديدي" : "Fatima Al-Jadidi",
-      city: language === 'ar' ? "غدامس" : "Ghadames",
-      role: language === 'ar' ? "مرشدة سياحية" : "Tour Guide",
-      avatar: "ف",
-      stars: 5,
-      text: language === 'ar'
-        ? "كمرشدة سياحية، دلني غيّر طريقة تواصلي مع السلح وتنظيم جولاتي."
-        : "As a tour guide, Dallani transformed how I connect with tourists and manage my tours professionally.",
-      gradient: "from-rose-500 to-pink-500",
-    },
-  ];
+  const isAr = language === "ar";
+  const [places, setPlaces] = useState<any[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    apiGetPlaces().then((rows) => alive && setPlaces(rows));
+    return () => { alive = false; };
+  }, []);
+  if (places !== null && places.length === 0) return null;
+  const shown = (places || []).slice(0, 8);
 
   return (
-    <section className="py-14 md:py-20 bg-slate-50 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
-            {language === 'ar' ? 'قصص من زوارنا' : 'Stories from our visitors'}
-          </h2>
-          <p className="mt-3 text-slate-600 text-lg">
-            {language === 'ar' ? 'تجارب زوار رحلات دلني' : 'What visitors say about their Dallani trips'}
-          </p>
-          
-        </div>
-
-        {/* Scrollable cards */}
-        <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-6 -mx-4 px-4 scroll-smooth">
-          {items.map((item, i) => (
-            <div
-              key={item.name + i}
-              className="group shrink-0 w-[300px] md:w-[340px] snap-start bg-white border border-slate-200 rounded-3xl p-7 hover:border-primary/40 hover:shadow-card hover:-translate-y-1 transition duration-300 flex flex-col"
-            >
-              {/* Quote icon */}
-              <div className="text-4xl text-slate-200 font-black leading-none mb-3">&ldquo;</div>
-              {/* Stars */}
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: item.stars }).map((_, k) => (
-                  <Icon.Star key={k} className="w-4 h-4 text-gold" />
-                ))}
-              </div>
-              {/* Text */}
-              <p className="text-slate-700 leading-relaxed flex-1 text-sm font-semibold">{item.text}</p>
-              {/* Divider */}
-              <div className="my-5 h-px bg-slate-100" />
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-black text-lg shadow-md`}>
-                  {item.avatar}
-                </div>
-                <div>
-                  <div className="font-black text-slate-900 text-sm">{item.name}</div>
-                  <div className="text-xs text-slate-500 flex items-center gap-1 font-medium mt-0.5">
-                    <Icon.Pin className="w-3 h-3" />
-                    {item.city} · {item.role}
-                  </div>
-                </div>
-              </div>
+    <section className="py-14 md:py-20 bg-gradient-to-b from-white to-slate-50 overflow-hidden">
+      <div className="container mx-auto px-4">
+        <Reveal>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black">
+                <span className="relative flex w-2 h-2">
+                  <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#003580] opacity-60" />
+                  <span className="relative inline-flex rounded-full w-2 h-2 bg-[#003580]" />
+                </span>
+                {isAr ? "من قاعدة بيانات دلني مباشرة" : "Live from Delni"}
+              </span>
+              <h2 className="mt-3 text-3xl md:text-4xl font-black text-slate-900">{isAr ? "معالم تنتظرك في ليبيا" : "Landmarks waiting for you"}</h2>
+              <p className="mt-2 text-slate-500 font-medium">{isAr ? "اختر وجهتك القادمة من المعالم المسجلة في المنصة" : "Pick your next destination from the landmarks on Delni"}</p>
             </div>
-          ))}
-        </div>
-        <div className="text-center text-xs text-slate-500 mt-2 font-medium">
-          {language === 'ar' ? '← اسحب لرؤية المزيد →' : '← Scroll for more →'}
+            <Link to="/attractions" className="self-start md:self-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white text-sm font-black text-slate-800 hover:border-[#003580] hover:text-[#003580] transition">
+              {isAr ? "كل المعالم" : "All landmarks"} <span aria-hidden>{isAr ? "←" : "→"}</span>
+            </Link>
+          </div>
+        </Reveal>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          {places === null
+            ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="aspect-[4/5] rounded-3xl bg-slate-200/70 motion-safe:animate-pulse" />)
+            : shown.map((pl, i) => (
+                <Reveal key={pl.place_id} delay={Math.min(i, 6) * 80}>
+                  <Link
+                    to="/attractions"
+                    className="group relative block aspect-[4/5] rounded-3xl overflow-hidden shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#003580]"
+                  >
+                    <img
+                      src={pl.place_image}
+                      alt={pl.place_name}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transition duration-700 ease-out motion-safe:group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B1B2B]/90 via-[#0B1B2B]/20 to-transparent" />
+                    {pl.category && (
+                      <span className="absolute top-3 start-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[11px] font-black text-slate-800">{pl.category}</span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 p-4 text-white transition duration-500 motion-safe:group-hover:-translate-y-1">
+                      <div className="text-lg md:text-xl font-black leading-tight">{pl.place_name}</div>
+                      <div className="mt-1 text-xs font-bold text-white/80">📍 {pl.city}{pl.region ? ` · ${pl.region}` : ""}</div>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
         </div>
       </div>
     </section>

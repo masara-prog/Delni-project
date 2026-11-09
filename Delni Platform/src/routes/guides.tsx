@@ -559,7 +559,7 @@ function GuidesPage() {
                       <div className="flex items-center gap-1.5">
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3 text-orange-400" />
-                          <span>{guide.experienceYears} س</span>
+                          <span>{guide.experienceYears} سنوات خبرة</span>
                         </span>
                         <span className="text-stone-300">•</span>
                         <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
