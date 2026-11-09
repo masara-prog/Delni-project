@@ -259,7 +259,7 @@ function GuideDashboard() {
             {
               liveBookings(d, true).forEach((b: any) => {
                 realTourists.push({
-                  booking_id: `BK-D-${b.booking_daily_id || b.id}`,
+                  booking_id: String(b.booking_daily_id || b.id),
                   tourist_id: b.tourist_id,
                   tourist_name: b.tourist?.full_name || `سائح (${b.tourist_id})`,
                   phone_number: b.tourist?.phone_number || "-",
@@ -267,7 +267,7 @@ function GuideDashboard() {
                   seats_count: Number(b.number_of_seats || b.seats_booked) || 1,
                   trip_name: d.trip_title || d.title,
                   payment_status: b.payment_status || (b.is_paid ? "paid" : "cash_at_office"),
-                  attended: Boolean(b.attended ?? b.attendance_status),
+                  attended: b.attended === true || b.attended === 1 || b.attended === "1",
                 });
               });
             }
@@ -278,7 +278,7 @@ function GuideDashboard() {
             {
               liveBookings(w, false).forEach((b: any) => {
                 realTourists.push({
-                  booking_id: `BK-W-${b.booking_weekly_id || b.id}`,
+                  booking_id: String(b.booking_weekly_id || b.id),
                   tourist_id: b.tourist_id,
                   tourist_name: b.tourist?.full_name || `سائح (${b.tourist_id})`,
                   phone_number: b.tourist?.phone_number || "-",
@@ -286,7 +286,7 @@ function GuideDashboard() {
                   seats_count: Number(b.number_of_seats || b.seats_booked) || 1,
                   trip_name: w.trip_title || w.title,
                   payment_status: b.payment_status || (b.is_paid ? "paid" : "cash_at_office"),
-                  attended: Boolean(b.attended ?? b.attendance_status),
+                  attended: b.attended === true || b.attended === 1 || b.attended === "1",
                 });
               });
             }
@@ -502,20 +502,24 @@ function GuideDashboard() {
           </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleAvailability}
+            {/* On / off switch, like the driver's: a guide on leave gets no new trips */}
+            <label
               title="المرشد في إجازة لا تُسند إليه رحلات جديدة"
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border cursor-pointer transition ${
-                guideInfo.availability_status === "إجازة"
-                  ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
-                  : "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
-              }`}
+              className="flex items-center gap-2.5 bg-white/15 backdrop-blur px-3 h-9 rounded-xl cursor-pointer text-white"
             >
-              {guideInfo.availability_status === "إجازة" ? "🌙 في إجازة — اضغط للعودة متاحاً" : "✅ متاح — اضغط لتفعيل الإجازة"}
-            </button>
+              <span className="text-xs font-black">{guideInfo.availability_status === "إجازة" ? "في إجازة" : "متاح للرحلات"}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={guideInfo.availability_status !== "إجازة"}
+                onClick={toggleAvailability}
+                className={`w-11 h-6 rounded-full relative transition cursor-pointer ${guideInfo.availability_status === "إجازة" ? "bg-white/30" : "bg-emerald-400"}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${guideInfo.availability_status === "إجازة" ? "right-5" : "right-0.5"}`} />
+              </button>
+            </label>
             <Badge tone={guideInfo.verification_status === "موثق" ? "green" : "sun"}>{guideInfo.verification_status}</Badge>
-            <Badge tone="sea">📜 {guideInfo.years_of_experience || 0} سنوات خبرة</Badge>
+            <span className="text-[11px] font-bold text-white/80">📜 {guideInfo.years_of_experience || 0} سنوات خبرة</span>
           </div>
         </div>
       </div>
@@ -721,10 +725,11 @@ function GuideDashboard() {
                 <div>
                   <h4 className="font-bold text-emerald-950 text-xs sm:text-sm">الرحلة الحالية: {activeTrip.trip_name}</h4>
                   <p className="text-[11px] text-emerald-800 mt-0.5">⏱️ الموعد: {activeTrip.time_or_duration} · قائمة السياح المحجوزين في هذه الرحلة (للاطلاع فقط).</p>
+                  <p className="text-[10px] text-emerald-700/80 mt-1">ℹ️ يُسجَّل حضور السائح تلقائياً عندما يُدقَّق رقم تذكرته في مكتب التذاكر يوم الرحلة.</p>
                 </div>
                 <div className="text-left">
                   <div className="text-xl font-bold text-emerald-800">{attendedCount} / {activeTrip.seats_booked}</div>
-                  <div className="text-[10px] text-emerald-600 font-medium">سائح تم تسجيل حضورهم</div>
+                  <div className="text-[10px] text-emerald-600 font-medium">مقعد حضر من المحجوز</div>
                 </div>
               </div>
 
@@ -766,12 +771,10 @@ function GuideDashboard() {
                             </span>
                           </td>
                           <td className="p-2.5">
-                            <span
-                              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] ${
-                                tr.attended ? "bg-emerald-600 text-white" : "bg-stone-100 text-stone-600"
-                              }`}
-                            >
-                              {tr.attended ? "✓ حاضر" : "لم يُسجَّل"}
+                            {/* status only (not a button): set by the ticket office when the ticket is checked */}
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${tr.attended ? "text-emerald-700" : "text-stone-400"}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${tr.attended ? "bg-emerald-500" : "bg-stone-300"}`} />
+                              {tr.attended ? "حضر" : "لم يحضر بعد"}
                             </span>
                           </td>
                         </tr>
@@ -1277,7 +1280,7 @@ function tripsOn(date: Date, trips: AssignedTrip[]): CalendarEntry[] {
       phone: b.tourist?.phone_number || "",
       seats: Number(b.number_of_seats) || 0,
       paid: b.payment_status === "paid",
-      attended: Boolean(b.attended),
+      attended: b.attended === true || b.attended === 1 || b.attended === "1",
     }));
 
   const entries: CalendarEntry[] = [];

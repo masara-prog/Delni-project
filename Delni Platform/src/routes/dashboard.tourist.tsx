@@ -223,7 +223,7 @@ function TouristDashboard() {
                 status: status.startsWith("ملغ") ? "ملغية" : "مؤكدة",
                 statusLabel: status || "مؤكدة",
                 payment_status: b.payment_status === "paid" ? "paid" : "cash_at_office",
-                attended: Boolean(b.attended),
+                attended: b.attended === true || b.attended === 1 || b.attended === "1",
                 price: `${Number(b.total_price) || 0} د.ل`,
                 tripImage: trip.photo,
               };

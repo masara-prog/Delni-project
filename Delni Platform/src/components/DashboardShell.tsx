@@ -352,6 +352,8 @@ export function StatCard({
   }[tone];
   // Figures stay large; a text value (a trip name, "not set") gets a smaller font so it never overflows the card
   const isText = typeof value === "string" && !/^[\d\s.,%٠-٩]+$/.test(value) && value.length > 10;
+  // "12 جولة", "200 د.ل / يوم": the figure stays large and its unit is written small beside it
+  const unit = typeof value === "string" ? value.match(/^([\d.,٠-٩]+)\s+(.{1,16})$/) : null;
   return (
     <div
       onClick={onClick}
@@ -368,11 +370,17 @@ export function StatCard({
       </div>
       <div
         className={`mt-2 font-black text-foreground group-hover:text-primary transition-colors ${
-          isText ? "text-base sm:text-lg leading-snug line-clamp-2" : "text-2xl sm:text-3xl tabular-nums tracking-tight"
+          isText && !unit ? "text-base sm:text-lg leading-snug line-clamp-2" : "text-2xl sm:text-3xl tabular-nums tracking-tight"
         }`}
         title={typeof value === "string" ? value : undefined}
       >
-        {value}
+        {unit ? (
+          <>
+            {unit[1]} <span className="text-sm sm:text-base font-bold text-muted-foreground">{unit[2]}</span>
+          </>
+        ) : (
+          value
+        )}
       </div>
       {hint && <div className="text-xs text-muted-foreground mt-1.5">{hint}</div>}
     </div>

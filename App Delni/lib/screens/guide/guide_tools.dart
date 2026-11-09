@@ -11,7 +11,7 @@ import '../../widgets/states.dart';
 
 /// DateTime.weekday of a stored day ("sat", "السبت", "الإثنين"...), or null.
 int? _weekdayOf(String day) {
-  final d = day.trim().toLowerCase().replaceAll('إ', 'ا');
+  final d = day.trim().toLowerCase().replaceAll(RegExp('[أإآ]'), 'ا'); // الأحد، الأربعاء، الإثنين in any spelling
   const map = {
     'sat': DateTime.saturday, 'السبت': DateTime.saturday,
     'sun': DateTime.sunday, 'الاحد': DateTime.sunday,
@@ -235,8 +235,8 @@ class _GuideCalendarScreenState extends State<GuideCalendarScreen> {
   }
 }
 
-/// "Trip manifest": the tourists booked on the guide's daily / weekly trips, shown straight away,
-/// grouped by trip and by run date (coming dates first; past dates under "Earlier").
+/// "Trip manifest", laid out like the platform's: one run date at a time (chosen from the dates on top),
+/// each trip of that date in a summary card with its tourists under it.
 class GuideManifestScreen extends StatefulWidget {
   final List<GuideTrip> trips;
   final void Function(GuideTrip) onOpen;
@@ -250,33 +250,31 @@ class GuideManifestScreen extends StatefulWidget {
 
 class _GuideManifestScreenState extends State<GuideManifestScreen> {
   bool _past = false; // false = coming dates, true = earlier dates
+  String? _date; // the chosen run date (yyyy-mm-dd)
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final today = isoDate(DateTime.now());
     // a booking's date: its run date (daily) or the trip's start date (weekly)
     String dateOf(GuideTrip t, Passenger p) => (p.tripDate.isNotEmpty ? p.tripDate : t.startDate).split('T').first;
-    bool upcoming(GuideTrip t, Passenger p) {
+    bool coming(GuideTrip t, String d) {
       if (t.kind == 'weekly' && t.endDate.isNotEmpty) return t.endDate.split('T').first.compareTo(today) >= 0;
-      final d = dateOf(t, p);
       return d.isEmpty || d.compareTo(today) >= 0;
     }
 
-    // one group per trip and date, only the chosen period
-    final groups = <(GuideTrip, String, List<Passenger>)>[];
+    // date -> trip -> passengers, only the chosen period
+    final byDate = <String, Map<GuideTrip, List<Passenger>>>{};
     for (final t in widget.trips.where((t) => t.kind != 'private' && t.approvalStatus != GuideTrip.declined)) {
-      final byDate = <String, List<Passenger>>{};
-      for (final p in t.passengers.where((p) => !p.isCancelled && upcoming(t, p) != _past)) {
-        byDate.putIfAbsent(dateOf(t, p), () => []).add(p);
-      }
-      for (final e in byDate.entries) {
-        groups.add((t, e.key, e.value));
+      for (final p in t.passengers.where((p) => !p.isCancelled)) {
+        final d = dateOf(t, p);
+        if (coming(t, d) == _past) continue;
+        byDate.putIfAbsent(d, () => {}).putIfAbsent(t, () => []).add(p);
       }
     }
-    groups.sort((a, b) => _past ? b.$2.compareTo(a.$2) : a.$2.compareTo(b.$2));
-    final bookings = groups.fold<int>(0, (s, g) => s + g.$3.length);
-    final seats = groups.fold<int>(0, (s, g) => s + g.$3.fold<int>(0, (x, p) => x + p.seats));
+    final dates = byDate.keys.toList()..sort((a, b) => _past ? b.compareTo(a) : a.compareTo(b));
+    final chosen = (_date != null && byDate.containsKey(_date)) ? _date! : (dates.isEmpty ? null : dates.first);
+
+    String label(String d) => d.isEmpty ? context.tr('بدون تاريخ', 'No date') : (d == today ? context.tr('اليوم', 'Today') : context.date(d));
 
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('كشف سياح الرحلة', 'Trip manifest'))),
@@ -289,10 +287,13 @@ class _GuideManifestScreenState extends State<GuideManifestScreen> {
               ButtonSegment(value: true, label: Text(context.tr('السابقة', 'Earlier')), icon: const Icon(Icons.history_rounded)),
             ],
             selected: {_past},
-            onSelectionChanged: (v) => setState(() => _past = v.first),
+            onSelectionChanged: (v) => setState(() {
+              _past = v.first;
+              _date = null;
+            }),
           ),
           const SizedBox(height: Gap.md),
-          if (groups.isEmpty)
+          if (chosen == null)
             EmptyState(
               icon: Icons.groups_outlined,
               title: _past ? context.tr('لا توجد حجوزات سابقة', 'No earlier bookings') : context.tr('لا يوجد سياح محجوزون بعد', 'No tourists booked yet'),
@@ -300,23 +301,38 @@ class _GuideManifestScreenState extends State<GuideManifestScreen> {
                   'The tourists booked on your daily and weekly trips appear here as soon as they book.'),
             )
           else ...[
-            InlineMessage(
-              tone: Tone.neutral,
-              icon: Icons.groups_rounded,
-              text: context.tr('$bookings حجز • $seats مقعد', '$bookings bookings • $seats seats'),
+            // one chip per run date
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: dates.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final d = dates[i];
+                  final seats = byDate[d]!.values.expand((l) => l).fold<int>(0, (s, p) => s + p.seats);
+                  return ChoiceChip(
+                    label: Text('${label(d)} • ${context.tr('$seats مقعد', '$seats seats')}'),
+                    selected: d == chosen,
+                    onSelected: (_) => setState(() => _date = d),
+                    selectedColor: AppColors.primary,
+                    labelStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: d == chosen ? Colors.white : AppColors.navy),
+                    showCheckmark: false,
+                  );
+                },
+              ),
             ),
             const SizedBox(height: Gap.lg),
-            for (final (trip, date, list) in groups) ...[
+            for (final entry in byDate[chosen]!.entries) ...[
               _ManifestHeader(
-                title: widget.titleOf(trip),
-                kind: trip.kind,
-                date: date.isEmpty ? '' : (date == today ? context.tr('اليوم', 'Today') : context.date(date)),
-                seats: list.fold<int>(0, (s, p) => s + p.seats),
-                attended: list.where((p) => p.attended).length,
-                count: list.length,
-                onOpen: () => widget.onOpen(trip),
+                title: widget.titleOf(entry.key),
+                kind: entry.key.kind,
+                date: label(chosen),
+                seats: entry.value.fold<int>(0, (s, p) => s + p.seats),
+                attendedSeats: entry.value.where((p) => p.attended).fold<int>(0, (s, p) => s + p.seats),
+                onOpen: () => widget.onOpen(entry.key),
               ),
-              for (final p in list) _PassengerCard(p: p),
+              for (final p in entry.value) _PassengerCard(p: p),
               const SizedBox(height: Gap.lg),
             ],
           ],
@@ -326,9 +342,10 @@ class _GuideManifestScreenState extends State<GuideManifestScreen> {
   }
 }
 
+/// The trip's summary for the chosen date, like the platform's green card: name, date, attended / booked seats.
 class _ManifestHeader extends StatelessWidget {
   final String title, kind, date;
-  final int seats, attended, count;
+  final int seats, attendedSeats;
   final VoidCallback onOpen;
 
   const _ManifestHeader({
@@ -336,43 +353,52 @@ class _ManifestHeader extends StatelessWidget {
     required this.kind,
     required this.date,
     required this.seats,
-    required this.attended,
-    required this.count,
+    required this.attendedSeats,
     required this.onOpen,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = _kindColor(kind);
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        color: const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFA7F3D0)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.label.copyWith(color: AppColors.navy)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(label: _kindLabel(context, kind), tone: kind == 'weekly' ? Tone.success : Tone.primary, dense: true),
-                  if (date.isNotEmpty) StatusBadge(label: date, tone: Tone.warning, icon: Icons.event_rounded, dense: true),
-                  StatusBadge(label: context.tr('$seats مقعد', '$seats seats'), tone: Tone.neutral, icon: Icons.event_seat_rounded, dense: true),
-                  StatusBadge(label: context.tr('حضر $attended من $count', '$attended of $count in'), tone: Tone.neutral, icon: Icons.how_to_reg_rounded, dense: true),
-                ]),
+                Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.label.copyWith(color: const Color(0xFF064E3B))),
+                const SizedBox(height: 4),
+                Text(
+                  context.tr('${_kindLabel(context, kind)} • الموعد: $date', '${_kindLabel(context, kind)} • $date'),
+                  style: AppText.caption.copyWith(color: const Color(0xFF065F46), fontSize: 11.5),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.tr('يُسجَّل الحضور عند تدقيق التذكرة في مكتب التذاكر.', 'Check-in is recorded when the ticket is checked at the office.'),
+                  style: AppText.caption.copyWith(color: const Color(0xFF047857), fontSize: 10.5),
+                ),
               ],
             ),
           ),
-          IconButton(
-            tooltip: context.tr('تفاصيل الرحلة', 'Trip details'),
-            onPressed: onOpen,
-            icon: Icon(Icons.info_outline_rounded, color: color),
+          Column(
+            children: [
+              Text('$attendedSeats / $seats', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF065F46))),
+              Text(context.tr('مقعد حضر', 'seats in'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+              IconButton(
+                tooltip: context.tr('تفاصيل الرحلة', 'Trip details'),
+                visualDensity: VisualDensity.compact,
+                onPressed: onOpen,
+                icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF047857), size: 20),
+              ),
+            ],
           ),
         ],
       ),
@@ -405,16 +431,23 @@ class _PassengerCard extends StatelessWidget {
                     style: AppText.caption.copyWith(fontSize: 11.5),
                   ),
                   const SizedBox(height: 6),
-                  Wrap(spacing: 6, children: [
+                  Row(children: [
                     StatusBadge(
-                      label: p.paid ? context.tr('مدفوع', 'Paid') : context.tr('غير مدفوع', 'Unpaid'),
+                      label: p.paid ? context.tr('مدفوع', 'Paid') : context.tr('نقداً بالفرع', 'Cash at office'),
                       tone: p.paid ? Tone.success : Tone.warning,
                       dense: true,
                     ),
-                    StatusBadge(
-                      label: p.attended ? context.tr('حضر', 'Checked in') : context.tr('لم يحضر بعد', 'Not in yet'),
-                      tone: p.attended ? Tone.primary : Tone.neutral,
-                      dense: true,
+                    const SizedBox(width: 10),
+                    // a status, not a button: set by the ticket office
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(color: p.attended ? const Color(0xFF10B981) : AppColors.border, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      p.attended ? context.tr('حضر', 'Checked in') : context.tr('لم يحضر بعد', 'Not in yet'),
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: p.attended ? const Color(0xFF047857) : AppColors.mutedText),
                     ),
                   ]),
                 ],

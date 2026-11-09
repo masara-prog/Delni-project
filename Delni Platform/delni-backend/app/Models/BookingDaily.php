@@ -28,6 +28,7 @@ class BookingDaily extends Model
         'booking_date' => 'datetime',
         'number_of_seats' => 'integer',
         'total_price' => 'decimal:2',
+        'attended' => 'boolean',
     ];
 
     public function tourist()

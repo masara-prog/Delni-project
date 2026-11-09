@@ -1401,7 +1401,7 @@ function AdminDashboard() {
       seats: Number(b.number_of_seats) || 1,
       totalPrice: Number(b.total_price) || 0,
       paymentStatus: b.payment_status || "unpaid",
-      attended: !!b.attended,
+      attended: b.attended === true || b.attended === 1 || b.attended === "1",
       bookingStatus: b.booking_status || "",
       // A daily ticket is for one run date; otherwise show when it was booked
       date: isDaily && b.trip_date ? String(b.trip_date).slice(0, 10) : (b.booking_date ? new Date(b.booking_date).toLocaleDateString("ar-LY") : ""),
@@ -5628,6 +5628,61 @@ const codeToArabicMap: Record<string, string> = {
   "fri": "الجمعة",
 };
 
+// Day names (Arabic, any spelling of Monday) or codes as codes: sat, sun, mon, ...
+function dayCodesOf(days: any): string[] {
+  let list: any = days;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      list = list.split(",");
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((d: any) => String(d).trim().toLowerCase().replace("الاثنين", "الإثنين"))
+    .map((d: string) => arabicToCodeMap[d] || d)
+    .filter(Boolean);
+}
+
+/**
+ * Why a guide cannot take a daily trip running on these weekdays (null = the guide fits). Mirrors the server's
+ * checks: approved, not on leave, works every trip day, licence valid, and not already on another trip those days.
+ */
+function dailyGuideProblem(
+  g: Guide,
+  tripDays: string[],
+  dailyTrips: DailyTrip[],
+  weeklyTrips: WeeklyTrip[],
+  excludeTripId?: string,
+): string | null {
+  if (g.verification_status !== "موثق") return "غير معتمد";
+  if ((g as any).availability_status === "إجازة") return "في إجازة";
+  const days = dayCodesOf(tripDays);
+  if (days.length === 0) return null;
+  const today = new Date().toLocaleDateString("en-CA");
+  const expiry = (g as any).license_expiry_date as string | null | undefined;
+  if (expiry && expiry < today) return "ترخيصه منتهٍ";
+  const works = guideDayCodes(g);
+  if (works && !days.every((d) => works.includes(d))) {
+    return "لا يعمل يوم " + days.filter((d) => !works.includes(d)).map((d) => codeToArabicMap[d] || d).join(" و");
+  }
+  const mine = (t: { guide_license_number?: string; guide_license?: string }) =>
+    (t.guide_license_number || t.guide_license) === g.license_number;
+  const busyDaily = dailyTrips.find(
+    (t) => t.id !== excludeTripId && t.is_active && mine(t) && t.guide_approval_status !== "اعتذر المرشد" &&
+      dayCodesOf(t.recurring_days).some((d) => days.includes(d)),
+  );
+  if (busyDaily) return `مسند لرحلة يومية أخرى (${busyDaily.title}) في نفس اليوم`;
+  const busyWeekly = weeklyTrips.find(
+    (t) => t.is_active && mine(t) && t.guide_approval_status !== "اعتذر المرشد" && !!t.start_date && !!t.end_date &&
+      String(t.end_date).slice(0, 10) >= today &&
+      weekdayCodesBetween(String(t.start_date), String(t.end_date)).some((d) => days.includes(d)),
+  );
+  if (busyWeekly) return `مسند لرحلة أسبوعية (${busyWeekly.title}) في نفس الأيام`;
+  return null;
+}
+
 function CreateTripModal({
   type,
   guides,
@@ -5742,26 +5797,8 @@ function CreateTripModal({
         if (!match && g.city !== departureCity) return false;
       }
 
-      // Daily trips schedule filter: match guide's working_days with trip recurringDays
-      if (isDaily && !showAllGuides && recurringDays.length > 0 && g.working_days) {
-        let gDays: string[] = [];
-        try {
-          gDays = typeof g.working_days === "string" ? JSON.parse(g.working_days) : g.working_days;
-        } catch {
-          gDays = String(g.working_days).split(",").map(s => s.trim().toLowerCase());
-        }
-        if (Array.isArray(gDays) && gDays.length > 0) {
-          const gDaysLower = gDays.map(d => String(d).toLowerCase().trim());
-          if (!gDaysLower.includes("all") && !gDaysLower.includes("جميع الأيام")) {
-            // Check if guide works on all selected trip days
-            const availableOnAllDays = recurringDays.every(day => {
-              const code = arabicToCodeMap[day] || "";
-              return gDaysLower.includes(code) || gDaysLower.includes(day);
-            });
-            if (!availableOnAllDays) return false;
-          }
-        }
-      }
+      // Daily trips: the same checks as the server (working days in any spelling, leave, licence, other trips those days)
+      if (isDaily && !showAllGuides && dailyGuideProblem(g, recurringDays, dailyTrips, weeklyTrips)) return false;
 
       // Weekly trips: the guide works on every weekday the trip covers (7+ days = the whole week)
       if (!isDaily && !showAllGuides && startDate && endDate) {
@@ -5797,7 +5834,7 @@ function CreateTripModal({
       }
       return 0;
     });
-  }, [guides, isDaily, destination, departureCity, multiDestinations, recurringDays, showAllGuides, startDate, endDate, weeklyTrips]);
+  }, [guides, isDaily, destination, departureCity, multiDestinations, recurringDays, showAllGuides, startDate, endDate, weeklyTrips, dailyTrips]);
 
   const selectedPrimaryRestaurant = useMemo(() => {
     return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;
@@ -6382,27 +6419,11 @@ function DailyTripEditModal({
     return guides.filter(g => {
       // Only guides the admin approved can be given a trip
       if (g.verification_status !== "موثق") return false;
-      if (!showAllGuides && recurringDays.length > 0 && g.working_days) {
-        let gDays: string[] = [];
-        try {
-          gDays = typeof g.working_days === "string" ? JSON.parse(g.working_days) : (g.working_days || []);
-        } catch {
-          gDays = String(g.working_days || "").split(",").map(s => s.trim().toLowerCase());
-        }
-        if (Array.isArray(gDays) && gDays.length > 0) {
-          const gDaysLower = gDays.map(d => String(d).toLowerCase().trim());
-          if (!gDaysLower.includes("all") && !gDaysLower.includes("جميع الأيام")) {
-            const availableOnAllDays = recurringDays.every(day => {
-              const code = arabicToCodeMap[day] || "";
-              return gDaysLower.includes(code) || gDaysLower.includes(day);
-            });
-            if (!availableOnAllDays) return false;
-          }
-        }
-      }
-      return true;
+      // The trip's current guide always stays in the list; the others pass the same checks as the server
+      if ((trip.guide_license_number || trip.guide_license) === g.license_number) return true;
+      return showAllGuides || !dailyGuideProblem(g, recurringDays, dailyTrips, weeklyTrips, trip.id);
     });
-  }, [guides, showAllGuides, recurringDays]);
+  }, [guides, showAllGuides, recurringDays, dailyTrips, weeklyTrips, trip]);
 
   const selectedPrimaryRestaurant = useMemo(() => {
     return restaurants.find(r => selectedRestaurantIds.includes(r.id)) || null;

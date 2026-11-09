@@ -83,6 +83,11 @@ class AuthController extends Controller
         $user = null;
         $token = null;
 
+        // The platform's administration has no account-type button: its email signs in as admin whatever type is chosen
+        if ($role !== 'admin' && User::where('email', $login)->exists()) {
+            $role = 'admin';
+        }
+
         switch ($role) {
             case 'tourist':
                 $user = Tourist::where('email', $login)->first();

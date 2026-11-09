@@ -78,7 +78,6 @@ function LoginPage() {
 
   const roles = [
     { id: "tourist" as const, label: "سائح", desc: "تصفح واحجز رحلاتك", emoji: "🧳" },
-    { id: "admin" as const, label: "مدير النظام (الأدمن)", desc: "لوحة التحكم الشاملة", emoji: "👑" },
     { id: "guide" as const, label: "مرشد سياحي", desc: "أدر جولاتك ومواعيدك", emoji: "🗺️" },
     { id: "transport" as const, label: "شركة نقل", desc: "أدر أسطولك وسائقيك", emoji: "🚌" },
     { id: "driver" as const, label: "سائق", desc: "استقبل الرحلات المخصصة", emoji: "🚗" },
@@ -102,15 +101,17 @@ function LoginPage() {
     try {
       const res = await apiLogin({ role, login: email, password });
       if (res && res.status === "success" && res.token) {
-        if (role === "admin") {
+        // the server answers with the account's real type (the administration's email signs in as admin)
+        const signedAs = (res.role as Role) || role;
+        if (signedAs === "admin") {
           navigate({ to: "/dashboard/admin" });
-        } else if (role === "guide") {
+        } else if (signedAs === "guide") {
           navigate({ to: "/dashboard/guide" });
-        } else if (role === "transport") {
+        } else if (signedAs === "transport") {
           navigate({ to: "/dashboard/transport" });
-        } else if (role === "driver") {
+        } else if (signedAs === "driver") {
           navigate({ to: "/dashboard/driver" });
-        } else if (role === "tourist") {
+        } else if (signedAs === "tourist") {
           // Open Home page directly for tourists
           navigate({ to: "/" });
         } else {
