@@ -1,10 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../api_service.dart';
 import '../../core/format.dart';
 import '../../core/i18n.dart';
 import '../../core/theme.dart';
 import '../../models.dart';
 import '../../widgets/common.dart';
+import '../../widgets/delni_image.dart';
 import '../../widgets/states.dart';
 
 /// Weekday codes stored for a guide (guide_working_days), Saturday first as on Delni.
@@ -44,6 +48,10 @@ class _GuideProfileEditScreenState extends State<GuideProfileEditScreen> {
   late final Set<String> _days = widget.guide.workingDays.map((d) => d.toLowerCase()).toSet();
   late final Set<String> _placeIds = widget.guide.placeIds.toSet();
   late DateTime? _expiry = DateTime.tryParse(widget.licenseExpiry);
+
+  // A new profile photo, sent with the other fields when saved (the platform shows the same photo)
+  Uint8List? _avatarBytes;
+  String? _avatarDataUrl;
 
   List<Place>? _places;
   bool _placesFailed = false;
@@ -127,6 +135,7 @@ class _GuideProfileEditScreenState extends State<GuideProfileEditScreen> {
       'working_days': guideDayCodes.where(_days.contains).toList(),
       'place_ids': _placeIds.toList(),
       if (_expiry != null) 'license_expiry_date': isoDate(_expiry!),
+      if (_avatarDataUrl != null) 'avatar': _avatarDataUrl,
     });
     if (!mounted) return;
     setState(() => _saving = false);
@@ -138,6 +147,64 @@ class _GuideProfileEditScreenState extends State<GuideProfileEditScreen> {
     }
   }
 
+  Future<void> _pickAvatar() async {
+    try {
+      // Shrunk before upload like the sign-up form (at most 800 px)
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 80);
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _avatarBytes = bytes;
+        _avatarDataUrl = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        _error = null;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = context.tr('تعذر فتح الصور: يرجى التحقق من أذونات الهاتف', 'Could not open photos: check app permissions'));
+    }
+  }
+
+  Widget _avatar(BuildContext context) => Center(
+        child: Column(
+          children: [
+            Semantics(
+              button: true,
+              label: context.tr('تغيير الصورة الشخصية', 'Change profile photo'),
+              child: InkWell(
+                onTap: _pickAvatar,
+                customBorder: const CircleBorder(),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.muted, border: Border.all(color: Colors.white, width: 4), boxShadow: AppShadows.card),
+                      clipBehavior: Clip.antiAlias,
+                      child: _avatarBytes != null
+                          ? Image.memory(_avatarBytes!, fit: BoxFit.cover)
+                          : DelniImage(widget.guide.avatar.isEmpty ? null : widget.guide.avatar, fallbackIcon: Icons.person_rounded),
+                    ),
+                    PositionedDirectional(
+                      bottom: 2,
+                      end: 2,
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                        child: const Icon(Icons.photo_camera_rounded, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _avatarBytes != null ? context.tr('اضغط «حفظ التعديلات» لاعتماد الصورة', 'Tap “Save changes” to keep this photo') : context.tr('اضغط لتغيير الصورة الشخصية', 'Tap to change your profile photo'),
+              style: AppText.caption,
+            ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,6 +212,8 @@ class _GuideProfileEditScreenState extends State<GuideProfileEditScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Gap.page, Gap.sm, Gap.page, Gap.xxl),
         children: [
+          _avatar(context),
+          const SizedBox(height: Gap.lg),
           _section(context, Icons.lock_outline_rounded, context.tr('الهوية والترخيص', 'Identity & licence'),
               context.tr('بيانات معتمدة لا تتغير إلا عن طريق الإدارة', 'Verified details change only through the team')),
           AppTextField(

@@ -88,18 +88,8 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(Gap.page, 12, Gap.page, 0),
-                    child: Row(
-                      children: const [
-                        Expanded(
-                          child: Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: DelniMark(size: 46, framed: true),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        LanguagePill(light: true),
-                      ],
-                    ),
+                    // Only the language button on the photo; the full logo sits on the white sheet below
+                    child: const Align(alignment: AlignmentDirectional.centerEnd, child: LanguagePill(light: true)),
                   ),
                   const Spacer(),
                   Padding(
@@ -143,41 +133,54 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                     width: double.infinity,
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                      boxShadow: [BoxShadow(color: Color(0x330B1B2B), blurRadius: 30, offset: Offset(0, -8))],
                     ),
-                    padding: EdgeInsets.fromLTRB(Gap.page, 22, Gap.page, 12 + MediaQuery.of(context).padding.bottom),
+                    padding: EdgeInsets.fromLTRB(Gap.page, 12, Gap.page, 16 + MediaQuery.of(context).padding.bottom),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(context.tr('كيف تريد استخدام دلني؟', 'How will you use Delni?'), style: AppText.h2),
+                        Center(
+                          child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(4))),
+                        ),
                         const SizedBox(height: 14),
+                        Center(
+                          child: Semantics(
+                            label: context.tr('دلّني، دليلك لاكتشاف ليبيا', 'Delni, your guide to Libya'),
+                            image: true,
+                            child: Image.asset('assets/images/logo_full_clear.png', height: 76, fit: BoxFit.contain),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(context.tr('كيف تريد استخدام دلّني؟', 'How will you use Delni?'), style: AppText.h2, textAlign: TextAlign.center),
+                        const SizedBox(height: 4),
+                        Text(context.tr('اختر نوع حسابك للمتابعة', 'Choose your account type to continue'), style: AppText.bodyMuted, textAlign: TextAlign.center),
+                        const SizedBox(height: 18),
                         _RoleTile(
                           role: AuthRole.tourist,
                           subtitle: context.tr('احجز الرحلات وتابع تذاكرك', 'Book trips and follow your tickets'),
                           tone: Tone.primary,
                           onTap: () => _openLogin(AuthRole.tourist),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         _RoleTile(
                           role: AuthRole.guide,
                           subtitle: context.tr('رحلاتك المسندة وقوائم المسافرين', 'Your assigned trips and passengers'),
                           tone: Tone.orange,
                           onTap: () => _openLogin(AuthRole.guide),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         _RoleTile(
                           role: AuthRole.driver,
                           subtitle: context.tr('مركبتك ورحلاتك ومرحلة الرحلة', 'Your vehicle, trips and trip stage'),
                           tone: Tone.success,
                           onTap: () => _openLogin(AuthRole.driver),
                         ),
-                        const SizedBox(height: 6),
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: _enterAsGuest,
-                            icon: const Icon(Icons.explore_outlined, size: 19),
-                            label: Text(context.tr('تصفح التطبيق كزائر', 'Browse as a visitor')),
-                          ),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: _enterAsGuest,
+                          icon: const Icon(Icons.explore_outlined, size: 20),
+                          label: Text(context.tr('تصفح التطبيق كزائر', 'Browse as a visitor')),
                         ),
                       ],
                     ),
@@ -206,33 +209,43 @@ class _RoleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.background,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            children: [
-              IconBubble(icon: role.icon, tone: tone, size: 46),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(role.title(context), style: AppText.h3),
-                    Text(subtitle, style: AppText.caption),
-                  ],
+    final radius = BorderRadius.circular(AppRadius.md);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+        boxShadow: AppShadows.card,
+      ),
+      child: Material(
+        color: Colors.white,
+        borderRadius: radius,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                IconBubble(icon: role.icon, tone: tone, size: 48),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(role.title(context), style: AppText.h3),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: AppText.caption),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(context.isAr ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: AppColors.mutedText),
-            ],
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(color: AppColors.muted, shape: BoxShape.circle),
+                  child: Icon(context.isAr ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: AppColors.navy, size: 20),
+                ),
+              ],
+            ),
           ),
         ),
       ),
