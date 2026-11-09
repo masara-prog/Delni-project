@@ -903,8 +903,10 @@ function DepartureOffices() {
   }, []);
 
   const cities = [
-    { key: "tripoli" as const, name: isAr ? "طرابلس" : "Tripoli", region: isAr ? "المكتب الرئيسي · الغرب الليبي" : "Main office · West", q: "طرابلس", dot: "bg-[#003580]", tone: "from-[#003580] to-[#0D5C96]" },
-    { key: "benghazi" as const, name: isAr ? "بنغازي" : "Benghazi", region: isAr ? "مكتب الشرق الليبي" : "East office", q: "بنغازي", dot: "bg-[#D96B27]", tone: "from-[#D96B27] to-[#E8913F]" },
+    { key: "tripoli" as const, name: isAr ? "طرابلس" : "Tripoli", region: isAr ? "المكتب الرئيسي · الغرب الليبي" : "Main office · West", q: "طرابلس",
+      address: isAr ? "حي النوفليين، طرابلس" : "Al-Nofliyeen, Tripoli", map: "النوفليين، طرابلس، ليبيا", dot: "bg-[#003580]", tone: "from-[#003580] to-[#0D5C96]" },
+    { key: "benghazi" as const, name: isAr ? "بنغازي" : "Benghazi", region: isAr ? "مكتب الشرق الليبي" : "East office", q: "بنغازي",
+      address: isAr ? "حي الفويهات، بنغازي" : "Al-Fuwayhat, Benghazi", map: "الفويهات، بنغازي، ليبيا", dot: "bg-[#D96B27]", tone: "from-[#D96B27] to-[#E8913F]" },
   ];
   const steps = [
     { icon: "🎫", title: isAr ? "احجز من المنصة" : "Book online", text: isAr ? "اختر رحلتك وعدد المقاعد واحصل على تذكرتك فوراً" : "Pick a trip and seats, get your ticket at once" },
@@ -959,22 +961,32 @@ function DepartureOffices() {
                 const n = counts?.[c.key];
                 return (
                   <Reveal key={c.key} delay={i * 120}>
-                    <a
-                      href={`/trips?q=${encodeURIComponent(c.q)}`}
-                      className="group block h-full p-5 rounded-3xl bg-white border border-border shadow-sm hover:shadow-card hover:-translate-y-1 transition duration-300"
-                    >
+                    {/* The card opens the office on Google Maps; the small link under it opens the city's trips */}
+                    <div className="group relative h-full p-5 rounded-3xl bg-white border border-border shadow-sm hover:shadow-card hover:-translate-y-1 transition duration-300">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.map)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={isAr ? `موقع مكتب ${c.name} على خرائط Google` : `${c.name} office on Google Maps`}
+                        className="absolute inset-0 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#003580]"
+                      />
                       <div className={`w-12 h-12 rounded-2xl grid place-items-center text-white bg-gradient-to-br ${c.tone} shadow-md motion-safe:group-hover:scale-110 transition`}>
                         <Icon.Pin className="w-6 h-6" />
                       </div>
                       <h3 className="mt-4 text-xl font-black text-foreground">{c.name}</h3>
                       <div className="text-xs font-bold text-muted-foreground mt-0.5">{c.region}</div>
-                      <div className="mt-4 flex items-center justify-between">
-                        <span className="text-sm font-black text-[#003580]">
-                          {counts === null ? (isAr ? "جارٍ التحميل…" : "Loading…") : n ? (isAr ? `${n} رحلة تنطلق من هنا` : `${n} trips depart here`) : (isAr ? "رحلات جديدة قريباً" : "New trips soon")}
-                        </span>
-                        <span aria-hidden className="w-8 h-8 rounded-full bg-slate-100 grid place-items-center text-slate-700 group-hover:bg-[#003580] group-hover:text-white transition">{isAr ? "←" : "→"}</span>
+                      <div className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                        <span aria-hidden>📍</span>{c.address}
                       </div>
-                    </a>
+                      <div className="mt-4 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black group-hover:bg-[#003580] group-hover:text-white transition">
+                          <span aria-hidden>🗺️</span>{isAr ? "الموقع على الخريطة" : "View on map"}
+                        </span>
+                        <a href={`/trips?q=${encodeURIComponent(c.q)}`} className="relative z-10 text-xs font-black text-slate-500 hover:text-[#D96B27] transition">
+                          {counts === null ? (isAr ? "…" : "…") : n ? (isAr ? `${n} رحلة ←` : `${n} trips →`) : (isAr ? "رحلات قريباً" : "Trips soon")}
+                        </a>
+                      </div>
+                    </div>
                   </Reveal>
                 );
               })}
