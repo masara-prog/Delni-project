@@ -136,47 +136,44 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                       borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
                       boxShadow: [BoxShadow(color: Color(0x330B1B2B), blurRadius: 30, offset: Offset(0, -8))],
                     ),
-                    padding: EdgeInsets.fromLTRB(Gap.page, 12, Gap.page, 16 + MediaQuery.of(context).padding.bottom),
+                    padding: EdgeInsets.fromLTRB(Gap.page, 18, Gap.page, 12 + MediaQuery.of(context).padding.bottom),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Center(
-                          child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(4))),
+                        // Compact header (title + small full logo) so the photos above keep most of the screen
+                        Row(
+                          children: [
+                            Expanded(child: Text(context.tr('كيف تريد استخدام دلّني؟', 'How will you use Delni?'), style: AppText.h2)),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: context.tr('دلّني، دليلك لاكتشاف ليبيا', 'Delni, your guide to Libya'),
+                              image: true,
+                              child: Image.asset('assets/images/logo_full_clear.png', height: 46, fit: BoxFit.contain),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        Center(
-                          child: Semantics(
-                            label: context.tr('دلّني، دليلك لاكتشاف ليبيا', 'Delni, your guide to Libya'),
-                            image: true,
-                            child: Image.asset('assets/images/logo_full_clear.png', height: 76, fit: BoxFit.contain),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(context.tr('كيف تريد استخدام دلّني؟', 'How will you use Delni?'), style: AppText.h2, textAlign: TextAlign.center),
-                        const SizedBox(height: 4),
-                        Text(context.tr('اختر نوع حسابك للمتابعة', 'Choose your account type to continue'), style: AppText.bodyMuted, textAlign: TextAlign.center),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 10),
                         _RoleTile(
                           role: AuthRole.tourist,
                           subtitle: context.tr('احجز الرحلات وتابع تذاكرك', 'Book trips and follow your tickets'),
                           tone: Tone.primary,
                           onTap: () => _openLogin(AuthRole.tourist),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         _RoleTile(
                           role: AuthRole.guide,
                           subtitle: context.tr('رحلاتك المسندة وقوائم المسافرين', 'Your assigned trips and passengers'),
                           tone: Tone.orange,
                           onTap: () => _openLogin(AuthRole.guide),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         _RoleTile(
                           role: AuthRole.driver,
                           subtitle: context.tr('مركبتك ورحلاتك ومرحلة الرحلة', 'Your vehicle, trips and trip stage'),
                           tone: Tone.success,
                           onTap: () => _openLogin(AuthRole.driver),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         OutlinedButton.icon(
                           onPressed: _enterAsGuest,
                           icon: const Icon(Icons.explore_outlined, size: 20),
@@ -223,10 +220,10 @@ class _RoleTile extends StatelessWidget {
           borderRadius: radius,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(
               children: [
-                IconBubble(icon: role.icon, tone: tone, size: 48),
+                IconBubble(icon: role.icon, tone: tone, size: 44),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
