@@ -891,6 +891,8 @@ function DepartureOffices() {
   const isAr = language === "ar";
   // Trips currently open, counted by departure city (read from DelniDB; the same rule as the trips page)
   const [counts, setCounts] = useState<{ tripoli: number; benghazi: number } | null>(null);
+  // The city card under the pointer (or focused) lights its marker on the photo
+  const [active, setActive] = useState<"tripoli" | "benghazi" | null>(null);
   useEffect(() => {
     let alive = true;
     Promise.all([laravelRequest<any[]>("GET", "/trips/daily"), laravelRequest<any[]>("GET", "/trips/weekly")]).then(([d, w]) => {
@@ -903,109 +905,122 @@ function DepartureOffices() {
   }, []);
 
   const cities = [
-    { key: "tripoli" as const, name: isAr ? "طرابلس" : "Tripoli", region: isAr ? "المكتب الرئيسي · الغرب الليبي" : "Main office · West", q: "طرابلس",
-      address: isAr ? "حي النوفليين، طرابلس" : "Al-Nofliyeen, Tripoli", map: "النوفليين، طرابلس، ليبيا", dot: "bg-[#003580]", tone: "from-[#003580] to-[#0D5C96]" },
-    { key: "benghazi" as const, name: isAr ? "بنغازي" : "Benghazi", region: isAr ? "مكتب الشرق الليبي" : "East office", q: "بنغازي",
-      address: isAr ? "حي الفويهات، بنغازي" : "Al-Fuwayhat, Benghazi", map: "الفويهات، بنغازي، ليبيا", dot: "bg-[#D96B27]", tone: "from-[#D96B27] to-[#E8913F]" },
+    { key: "tripoli" as const, name: isAr ? "طرابلس" : "Tripoli", address: isAr ? "حي النوفليين" : "Al-Nofliyeen", map: "النوفليين، طرابلس، ليبيا", q: "طرابلس", dot: "bg-[#003580]", tone: "from-[#003580] to-[#0D5C96]" },
+    { key: "benghazi" as const, name: isAr ? "بنغازي" : "Benghazi", address: isAr ? "حي الفويهات" : "Al-Fuwayhat", map: "الفويهات، بنغازي، ليبيا", q: "بنغازي", dot: "bg-[#D96B27]", tone: "from-[#D96B27] to-[#E8913F]" },
   ];
-  const steps = [
-    { icon: "🎫", title: isAr ? "احجز من المنصة" : "Book online", text: isAr ? "اختر رحلتك وعدد المقاعد واحصل على تذكرتك فوراً" : "Pick a trip and seats, get your ticket at once" },
-    { icon: "💵", title: isAr ? "ادفع في المكتب" : "Pay at the office", text: isAr ? "سدّد قيمة الحجز نقداً في المكتب قبل موعد الرحلة" : "Pay in cash at the office before the trip" },
-    { icon: "🚌", title: isAr ? "انطلق من المكتب" : "Depart from the office", text: isAr ? "يوم الرحلة يُمسح رمز تذكرتك وتنطلق مع المرشد" : "On the day your ticket is scanned and you set off" },
-  ];
+  const steps = isAr ? ["احجز من المنصة", "ادفع في المكتب", "انطلق مع المرشد"] : ["Book online", "Pay at the office", "Set off with your guide"];
+  const ease = { transitionTimingFunction: "var(--ease-out)" };
 
   return (
     <section className="relative py-20 md:py-28 bg-gradient-sand overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute -top-24 -start-24 w-80 h-80 rounded-full bg-[#003580]/10 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-24 -end-24 w-80 h-80 rounded-full bg-[#D96B27]/10 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -top-32 -start-32 w-96 h-96 rounded-full bg-[#003580]/[0.07] blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-32 -end-32 w-96 h-96 rounded-full bg-[#D96B27]/[0.08] blur-3xl" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <Reveal>
             <div className="relative rounded-[2rem] overflow-hidden shadow-card group">
-              <img src={transportHero} alt={isAr ? "مركبات دلني عند نقطة الانطلاق" : "Delni vehicles at the departure point"} className="w-full aspect-[4/3] object-cover transition duration-[1500ms] ease-out motion-safe:group-hover:scale-105" loading="lazy" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/80 via-[#0F172A]/10 to-transparent" />
-              <div className="absolute top-6 start-6 flex flex-col gap-2">
-                {cities.map((c) => (
-                  <div key={c.key} className="self-start flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur shadow-md text-xs font-black text-slate-800">
-                    <span className="relative flex w-2.5 h-2.5">
-                      <span className={`motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full ${c.dot} opacity-60`} />
-                      <span className={`relative inline-flex rounded-full w-2.5 h-2.5 ${c.dot}`} />
-                    </span>
-                    {c.name}
-                  </div>
-                ))}
+              <img
+                src={transportHero}
+                alt={isAr ? "مركبات دلني عند نقطة الانطلاق" : "Delni vehicles at the departure point"}
+                className="w-full aspect-[4/3] object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                style={ease}
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/75 via-transparent to-transparent" />
+              <div className="absolute top-5 start-5 flex flex-col gap-2">
+                {cities.map((c) => {
+                  const on = active === c.key;
+                  return (
+                    <div
+                      key={c.key}
+                      className={`self-start flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur text-xs font-black shadow-md transition-[transform,background-color,color] duration-200 ${on ? "bg-white text-slate-900 scale-105" : "bg-white/80 text-slate-700"}`}
+                      style={ease}
+                    >
+                      <span className="relative flex w-2.5 h-2.5">
+                        {on && <span className={`motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full ${c.dot} opacity-60`} />}
+                        <span className={`relative inline-flex rounded-full w-2.5 h-2.5 ${c.dot}`} />
+                      </span>
+                      {c.name}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="absolute bottom-6 start-6 end-6 text-white">
-                <div className="text-xs font-bold opacity-80">{isAr ? "من مكاتبنا الرسمية" : "From our official offices"}</div>
-                <div className="text-2xl md:text-3xl font-black">{isAr ? "نقاط الانطلاق" : "Departure points"}</div>
-              </div>
+              <div className="absolute bottom-5 start-6 text-white text-2xl md:text-3xl font-black">{isAr ? "نقاط الانطلاق" : "Departure points"}</div>
             </div>
           </Reveal>
 
           <div>
             <Reveal>
-              <span className="inline-flex px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black">{isAr ? "مكتبان · مدينتان" : "Two offices · two cities"}</span>
-              <h2 className="mt-3 text-4xl md:text-5xl font-black text-foreground leading-tight">
+              <h2 className="text-4xl md:text-5xl font-black text-foreground leading-tight">
                 {isAr ? "انطلق من أقرب " : "Depart from your nearest "}
                 <span className="text-gradient-sea">{isAr ? "مكتب لك" : "office"}</span>
               </h2>
-              <p className="mt-3 text-muted-foreground text-lg leading-relaxed">
-                {isAr
-                  ? "جميع الرحلات اليومية والأسبوعية والخاصة تنطلق من مكاتب الشركة الرسمية في طرابلس وبنغازي — لضمان أعلى مستويات الأمان والتنظيم."
-                  : "All daily, weekly and private trips depart from our official offices in Tripoli and Benghazi, for the highest safety and organisation."}
+              <p className="mt-3 text-muted-foreground text-lg">
+                {isAr ? "كل رحلاتنا تنطلق من مكتبينا في طرابلس وبنغازي." : "Every trip departs from our offices in Tripoli and Benghazi."}
               </p>
             </Reveal>
 
-            <div className="mt-7 grid sm:grid-cols-2 gap-4">
+            <div className="mt-8 grid sm:grid-cols-2 gap-4">
               {cities.map((c, i) => {
-                const n = counts?.[c.key];
+                const n = counts?.[c.key] || 0;
                 return (
-                  <Reveal key={c.key} delay={i * 120}>
-                    {/* The card opens the office on Google Maps; the small link under it opens the city's trips */}
-                    <div className="group relative h-full p-5 rounded-3xl bg-white border border-border shadow-sm hover:shadow-card hover:-translate-y-1 transition duration-300">
+                  <Reveal key={c.key} delay={i * 60}>
+                    {/* The card opens the office on Google Maps; the trips link sits above it */}
+                    <div
+                      onMouseEnter={() => setActive(c.key)}
+                      onMouseLeave={() => setActive(null)}
+                      onFocus={() => setActive(c.key)}
+                      onBlur={() => setActive(null)}
+                      className="group relative p-5 rounded-3xl bg-white border border-border shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-card active:scale-[0.98]"
+                      style={ease}
+                    >
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.map)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={isAr ? `موقع مكتب ${c.name} على خرائط Google` : `${c.name} office on Google Maps`}
-                        className="absolute inset-0 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#003580]"
+                        className="absolute inset-0 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#003580]"
                       />
-                      <div className={`w-12 h-12 rounded-2xl grid place-items-center text-white bg-gradient-to-br ${c.tone} shadow-md motion-safe:group-hover:scale-110 transition`}>
-                        <Icon.Pin className="w-6 h-6" />
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 shrink-0 rounded-2xl grid place-items-center text-white bg-gradient-to-br ${c.tone} shadow-md transition-transform duration-200 group-hover:scale-110`} style={ease}>
+                          <Icon.Pin className="w-6 h-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-xl font-black text-foreground">{c.name}</h3>
+                          <div className="text-sm font-bold text-muted-foreground">{c.address}</div>
+                        </div>
                       </div>
-                      <h3 className="mt-4 text-xl font-black text-foreground">{c.name}</h3>
-                      <div className="text-xs font-bold text-muted-foreground mt-0.5">{c.region}</div>
-                      <div className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-slate-700">
-                        <span aria-hidden>📍</span>{c.address}
-                      </div>
-                      <div className="mt-4 flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black group-hover:bg-[#003580] group-hover:text-white transition">
-                          <span aria-hidden>🗺️</span>{isAr ? "الموقع على الخريطة" : "View on map"}
+                      <div className="mt-5 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-sm font-black text-[#003580]">
+                          {isAr ? "الموقع على الخريطة" : "View on map"}
+                          <span aria-hidden className="transition-transform duration-200 group-hover:-translate-x-1 rtl:group-hover:-translate-x-1 ltr:group-hover:translate-x-1" style={ease}>{isAr ? "←" : "→"}</span>
                         </span>
-                        <a href={`/trips?q=${encodeURIComponent(c.q)}`} className="relative z-10 text-xs font-black text-slate-500 hover:text-[#D96B27] transition">
-                          {counts === null ? (isAr ? "…" : "…") : n ? (isAr ? `${n} رحلة ←` : `${n} trips →`) : (isAr ? "رحلات قريباً" : "Trips soon")}
-                        </a>
+                        {n > 0 && (
+                          <a href={`/trips?q=${encodeURIComponent(c.q)}`} className="relative z-10 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-black text-slate-600 hover:bg-[#D96B27] hover:text-white transition-colors duration-200">
+                            {isAr ? `${n} رحلة` : `${n} trips`}
+                          </a>
+                        )}
                       </div>
                     </div>
                   </Reveal>
                 );
               })}
             </div>
-          </div>
-        </div>
 
-        <div className="mt-14 grid md:grid-cols-3 gap-6 relative">
-          <div aria-hidden className="hidden md:block absolute top-9 start-[16%] end-[16%] h-0.5 bg-gradient-to-l from-[#003580]/0 via-[#003580]/25 to-[#003580]/0" />
-          {steps.map((st, i) => (
-            <Reveal key={st.title} delay={i * 120}>
-              <div className="relative text-center px-4">
-                <div className="mx-auto w-[72px] h-[72px] rounded-full bg-white shadow-card grid place-items-center text-3xl ring-8 ring-[#F8F5EF]">{st.icon}</div>
-                <div className="mt-3 text-[11px] font-black text-[#D96B27]">{isAr ? `الخطوة ${i + 1}` : `Step ${i + 1}`}</div>
-                <h4 className="mt-1 font-black text-foreground">{st.title}</h4>
-                <p className="mt-1 text-sm text-muted-foreground">{st.text}</p>
-              </div>
+            <Reveal delay={120}>
+              <ol className="mt-6 flex flex-wrap items-center gap-2 text-sm font-black text-slate-700">
+                {steps.map((st, k) => (
+                  <li key={st} className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 border border-border">
+                      <span className="w-5 h-5 rounded-full bg-[#003580] text-white text-[11px] grid place-items-center">{k + 1}</span>
+                      {st}
+                    </span>
+                    {k < steps.length - 1 && <span aria-hidden className="text-slate-400">{isAr ? "←" : "→"}</span>}
+                  </li>
+                ))}
+              </ol>
             </Reveal>
-          ))}
+          </div>
         </div>
       </div>
     </section>
