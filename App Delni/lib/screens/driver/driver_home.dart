@@ -102,7 +102,7 @@ class _DriverHomeState extends State<DriverHome> {
               : const SafeArea(child: SkeletonList(count: 3, imageHeight: 80)))
           : IndexedStack(index: _tab, children: [_overview(context, d), _trips(context, d), _account(context, d)]),
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
+        decoration: const BoxDecoration(color: Colors.white, boxShadow: AppShadows.navBar, border: Border(top: BorderSide(color: AppColors.border)),),
         child: NavigationBar(
           selectedIndex: _tab,
           onDestinationSelected: (i) => setState(() => _tab = i),

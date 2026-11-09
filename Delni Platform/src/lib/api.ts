@@ -102,7 +102,7 @@ export interface GuideRecord {
   working_days?: string;
   operating_regions?: string;
   price_per_day?: number;
-  verification_status: "قيد المراجعة" | "موثق" | "مرفوض";
+  verification_status: "قيد المراجعة" | "موثق" | "مرفوض" | "موقوف";
   assigned_trips?: any[];
   registered_at?: string;
 }
@@ -565,7 +565,7 @@ export function saveAllGuides(guides: GuideRecord[]) {
   }
 }
 
-export function updateGuideVerification(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة"): boolean {
+export function updateGuideVerification(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة" | "موقوف"): boolean {
   const guides = getAllGuides();
   const idx = guides.findIndex((g) => g.license_number === licenseNumber);
   if (idx !== -1) {
@@ -968,7 +968,7 @@ export async function apiGetAdminDashboard(): Promise<any> {
   };
 }
 
-export async function apiVerifyGuide(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة") {
+export async function apiVerifyGuide(licenseNumber: string, status: "موثق" | "مرفوض" | "قيد المراجعة" | "موقوف") {
   const saved = await laravelRequest("POST", `/guides/${encodeURIComponent(licenseNumber)}/verify`, {
     verification_status: status,
   });

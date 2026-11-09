@@ -40,7 +40,7 @@ class _TouristShellState extends State<TouristShell> {
           ),
           bottomNavigationBar: DecoratedBox(
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border)),
+              color: Colors.white, boxShadow: AppShadows.navBar, border: Border(top: BorderSide(color: AppColors.border)),
             ),
             child: NavigationBar(
               selectedIndex: tab,

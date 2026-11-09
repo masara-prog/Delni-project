@@ -158,7 +158,7 @@ class _GuideHomeState extends State<GuideHome> {
     return Scaffold(
       body: body,
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
+        decoration: const BoxDecoration(color: Colors.white, boxShadow: AppShadows.navBar, border: Border(top: BorderSide(color: AppColors.border)),),
         child: NavigationBar(
           selectedIndex: _tabIndex,
           onDestinationSelected: (i) => setState(() => _tabIndex = i),
@@ -465,7 +465,7 @@ class _GuideHero extends StatelessWidget {
                                       maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
                                 ),
                                 const SizedBox(width: 4),
-                                if (g.isVerified) const Icon(Icons.verified_rounded, color: Color(0xFF93C5FD), size: 19),
+                                if (g.isVerified) const Icon(Icons.verified_rounded, color: AppColors.onDarkSoft, size: 19),
                               ],
                             ),
                             Text.rich(
@@ -489,7 +489,7 @@ class _GuideHero extends StatelessWidget {
                     children: [
                       if (g.isVerified) _HeroChip(icon: Icons.verified_user_rounded, text: context.tr('موثق', 'Verified'), color: const Color(0xFF6EE7B7)),
                       if (g.experienceYears > 0) _HeroChip(icon: Icons.workspace_premium_rounded, text: context.tr('${g.experienceYears} سنوات خبرة', '${g.experienceYears} years'), color: const Color(0xFFFDE68A)),
-                      if (langs.isNotEmpty) _HeroChip(icon: Icons.translate_rounded, text: langs.join('، '), color: const Color(0xFFBFDBFE)),
+                      if (langs.isNotEmpty) _HeroChip(icon: Icons.translate_rounded, text: langs.join('، '), color: AppColors.onDarkSoft),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -897,7 +897,7 @@ class GuideTripScreen extends StatelessWidget {
                           children: [
                             if (_guideTripWhen(context, t).isNotEmpty) _HeroChip(icon: Icons.event_rounded, text: _guideTripWhen(context, t), color: const Color(0xFFFDE68A)),
                             if (t.kind == 'private' && t.companions > 0)
-                              _HeroChip(icon: Icons.groups_rounded, text: context.tr('${t.companions} أشخاص', '${t.companions} people'), color: const Color(0xFFBFDBFE)),
+                              _HeroChip(icon: Icons.groups_rounded, text: context.tr('${t.companions} أشخاص', '${t.companions} people'), color: AppColors.onDarkSoft),
                             if (t.departureCity.isNotEmpty) _HeroChip(icon: Icons.place_rounded, text: t.departureCity, color: const Color(0xFF6EE7B7)),
                           ],
                         ),
