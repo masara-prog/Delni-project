@@ -463,7 +463,7 @@ Future<void> _showTicket(BuildContext context, Booking b, VoidCallback onChanged
                               Text(b.tripTitle, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.35)),
                               const SizedBox(height: 2),
                               Text(ctx.tr('دلّني · السياحة الليبية بأبهى صورها', 'Delni · Libyan tourism at its best'),
-                                  style: const TextStyle(color: Color(0xFFBFDBFE), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  style: const TextStyle(color: AppColors.onDarkSoft, fontSize: 11, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -653,7 +653,7 @@ class _BandChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(30)),
-        child: Text(text, style: const TextStyle(color: Color(0xFFDBEAFE), fontSize: 11, fontWeight: FontWeight.w700)),
+        child: Text(text, style: const TextStyle(color: AppColors.onDarkSoft, fontSize: 11, fontWeight: FontWeight.w700)),
       );
 }
 

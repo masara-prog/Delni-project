@@ -109,7 +109,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                       children: [
                         Text(
                           context.tr('اكتشف ليبيا\nكما لم تعرفها من قبل', 'Discover Libya\nlike never before'),
-                          style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, height: 1.3),
+                          style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, height: 1.3),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -129,7 +129,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                               width: i == _index ? 22 : 7,
                               height: 7,
                               decoration: BoxDecoration(
-                                color: i == _index ? AppColors.gold : Colors.white38,
+                                color: i == _index ? AppColors.desertSand : Colors.white38,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
