@@ -4903,6 +4903,7 @@ function TripVehicleAndDriverSelector({
   endDate,
   existingTrips,
   currentTripId,
+  tripDays,
 }: {
   vehicles: Vehicle[];
   drivers: Driver[];
@@ -4918,66 +4919,63 @@ function TripVehicleAndDriverSelector({
     weeklyTrips?: any[];
   };
   currentTripId?: string;
+  /** A daily trip's weekdays (the vehicle is then checked against those days, not dates) */
+  tripDays?: string[];
 }) {
-  // Check vehicle status and conflict with existing trips in the trip dates
+  // The same checks as the server: the vehicle's state, its company (suspended, contract ending before the trip),
+  // and every other trip on the same days. A daily trip occupies its weekdays, a weekly trip its dates.
   const vehicleAvailability = useMemo(() => {
-    const map = new Map<string, { isAvailable: boolean; reason?: string }>();
-
-    const targetStart = startDate ? new Date(startDate) : null;
-    const targetEnd = endDate ? new Date(endDate) : (targetStart || null);
+    const map = new Map<string, { isAvailable: boolean; reason?: string; warning?: string }>();
+    const today = new Date().toLocaleDateString("en-CA");
+    const daily = Array.isArray(tripDays);
+    const days = daily ? dayCodesOf(tripDays) : startDate && endDate ? weekdayCodesBetween(startDate, endDate) : [];
+    const lastDay = !daily && endDate && endDate > today ? endDate : today;
+    const live = (t: any) => t.is_active !== false && t.guide_approval_status !== "اعتذر المرشد";
+    const isCurrent = (t: any) => !!currentTripId && [t.daily_trip_id, t.weekly_trip_id, t.id].includes(currentTripId);
 
     vehicles.forEach((v) => {
-      // 1. Maintenance / Broken status check
-      if (v.status === "صيانة" || v.vehicle_status === "صيانة" || (v as any).status === "معطلة") {
-        map.set(v.plate_number, { isAvailable: false, reason: "المركبة في الصيانة الفنية حالياً" });
-        return;
-      }
+      const status = String(v.vehicle_status || v.status || "");
+      const no = (reason: string) => map.set(v.plate_number, { isAvailable: false, reason });
+      if (["صيانة", "خارج الخدمة", "معطلة"].includes(status)) return no(`حالتها «${status}»`);
+      if ((v as any).company_status === "موقوفة") return no(`شركة النقل (${v.company_name}) موقوفة`);
+      const contractEnd = (v as any).company_contract_end as string | undefined;
+      if (contractEnd && contractEnd < lastDay) return no(`عقد الشركة ينتهي ${contractEnd} قبل انتهاء الرحلة`);
 
-      // 2. Check weekly trips overlap
-      if (existingTrips?.weeklyTrips && targetStart && !isNaN(targetStart.getTime())) {
-        const conflict = existingTrips.weeklyTrips.find((wt: any) => {
-          if (currentTripId && (wt.weekly_trip_id === currentTripId || wt.id === currentTripId)) return false;
-          const assigned = wt.vehicle_plate === v.plate_number || (Array.isArray(wt.vehicle_plates) && wt.vehicle_plates.includes(v.plate_number));
-          if (!assigned) return false;
-          if (!wt.start_date) return false;
-          const wtStart = new Date(wt.start_date);
-          const wtEnd = wt.end_date ? new Date(wt.end_date) : wtStart;
-          if (isNaN(wtStart.getTime()) || isNaN(wtEnd.getTime())) return false;
-          const s = targetStart.getTime();
-          const e = (targetEnd || targetStart)!.getTime();
-          return !(wtEnd.getTime() < s || wtStart.getTime() > e);
-        });
+      // weekly trips: same dates (weekly trip being made) or same weekdays (daily trip being made)
+      const weekly = (existingTrips?.weeklyTrips || []).find((wt: any) => {
+        if (isCurrent(wt) || !live(wt) || wt.vehicle_plate !== v.plate_number || !wt.start_date || !wt.end_date) return false;
+        const ws = String(wt.start_date).slice(0, 10);
+        const we = String(wt.end_date).slice(0, 10);
+        if (we < today) return false;
+        if (daily) return weekdayCodesBetween(ws, we).some((d) => days.includes(d));
+        return !!startDate && !(we < startDate.slice(0, 10) || ws > (endDate || startDate).slice(0, 10));
+      });
+      if (weekly) return no(`مسندة لرحلة أسبوعية (${weekly.trip_title || weekly.title}) ${String(weekly.start_date).slice(0, 10)} → ${String(weekly.end_date).slice(0, 10)}`);
 
-        if (conflict) {
-          map.set(v.plate_number, {
-            isAvailable: false,
-            reason: `محجوزة في رحلة أسبوعية (${conflict.trip_title || conflict.title}) من ${conflict.start_date} إلى ${conflict.end_date || conflict.start_date}`,
-          });
-          return;
+      // daily trips: any shared weekday
+      if (days.length > 0) {
+        const busy = (existingTrips?.dailyTrips || []).find((dt: any) =>
+          !isCurrent(dt) && live(dt) && dt.vehicle_plate === v.plate_number &&
+          (dayCodesOf(dt.recurring_days).length === 0 || dayCodesOf(dt.recurring_days).some((d) => days.includes(d))));
+        if (busy) {
+          const shared = dayCodesOf(busy.recurring_days).filter((d) => days.includes(d)).map((d) => codeToArabicMap[d] || d);
+          return no(`مسندة لرحلة يومية (${busy.trip_title || busy.title})${shared.length ? " يوم " + shared.join(" و") : ""}`);
         }
       }
 
-      // 3. Check daily trips overlap
-      if (existingTrips?.dailyTrips && startDate) {
-        const conflict = existingTrips.dailyTrips.find((dt: any) => {
-          if (currentTripId && (dt.daily_trip_id === currentTripId || dt.id === currentTripId)) return false;
-          if (dt.vehicle_plate !== v.plate_number) return false;
-          return dt.date === startDate || (dt.days_of_week && dt.days_of_week.includes(startDate));
-        });
-        if (conflict) {
-          map.set(v.plate_number, {
-            isAvailable: false,
-            reason: `محجوزة في رحلة يومية (${conflict.trip_title || conflict.title})`,
-          });
-          return;
-        }
-      }
-
-      map.set(v.plate_number, { isAvailable: true });
+      // the driver only warns (the server lets the admin go on)
+      const d = drivers.find((x) => x.assigned_vehicle_plate === v.plate_number);
+      const licence = (d as any)?.license_date_valid ? String((d as any).license_date_valid).slice(0, 10) : "";
+      const warning = !d ? "لا يوجد سائق مخصص لها بعد"
+        : d.account_status === "موقوف" ? `حساب السائق (${d.full_name}) موقوف`
+        : d.operational_status === "إجازة" ? `السائق (${d.full_name}) في إجازة`
+        : licence && licence < lastDay ? `رخصة السائق تنتهي ${licence}`
+        : undefined;
+      map.set(v.plate_number, { isAvailable: true, warning });
     });
 
     return map;
-  }, [vehicles, existingTrips, startDate, endDate, currentTripId]);
+  }, [vehicles, drivers, existingTrips, startDate, endDate, currentTripId, tripDays]);
 
   const matchingVehicles = useMemo(() => {
     return vehicles.filter((v) => {
@@ -5163,6 +5161,11 @@ function TripVehicleAndDriverSelector({
                         </span>
                       )}
                     </div>
+                    {vehicleAvailability.get(v.plate_number)?.warning && (
+                      <div className="mt-1 text-[9px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        ⚠️ {vehicleAvailability.get(v.plate_number)?.warning}
+                      </div>
+                    )}
                     {isSelected && (
                       <div className="mt-1 text-[9px] text-emerald-800 font-bold bg-emerald-100/60 px-2 py-0.5 rounded">
                         🔒 تصبح غير متاحة طوال فترة الرحلة لضمان التفرغ الكامل.
@@ -5175,7 +5178,7 @@ function TripVehicleAndDriverSelector({
           </div>
         ) : (
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs text-center font-bold">
-            ⚠️ لا توجد مركبات شاغرة ومتاحة حالياً بسعة {busCapacity} راكب في هذا التاريخ.
+            ⚠️ لا توجد مركبات شاغرة بسعة {busCapacity} راكب في أيام هذه الرحلة. يمكنك عرض المركبات المشغولة لمعرفة السبب.
           </div>
         )}
 
@@ -6172,6 +6175,7 @@ function CreateTripModal({
           startDate={startDate}
           endDate={endDate}
           existingTrips={{ dailyTrips, weeklyTrips }}
+          tripDays={isDaily ? recurringDays : undefined}
         />
 
         {/* 4. Multi-Select Restaurants & Cafes Filtered by Landmark / Destination */}
@@ -6603,6 +6607,7 @@ function DailyTripEditModal({
           departureCity={departureCity}
           existingTrips={{ dailyTrips, weeklyTrips }}
           currentTripId={trip.daily_trip_id || trip.id}
+          tripDays={recurringDays}
         />
 
         {/* Multi-Select Restaurants & Cafes Filtered by Landmark / Destination */}

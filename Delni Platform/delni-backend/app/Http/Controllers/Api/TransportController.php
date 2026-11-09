@@ -239,7 +239,8 @@ class TransportController extends Controller
     {
         $query = Vehicle::query()
             ->leftJoin('transportation_companies as c', 'vehicles.contract_number', '=', 'c.contract_number')
-            ->select('vehicles.*', 'c.company_name', 'c.city as company_city', 'c.city as city')
+            ->select('vehicles.*', 'c.company_name', 'c.city as company_city', 'c.city as city',
+                'c.verification_status as company_status', DB::raw('CONVERT(VARCHAR(10), c.contract_end_date, 23) as company_contract_end'))
             ->orderBy('vehicles.plate_number');
         if ($request->filled('contract_number')) {
             $query->where('vehicles.contract_number', $request->input('contract_number'));

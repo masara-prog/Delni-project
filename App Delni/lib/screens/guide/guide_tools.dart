@@ -271,6 +271,24 @@ class _GuideManifestScreenState extends State<GuideManifestScreen> {
         byDate.putIfAbsent(d, () => {}).putIfAbsent(t, () => []).add(p);
       }
     }
+    // Coming: a button for every day left in this month on which one of the guide's trips runs (booked or not yet)
+    if (!_past) {
+      final now = DateTime.now();
+      final last = DateTime(now.year, now.month + 1, 0);
+      final shown = widget.trips.where((t) => t.kind != 'private' && t.approvalStatus != GuideTrip.declined).toList();
+      for (var d = DateTime(now.year, now.month, now.day); !d.isAfter(last); d = d.add(const Duration(days: 1))) {
+        final iso = isoDate(d);
+        for (final t in shown.where((t) => guideTripRunsOn(t, d))) {
+          final group = byDate.putIfAbsent(iso, () => {});
+          if (t.kind == 'weekly') {
+            // a weekly trip's tourists travel every day of it
+            group[t] = t.passengers.where((p) => !p.isCancelled).toList();
+          } else {
+            group.putIfAbsent(t, () => []);
+          }
+        }
+      }
+    }
     final dates = byDate.keys.toList()..sort((a, b) => _past ? b.compareTo(a) : a.compareTo(b));
     final chosen = (_date != null && byDate.containsKey(_date)) ? _date! : (dates.isEmpty ? null : dates.first);
 
@@ -332,6 +350,14 @@ class _GuideManifestScreenState extends State<GuideManifestScreen> {
                 attendedSeats: entry.value.where((p) => p.attended).fold<int>(0, (s, p) => s + p.seats),
                 onOpen: () => widget.onOpen(entry.key),
               ),
+              if (entry.value.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    context.tr('لا توجد حجوزات في هذا الموعد بعد.', 'No bookings on this date yet.'),
+                    style: AppText.caption,
+                  ),
+                ),
               for (final p in entry.value) _PassengerCard(p: p),
               const SizedBox(height: Gap.lg),
             ],
