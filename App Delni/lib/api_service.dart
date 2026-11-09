@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'models.dart';
 
@@ -40,8 +41,13 @@ class ApiService {
       return true;
     }
 
+    // In a browser (the app opened from another device on the same network), the server runs on the computer
+    // that served the page, so its address is tried first
+    final pageHost = kIsWeb ? Uri.base.host : '';
+    final fromPage = pageHost.isEmpty ? <String>[] : ['http://$pageHost:8000/api'];
+
     // Otherwise probe all candidates
-    for (final candidate in candidateUrls) {
+    for (final candidate in [...fromPage, ...candidateUrls]) {
       if (candidate == baseUrl) continue;
       if (await _pingUrl(candidate)) {
         baseUrl = candidate;
