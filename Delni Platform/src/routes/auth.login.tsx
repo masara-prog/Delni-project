@@ -260,7 +260,7 @@ function LoginPage() {
           {role === "driver" && (
             <div className="mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
               <div className="flex items-center gap-1.5 font-black text-emerald-950 mb-1">
-                <span>🧑‍✈️</span>
+                <span>🚘</span>
                 <span>دخول السائقين المعتمدين:</span>
               </div>
               <div>يرجى إدخال البريد الإلكتروني وكلمة المرور المسجلين لدى شركة النقل.</div>

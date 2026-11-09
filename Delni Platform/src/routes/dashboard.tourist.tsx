@@ -396,7 +396,7 @@ function TouristDashboard() {
                           <div>📅 <b>الموعد:</b> {b.date}{b.time ? ` (${b.time})` : ""}</div>
                           <div>👥 <b>المقاعد المحجوزة:</b> {b.seats} مقاعد · المرافقون: {b.passengers}</div>
                           <div>📍 <b>نقطة الانطلاق:</b> {b.pickup}</div>
-                          <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName}{b.guideLicense ? ` (${b.guideLicense})` : ""}</div>
+                          <div>🚘 <b>المرشد السياحي:</b> {b.guideName}{b.guideLicense ? ` (${b.guideLicense})` : ""}</div>
                         </div>
 
                         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
@@ -496,7 +496,7 @@ function TouristDashboard() {
                       <div>📅 <b>الموعد:</b> {b.date}{b.time ? ` (${b.time})` : ""}</div>
                       <div>👥 <b>المقاعد:</b> {b.seats} مقاعد · المرافقون: {b.passengers}</div>
                       <div>📍 <b>نقطة الانطلاق:</b> {b.pickup}</div>
-                      <div>👨‍✈️ <b>المرشد السياحي:</b> {b.guideName}{b.guideLicense ? ` (${b.guideLicense})` : ""}</div>
+                      <div>🚘 <b>المرشد السياحي:</b> {b.guideName}{b.guideLicense ? ` (${b.guideLicense})` : ""}</div>
                     </div>
 
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
@@ -1183,7 +1183,7 @@ function TouristDashboard() {
             {/* Trip summary metadata */}
             <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 space-y-1">
               <div>📅 <b>تاريخ الرحلة:</b> {reviewModalTicket.date}{reviewModalTicket.time ? ` (${reviewModalTicket.time})` : ""}</div>
-              <div>👨‍✈️ <b>المرشد السياحي:</b> {reviewModalTicket.guideName}{reviewModalTicket.guideLicense ? ` (${reviewModalTicket.guideLicense})` : ""}</div>
+              <div>🚘 <b>المرشد السياحي:</b> {reviewModalTicket.guideName}{reviewModalTicket.guideLicense ? ` (${reviewModalTicket.guideLicense})` : ""}</div>
               <div>🎫 <b>رقم التذكرة:</b> <span className="font-mono font-bold text-[#1B5A78]">{reviewModalTicket.code}</span></div>
             </div>
 

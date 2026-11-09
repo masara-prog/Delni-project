@@ -208,7 +208,7 @@ function HotelDetailsView({
 
   const amenities = [
     { icon: "📶", title: isAr ? "واي فاي فائق السرعة" : "Ultra-Fast WiFi", desc: isAr ? "تغطية ألياف بصرية مجانية في جميع الغرف والمرافق" : "High speed fiber throughout property" },
-    { icon: "🏊‍♂️", title: isAr ? "مسبح وإطلالات بانورامية" : "Scenic Pool & Views", desc: isAr ? "جلسات استرخاء شاطئية/جبلية بإطلالة خلابة" : "Scenic lounge and heated pool" },
+    { icon: "🏊", title: isAr ? "مسبح وإطلالات بانورامية" : "Scenic Pool & Views", desc: isAr ? "جلسات استرخاء شاطئية/جبلية بإطلالة خلابة" : "Scenic lounge and heated pool" },
     { icon: "🍽️", title: isAr ? "مطعم وبوفيه إفطار فاخر" : "Fine Dining & Breakfast", desc: isAr ? "أشهى المأكولات الليبية والعالمية والمشروبات الطازجة" : "Local & international cuisines" },
     { icon: "🅿️", title: isAr ? "مواقف خاصة وآمنة" : "Secure VIP Parking", desc: isAr ? "مواقف مجانية ومحروسة بكاميرات مراقبة 24/7" : "Secure free onsite parking" },
     { icon: "❄️", title: isAr ? "تكييف مركزي ذكي" : "Smart Climate Control", desc: isAr ? "تحكم رقمي فائق الهدوء في درجات الحرارة" : "Quiet personalized room control" },

@@ -107,7 +107,7 @@ export function HotelDetailsModal({
     { title: isAr ? "الأجنحة والغرف الفندقية الفاخرة" : "Luxury Suites & Rooms", icon: "🛏️" },
     { title: isAr ? "بهو الاستقبال والاستراحة الرئيسية" : "Lobby & Reception Lounge", icon: "✨" },
     { title: isAr ? "المطعم وخدمات الضيافة المتميزة" : "Dining & Gourmet Services", icon: "🍽️" },
-    { title: isAr ? "المرافق والخدمات الترفيهية" : "Leisure & Wellness Amenities", icon: "🏊‍♂️" },
+    { title: isAr ? "المرافق والخدمات الترفيهية" : "Leisure & Wellness Amenities", icon: "🏊" },
   ];
 
   const handleShare = () => {

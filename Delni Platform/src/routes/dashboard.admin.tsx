@@ -1436,7 +1436,7 @@ function AdminDashboard() {
     // Badges count only items waiting for the admin (hidden at zero)
     { id: "scanner", label: isAr ? "تأكيد التذاكر برقم التذكرة" : "Ticket check-in", icon: "🎫" },
     { id: "companies", label: isAr ? "شركات النقل" : "Transport Companies", icon: "🚌" },
-    { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🧑‍✈️" },
+    { id: "drivers", label: isAr ? "السائقون المسجلون" : "Registered Drivers", icon: "🚘" },
     { id: "guides", label: isAr ? "اعتماد وثائق المرشدين" : "Guide Verification", icon: "🗺️", badge: guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length || undefined },
     { id: "tourists", label: isAr ? "إدارة وتقييد السياح" : "Tourists Management", icon: "👥" },
     { id: "trips", label: isAr ? "إدارة وتعيين الرحلات" : "Manage & Assign Tours", icon: "🧭", badge: [...weeklyTrips, ...dailyTrips].filter(t => t.guide_approval_status === "اعتذر المرشد").length || undefined },
@@ -1474,7 +1474,7 @@ function AdminDashboard() {
           const active = companies.length - suspended;
           return isAr ? `${active} نشطة${suspended ? ` · ${suspended} موقوفة` : ""}` : `${active} active${suspended ? ` · ${suspended} suspended` : ""}`;
         })()} icon="🚌" tone="clay" />
-        <StatCard label={isAr ? "السائقون المسجلون" : "Registered Drivers"} value={drivers.length} hint={isAr ? "مسجلون عبر شركات النقل" : "Registered via Transport Cos"} icon="🧑‍✈️" tone="sea" />
+        <StatCard label={isAr ? "السائقون المسجلون" : "Registered Drivers"} value={drivers.length} hint={isAr ? "مسجلون عبر شركات النقل" : "Registered via Transport Cos"} icon="🚘" tone="sea" />
         <StatCard label={isAr ? "طلبات اعتماد المرشدين" : "Guide Verification Requests"} value={guides.filter(g => g.verification_status?.includes("بانتظار") || g.verification_status?.includes("انتظار") || g.verification_status?.includes("مراجعة")).length} hint={isAr ? "وثائق بانتظار المراجعة" : "Pending documents review"} icon="🗺️" tone="sun" />
         <StatCard label={isAr ? "الرحلات الخاصة VIP" : "VIP Custom Trips"} value={privateTrips.length} hint={isAr ? `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} طلبات جديدة` : `${privateTrips.filter(p => p.status_order === "قيد الدراسة").length} New Requests`} icon="👑" tone="green" />
       </div>
@@ -2148,7 +2148,7 @@ function AdminDashboard() {
                       <span>👥 {d.bookings_count} حجز</span>
                       <span>⭐ {d.rating_avg}</span>
                       <span>🪑 {d.available_seats} مقعد متاح من أصل {d.max_capacity}</span>
-                      {d.guide_license && <span>👨‍✈️ مرشد: {d.guide_license}</span>}
+                      {d.guide_license && <span>🚘 مرشد: {d.guide_license}</span>}
                     </div>
                     {d.vehicle_plates && d.vehicle_plates.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
@@ -2199,7 +2199,7 @@ function AdminDashboard() {
                       <span>👥 {w.bookings_count} حجز</span>
                       <span>⭐ {w.rating_avg}</span>
                       <span>🪑 {w.available_seats || w.max_capacity} مقعد متاح من أصل {w.max_capacity}</span>
-                      {w.guide_license && <span>👨‍✈️ مرشد: {w.guide_license}</span>}
+                      {w.guide_license && <span>🚘 مرشد: {w.guide_license}</span>}
                     </div>
                     {w.vehicle_plates && w.vehicle_plates.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
@@ -2706,7 +2706,7 @@ function AdminDashboard() {
                           {placesCount > 0 && <span>🏛️ {placesCount} {placesCount > 1 ? "معالم" : "معلم"}</span>}
                           {pt.quoted_price && <span className="text-emerald-700 font-black">💰 {pt.quoted_price} د.ل</span>}
                           <span>
-                            👨‍✈️{" "}
+                            🚘{" "}
                             <span className="text-primary font-black">
                               {pt.guide_name ? `${pt.guide_name} (${pt.guide_license_number || ""})` : (pt.guide_license_number || "غير محدد (بمعرفة الإدارة)")}
                             </span>
@@ -5153,7 +5153,7 @@ function TripVehicleAndDriverSelector({
                     </div>
                     <div className="mt-1 pt-1 border-t border-slate-100 text-[10px] flex items-center justify-between">
                       <span className="text-emerald-900 font-black truncate">
-                        👨‍✈️ {assignedDriver ? assignedDriver.full_name : "سائق معتمد من الشركة"}
+                        🚘 {assignedDriver ? assignedDriver.full_name : "سائق معتمد من الشركة"}
                       </span>
                       {assignedDriver?.phone_number && (
                         <span className="text-slate-600 font-bold text-[9px] mr-1">
@@ -6212,7 +6212,7 @@ function CreateTripModal({
         <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
             <label className="text-xs font-bold text-slate-800 block">
-              👨‍🏫 المرشد السياحي المعين للرحلة {isDaily && !showAllGuides && (
+              🧭 المرشد السياحي المعين للرحلة {isDaily && !showAllGuides && (
                 <span className="text-blue-700 font-black">
                   (مفلتر تلقائياً وفقاً لأيام عمل المرشد لتناسب أيام الرحلة: {recurringDays.join(" و ")})
                 </span>
@@ -6630,7 +6630,7 @@ function DailyTripEditModal({
         <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
             <label className="text-xs font-bold text-slate-800 block">
-              👨‍🏫 المرشد السياحي المعين للرحلة {!showAllGuides && (
+              🧭 المرشد السياحي المعين للرحلة {!showAllGuides && (
                 <span className="text-blue-700 font-black">
                   (مفلتر تلقائياً وفقاً لأيام عمل المرشد: {recurringDays.join(" و ")})
                 </span>
@@ -7364,7 +7364,7 @@ function EvaluatePrivateTripModal({
         {/* Tourist Selected Guide Display & Confirmation */}
         <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
           <label className="text-xs font-black text-foreground block">
-            👨‍✈️ المرشد السياحي المعين للرحلة:
+            🚘 المرشد السياحي المعين للرحلة:
           </label>
           <select
             value={guide}

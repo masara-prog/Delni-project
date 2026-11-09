@@ -147,7 +147,7 @@ function TransportDashboard() {
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "📊" },
-    { id: "drivers", label: isAr ? "السائقون المسجلون" : "Drivers", icon: "🧑‍✈️", badge: drivers.length },
+    { id: "drivers", label: isAr ? "السائقون المسجلون" : "Drivers", icon: "🚘", badge: drivers.length },
     { id: "vehicles", label: isAr ? "الأسطول والسيارات" : "Fleet & Vehicles", icon: "🚌", badge: vehicles.length },
     { id: "trips", label: isAr ? "الرحلات المسنّدة" : "Assigned Tours", icon: "🧭" },
     { id: "profile", label: isAr ? "بيانات الشركة" : "Company Profile", icon: "🏢" },
@@ -268,13 +268,13 @@ function TransportDashboard() {
                 onClick={() => setShowAddDriver(true)}
                 className="inline-flex items-center gap-1.5 px-4 h-11 rounded-xl bg-gradient-sea text-white font-black text-sm shadow-glow hover:-translate-y-0.5 transition"
               >
-                + إضافة سائق جديد 🧑‍✈️
+                + إضافة سائق جديد 🚘
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="عدد السائقين" value={drivers.length} icon="🧑‍✈️" tone="sea" />
+            <StatCard label="عدد السائقين" value={drivers.length} icon="🚘" tone="sea" />
             <StatCard label="حجم الأسطول" value={`${vehicles.length} / ${companyInfo.total_vehicles}`} hint={`${vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} جاهزة · ${vehicles.filter(v => v.vehicle_status === "صيانة" || v.status === "صيانة").length} صيانة`} icon="🚌" tone="clay" />
             <StatCard label="السيارات المتاحة" value={vehicles.filter(v => v.vehicle_status === "جاهزة" || v.status === "جاهزة").length} icon="🚗" tone="green" />
             <StatCard label="حالة توثيق العقد" value={companyInfo.verification_status || "غير محدد"} icon="📜" tone="sun" />
@@ -357,7 +357,7 @@ function TransportDashboard() {
                         <div key={v.plate_number} className="p-3 rounded-xl bg-muted/50 text-right">
                           <div className="font-black text-sm text-foreground">{v.vehicle_type}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            🧑‍✈️ {d ? d.full_name : "بانتظار تعيين سائق"} · 🚘 لوحة: {v.plate_number}
+                            🚘 {d ? d.full_name : "بانتظار تعيين سائق"} · 🚘 لوحة: {v.plate_number}
                           </div>
                         </div>
                       );
@@ -390,7 +390,7 @@ function TransportDashboard() {
               onClick={() => setShowAddDriver(true)}
               className="px-4 py-2 rounded-xl bg-gradient-sea text-white text-xs font-black shadow-glow"
             >
-              + إضافة سائق جديد 🧑‍✈️
+              + إضافة سائق جديد 🚘
             </button>
           }
         >
@@ -412,7 +412,7 @@ function TransportDashboard() {
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-gradient-sea text-white grid place-items-center text-xs font-black shadow-xs flex-shrink-0">
-                          🧑‍✈️
+                          🚘
                         </div>
                         <div>
                           <div className="font-black text-foreground text-xs">{d.full_name}</div>
@@ -1276,7 +1276,7 @@ function VehicleModal({
         <div className="p-3.5 rounded-2xl border-2 border-[#1B5A78]/30 bg-[#1B5A78]/5 space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black text-[#1B5A78] flex items-center gap-1.5">
-              🧑‍✈️ {isAr ? "تعيين سائق مخصص للمركبة (سائق مخصص لا يتكرر):" : "Assign Dedicated Driver:"}
+              🚘 {isAr ? "تعيين سائق مخصص للمركبة (سائق مخصص لا يتكرر):" : "Assign Dedicated Driver:"}
             </span>
             <span className="text-[11px] font-bold text-slate-500">
               {selectableDrivers.length} {isAr ? "سائق متاح" : "available"}

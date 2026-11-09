@@ -818,7 +818,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
             <div className="p-3.5 rounded-2xl bg-white border border-[#E8E2D6] shadow-xs flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#003580] flex items-center justify-center text-xl shrink-0">
-                  👨‍✈️
+                  🚘
                 </div>
                 <div>
                   <div className="text-[10px] font-bold text-[#526078]">{isAr ? "المرشد السياحي المرافق" : "Accompanying Tour Guide"}</div>

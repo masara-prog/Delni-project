@@ -1476,7 +1476,7 @@ function TripDetailsView({
                     })}
                     className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <span>👨‍✈️</span>
+                    <span>🚘</span>
                     <span>{isAr ? "عرض السيرة الذاتية ورخصة الإرشاد" : "View Certified CV"}</span>
                   </button>
                 </>
@@ -1520,7 +1520,7 @@ function TripDetailsView({
 
                     <div className="pt-1.5 border-t border-[#E8E2D6]/60 flex items-center justify-between text-xs">
                       <div className="font-bold text-slate-700 flex items-center gap-1">
-                        <span>👨‍✈️</span>
+                        <span>🚘</span>
                         <span>{info.vehicle.driver}</span>
                       </div>
                       {info.vehicle.driverPhone && (

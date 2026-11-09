@@ -107,7 +107,7 @@ export function RestaurantDetailsModal({
     { title: isAr ? "الأطباق والوجبات الطازجة" : "Specialty Dishes & Menu", icon: "🍽️" },
     { title: isAr ? "المشروبات والضيافة الليبية" : "Beverages & Traditional Tea", icon: "☕" },
     { title: isAr ? "الواجهة والموقع الخارجي" : "Exterior & Venue", icon: "🏛️" },
-    { title: isAr ? "جلسات العائلات والخصوصية" : "Family & Private Seating", icon: "👨‍👩‍👧‍👦" },
+    { title: isAr ? "جلسات العائلات والخصوصية" : "Family & Private Seating", icon: "👪" },
   ];
 
   const handleShare = () => {

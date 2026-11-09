@@ -30,7 +30,7 @@ const GENERAL_LINKS = [
 const DASHBOARD_LINKS = [
   { label: "🛡️ لوحة الإدارة", labelEn: "🛡️ Admin Panel", to: "/dashboard/admin", badge: "أدمن" },
   { label: "🚐 لوحة شركة النقل", labelEn: "🚐 Transport Co.", to: "/dashboard/transport", badge: "شركة" },
-  { label: "🧑‍✈️ لوحة تحكم السائق", labelEn: "🧑‍✈️ Driver Panel", to: "/dashboard/driver", badge: "سائق" },
+  { label: "🚘 لوحة تحكم السائق", labelEn: "🚘 Driver Panel", to: "/dashboard/driver", badge: "سائق" },
   { label: "🗺️ لوحة تحكم المرشد", labelEn: "🗺️ Guide Panel", to: "/dashboard/guide", badge: "مرشد" },
   { label: "👤 لوحة تحكم السائح", labelEn: "👤 Tourist Panel", to: "/dashboard/tourist", badge: "سائح" },
 ];
