@@ -342,7 +342,7 @@ function SignupPage() {
           ))}
 
           {/* Crisp Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/35 to-transparent z-1" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0B4F57]/35 to-transparent z-1" />
           <div className="absolute inset-0 z-1" />
 
           <div className="relative z-10 h-full flex flex-col justify-between p-8 xl:p-10 text-white">
@@ -375,7 +375,7 @@ function SignupPage() {
                   "دعم ومساعدة سياحية ذكية على مدار الساعة",
                 ].map((t) => (
                   <li key={t} className="flex items-center gap-2.5 text-xs font-semibold text-white/95 drop-shadow-xs">
-                    <span className="w-4.5 h-4.5 rounded-full bg-[#D96B27] text-white grid place-items-center text-[10px] font-black shrink-0 shadow-sm">✓</span>
+                    <span className="w-4.5 h-4.5 rounded-full bg-[#D96B27] text-white grid place-items-center text-[11px] font-black shrink-0 shadow-sm">✓</span>
                     <span>{t}</span>
                   </li>
                 ))}
@@ -405,7 +405,7 @@ function SignupPage() {
           <div className="w-full max-w-xl mx-auto text-right pb-16">
             {/* Back arrow only: the logo is on the photo side */}
             <div className="flex items-center justify-end mb-3">
-              <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#1B5A78] hover:scale-105 transition text-[#1B5A78]" />
+              <BackHome className="w-11 h-11 border-2 border-[#E2E8F0] shadow-sm hover:border-[#0B4F57] hover:scale-105 transition text-[#0B4F57]" />
             </div>
 
             <div className="mb-4 text-right">
@@ -447,7 +447,7 @@ function SignupPage() {
                             <span className="w-2 h-2 rounded-full bg-[#D96B27]" />
                           )}
                         </div>
-                        <div className="text-[10px] sm:text-xs text-[#64748B] font-medium truncate mt-0.5">
+                        <div className="text-[11px] sm:text-xs text-[#64748B] font-medium truncate mt-0.5">
                           {r.desc}
                         </div>
                       </div>
@@ -492,13 +492,13 @@ function SignupPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[#64748B]">الظهور في دليل المرشدين:</span>
-                        <span className="text-[#1B5A78] font-black">يظهر تلقائياً في صفحة المرشدين بعد التوثيق</span>
+                        <span className="text-[#0B4F57] font-black">يظهر تلقائياً في صفحة المرشدين بعد التوثيق</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       <Link
                         to="/auth/login"
-                        className="py-3.5 px-4 rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2"
+                        className="py-3.5 px-4 rounded-2xl bg-[#0B4F57] hover:bg-[#13445C] text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2"
                       >
                         <span>الانتقال لصفحة تسجيل الدخول</span>
                         <span>←</span>
@@ -640,11 +640,11 @@ function SignupPage() {
                   onClick={() => setGuideStep(1)}
                   className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     guideStep === 1
-                      ? "bg-[#1B5A78] text-white shadow-xs"
+                      ? "bg-[#0B4F57] text-white shadow-xs"
                       : "text-[#718096] hover:text-[#0F172A]"
                   }`}
                 >
-                  <span className={`w-4 h-4 rounded-full grid place-items-center text-[10px] font-black ${guideStep === 1 ? "bg-white text-[#1B5A78]" : "bg-[#E2E8F0] text-[#0F172A]"}`}>1</span>
+                  <span className={`w-4 h-4 rounded-full grid place-items-center text-[11px] font-black ${guideStep === 1 ? "bg-white text-[#0B4F57]" : "bg-[#E2E8F0] text-[#0F172A]"}`}>1</span>
                   <span>البيانات والتكلفة والترخيص</span>
                 </button>
                 <button
@@ -656,11 +656,11 @@ function SignupPage() {
                   }}
                   className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     guideStep === 2
-                      ? "bg-[#1B5A78] text-white shadow-xs"
+                      ? "bg-[#0B4F57] text-white shadow-xs"
                       : "text-[#718096] hover:text-[#0F172A]"
                   }`}
                 >
-                  <span className={`w-4 h-4 rounded-full grid place-items-center text-[10px] font-black ${guideStep === 2 ? "bg-white text-[#1B5A78]" : "bg-[#E2E8F0] text-[#0F172A]"}`}>2</span>
+                  <span className={`w-4 h-4 rounded-full grid place-items-center text-[11px] font-black ${guideStep === 2 ? "bg-white text-[#0B4F57]" : "bg-[#E2E8F0] text-[#0F172A]"}`}>2</span>
                   <span>نطاق العمل والجدول</span>
                 </button>
               </div>
@@ -689,11 +689,11 @@ function SignupPage() {
                         ) : (
                           <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border-2 border-dashed border-[#D96B27]/40 flex flex-col items-center justify-center text-[#D96B27] shrink-0 shadow-2xs">
                             <Camera className="w-5 h-5 text-[#D96B27]" />
-                            <span className="text-[9px] font-bold mt-0.5 text-[#64748B]">صورة شخصية</span>
+                            <span className="text-[11px] font-bold mt-0.5 text-[#64748B]">صورة شخصية</span>
                           </div>
                         )}
                         {guide.avatar && (
-                          <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white grid place-items-center text-[9px] text-white font-bold">
+                          <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white grid place-items-center text-[11px] text-white font-bold">
                             ✓
                           </span>
                         )}
@@ -946,7 +946,7 @@ function SignupPage() {
                         <div className="max-h-64 overflow-y-auto space-y-3 pl-1">
                           {placeGroups.map(([region, places]) => (
                             <div key={region}>
-                              <div className="text-[10px] font-black text-slate-500 mb-1.5">{region}</div>
+                              <div className="text-[11px] font-black text-slate-500 mb-1.5">{region}</div>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {places.map((attr) => {
                                   const pid = attr.place_id;
@@ -963,10 +963,10 @@ function SignupPage() {
                                       {attr.place_image ? (
                                         <img src={attr.place_image} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />
                                       ) : (
-                                        <div className="absolute inset-0 bg-gradient-to-br from-[#1B5A78] to-[#0F172A]" />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-[#0B4F57] to-[#0F172A]" />
                                       )}
                                       <div className={`absolute inset-0 ${isChecked ? "bg-[#D96B27]/45" : "bg-black/35"}`} />
-                                      <span className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full grid place-items-center text-[10px] font-black ${isChecked ? "bg-white text-[#D96B27]" : "bg-white/30 text-transparent border border-white/70"}`}>✓</span>
+                                      <span className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full grid place-items-center text-[11px] font-black ${isChecked ? "bg-white text-[#D96B27]" : "bg-white/30 text-transparent border border-white/70"}`}>✓</span>
                                       <span className="absolute bottom-1.5 right-2 left-2 text-white text-xs font-black truncate drop-shadow">{attr.city || attr.place_name}</span>
                                     </button>
                                   );
@@ -1039,10 +1039,10 @@ function SignupPage() {
                             }`}
                           >
                             <span className="flex items-center gap-1.5">
-                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#FAF7F2] text-[#0F172A]">{lang.code}</span>
+                              <span className="text-[11px] font-black px-1.5 py-0.5 rounded bg-[#FAF7F2] text-[#0F172A]">{lang.code}</span>
                               <span className="text-xs">{lang.labelAr}</span>
                             </span>
-                            <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                            <span className={`w-4 h-4 rounded border flex items-center justify-center text-[11px] ${
                               isSelected ? "bg-[#D96B27] text-white border-[#D96B27]" : "border-[#CBD5E0]"
                             }`}>
                               {isSelected && "✓"}
@@ -1110,7 +1110,7 @@ function SignupPage() {
                           <span className="font-bold text-xs sm:text-sm text-[#0F172A]">
                             انقر هنا لرفع صورة الترخيص السياحي أو الشهادة المعتمدة
                           </span>
-                          <span className="text-[10px] text-[#64748B]">
+                          <span className="text-[11px] text-[#64748B]">
                             يدعم ملفات الصور (JPG, PNG) أو مستندات PDF
                           </span>
                         </div>
@@ -1131,7 +1131,7 @@ function SignupPage() {
                                   <div className="text-xs font-bold text-[#0F172A] truncate max-w-[200px] sm:max-w-[260px]" title={c}>
                                     {c}
                                   </div>
-                                  <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                  <div className="text-[11px] text-emerald-600 font-bold flex items-center gap-0.5">
                                     <Check className="w-3 h-3" />
                                     <span>جاهز للإرفاق والاعتماد</span>
                                   </div>
@@ -1181,7 +1181,7 @@ function SignupPage() {
                               }}
                             />
                           </label>
-                          <span className="text-[10px] text-[#64748B]">
+                          <span className="text-[11px] text-[#64748B]">
                             يمكنك إضافة أو استبدال أي ملف بسهولة
                           </span>
                         </div>
@@ -1295,7 +1295,7 @@ function Field({
         <span>{label}</span>
         {required && <span className="text-red-500 font-black">*</span>}
       </label>
-      <div className={`flex items-stretch rounded-xl border bg-white focus-within:ring-2 transition overflow-hidden shadow-xs ${error ? "border-red-400 focus-within:ring-red-200" : "border-[#E2E8F0] focus-within:border-[#1B5A78] focus-within:ring-[#1B5A78]/15"}`}>
+      <div className={`flex items-stretch rounded-xl border bg-white focus-within:ring-2 transition overflow-hidden shadow-xs ${error ? "border-red-400 focus-within:ring-red-200" : "border-[#E2E8F0] focus-within:border-[#0B4F57] focus-within:ring-[#0B4F57]/15"}`}>
         {/* Left Side (Addon): Unit Suffix Badge & Dedicated Stepper Buttons */}
         {(suffix || isNumber) && (
           <div className="flex items-center bg-[#F8FAFC] border-l border-[#E2E8F0] shrink-0 select-none">
@@ -1304,7 +1304,7 @@ function Field({
                 <button
                   type="button"
                   onClick={() => handleStep(1)}
-                  className="px-1 text-[9px] font-black text-slate-500 hover:text-[#1B5A78] hover:bg-slate-200/80 rounded transition cursor-pointer leading-tight select-none"
+                  className="px-1 text-[11px] font-black text-slate-500 hover:text-[#0B4F57] hover:bg-slate-200/80 rounded transition cursor-pointer leading-tight select-none"
                   title="زيادة القيمة"
                   tabIndex={-1}
                 >
@@ -1313,7 +1313,7 @@ function Field({
                 <button
                   type="button"
                   onClick={() => handleStep(-1)}
-                  className="px-1 text-[9px] font-black text-slate-500 hover:text-[#1B5A78] hover:bg-slate-200/80 rounded transition cursor-pointer leading-tight select-none"
+                  className="px-1 text-[11px] font-black text-slate-500 hover:text-[#0B4F57] hover:bg-slate-200/80 rounded transition cursor-pointer leading-tight select-none"
                   title="إنقاص القيمة"
                   tabIndex={-1}
                 >
@@ -1322,7 +1322,7 @@ function Field({
               </div>
             )}
             {suffix && (
-              <span className="px-2.5 py-1 text-[10px] sm:text-[11px] font-black text-[#64748B] whitespace-nowrap">
+              <span className="px-2.5 py-1 text-[11px] sm:text-[11px] font-black text-[#64748B] whitespace-nowrap">
                 {suffix}
               </span>
             )}
@@ -1341,7 +1341,7 @@ function Field({
           className="flex-1 h-10 sm:h-11 px-3.5 bg-transparent outline-none text-xs sm:text-sm font-semibold text-[#0F172A] text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </div>
-      {error && <div className="text-[10px] text-red-600 font-bold mt-1">{error}</div>}
+      {error && <div className="text-[11px] text-red-600 font-bold mt-1">{error}</div>}
     </div>
   );
 }

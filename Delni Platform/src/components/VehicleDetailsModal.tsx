@@ -59,12 +59,12 @@ export function VehicleDetailsModal({ vehicle, onClose }: VehicleDetailsModalPro
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#003580] text-white">
+        <div className="flex items-center justify-between px-6 py-4 bg-[#00736F] text-white">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-white/10 text-xl">🚍</span>
             <div>
               <h3 className="text-base font-black">{model}</h3>
-              {plate && <p className="text-xs text-blue-200 font-mono">رقم اللوحة: {plate}</p>}
+              {plate && <p className="text-xs text-teal-200 font-mono">رقم اللوحة: {plate}</p>}
             </div>
           </div>
           <button
@@ -97,7 +97,7 @@ export function VehicleDetailsModal({ vehicle, onClose }: VehicleDetailsModalPro
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
               {facts.map((f) => (
                 <div key={f.label} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <div className="text-[10px] text-slate-500 font-bold">{f.label}</div>
+                  <div className="text-[11px] text-slate-500 font-bold">{f.label}</div>
                   <div className={`font-black text-[#0F172A] mt-0.5 ${f.mono ? "font-mono" : ""}`}>{f.value}</div>
                 </div>
               ))}
@@ -105,17 +105,17 @@ export function VehicleDetailsModal({ vehicle, onClose }: VehicleDetailsModalPro
           )}
 
           {(company || phone) && (
-            <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-100 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <span className="text-[10px] font-bold text-slate-500 block">شركة النقل المشغلة</span>
+                <span className="text-[11px] font-bold text-slate-500 block">شركة النقل المشغلة</span>
                 <span className="text-sm font-black text-[#0F172A] block truncate">{company || "—"}</span>
               </div>
               {phone && (
                 <a
                   href={`tel:${phone}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-blue-800 border border-blue-200 text-xs font-bold hover:bg-blue-100 transition flex-shrink-0"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-teal-800 border border-teal-200 text-xs font-bold hover:bg-teal-100 transition flex-shrink-0"
                 >
-                  <Phone className="w-3.5 h-3.5 text-blue-600" />
+                  <Phone className="w-3.5 h-3.5 text-teal-600" />
                   <span className="font-mono">{phone}</span>
                 </a>
               )}

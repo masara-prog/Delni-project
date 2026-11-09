@@ -292,7 +292,7 @@ export function FloatingChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="مساعد الذكاء الاصطناعي"
-        className={`fixed bottom-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-[90] h-[52px] w-[150px] justify-center rounded-full bg-orange-500 text-white font-black shadow-2xl hover:scale-105 transition flex items-center gap-2 border-2 border-white/50`}
+        className={`fixed bottom-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-[90] h-[52px] w-[150px] justify-center rounded-full bg-[#D96B27] text-white font-black shadow-2xl hover:scale-105 transition hidden md:flex items-center gap-2 border-2 border-white/50`}
       >
         <span className="relative flex items-center justify-center shrink-0 w-6 h-6 text-xl animate-bounce">🤖</span>
         <span className="text-xs font-black text-white drop-shadow text-center">
@@ -303,17 +303,17 @@ export function FloatingChat() {
 
       {open && (
         <div className={`fixed bottom-24 ${language === 'ar' ? 'left-6' : 'right-6'} z-[95] w-[94vw] max-w-md h-[78vh] max-h-[620px] bg-white text-[#0B132B] rounded-3xl shadow-2xl border border-[#E6E1D6] flex flex-col overflow-hidden animate-fade-up`} dir={dir}>
-          <div className="bg-blue-50 p-4 border-b border-[#E6E1D6] flex items-center justify-between">
+          <div className="bg-teal-50 p-4 border-b border-[#E6E1D6] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#003580] p-0.5 shadow-md flex items-center justify-center text-xl text-white">
+              <div className="w-10 h-10 rounded-2xl bg-[#00736F] p-0.5 shadow-md flex items-center justify-center text-xl text-white">
                 🤖
               </div>
               <div>
                 <div className="font-black text-sm text-[#0B132B] flex items-center gap-1.5">
                   {language === 'ar' ? 'مساعد دلّني السياحي الذكي' : 'Dallani AI Travel Assistant'}
-                  <span className="text-[9px] bg-[#003580] text-white px-1.5 py-0.5 rounded-md font-bold">AI Active</span>
+                  <span className="text-[11px] bg-[#00736F] text-white px-1.5 py-0.5 rounded-md font-bold">AI Active</span>
                 </div>
-                <div className="text-[10px] text-[#526078] font-semibold flex items-center gap-1">
+                <div className="text-[11px] text-[#526078] font-semibold flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> 
                   {language === 'ar' ? 'متصل الآن' : 'Online'}
                 </div>
@@ -329,13 +329,13 @@ export function FloatingChat() {
               <div key={m.id} className={`flex ${m.from === "user" ? "justify-start" : "justify-end"}`}>
                 <div className={`max-w-[85%] p-3.5 text-xs md:text-sm rounded-2xl shadow-xs ${
                   m.from === "user"
-                    ? "bg-[#003580] text-white font-bold rounded-bl-none"
+                    ? "bg-[#00736F] text-white font-bold rounded-bl-none"
                     : m.from === "ai"
                     ? "bg-white border border-[#E6E1D6] text-[#0B132B] rounded-br-none"
                     : "bg-amber-50 border border-amber-200 text-amber-950 rounded-br-none"
                 }`}>
                   {m.badge && (
-                    <div className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-100 text-[#003580] mb-1.5 w-fit">
+                    <div className="text-[11px] font-black px-2 py-0.5 rounded-md bg-teal-100 text-[#00736F] mb-1.5 w-fit">
                       {m.badge}
                     </div>
                   )}
@@ -345,14 +345,14 @@ export function FloatingChat() {
                   )}
 
                   <div className="whitespace-pre-line leading-relaxed font-semibold">{m.text}</div>
-                  <div className={`text-[9px] mt-1.5 ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</div>
+                  <div className={`text-[11px] mt-1.5 ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</div>
                 </div>
               </div>
             ))}
 
             {analyzingImage && (
               <div className="flex justify-end">
-                <div className="bg-white border border-sky-300 p-3 rounded-2xl text-xs text-sky-900 font-bold flex items-center gap-2 shadow-sm animate-pulse">
+                <div className="bg-white border border-teal-300 p-3 rounded-2xl text-xs text-teal-900 font-bold flex items-center gap-2 shadow-sm animate-pulse">
                   <span className="text-base">📸</span> {language === 'ar' ? 'جارٍ تحليل الصورة بواسطة الذكاء الاصطناعي...' : 'Analyzing image using AI...'}
                 </div>
               </div>
@@ -361,9 +361,9 @@ export function FloatingChat() {
             {typing && (
               <div className="flex justify-end">
                 <div className="bg-white border border-[#E6E1D6] p-3 rounded-2xl text-stone-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" style={{ animationDelay: "0.15s" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#003580] animate-bounce" style={{ animationDelay: "0.3s" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00736F] animate-bounce" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00736F] animate-bounce" style={{ animationDelay: "0.15s" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00736F] animate-bounce" style={{ animationDelay: "0.3s" }} />
                 </div>
               </div>
             )}
@@ -382,17 +382,17 @@ export function FloatingChat() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title={language === 'ar' ? "رفع صورة لمعلم سياحي للتعرف عليه" : "Upload landmark photo"}
-              className="h-10 px-3 rounded-xl bg-[#F4F1EA] hover:bg-[#E6E1D6] text-[#003580] font-black text-sm border border-[#E6E1D6] flex items-center gap-1"
+              className="h-10 px-3 rounded-xl bg-[#F4F1EA] hover:bg-[#E6E1D6] text-[#00736F] font-black text-sm border border-[#E6E1D6] flex items-center gap-1"
             >
-              📸 <span className="text-[10px] hidden sm:inline">{language === 'ar' ? 'صورة معلم' : 'Photo'}</span>
+              📸 <span className="text-[11px] hidden sm:inline">{language === 'ar' ? 'صورة معلم' : 'Photo'}</span>
             </button>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={language === 'ar' ? "اكتب استفسارك هنا..." : "Type your query here..."}
-              className="flex-1 h-10 px-3.5 rounded-xl bg-[#FAFAF8] border border-[#E6E1D6] text-[#0B132B] focus:border-[#003580] focus:bg-white outline-none text-xs font-semibold"
+              className="flex-1 h-10 px-3.5 rounded-xl bg-[#FAFAF8] border border-[#E6E1D6] text-[#0B132B] focus:border-[#00736F] focus:bg-white outline-none text-xs font-semibold"
             />
-            <button className="h-10 px-4 rounded-xl bg-[#003580] hover:bg-[#1B5A78] text-white font-black text-xs shadow-soft transition">
+            <button className="h-10 px-4 rounded-xl bg-[#00736F] hover:bg-[#0B4F57] text-white font-black text-xs shadow-soft transition">
               {language === 'ar' ? 'إرسال' : 'Send'}
             </button>
           </form>

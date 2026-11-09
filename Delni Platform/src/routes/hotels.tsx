@@ -101,12 +101,12 @@ function HotelOffersSpotlight({
               <span className="px-3.5 py-1 rounded-full bg-[#D96B27]/10 text-[#D96B27] border border-[#D96B27]/25 text-xs font-black">
                 {offer.badge}
               </span>
-              <span className="px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] border border-[#003580]/20 text-xs font-bold">
+              <span className="px-3 py-1 rounded-full bg-[#00736F]/10 text-[#00736F] border border-[#00736F]/20 text-xs font-bold">
                 📍 {offer.city}
               </span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#003580] tracking-tight leading-tight group-hover:text-[#D96B27] transition-colors">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#00736F] tracking-tight leading-tight group-hover:text-[#D96B27] transition-colors">
               {offer.title}
             </h2>
 
@@ -232,7 +232,7 @@ function HotelDetailsView({
   const prevPhoto = () => setActivePhoto((prev) => (prev - 1 + photos.length) % photos.length);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-[#003580] selection:text-white" dir={dir}>
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-[#00736F] selection:text-white" dir={dir}>
       {/* ── 1. LUXURY TOP FLOATING NAVIGATION ── */}
       <div className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
@@ -241,7 +241,7 @@ function HotelDetailsView({
             onClick={onBack}
             className="group inline-flex items-center gap-2.5 text-slate-300 hover:text-white text-xs sm:text-sm font-black transition cursor-pointer bg-white/5 hover:bg-white/10 px-4 py-2 rounded-2xl border border-white/10"
           >
-            <span className="w-6 h-6 rounded-full bg-white/10 group-hover:bg-[#003580] flex items-center justify-center text-xs text-white transition-colors">
+            <span className="w-6 h-6 rounded-full bg-white/10 group-hover:bg-[#00736F] flex items-center justify-center text-xs text-white transition-colors">
               {dir === "rtl" ? "→" : "←"}
             </span>
             <span>{isAr ? "العودة إلى قائمة الفنادق" : "Back to Hotels"}</span>
@@ -269,7 +269,7 @@ function HotelDetailsView({
         
         {/* Luxury Hero Header Bar */}
         <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#003580]/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#00736F]/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -282,7 +282,7 @@ function HotelDetailsView({
                 </span>
                 
                 {/* Category Pill */}
-                <span className="px-3 py-1 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-300 font-black">
+                <span className="px-3 py-1 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-300 font-black">
                   {hotel.propertyType === "hotel"
                     ? (isAr ? "🏨 فندق مصنف" : "Certified Hotel")
                     : hotel.propertyType === "camp"
@@ -343,9 +343,9 @@ function HotelDetailsView({
                   {(hotel.reviewsCount || 0) > 0 ? `${hotel.reviewsCount} ${isAr ? "تقييم نزيل معتمد" : "verified reviews"}` : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet")}
                 </div>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-[#003580] text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
+              <div className="w-14 h-14 rounded-2xl bg-[#00736F] text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
                 <span className="text-lg leading-tight font-black">{(hotel.rating || 0) > 0 ? hotel.rating : "—"}</span>
-                <span className="text-[9px] text-amber-300 font-bold">{(hotel.rating || 0) > 0 ? (isAr ? "من 10" : "/10") : (isAr ? "جديد" : "New")}</span>
+                <span className="text-[11px] text-amber-300 font-bold">{(hotel.rating || 0) > 0 ? (isAr ? "من 10" : "/10") : (isAr ? "جديد" : "New")}</span>
               </div>
             </div>
           </div>
@@ -503,7 +503,7 @@ function HotelDetailsView({
                 onClick={() => setActivePhoto(idx)}
                 className={`px-4 py-2 rounded-2xl text-xs font-black transition flex items-center gap-2 cursor-pointer border ${
                   activePhoto === idx
-                    ? "bg-[#003580] text-white border-blue-400/40 shadow-lg scale-102"
+                    ? "bg-[#00736F] text-white border-teal-400/40 shadow-lg scale-102"
                     : "bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
                 }`}
               >
@@ -534,7 +534,7 @@ function HotelDetailsView({
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab === tab.id
-                      ? "bg-[#003580] text-white shadow-md border border-blue-400/30"
+                      ? "bg-[#00736F] text-white shadow-md border border-teal-400/30"
                       : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -667,7 +667,7 @@ function HotelDetailsView({
                 </p>
 
                 {/* Map Action Box */}
-                <div className="p-5 rounded-2xl bg-blue-900/40 border border-blue-400/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="p-5 rounded-2xl bg-teal-900/40 border border-teal-400/30 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="space-y-1 text-right w-full sm:w-auto">
                     <div className="text-sm font-black text-white flex items-center gap-2">
                       <span>🗺️</span>
@@ -719,7 +719,7 @@ function HotelDetailsView({
               <div className="space-y-3">
                 <a
                   href={`tel:${hotel.phone}`}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">📞</span>
                   <span>{isAr ? `اتصال فوري بالاستقبال (${hotel.phone})` : `Call Front Desk (${hotel.phone})`}</span>
@@ -1046,7 +1046,7 @@ function HotelsPage() {
       <Header active="hotels" />
 
       {/* ── 1. HERO SECTION (Professional Animated Slideshow) ── */}
-      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#003580]">
+      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#00736F]">
         <HeroSlideshow
           images={[
             "/assets/ai_city.jpg",
@@ -1057,7 +1057,7 @@ function HotelsPage() {
           alt="الفنادق والإقامة في ليبيا"
           brightness="brightness-90"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#003580]/90 via-[#003580]/45 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#00736F]/90 via-[#00736F]/45 to-transparent z-10" />
         <div className="relative z-20 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center pt-12 text-white">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-black w-fit mb-2.5 border border-white/25">
             🏨 {isAr ? "دليل واستعراض الفنادق وأماكن الإقامة في ليبيا (للعرض والتعريف فقط)" : "Hotels & Stays Directory in Libya (Showcase Only)"}
@@ -1077,12 +1077,12 @@ function HotelsPage() {
       {/* ── 2. UNIFIED FLOATING FILTER PANEL (Matching Attractions & Guides) ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-blue-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* Search Input */}
             <div className="lg:col-span-5 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">🔍</span>
+              <span className="text-[#00736F] font-bold text-base">🔍</span>
               <div className="relative flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "البحث عن فندق أو وجهة:" : "Search Hotel or City:"}
                 </label>
                 <input
@@ -1109,9 +1109,9 @@ function HotelsPage() {
 
             {/* City / Destination Select */}
             <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">📍</span>
+              <span className="text-[#00736F] font-bold text-base">📍</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "المدينة والوجهة:" : "City & Destination:"}
                 </label>
                 <select
@@ -1136,7 +1136,7 @@ function HotelsPage() {
             {/* Star Rating Select */}
             <div className="lg:col-span-3 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center justify-between gap-2">
               <div>
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "تصنيف النجوم:" : "Star Rating:"}
                 </label>
                 <div className="flex items-center gap-1">
@@ -1151,7 +1151,7 @@ function HotelsPage() {
                       }}
                       className={`px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer ${
                         stars === s
-                          ? "bg-[#003580] text-white shadow-xs"
+                          ? "bg-[#00736F] text-white shadow-xs"
                           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
                     >
@@ -1194,7 +1194,7 @@ function HotelsPage() {
                   count: countLabel("hotel"),
                   img: "/assets/ai_hotel.jpg",
                   badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
-                  badgeBg: "bg-[#003580]",
+                  badgeBg: "bg-[#00736F]",
                 },
                 {
                   id: "resort",
@@ -1210,7 +1210,7 @@ function HotelsPage() {
                   count: countLabel("apartment"),
                   img: "/assets/dest-tripoli.jpg",
                   badge: isAr ? "خصوصية عائلية" : "Family Suites",
-                  badgeBg: "bg-indigo-700",
+                  badgeBg: "bg-teal-700",
                 },
                 {
                   id: "heritage",
@@ -1235,7 +1235,7 @@ function HotelsPage() {
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
-                    <span className={`px-2.5 py-1 rounded-full text-white text-[10px] font-black shadow-xs ${prop.badgeBg}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-white text-[11px] font-black shadow-xs ${prop.badgeBg}`}>
                       {prop.badge}
                     </span>
                   </div>
@@ -1298,7 +1298,7 @@ function HotelsPage() {
                   count: countLabel("hotel"),
                   img: "/assets/ai_hotel.jpg",
                   badge: isAr ? "خدمة 5 نجوم" : "5-Star Service",
-                  badgeBg: "bg-[#003580]",
+                  badgeBg: "bg-[#00736F]",
                   desc: isAr ? "أرقى الفنادق المصنفة بضيافة استثنائية وخدمة 5 نجوم في أهم المدن مع خصم 15% لرواد دلّني." : "Top luxury rated 5-star hotels.",
                 },
                 {
@@ -1316,7 +1316,7 @@ function HotelsPage() {
                   count: countLabel("apartment"),
                   img: "/assets/dest-tripoli.jpg",
                   badge: isAr ? "خصوصية عائلية" : "Family Suites",
-                  badgeBg: "bg-indigo-700",
+                  badgeBg: "bg-teal-700",
                   desc: isAr ? "شقق وأجنحة مفروشة بالكامل تمنحك راحة وخصوصية عائلية تامة." : "Furnished apartments with family privacy.",
                 },
                 {
@@ -1408,7 +1408,7 @@ function HotelsPage() {
                   <button
                     type="button"
                     onClick={() => scrollHotels("right")}
-                    className="w-8 h-8 rounded-xl bg-white hover:bg-[#003580] text-[#003580] hover:text-white border border-slate-200 shadow-xs transition flex items-center justify-center font-black cursor-pointer text-sm"
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-[#00736F] text-[#00736F] hover:text-white border border-slate-200 shadow-xs transition flex items-center justify-center font-black cursor-pointer text-sm"
                     title={isAr ? "تمرير لليمين" : "Scroll Right"}
                   >
                     <span>➔</span>
@@ -1416,7 +1416,7 @@ function HotelsPage() {
                   <button
                     type="button"
                     onClick={() => scrollHotels("left")}
-                    className="w-8 h-8 rounded-xl bg-white hover:bg-[#003580] text-[#003580] hover:text-white border border-slate-200 shadow-xs transition flex items-center justify-center font-black cursor-pointer text-sm"
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-[#00736F] text-[#00736F] hover:text-white border border-slate-200 shadow-xs transition flex items-center justify-center font-black cursor-pointer text-sm"
                     title={isAr ? "تمرير لليسار" : "Scroll Left"}
                   >
                     <span className="rotate-180 inline-block">➔</span>
@@ -1433,9 +1433,9 @@ function HotelsPage() {
 
           {/* Prompt banner when no category is selected yet */}
           {propertyType === "none" ? (
-            <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-[#003580]/20 shadow-xs space-y-4 my-4">
+            <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-[#00736F]/20 shadow-xs space-y-4 my-4">
               <div className="text-4xl sm:text-5xl mb-2">🏨</div>
-              <h4 className="text-lg sm:text-xl font-black text-[#003580]">
+              <h4 className="text-lg sm:text-xl font-black text-[#00736F]">
                 {isAr ? "يرجى اختيار نوع مكان الإقامة أعلاه لعرض الأماكن المتاحة" : "Please select a property category above to view available stays"}
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 font-semibold max-w-lg mx-auto leading-relaxed">
@@ -1455,7 +1455,7 @@ function HotelsPage() {
                     key={btn.id}
                     type="button"
                     onClick={() => setPropertyType(btn.id)}
-                    className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#003580] text-[#003580] hover:text-white border border-[#E8E2D6] text-xs font-black transition cursor-pointer shadow-xs"
+                    className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#00736F] text-[#00736F] hover:text-white border border-[#E8E2D6] text-xs font-black transition cursor-pointer shadow-xs"
                   >
                     {btn.label}
                   </button>
@@ -1514,7 +1514,7 @@ function HotelsPage() {
                       {/* Body */}
                       <div className="p-5 flex-1 flex flex-col gap-3">
                         <div>
-                          <h4 className="text-lg sm:text-xl font-black text-[#0F172A] group-hover:text-[#003580] transition-colors leading-snug line-clamp-1">
+                          <h4 className="text-lg sm:text-xl font-black text-[#0F172A] group-hover:text-[#00736F] transition-colors leading-snug line-clamp-1">
                             {h.name}
                           </h4>
                           {h.description && (
@@ -1543,7 +1543,7 @@ function HotelsPage() {
                               e.preventDefault();
                               setSelectedHotel(h);
                             }}
-                            className="flex-1 h-11 rounded-full bg-[#003580] hover:bg-[#0F172A] text-white font-black text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                            className="flex-1 h-11 rounded-full bg-[#00736F] hover:bg-[#0F172A] text-white font-black text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
                           >
                             <span>{isAr ? "عرض التفاصيل" : "View details"}</span>
                             <span className="transition-transform duration-300 group-hover:-translate-x-1">←</span>
@@ -1574,7 +1574,7 @@ function HotelsPage() {
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.mapsQuery || `${h.name} ${h.city}`)}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="w-11 h-11 rounded-full bg-[#003580]/8 hover:bg-[#003580]/15 text-[#003580] ring-1 ring-[#003580]/15 flex items-center justify-center transition-colors"
+                            className="w-11 h-11 rounded-full bg-[#00736F]/8 hover:bg-[#00736F]/15 text-[#00736F] ring-1 ring-[#00736F]/15 flex items-center justify-center transition-colors"
                             title={isAr ? "الموقع على خرائط Google" : "Open in Google Maps"}
                             aria-label={isAr ? "الموقع على الخريطة" : "Map"}
                           >
@@ -1602,7 +1602,7 @@ function HotelsPage() {
                       setStars(0);
                       setSearchQuery("");
                     }}
-                    className="mt-4 px-4 py-2 bg-[#003580] text-white text-xs font-black rounded-xl"
+                    className="mt-4 px-4 py-2 bg-[#00736F] text-white text-xs font-black rounded-xl"
                   >
                     {isAr ? "إعادة ضبط التصفية" : "Reset Filters"}
                   </button>

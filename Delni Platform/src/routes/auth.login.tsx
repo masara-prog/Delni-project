@@ -149,7 +149,7 @@ function LoginPage() {
         ))}
 
         {/* Crisp Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#1B5A78]/40 to-transparent z-1" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0B4F57]/40 to-transparent z-1" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#D96B27]/20 via-transparent to-transparent z-1" />
 
         <div className="relative z-10 h-full flex flex-col justify-between p-10 xl:p-12 text-white">
@@ -168,7 +168,7 @@ function LoginPage() {
           </div>
 
           <div className="max-w-lg space-y-4">
-            <div className="inline-block px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D96B27] to-[#1B5A78] text-white text-xs font-black tracking-wide shadow-md">
+            <div className="inline-block px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D96B27] to-[#0B4F57] text-white text-xs font-black tracking-wide shadow-md">
               بوابة السياحة الذكية
             </div>
             <h2 className="text-3xl xl:text-4xl font-black leading-tight text-white drop-shadow-md">
@@ -226,15 +226,15 @@ function LoginPage() {
                   onClick={() => handleRoleSelect(r.id)}
                   className={`p-3 rounded-[18px] bg-white text-right transition-all duration-200 cursor-pointer flex items-center justify-between gap-1.5 ${
                     isSelected
-                      ? "border-2 border-[#1B5A78] shadow-sm ring-1 ring-[#1B5A78]/20 bg-blue-50/50"
-                      : "border border-[#E2E8F0] shadow-2xs hover:border-[#1B5A78]/40"
+                      ? "border-2 border-[#0B4F57] shadow-sm ring-1 ring-[#0B4F57]/20 bg-teal-50/50"
+                      : "border border-[#E2E8F0] shadow-2xs hover:border-[#0B4F57]/40"
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="font-black text-xs text-[#0F172A] truncate">
                       {r.label}
                     </div>
-                    <div className="text-[9px] text-[#718096] font-medium truncate mt-0.5">
+                    <div className="text-[11px] text-[#718096] font-medium truncate mt-0.5">
                       {r.desc}
                     </div>
                   </div>
@@ -247,8 +247,8 @@ function LoginPage() {
 
           {/* Transport Info Notice */}
           {role === "transport" && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
-              <div className="flex items-center gap-1.5 font-black text-blue-950 mb-1">
+            <div className="mb-4 p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 text-xs font-bold leading-relaxed shadow-2xs text-right">
+              <div className="flex items-center gap-1.5 font-black text-teal-950 mb-1">
                 <span>🚌</span>
                 <span>دخول شركات النقل السياحي المعتمدة:</span>
               </div>
@@ -319,7 +319,7 @@ function LoginPage() {
                 type="button"
                 disabled={resubmitting}
                 onClick={handleResubmit}
-                className="w-full h-10 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-xs disabled:opacity-60 cursor-pointer"
+                className="w-full h-10 rounded-xl bg-[#0B4F57] hover:bg-[#13445C] text-white font-black text-xs disabled:opacity-60 cursor-pointer"
               >
                 {resubmitting ? "جاري الإرسال..." : "إرسال الطلب للمراجعة من جديد"}
               </button>
@@ -338,14 +338,14 @@ function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@gmail.com"
                 required
-                className="w-full h-13 sm:h-14 px-5 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 transition shadow-2xs text-right"
+                className="w-full h-13 sm:h-14 px-5 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#0B4F57] focus:ring-2 focus:ring-[#0B4F57]/15 transition shadow-2xs text-right"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs sm:text-sm font-bold text-[#0F172A]">كلمة المرور</label>
-                <a href="#" className="text-xs sm:text-sm font-bold text-[#1B5A78] hover:underline">
+                <a href="#" className="text-xs sm:text-sm font-bold text-[#0B4F57] hover:underline">
                   نسيت كلمة المرور؟
                 </a>
               </div>
@@ -356,12 +356,12 @@ function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full h-13 sm:h-14 px-5 pl-20 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/15 transition shadow-2xs text-right"
+                  className="w-full h-13 sm:h-14 px-5 pl-20 rounded-2xl border border-[#E2E8F0] bg-white text-sm font-semibold text-[#0F172A] placeholder:text-[#A0AEC0] outline-none focus:border-[#0B4F57] focus:ring-2 focus:ring-[#0B4F57]/15 transition shadow-2xs text-right"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-bold text-[#1B5A78] hover:underline transition cursor-pointer py-1"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-bold text-[#0B4F57] hover:underline transition cursor-pointer py-1"
                 >
                   {showPass ? "إخفاء" : "إظهار"}
                 </button>
@@ -373,7 +373,7 @@ function LoginPage() {
                 <input
                   type="checkbox"
                   defaultChecked
-                  className="w-5 h-5 rounded-md border-2 border-[#CBD5E0] accent-[#1B5A78] cursor-pointer"
+                  className="w-5 h-5 rounded-md border-2 border-[#CBD5E0] accent-[#0B4F57] cursor-pointer"
                 />
                 <span>تذكرني على هذا الجهاز</span>
               </label>
@@ -381,7 +381,7 @@ function LoginPage() {
 
             <button
               type="submit"
-              className="w-full h-13 sm:h-14 rounded-2xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-black text-base sm:text-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition flex items-center justify-center mt-2 cursor-pointer border-none"
+              className="w-full h-13 sm:h-14 rounded-2xl bg-[#0B4F57] hover:bg-[#13445C] text-white font-black text-base sm:text-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition flex items-center justify-center mt-2 cursor-pointer border-none"
             >
               تسجيل الدخول
             </button>
@@ -390,7 +390,7 @@ function LoginPage() {
           {/* Right-aligned Signup Footer */}
           <div className="mt-6 text-right text-xs sm:text-sm text-[#718096] font-medium">
             ليس لديك حساب؟{" "}
-            <Link to="/auth/signup" className="text-[#1B5A78] font-black hover:underline mr-1">
+            <Link to="/auth/signup" className="text-[#0B4F57] font-black hover:underline mr-1">
               أنشئ حساباً جديداً
             </Link>
           </div>

@@ -244,7 +244,7 @@ function RestaurantDetailsView({
               </div>
               <div className="w-14 h-14 rounded-2xl bg-[#D96B27] text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
                 <span className="text-lg leading-tight font-black">{restaurant.rating > 0 ? restaurant.rating : "—"}</span>
-                <span className="text-[9px] text-amber-200 font-bold">{restaurant.rating > 0 ? (isAr ? "من 5" : "/5") : (isAr ? "جديد" : "New")}</span>
+                <span className="text-[11px] text-amber-200 font-bold">{restaurant.rating > 0 ? (isAr ? "من 5" : "/5") : (isAr ? "جديد" : "New")}</span>
               </div>
             </div>
           </div>
@@ -570,7 +570,7 @@ function RestaurantDetailsView({
               <div className="space-y-3">
                 <a
                   href={`tel:${restaurant.phone}`}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">📞</span>
                   <span>{isAr ? `اتصال مباشر وحجز طاولة (${restaurant.phone})` : `Call Restaurant (${restaurant.phone})`}</span>
@@ -883,7 +883,7 @@ function RestaurantsPage() {
       <Header active="restaurants" />
 
       {/* ── 1. HERO SECTION (Professional Animated Slideshow) ── */}
-      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#003580]">
+      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#00736F]">
         <HeroSlideshow
           images={[
             "/assets/restaurant-libya.jpg",
@@ -894,7 +894,7 @@ function RestaurantsPage() {
           alt="المطاعم والمقاهي في ليبيا"
           brightness="brightness-90"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#003580]/90 via-[#003580]/45 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#00736F]/90 via-[#00736F]/45 to-transparent z-10" />
         <div className="relative z-20 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center pt-12 text-white">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-black w-fit mb-2.5 border border-white/25">
             🍽️ {isAr ? "دليل واستعراض المطاعم والمقاهي في ليبيا (للعرض والتعريف فقط)" : "Dining & Cafes Directory in Libya (Showcase Only)"}
@@ -913,12 +913,12 @@ function RestaurantsPage() {
       {/* ── 2. UNIFIED FLOATING FILTER PANEL (Matching Hotels & Attractions) ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-blue-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* Search Input */}
             <div className="lg:col-span-5 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">🔍</span>
+              <span className="text-[#00736F] font-bold text-base">🔍</span>
               <div className="relative flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "البحث عن مطعم أو طبق:" : "Search Restaurant or Dish:"}
                 </label>
                 <input
@@ -946,9 +946,9 @@ function RestaurantsPage() {
 
             {/* City / Destination Select */}
             <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">📍</span>
+              <span className="text-[#00736F] font-bold text-base">📍</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "المدينة والمنطقة:" : "City & Region:"}
                 </label>
                 <select
@@ -973,7 +973,7 @@ function RestaurantsPage() {
             {/* Cuisine Category Dropdown Filter */}
             <div className="lg:col-span-3 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center justify-between gap-2">
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "تصنيف المأكولات:" : "Cuisine Category:"}
                 </label>
                 <select
@@ -1037,8 +1037,8 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "seafood").length,
                 img: "/assets/seafood_category.jpg",
                 badge: isAr ? "صيد بحري طازج" : "Fresh Catch",
-                badgeBg: "bg-blue-700",
-                border: "border-blue-500 ring-4 ring-blue-500/25",
+                badgeBg: "bg-teal-700",
+                border: "border-teal-500 ring-4 ring-teal-500/25",
               },
               {
                 id: "traditional",
@@ -1093,11 +1093,11 @@ function RestaurantsPage() {
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
-                    <span className={`px-3 py-1 rounded-full text-white text-[10px] font-black shadow-xs ${cat.badgeBg}`}>
+                    <span className={`px-3 py-1 rounded-full text-white text-[11px] font-black shadow-xs ${cat.badgeBg}`}>
                       {cat.badge}
                     </span>
                     {isSelected && (
-                      <span className="w-6 h-6 rounded-full bg-white text-[#003580] flex items-center justify-center text-xs font-black shadow-md">
+                      <span className="w-6 h-6 rounded-full bg-white text-[#00736F] flex items-center justify-center text-xs font-black shadow-md">
                         ✓
                       </span>
                     )}
@@ -1128,7 +1128,7 @@ function RestaurantsPage() {
           {!selectedCategory ? (
             <div className="text-center py-14 px-4 bg-white rounded-3xl border-2 border-dashed border-amber-300 shadow-sm space-y-3 my-4">
               <div className="text-5xl">🍽️</div>
-              <h4 className="text-lg sm:text-xl font-black text-[#003580]">
+              <h4 className="text-lg sm:text-xl font-black text-[#00736F]">
                 {isAr ? "اختر أحد تصنيفات المأكولات والمقاهي أعلاه لعرض الخيارات المتاحة" : "Select a Dining Category Above"}
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 font-semibold max-w-lg mx-auto leading-relaxed">
@@ -1140,11 +1140,11 @@ function RestaurantsPage() {
           ) : (
             /* B. When Category IS Selected -> Show Filtered Results */
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#EBF3FF] rounded-2xl border border-blue-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#EBF3FF] rounded-2xl border border-teal-200">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">✅</span>
                   <div>
-                    <h3 className="text-base sm:text-lg font-black text-[#003580]">
+                    <h3 className="text-base sm:text-lg font-black text-[#00736F]">
                       {isAr ? "قائمة الخيارات المتاحة لـ: " : "Available Places for: "}
                       <span className="text-[#D96B27]">
                         {selectedCategory === "seafood"
@@ -1165,7 +1165,7 @@ function RestaurantsPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedCategory(null)}
-                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-[#003580] text-xs font-black border border-[#003580]/30 transition cursor-pointer"
+                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-[#00736F] text-xs font-black border border-[#00736F]/30 transition cursor-pointer"
                 >
                   {isAr ? "اختيار تصنيف آخر ✕" : "Change Category ✕"}
                 </button>
@@ -1196,7 +1196,7 @@ function RestaurantsPage() {
                             size="sm"
                           />
                         </div>
-                        <div className="absolute top-2.5 left-2.5 bg-[#003580] text-white text-[10px] font-black px-3 py-1 rounded-full shadow-sm">
+                        <div className="absolute top-2.5 left-2.5 bg-[#00736F] text-white text-[11px] font-black px-3 py-1 rounded-full shadow-sm">
                           {r.type}
                         </div>
                       </div>
@@ -1205,20 +1205,20 @@ function RestaurantsPage() {
                       <div className="flex-1 flex flex-col justify-between space-y-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            <h4 className="text-lg sm:text-xl font-black text-[#003580] group-hover:text-[#D96B27] transition-colors">
+                            <h4 className="text-lg sm:text-xl font-black text-[#00736F] group-hover:text-[#D96B27] transition-colors">
                               {r.name}
                             </h4>
-                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                            <span className="text-[11px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                               مفتوح الآن · {r.hours}
                             </span>
-                            <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                               <span>❤️</span>
                               <span>{isFav ? (Number(r.reviewsCount) || 0) + 1 : (Number(r.reviewsCount) || 0)} {isAr ? "إعجاب" : "likes"}</span>
                             </span>
                           </div>
 
                           <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                            <span className="text-[#003580] font-bold">📍 {r.city}</span>
+                            <span className="text-[#00736F] font-bold">📍 {r.city}</span>
                             <span>·</span>
                             <span>{r.address}</span>
                           </div>

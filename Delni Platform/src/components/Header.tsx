@@ -123,7 +123,7 @@ export function Header({ active }: HeaderProps) {
             <div className="flex items-center gap-1.5 p-1 bg-black/35 hover:bg-black/45 backdrop-blur-xl rounded-full border border-white/20 shadow-md">
               <Link
                 to={currentRole ? currentRole.path : "/trips"}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-sm hover:scale-105 transition border border-white/20 antialiased whitespace-nowrap"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-xs sm:text-sm font-bold font-['Cairo',sans-serif] shadow-sm hover:scale-105 transition border border-white/20 antialiased whitespace-nowrap"
                 title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-lg" />
@@ -143,7 +143,7 @@ export function Header({ active }: HeaderProps) {
           ) : (
             <Link
               to="/auth/login"
-              className="h-9 px-4 inline-flex items-center justify-center rounded-full bg-[#D96B27] hover:bg-[#C25B1E] text-white text-xs sm:text-sm font-bold font-['Tajawal',sans-serif] shadow-soft hover:scale-105 transition whitespace-nowrap shrink-0"
+              className="h-9 px-4 inline-flex items-center justify-center rounded-full bg-[#D96B27] hover:bg-[#C25B1E] text-white text-xs sm:text-sm font-bold font-['Cairo',sans-serif] shadow-soft hover:scale-105 transition whitespace-nowrap shrink-0"
             >
               {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
             </Link>
@@ -153,7 +153,7 @@ export function Header({ active }: HeaderProps) {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#1B5A78] border-b border-white/15 animate-in slide-in-from-top-4 duration-300">
+        <div className="lg:hidden bg-[#0B4F57] border-b border-white/15 animate-in slide-in-from-top-4 duration-300">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-1.5">
             <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-white/15">
               <span className="text-[11px] font-black text-white/70 tracking-wider uppercase">

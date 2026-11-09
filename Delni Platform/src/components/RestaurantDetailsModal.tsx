@@ -260,31 +260,31 @@ export function RestaurantDetailsModal({
                   ⏱️
                 </div>
                 <div>
-                  <div className="text-[10px] font-black text-slate-500 dark:text-slate-400">
+                  <div className="text-[11px] font-black text-slate-500 dark:text-slate-400">
                     {isAr ? "ساعات وفترات العمل:" : "Working Hours:"}
                   </div>
                   <div className="text-xs font-black text-amber-700 dark:text-amber-300">
                     {restaurant.hours || (isAr ? "09:00 ص — 12:00 م" : "09:00 AM — 12:00 AM")}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-semibold">
+                  <div className="text-[11px] text-slate-500 font-semibold">
                     {isAr ? "مفتوح يومياً لخدمتكم" : "Open daily"}
                   </div>
                 </div>
               </div>
 
               {/* Cuisine & Specialty */}
-              <div className="p-3 rounded-2xl bg-blue-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700 flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm">
+              <div className="p-3 rounded-2xl bg-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-teal-100 dark:border-slate-700 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm">
                   🍲
                 </div>
                 <div className="truncate">
-                  <div className="text-[10px] font-black text-slate-500 dark:text-slate-400">
+                  <div className="text-[11px] font-black text-slate-500 dark:text-slate-400">
                     {isAr ? "نوع المأكولات والتخصص:" : "Cuisine & Specialty:"}
                   </div>
-                  <div className="text-xs font-black text-blue-700 dark:text-blue-300 truncate">
+                  <div className="text-xs font-black text-teal-700 dark:text-teal-300 truncate">
                     {restaurant.type}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-semibold truncate">
+                  <div className="text-[11px] text-slate-500 font-semibold truncate">
                     {restaurant.specialty || (isAr ? "أطباق طازجة ومشروبات" : "Fresh Food & Drinks")}
                   </div>
                 </div>
@@ -296,13 +296,13 @@ export function RestaurantDetailsModal({
                   📍
                 </div>
                 <div className="truncate">
-                  <div className="text-[10px] font-black text-emerald-800 dark:text-emerald-400">
+                  <div className="text-[11px] font-black text-emerald-800 dark:text-emerald-400">
                     {isAr ? "المدينة والموقع:" : "City & Location:"}
                   </div>
                   <div className="text-xs font-black text-emerald-700 dark:text-emerald-300 truncate">
                     {restaurant.city}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-semibold truncate">
+                  <div className="text-[11px] text-slate-500 font-semibold truncate">
                     {restaurant.address || restaurant.city}
                   </div>
                 </div>
@@ -347,11 +347,11 @@ export function RestaurantDetailsModal({
               <div>
                 <div className="text-[11px] font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                   <span>{isAr ? "دليل سياحي تعريفي (عرض فقط)" : "Tourism Directory Showcase"}</span>
-                  <span className="px-2 py-0.2 rounded-full bg-amber-100 text-amber-800 text-[9px] font-black">
+                  <span className="px-2 py-0.2 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black">
                     {isAr ? "استعلام مباشر" : "Direct"}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-500 font-bold">
+                <div className="text-[11px] text-slate-500 font-bold">
                   {isAr ? "تواصل مباشرة مع إدارة المطعم" : "Contact restaurant directly"}
                 </div>
               </div>

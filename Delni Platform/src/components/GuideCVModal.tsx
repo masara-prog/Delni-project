@@ -78,7 +78,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
                   <span className="text-3xl sm:text-4xl">👤</span>
                 </div>
               )}
-              <span className="absolute bottom-1 left-1 w-6 h-6 rounded-full bg-[#1B5A78] text-white grid place-items-center text-xs font-black border-2 border-white shadow-xs" title="معتمد">
+              <span className="absolute bottom-1 left-1 w-6 h-6 rounded-full bg-[#0B4F57] text-white grid place-items-center text-xs font-black border-2 border-white shadow-xs" title="معتمد">
                 ✓
               </span>
             </div>
@@ -107,7 +107,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
           {/* Minimalist Stats Grid */}
           <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-4">
             <div className="p-2.5 sm:p-3 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-center">
-              <div className="text-[10px] text-[#718096] font-bold flex items-center justify-center gap-1">
+              <div className="text-[11px] text-[#718096] font-bold flex items-center justify-center gap-1">
                 <Calendar className="w-3 h-3 text-orange-500" />
                 <span>أيام العمل</span>
               </div>
@@ -117,7 +117,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
             </div>
 
             <div className="p-2.5 sm:p-3 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-center">
-              <div className="text-[10px] text-[#718096] font-bold flex items-center justify-center gap-1">
+              <div className="text-[11px] text-[#718096] font-bold flex items-center justify-center gap-1">
                 <User className="w-3 h-3 text-orange-500" />
                 <span>الخبرة</span>
               </div>
@@ -127,7 +127,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
             </div>
 
             <div className="p-2.5 sm:p-3 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-center">
-              <div className="text-[10px] text-[#718096] font-bold flex items-center justify-center gap-1">
+              <div className="text-[11px] text-[#718096] font-bold flex items-center justify-center gap-1">
                 <Star className="w-3 h-3 text-amber-500 fill-current" />
                 <span>التقييم</span>
               </div>
@@ -137,7 +137,7 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
             </div>
 
             <div className="p-2.5 sm:p-3 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] text-center">
-              <div className="text-[10px] text-[#718096] font-bold flex items-center justify-center gap-1">
+              <div className="text-[11px] text-[#718096] font-bold flex items-center justify-center gap-1">
                 <span>🛡️</span>
                 <span>الاعتماد</span>
               </div>
@@ -152,8 +152,8 @@ export function GuideCVModal({ open, onClose, guide, onSelectForPrivateTrip }: G
         <div className="p-6 sm:p-8 space-y-4 overflow-y-auto">
           {/* Bio Section */}
           {guide.bio && (
-            <div className="p-4 rounded-2xl bg-[#FAF7F2] border-r-4 border-r-[#1B5A78] border border-[#E8E2D6]">
-              <div className="text-xs font-black text-[#1B5A78] mb-1.5">نبذة عن خبرات المرشد والسيرة الذاتية:</div>
+            <div className="p-4 rounded-2xl bg-[#FAF7F2] border-r-4 border-r-[#0B4F57] border border-[#E8E2D6]">
+              <div className="text-xs font-black text-[#0B4F57] mb-1.5">نبذة عن خبرات المرشد والسيرة الذاتية:</div>
               <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed font-semibold">
                 {guide.bio}
               </p>

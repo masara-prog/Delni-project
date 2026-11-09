@@ -470,7 +470,7 @@ function GuideDashboard() {
                 className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover ring-4 ring-white/15 shadow-lg flex-shrink-0"
               />
             ) : (
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#003580] text-white grid place-items-center text-3xl font-black ring-4 ring-white/15 flex-shrink-0">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#00736F] text-white grid place-items-center text-3xl font-black ring-4 ring-white/15 flex-shrink-0">
                 {(guideInfo.full_name || "?").charAt(0)}
               </div>
             )}
@@ -725,11 +725,11 @@ function GuideDashboard() {
                 <div>
                   <h4 className="font-bold text-emerald-950 text-xs sm:text-sm">الرحلة الحالية: {activeTrip.trip_name}</h4>
                   <p className="text-[11px] text-emerald-800 mt-0.5">⏱️ الموعد: {activeTrip.time_or_duration} · قائمة السياح المحجوزين في هذه الرحلة (للاطلاع فقط).</p>
-                  <p className="text-[10px] text-emerald-700/80 mt-1">ℹ️ يُسجَّل حضور السائح تلقائياً عندما يُدقَّق رقم تذكرته في مكتب التذاكر يوم الرحلة.</p>
+                  <p className="text-[11px] text-emerald-700/80 mt-1">ℹ️ يُسجَّل حضور السائح تلقائياً عندما يُدقَّق رقم تذكرته في مكتب التذاكر يوم الرحلة.</p>
                 </div>
                 <div className="text-left">
                   <div className="text-xl font-bold text-emerald-800">{attendedCount} / {activeTrip.seats_booked}</div>
-                  <div className="text-[10px] text-emerald-600 font-medium">مقعد حضر من المحجوز</div>
+                  <div className="text-[11px] text-emerald-600 font-medium">مقعد حضر من المحجوز</div>
                 </div>
               </div>
 
@@ -758,10 +758,10 @@ function GuideDashboard() {
                           <td className="p-2.5 font-mono text-[11px] font-bold text-stone-600">{tr.booking_id}</td>
                           <td className="p-2.5 font-bold text-stone-900">{tr.tourist_name}</td>
                           <td className="p-2.5 font-mono text-stone-600 text-[11px]" dir="ltr">{tr.phone_number}</td>
-                          <td className="p-2.5 font-bold text-[#1B5A78]">{tr.seats_count} مقاعد</td>
+                          <td className="p-2.5 font-bold text-[#0B4F57]">{tr.seats_count} مقاعد</td>
                           <td className="p-2.5">
                             <span
-                              className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                              className={`px-2 py-0.5 rounded-md font-bold text-[11px] ${
                                 tr.payment_status === "paid"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : "bg-amber-100 text-amber-800"
@@ -864,7 +864,7 @@ function GuideDashboard() {
                   {isVerified ? (
                     <div className="h-10 px-3 rounded-xl border border-stone-200 bg-stone-100/80 flex items-center justify-between text-xs font-semibold text-stone-600">
                       <span>{guideInfo.gender === "female" ? "👩 أنثى (مرشدة سياحية)" : "👨 ذكر (مرشد سياحي)"}</span>
-                      <span className="text-[10px] text-stone-400">🔒 معتمد</span>
+                      <span className="text-[11px] text-stone-400">🔒 معتمد</span>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
@@ -873,7 +873,7 @@ function GuideDashboard() {
                         onClick={() => setGuideInfo({ ...guideInfo, gender: "male" })}
                         className={`h-10 px-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                           guideInfo.gender === "male"
-                            ? "border-[#1B5A78] bg-[#1B5A78]/5 text-[#1B5A78]"
+                            ? "border-[#0B4F57] bg-[#0B4F57]/5 text-[#0B4F57]"
                             : "border-stone-200 bg-white text-stone-600"
                         }`}
                       >
@@ -884,7 +884,7 @@ function GuideDashboard() {
                         onClick={() => setGuideInfo({ ...guideInfo, gender: "female" })}
                         className={`h-10 px-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                           guideInfo.gender === "female"
-                            ? "border-[#1B5A78] bg-[#1B5A78]/5 text-[#1B5A78]"
+                            ? "border-[#0B4F57] bg-[#0B4F57]/5 text-[#0B4F57]"
                             : "border-stone-200 bg-white text-stone-600"
                         }`}
                       >
@@ -969,7 +969,7 @@ function GuideDashboard() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-stone-700">أماكن العمل (من المعالم السياحية المسجلة في المنصة):</label>
-                <span className="text-[11px] font-bold text-[#1B5A78]">{selectedPlaceIds.length} معالم مختارة</span>
+                <span className="text-[11px] font-bold text-[#0B4F57]">{selectedPlaceIds.length} معالم مختارة</span>
               </div>
               {platformPlaces.length === 0 ? (
                 <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold">
@@ -985,12 +985,12 @@ function GuideDashboard() {
                         key={pid}
                         onClick={() => setSelectedPlaceIds(isChecked ? selectedPlaceIds.filter((p) => p !== pid) : [...selectedPlaceIds, pid])}
                         className={`flex items-center gap-2 p-2 rounded-lg border text-right transition cursor-pointer ${
-                          isChecked ? "border-[#1B5A78] bg-white text-[#0B132B] font-bold shadow-2xs" : "border-stone-200 bg-white/70 text-stone-500"
+                          isChecked ? "border-[#0B4F57] bg-white text-[#0B132B] font-bold shadow-2xs" : "border-stone-200 bg-white/70 text-stone-500"
                         }`}
                       >
-                        <MapPin className={`w-3.5 h-3.5 ${isChecked ? "text-[#1B5A78]" : "text-stone-400"}`} />
+                        <MapPin className={`w-3.5 h-3.5 ${isChecked ? "text-[#0B4F57]" : "text-stone-400"}`} />
                         <span className="text-xs flex-1 truncate">{place.place_name}{place.city && place.city !== place.place_name ? ` (${place.city})` : ""}</span>
-                        {isChecked && <Check className="w-3.5 h-3.5 text-[#1B5A78]" />}
+                        {isChecked && <Check className="w-3.5 h-3.5 text-[#0B4F57]" />}
                       </div>
                     );
                   })}
@@ -1013,7 +1013,7 @@ function GuideDashboard() {
                         setGuideInfo({ ...guideInfo, working_days: JSON.stringify(next) });
                       }}
                       className={`py-2 px-1 rounded-lg border text-center transition ${
-                        isChecked ? "bg-[#1B5A78] text-white font-bold border-[#1B5A78]" : "bg-white border-stone-200 text-stone-500 hover:bg-stone-50"
+                        isChecked ? "bg-[#0B4F57] text-white font-bold border-[#0B4F57]" : "bg-white border-stone-200 text-stone-500 hover:bg-stone-50"
                       }`}
                     >
                       <span className="text-[11px] block">{day.nameAr}</span>
@@ -1135,7 +1135,7 @@ function GuideDashboard() {
                 onChange={(e) => setGuideInfo({ ...guideInfo, bio: e.target.value })}
                 rows={3}
                 placeholder="اكتب نبذة عن مسيرتك في الإرشاد السياحي..."
-                className="w-full p-2.5 rounded-xl border border-stone-200 bg-white text-xs font-medium text-stone-800 text-right outline-none focus:border-[#1B5A78]"
+                className="w-full p-2.5 rounded-xl border border-stone-200 bg-white text-xs font-medium text-stone-800 text-right outline-none focus:border-[#0B4F57]"
               />
             </div>
 
@@ -1233,7 +1233,7 @@ function Field({
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-stone-700">{label}</label>
         {badge && (
-          <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+          <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md flex items-center gap-1">
             {badge}
           </span>
         )}
@@ -1248,7 +1248,7 @@ function Field({
         className={`w-full h-10 px-3 rounded-xl border text-right outline-none text-xs sm:text-sm font-medium transition ${
           disabled
             ? "bg-stone-100/80 border-stone-200 text-stone-500 cursor-not-allowed select-none"
-            : "bg-white border-stone-200 text-stone-800 hover:border-stone-300 focus:border-[#1B5A78] focus:ring-2 focus:ring-[#1B5A78]/10"
+            : "bg-white border-stone-200 text-stone-800 hover:border-stone-300 focus:border-[#0B4F57] focus:ring-2 focus:ring-[#0B4F57]/10"
         }`}
       />
     </div>
@@ -1343,12 +1343,12 @@ function GuideCalendar({ trips, onDetails }: { trips: AssignedTrip[]; onDetails:
               type="button"
               onClick={() => setSelected(key)}
               className={`shrink-0 px-3 py-2 rounded-xl border text-center cursor-pointer transition ${
-                on ? "bg-[#1B5A78] text-white border-[#1B5A78]" : "bg-white text-stone-700 border-stone-200 hover:border-[#1B5A78]/50"
+                on ? "bg-[#0B4F57] text-white border-[#0B4F57]" : "bg-white text-stone-700 border-stone-200 hover:border-[#0B4F57]/50"
               }`}
             >
-              <div className="text-[10px] font-bold">{WEEK_DAY_NAMES[date.getDay()]}</div>
+              <div className="text-[11px] font-bold">{WEEK_DAY_NAMES[date.getDay()]}</div>
               <div className="text-sm font-black font-mono">{key.slice(5).replace("-", "/")}</div>
-              <div className={`text-[10px] font-bold ${on ? "text-white/80" : "text-[#D96B27]"}`}>{entries.length} رحلة</div>
+              <div className={`text-[11px] font-bold ${on ? "text-white/80" : "text-[#D96B27]"}`}>{entries.length} رحلة</div>
             </button>
           );
         })}
@@ -1448,11 +1448,11 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
     "إلى": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
     "أيام التشغيل": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
     "تاريخ البدء المفضل": { icon: CalendarDays, tone: "bg-[#1ABC9C]/12 text-[#0E8C74]" },
-    "المدة": { icon: Clock, tone: "bg-sky-100 text-sky-700" },
+    "المدة": { icon: Clock, tone: "bg-teal-100 text-teal-700" },
     "سعر المقعد": { icon: Wallet, tone: "bg-[#D96B27]/12 text-[#B4541A]" },
     "السعر المعتمد": { icon: Wallet, tone: "bg-[#D96B27]/12 text-[#B4541A]" },
     "مصروفات الخدمات": { icon: Wallet, tone: "bg-[#D96B27]/12 text-[#B4541A]" },
-    "مدينة الانطلاق": { icon: MapPin, tone: "bg-[#003580]/10 text-[#003580]" },
+    "مدينة الانطلاق": { icon: MapPin, tone: "bg-[#00736F]/10 text-[#00736F]" },
     "سعة الرحلة": { icon: Users, tone: "bg-violet-100 text-violet-700" },
     "السعة / المقاعد المتاحة": { icon: Users, tone: "bg-violet-100 text-violet-700" },
     "عدد المرافقين": { icon: Users, tone: "bg-violet-100 text-violet-700" },
@@ -1494,7 +1494,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: trip photo with title */}
-        <div className="relative h-48 sm:h-56 bg-gradient-to-l from-[#1B5A78] to-[#0F172A] overflow-hidden rounded-t-3xl">
+        <div className="relative h-48 sm:h-56 bg-gradient-to-l from-[#0B4F57] to-[#0F172A] overflow-hidden rounded-t-3xl">
           {headerPhotos.map((src, i) => (
             <img
               key={src + i}
@@ -1537,7 +1537,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
                   🗓️ {fmtDate(r.start_date)} ← {fmtDate(r.end_date)} · {tripDays} أيام
                 </span>
               )}
-              <span className="text-[10px] font-mono text-white/70">{trip.id}</span>
+              <span className="text-[11px] font-mono text-white/70">{trip.id}</span>
             </div>
           </div>
         </div>
@@ -1560,8 +1560,8 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
                 </div>
               )}
               {adminNotes.length > 0 && (
-                <div className="rounded-2xl bg-[#F4F8FA] border border-[#1B5A78]/10 p-3.5">
-                  <div className="text-[11px] font-black text-[#1B5A78] mb-1">🛈 ملاحظات الإدارة</div>
+                <div className="rounded-2xl bg-[#F4F8FA] border border-[#0B4F57]/10 p-3.5">
+                  <div className="text-[11px] font-black text-[#0B4F57] mb-1">🛈 ملاحظات الإدارة</div>
                   {adminNotes.map((x, i) => (
                     <p key={i} className="text-xs text-stone-700 leading-relaxed">{x}</p>
                   ))}
@@ -1580,7 +1580,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
                     <Icon className="w-4 h-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold text-stone-500">{k}</div>
+                    <div className="text-[11px] font-bold text-stone-500">{k}</div>
                     <div className="text-[13px] font-black text-stone-900 leading-snug truncate" title={v}>{v}</div>
                   </div>
                 </div>
@@ -1589,22 +1589,22 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
           </div>
 
           {(vehicle || driver) && (
-            <div className="p-3.5 rounded-2xl bg-gradient-to-l from-[#003580] to-[#0F172A] text-white flex flex-wrap items-center gap-3">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-l from-[#00736F] to-[#0F172A] text-white flex flex-wrap items-center gap-3">
               <span className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
                 <Bus className="w-5 h-5" aria-hidden="true" />
               </span>
               <div className="flex-1 min-w-[140px]">
-                <div className="text-[10px] font-bold text-blue-200">المركبة</div>
+                <div className="text-[11px] font-bold text-teal-200">المركبة</div>
                 <div className="text-sm font-black">
                   {vehicle?.vehicle_type || "مركبة الرحلة"}
-                  {vehicle?.plate_number && <span className="font-mono text-blue-200 text-xs"> · {vehicle.plate_number}</span>}
-                  {vehicle?.seating_capacity && <span className="text-blue-200 text-xs"> · {vehicle.seating_capacity} مقعد</span>}
+                  {vehicle?.plate_number && <span className="font-mono text-teal-200 text-xs"> · {vehicle.plate_number}</span>}
+                  {vehicle?.seating_capacity && <span className="text-teal-200 text-xs"> · {vehicle.seating_capacity} مقعد</span>}
                 </div>
               </div>
               {driver && (
                 <div className="flex items-center gap-2.5 ps-3 sm:border-s border-white/15">
                   <div>
-                    <div className="text-[10px] font-bold text-blue-200">السائق</div>
+                    <div className="text-[11px] font-bold text-teal-200">السائق</div>
                     <div className="text-sm font-black">{driver.full_name}</div>
                   </div>
                   {driver.phone_number && (
@@ -1627,7 +1627,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
               <ol className="relative space-y-2 before:absolute before:top-2 before:bottom-2 before:right-[13px] before:w-0.5 before:bg-gradient-to-b before:from-[#1ABC9C] before:to-[#D96B27]">
                 {shownStations.map((st, i) => (
                   <li key={st.station_id || i} className="relative pr-9">
-                    <span className="absolute right-0 top-2 w-7 h-7 rounded-full bg-white border-2 border-[#1ABC9C] text-[#1B5A78] grid place-items-center text-[10px] font-black">
+                    <span className="absolute right-0 top-2 w-7 h-7 rounded-full bg-white border-2 border-[#1ABC9C] text-[#0B4F57] grid place-items-center text-[11px] font-black">
                       {st.station_order || i + 1}
                     </span>
                     <div className="p-3 rounded-xl bg-gradient-to-l from-stone-50 to-white border border-stone-200 text-xs">
@@ -1636,7 +1636,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
                           {st.day_number ? `اليوم ${st.day_number} · ` : ""}{st.station_title}
                         </span>
                         {st.station_time && (
-                          <span className="flex-shrink-0 text-[10px] font-black text-white bg-[#1B5A78] px-2 py-0.5 rounded-full">{st.station_time}</span>
+                          <span className="flex-shrink-0 text-[11px] font-black text-white bg-[#0B4F57] px-2 py-0.5 rounded-full">{st.station_time}</span>
                         )}
                       </div>
                       {st.station_desc && <div className="text-stone-600 mt-1 leading-relaxed">{st.station_desc}</div>}
@@ -1648,7 +1648,7 @@ function TripDetailsModal({ trip, onClose }: { trip: AssignedTrip; onClose: () =
                 <button
                   type="button"
                   onClick={() => setShowAllStations((v) => !v)}
-                  className="w-full mt-1 py-2 rounded-xl border border-[#1B5A78]/20 bg-[#1B5A78]/5 hover:bg-[#1B5A78]/10 text-[#1B5A78] text-xs font-black transition cursor-pointer"
+                  className="w-full mt-1 py-2 rounded-xl border border-[#0B4F57]/20 bg-[#0B4F57]/5 hover:bg-[#0B4F57]/10 text-[#0B4F57] text-xs font-black transition cursor-pointer"
                 >
                   {showAllStations ? "إخفاء المحطات ▲" : `عرض كل المحطات (${stations.length - 2} أخرى) ▼`}
                 </button>

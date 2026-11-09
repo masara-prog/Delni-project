@@ -220,7 +220,7 @@ function Navbar() {
           <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-xl transition">
             <Link
               to={dashboardPath}
-              className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Tajawal',sans-serif] tracking-wide shadow-md hover:scale-105 transition border border-white/25 antialiased"
+              className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-sm md:text-[15px] font-bold font-['Cairo',sans-serif] tracking-wide shadow-md hover:scale-105 transition border border-white/25 antialiased"
               title={language === 'ar' ? "الانتقال إلى لوحة التحكم" : "Go to dashboard"}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shadow-lg" />
@@ -228,7 +228,7 @@ function Navbar() {
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Tajawal',sans-serif] transition border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-red-500/80 text-white/90 hover:text-white text-xs md:text-sm font-semibold font-['Cairo',sans-serif] transition border border-white/15 hover:border-red-400/50 cursor-pointer antialiased"
               title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout'}
             >
               <svg className="w-3.5 h-3.5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,13 +241,13 @@ function Navbar() {
           <>
             <Link
               to="/auth/login"
-              className="px-5 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-black hover:bg-white/25 transition shadow-md"
+              className="px-3.5 sm:px-5 py-2.5 rounded-full whitespace-nowrap bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs sm:text-sm font-black hover:bg-white/25 transition shadow-md"
             >
               {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
             </Link>
             <Link
               to="/auth/signup"
-              className="px-6 py-2.5 rounded-full bg-[#D96B27] hover:brightness-110 text-white text-sm font-black shadow-lg hover:scale-105 transition border border-white/20"
+              className="px-4 sm:px-6 py-2.5 rounded-full whitespace-nowrap bg-[#D96B27] hover:brightness-110 text-white text-xs sm:text-sm font-black shadow-lg hover:scale-105 transition border border-white/20"
             >
               {language === 'ar' ? 'إنشاء حساب' : 'Sign Up'}
             </Link>
@@ -390,8 +390,8 @@ function SearchCard() {
             to={tItem.to}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-black whitespace-nowrap transition duration-300 cursor-pointer ${
               tab === tItem.id
-                ? "bg-[#003580] text-white shadow-md border border-[#003580] scale-105"
-                : "text-slate-700 hover:text-[#003580] hover:bg-slate-100/80 border border-transparent"
+                ? "bg-[#00736F] text-white shadow-md border border-[#00736F] scale-105"
+                : "text-slate-700 hover:text-[#00736F] hover:bg-slate-100/80 border border-transparent"
             }`}
             style={{ fontFamily: "'Cairo', sans-serif" }}
           >
@@ -408,7 +408,7 @@ function SearchCard() {
           placeholder={active.hint || t("search_placeholder")}
           value={query}
           onChange={setQuery}
-          iconColor="bg-blue-600/10 text-blue-600 border-blue-500/25"
+          iconColor="bg-teal-600/10 text-teal-600 border-teal-500/25"
         />
         {withDates && (
           <>
@@ -432,14 +432,14 @@ function SearchCard() {
               min={from || today}
               value={to}
               onChange={(v) => { setTo(v); setDateError(""); }}
-              iconColor="bg-blue-600/10 text-blue-600 border-blue-500/25"
+              iconColor="bg-teal-600/10 text-teal-600 border-teal-500/25"
             />
           </>
         )}
         <div className="md:col-span-2 flex">
           <button
             type="submit"
-            className="w-full h-full min-h-[56px] rounded-2xl bg-[#003580] hover:bg-[#002866] text-white font-black text-base shadow-md hover:-translate-y-0.5 transition flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full h-full min-h-[56px] rounded-2xl bg-[#00736F] hover:bg-[#005B57] text-white font-black text-base shadow-md hover:-translate-y-0.5 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <Icon.Search className="w-5 h-5" />
             {t("search_button")}
@@ -511,7 +511,7 @@ function TrustStrip() {
       icon: <Icon.Car className="w-6 h-6" />, 
       title: language === 'ar' ? "مرشدون وسائقون معتمدون" : "Certified Guides & Drivers", 
       sub: language === 'ar' ? "تغطية في كافة المدن" : "Full Coverage Across Libya",
-      color: "bg-blue-600/10 text-blue-600"
+      color: "bg-teal-600/10 text-teal-600"
     },
     { 
       icon: <Icon.Users className="w-6 h-6" />, 
@@ -651,7 +651,7 @@ function WhyUs() {
             {feats.map((f, i) => {
               const bgColors = [
                 "bg-emerald-600 text-white",
-                "bg-blue-600 text-white",
+                "bg-teal-600 text-white",
                 "bg-amber-500 text-white",
                 "bg-[#D96B27] text-white"
               ];
@@ -783,7 +783,7 @@ const tripTypesData = [
     duration: "من 8 إلى 10 ساعات",
     features: ["حديقة الحيوان", "المتحف الوطني والسرايا الحمراء", "كورنيش طرابلس والمدينة القديمة", "نقل مكيف بمرشد سياحي"],
     img: destTripoli,
-    accent: "from-sky-500/40 to-primary/40",
+    accent: "from-teal-500/40 to-primary/40",
   },
   {
     id: "weekly",
@@ -831,8 +831,8 @@ function TripTypes() {
               onClick={() => setActive(t.id)}
               className={`px-6 py-3 rounded-full text-sm font-black transition duration-200 ${
                 active === t.id
-                  ? "bg-[#003580] text-white shadow-lg scale-105"
-                  : "bg-white text-foreground border border-border hover:border-blue-500 hover:text-blue-700"
+                  ? "bg-[#00736F] text-white shadow-lg scale-105"
+                  : "bg-white text-foreground border border-border hover:border-teal-500 hover:text-teal-700"
               }`}
             >
               {t.tag}
@@ -865,7 +865,7 @@ function TripTypes() {
               <ul className="mt-5 grid grid-cols-2 gap-2">
                 {current.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-foreground font-semibold">
-                    <span className="w-5 h-5 rounded-full bg-gold text-gold-foreground grid place-items-center text-[10px] font-black">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-gold text-gold-foreground grid place-items-center text-[11px] font-black">✓</span>
                     {f}
                   </li>
                 ))}
@@ -900,7 +900,7 @@ function HowItWorks() {
 
   return (
     <section className="relative py-20 md:py-28 bg-gradient-sand overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute -top-32 start-1/4 w-96 h-96 rounded-full bg-[#003580]/[0.06] blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -top-32 start-1/4 w-96 h-96 rounded-full bg-[#00736F]/[0.06] blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div className="text-center max-w-2xl mx-auto">
@@ -912,7 +912,7 @@ function HowItWorks() {
         </Reveal>
 
         <ol className="relative mt-14 grid md:grid-cols-3 gap-6 md:gap-8">
-          <div aria-hidden className="hidden md:block absolute top-11 start-[17%] end-[17%] border-t-2 border-dashed border-[#003580]/20" />
+          <div aria-hidden className="hidden md:block absolute top-11 start-[17%] end-[17%] border-t-2 border-dashed border-[#00736F]/20" />
           {steps.map((st, k) => (
             <Reveal key={st.title} delay={k * 60}>
               <li
@@ -921,8 +921,8 @@ function HowItWorks() {
               >
                 <div className="relative mx-auto w-[88px] h-[88px]">
                   <div className="absolute inset-0 rounded-full bg-white shadow-card ring-8 ring-[#F8F5EF] transition-transform duration-200 group-hover:scale-105" style={ease} />
-                  <div className="relative w-full h-full grid place-items-center text-[#003580]"><st.icon className="w-9 h-9" strokeWidth={1.75} aria-hidden /></div>
-                  <span className="absolute -top-1 -end-1 w-8 h-8 rounded-full bg-[#003580] text-white text-sm font-black grid place-items-center shadow-md ring-4 ring-[#F8F5EF]">{k + 1}</span>
+                  <div className="relative w-full h-full grid place-items-center text-[#00736F]"><st.icon className="w-9 h-9" strokeWidth={1.75} aria-hidden /></div>
+                  <span className="absolute -top-1 -end-1 w-8 h-8 rounded-full bg-[#00736F] text-white text-sm font-black grid place-items-center shadow-md ring-4 ring-[#F8F5EF]">{k + 1}</span>
                 </div>
                 <h3 className="mt-6 text-xl font-black text-foreground">{st.title}</h3>
                 <p className="mt-2 text-muted-foreground leading-relaxed">{st.text}</p>

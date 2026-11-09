@@ -140,7 +140,7 @@ export function DashboardShell({
               )}
               <div className="hidden md:block">
                 <div className="text-sm font-black text-foreground leading-none">{userName}</div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">{roleLabel}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{roleLabel}</div>
               </div>
             </div>
             <button
@@ -245,7 +245,7 @@ export function DashboardShell({
                     </span>
                     {item.badge !== undefined && (
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-black flex-shrink-0 ${
+                        className={`text-[11px] px-2 py-0.5 rounded-full font-black flex-shrink-0 ${
                           isActive
                             ? "bg-white/20 text-white"
                             : "bg-red-500/80 text-white"
@@ -306,7 +306,7 @@ export function DashboardShell({
 
             {/* Version */}
             <div className="pt-3 text-center">
-              <span className="text-[10px] font-bold" style={{ color: "rgba(255,255,255,0.2)" }}>
+              <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.2)" }}>
                 {isAr ? "منصة دَلِّني · v2.0.0" : "Dallani Platform · v2.0.0"}
               </span>
             </div>

@@ -121,9 +121,9 @@ export function NotificationBell() {
       case "private_trip":
         return <Sparkles className="w-4 h-4 text-orange-600" />;
       case "assignment":
-        return <Bus className="w-4 h-4 text-sky-600" />;
+        return <Bus className="w-4 h-4 text-teal-600" />;
       case "chat":
-        return <MessageSquare className="w-4 h-4 text-blue-600" />;
+        return <MessageSquare className="w-4 h-4 text-teal-600" />;
       case "offer":
         return <Tag className="w-4 h-4 text-purple-600" />;
       default:
@@ -147,7 +147,7 @@ export function NotificationBell() {
         <Bell className="w-4.5 h-4.5 text-slate-700 group-hover:text-primary transition" />
 
         {unreadCount > 0 ? (
-          <span className="absolute -top-1 -right-1 min-w-[19px] h-[19px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white shadow-xs animate-pulse">
+          <span className="absolute -top-1 -right-1 min-w-[19px] h-[19px] px-1 rounded-full bg-red-500 text-white text-[11px] font-black flex items-center justify-center ring-2 ring-white shadow-xs animate-pulse">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : (
@@ -158,7 +158,7 @@ export function NotificationBell() {
       {/* Notifications Dropdown Drawer */}
       {isOpen && (
         <div
-          className="absolute left-0 mt-2 w-80 sm:w-[390px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[120] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 font-['Tajawal',sans-serif]"
+          className="absolute left-0 mt-2 w-80 sm:w-[390px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[120] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 font-['Cairo',sans-serif]"
           dir={isAr ? "rtl" : "ltr"}
         >
           {/* Header */}
@@ -169,7 +169,7 @@ export function NotificationBell() {
                 <h4 className="font-black text-xs sm:text-sm text-white truncate">
                   {isAr ? "التنبيهات والإشعارات الحية" : "Live Notifications"}
                 </h4>
-                <p className="text-[10px] text-teal-200/90 font-medium truncate">
+                <p className="text-[11px] text-teal-200/90 font-medium truncate">
                   {isAr ? "متابعة الحجوزات والتكليفات والتحديثات" : "Bookings, assignments & alerts"}
                 </p>
               </div>
@@ -179,7 +179,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={handleMarkAll}
-                className="text-[10px] font-black bg-white/20 hover:bg-white/30 text-white px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
+                className="text-[11px] font-black bg-white/20 hover:bg-white/30 text-white px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
                 title={isAr ? "تحديد كافة الإشعارات كمقروءة" : "Mark all as read"}
               >
                 <Check className="w-3 h-3" />
@@ -224,7 +224,7 @@ export function NotificationBell() {
                       >
                         {cleanNotifTitle(item.title)}
                       </h5>
-                      <span className="text-[10px] text-slate-400 font-semibold shrink-0 whitespace-nowrap">
+                      <span className="text-[11px] text-slate-400 font-semibold shrink-0 whitespace-nowrap">
                         {item.time}
                       </span>
                     </div>
@@ -233,13 +233,13 @@ export function NotificationBell() {
                       {cleanNotifBody(item.body)}
                     </p>
                     {notifCode(item) && (
-                      <span dir="ltr" className="mt-1.5 inline-block rounded-md bg-blue-50 px-2 py-0.5 font-mono text-[10px] font-black text-[#003580]">
+                      <span dir="ltr" className="mt-1.5 inline-block rounded-md bg-teal-50 px-2 py-0.5 font-mono text-[11px] font-black text-[#00736F]">
                         {notifCode(item)}
                       </span>
                     )}
 
                     {item.link && (
-                      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-primary font-bold">
+                      <div className="mt-1.5 flex items-center gap-1 text-[11px] text-primary font-bold">
                         <span>{isAr ? "انقر للمتابعة والتفاصيل" : "Click to view details"}</span>
                         <ExternalLink className="w-2.5 h-2.5" />
                       </div>
@@ -257,11 +257,11 @@ export function NotificationBell() {
           {/* Footer: unread count */}
           <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end text-[11px] text-slate-600 font-medium">
             {unreadCount > 0 ? (
-              <span className="font-bold text-amber-700 text-[10px] bg-amber-100/80 px-2 py-0.5 rounded-full">
+              <span className="font-bold text-amber-700 text-[11px] bg-amber-100/80 px-2 py-0.5 rounded-full">
                 {isAr ? `${unreadCount} غير مقروء` : `${unreadCount} unread`}
               </span>
             ) : (
-              <span className="text-[10px] text-slate-400">{isAr ? "محدث بالكامل" : "Up to date"}</span>
+              <span className="text-[11px] text-slate-400">{isAr ? "محدث بالكامل" : "Up to date"}</span>
             )}
           </div>
         </div>

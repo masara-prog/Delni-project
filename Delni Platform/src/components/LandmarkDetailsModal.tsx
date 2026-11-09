@@ -191,7 +191,7 @@ export function LandmarkDetailsModal({
 
           {/* Floating Top Controls */}
           <div className="absolute top-4 right-4 left-4 z-30 flex items-center justify-between">
-            <span className="bg-white/95 backdrop-blur-md text-[#003580] text-xs font-black px-3.5 py-1.5 rounded-full border border-blue-100 shadow-md flex items-center gap-1.5">
+            <span className="bg-white/95 backdrop-blur-md text-[#00736F] text-xs font-black px-3.5 py-1.5 rounded-full border border-teal-100 shadow-md flex items-center gap-1.5">
               <span>🏛️</span>
               <span>{isAr ? "معلم سياحي موثق" : "Verified Landmark"}</span>
             </span>
@@ -236,7 +236,7 @@ export function LandmarkDetailsModal({
           {/* Header Section: City Title + Region Badges + Rating */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-xl bg-[#003580] text-white font-black text-xs shadow-xs">
+              <span className="px-3 py-1 rounded-xl bg-[#00736F] text-white font-black text-xs shadow-xs">
                 📍 {city.region}
               </span>
               <span className="px-3 py-1 rounded-xl bg-amber-50 text-[#D96B27] font-black text-xs border border-amber-200 shadow-xs">
@@ -254,7 +254,7 @@ export function LandmarkDetailsModal({
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city.mapQuery || city.name)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#003580] font-black text-xs border border-blue-200 shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#00736F] font-black text-xs border border-teal-200 shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <span>🗺️</span>
               <span>{isAr ? "عرض الموقع في خرائط Google ↗" : "View Map ↗"}</span>
@@ -270,7 +270,7 @@ export function LandmarkDetailsModal({
                 onClick={() => setActiveModalTab(tab.id as any)}
                 className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                   activeModalTab === tab.id
-                    ? "bg-[#003580] text-white shadow-md"
+                    ? "bg-[#00736F] text-white shadow-md"
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
                 }`}
               >
@@ -284,7 +284,7 @@ export function LandmarkDetailsModal({
           {activeModalTab === "history" && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
-                <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
+                <h4 className="text-sm font-black text-[#00736F] flex items-center gap-2">
                   <span>📖</span>
                   <span>{isAr ? "عن المعلم وأهميته التاريخية:" : "About the Landmark & Heritage:"}</span>
                 </h4>
@@ -326,7 +326,7 @@ export function LandmarkDetailsModal({
           {activeModalTab === "highlights" && (
             <div className="space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
+                <h4 className="text-sm font-black text-[#00736F] flex items-center gap-2">
                   <span>✨</span>
                   <span>{isAr ? "أبرز المعالم والمحطات الرئيسية (٤ محطات):" : "Top 4 Highlights & Stations:"}</span>
                 </h4>
@@ -341,16 +341,16 @@ export function LandmarkDetailsModal({
                   return (
                     <div
                       key={idx}
-                      className="group relative p-4 rounded-2xl bg-white hover:bg-blue-50/40 border-2 border-slate-100 hover:border-blue-200 shadow-xs transition duration-300 flex items-center gap-3.5"
+                      className="group relative p-4 rounded-2xl bg-white hover:bg-teal-50/40 border-2 border-slate-100 hover:border-teal-200 shadow-xs transition duration-300 flex items-center gap-3.5"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-[#003580] text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-[#00736F] text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                         <span>{icons[idx % icons.length]}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-black text-[#D96B27] uppercase tracking-wider">
+                        <div className="text-[11px] font-black text-[#D96B27] uppercase tracking-wider">
                           <span>{isAr ? `المعلم ${idx + 1}` : `Station #${idx + 1}`}</span>
                         </div>
-                        <span className="text-xs sm:text-sm font-black text-slate-800 leading-snug block truncate mt-0.5 group-hover:text-[#003580] transition-colors">
+                        <span className="text-xs sm:text-sm font-black text-slate-800 leading-snug block truncate mt-0.5 group-hover:text-[#00736F] transition-colors">
                           {hl}
                         </span>
                       </div>
@@ -370,7 +370,7 @@ export function LandmarkDetailsModal({
               {/* Summary Rating Box */}
               <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-sm sm:text-base font-black text-[#003580] flex items-center gap-2">
+                  <h4 className="text-sm sm:text-base font-black text-[#00736F] flex items-center gap-2">
                     <span>⭐</span>
                     <span>{isAr ? "تقييمات وتجارب الزوار المعتمدة لهذا المعلم:" : "Verified Visitor Reviews & Ratings:"}</span>
                   </h4>
@@ -387,7 +387,7 @@ export function LandmarkDetailsModal({
                     <div className="text-base font-black text-amber-950">
                       {avgRating} / 5
                     </div>
-                    <div className="text-[10px] text-slate-500 font-bold">
+                    <div className="text-[11px] text-slate-500 font-bold">
                       {reviewsList.length} {isAr ? "تقييم معتمد" : "reviews"}
                     </div>
                   </div>
@@ -401,17 +401,17 @@ export function LandmarkDetailsModal({
                     <div key={rev.id} className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2.5">
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                          <div className="w-8 h-8 rounded-full bg-[#00736F] text-white flex items-center justify-center font-black text-xs shadow-xs">
                             {(rev.authorName || "س").slice(0, 1)}
                           </div>
                           <div>
                             <div className="text-xs font-black text-[#0F172A] flex items-center gap-1.5">
                               <span>{rev.authorName}</span>
-                              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
+                              <span className="text-[11px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
                                 {isAr ? "زائر موثق ✓" : "Verified ✓"}
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-400 font-medium">
+                            <div className="text-[11px] text-slate-400 font-medium">
                               {rev.date}
                             </div>
                           </div>
@@ -445,8 +445,8 @@ export function LandmarkDetailsModal({
 
               {/* Tourist Review Submission Form */}
               {isTourist ? (
-                <form onSubmit={handleAddReview} className="p-5 rounded-2xl bg-white border-2 border-blue-100 shadow-xs space-y-3">
-                  <h5 className="text-xs sm:text-sm font-black text-[#003580] flex items-center gap-1.5">
+                <form onSubmit={handleAddReview} className="p-5 rounded-2xl bg-white border-2 border-teal-100 shadow-xs space-y-3">
+                  <h5 className="text-xs sm:text-sm font-black text-[#00736F] flex items-center gap-1.5">
                     <span>✍️</span>
                     <span>{isAr ? "أضف تقييمك وتجربتك لهذا المعلم السياحي:" : "Add Your Review for this Landmark:"}</span>
                   </h5>
@@ -482,7 +482,7 @@ export function LandmarkDetailsModal({
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder={isAr ? "اكتب رأيك وانطباعك عن زيارة هذا المعلم..." : "Write your thoughts and experience about visiting this landmark..."}
-                    className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#003580] focus:ring-1 focus:ring-[#003580] text-xs sm:text-sm text-slate-900 outline-none resize-none"
+                    className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#00736F] focus:ring-1 focus:ring-[#00736F] text-xs sm:text-sm text-slate-900 outline-none resize-none"
                     required
                   />
 
@@ -490,14 +490,14 @@ export function LandmarkDetailsModal({
                     <button
                       type="submit"
                       disabled={isSubmittingReview || !newComment.trim()}
-                      className="px-6 py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50"
                     >
                       {isSubmittingReview ? (isAr ? "جاري النشر..." : "Posting...") : (isAr ? "نشر التقييم ⭐" : "Submit Review ⭐")}
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2 text-slate-700 font-bold">
                     <span className="text-lg">💡</span>
                     <span>
@@ -508,7 +508,7 @@ export function LandmarkDetailsModal({
                   </div>
                   <a
                     href="/auth/login?role=tourist"
-                    className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs shrink-0 transition"
+                    className="px-4 py-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs shrink-0 transition"
                   >
                     {isAr ? "تسجيل الدخول كسائح ➔" : "Login as Tourist ➔"}
                   </a>
@@ -520,9 +520,9 @@ export function LandmarkDetailsModal({
           {/* Tab 4: Custom Private Tours (ONLY if not UNESCO) */}
           {!isUnescoSite && activeModalTab === "trips" && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3 shadow-xs">
+              <div className="p-5 rounded-2xl bg-teal-50/60 border border-teal-200/80 space-y-3 shadow-xs">
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-[#003580] text-white font-black text-xs shadow-xs">
+                  <span className="px-3 py-1 rounded-full bg-[#00736F] text-white font-black text-xs shadow-xs">
                     🧭 {isAr ? "رحلات خاصة مخصصة بالكامل" : "Custom Private Tours"}
                   </span>
                   <span className="text-xs font-bold text-slate-700">{isAr ? "سيارة خاصة + مرشد معتمد" : "Private Vehicle + Guide"}</span>
@@ -553,7 +553,7 @@ export function LandmarkDetailsModal({
             <button
               type="button"
               onClick={onBookPrivate}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs sm:text-sm shadow-lg transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
             >
               <span>🧭</span>
               <span>{isAr ? "إنشاء رحلة خاصة لهذا المعلم (مع اختيار المرشد والمركبة)" : "Create Custom Trip for this Landmark"}</span>

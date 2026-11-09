@@ -416,7 +416,7 @@ function TransportDashboard() {
                         </div>
                         <div>
                           <div className="font-black text-foreground text-xs">{d.full_name}</div>
-                          <div className="text-[10px] text-muted-foreground font-mono">{d.email}</div>
+                          <div className="text-[11px] text-muted-foreground font-mono">{d.email}</div>
                         </div>
                       </div>
                     </td>
@@ -444,14 +444,14 @@ function TransportDashboard() {
                         {d.operational_status || "متاح"}
                       </Badge>
                       {(d as any).current_trip_stage && (
-                        <div className="text-[10px] font-bold text-primary mt-1">🧭 مرحلة الرحلة: {(d as any).current_trip_stage}</div>
+                        <div className="text-[11px] font-bold text-primary mt-1">🧭 مرحلة الرحلة: {(d as any).current_trip_stage}</div>
                       )}
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => setEditingDriver(d)}
-                          className="px-3 py-1.5 bg-[#1B5A78]/10 text-[#1B5A78] hover:bg-[#1B5A78]/20 transition text-xs font-black rounded-xl cursor-pointer flex items-center gap-1 shadow-xs"
+                          className="px-3 py-1.5 bg-[#0B4F57]/10 text-[#0B4F57] hover:bg-[#0B4F57]/20 transition text-xs font-black rounded-xl cursor-pointer flex items-center gap-1 shadow-xs"
                           title="عرض وتعديل كافة البيانات"
                         >
                           <span>✏️</span>
@@ -584,7 +584,7 @@ function TransportDashboard() {
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1 flex items-center justify-between">
                   <span>رقم العقد الرسمي 🔒</span>
-                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">معتمد</span>
+                  <span className="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">معتمد</span>
                 </label>
                 <input
                   type="text"
@@ -598,7 +598,7 @@ function TransportDashboard() {
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1 flex items-center justify-between">
                   <span>اسم الشركة الرسمي 🔒</span>
-                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">مسجل</span>
+                  <span className="text-[11px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md font-bold">مسجل</span>
                 </label>
                 <input
                   type="text"
@@ -694,7 +694,7 @@ function TransportDashboard() {
                         href={companyInfo.address}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[10px] text-primary hover:underline font-bold"
+                        className="text-[11px] text-primary hover:underline font-bold"
                       >
                         معاينة الخريطة 📍
                       </a>
@@ -815,7 +815,7 @@ function TransportDashboard() {
             className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-200 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 bg-[#003580] text-white flex items-center justify-between">
+            <div className="p-4 bg-[#00736F] text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🛡️</span>
                 <span className="font-black text-sm">معاينة ورقة وثيقة التأمين</span>
@@ -842,7 +842,7 @@ function TransportDashboard() {
               <button
                 type="button"
                 onClick={() => setPreviewInsuranceDoc(null)}
-                className="px-4 py-1.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer"
+                className="px-4 py-1.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer"
               >
                 إغلاق
               </button>
@@ -1028,7 +1028,7 @@ function DriverModal({
           )}
         </div>
         {driver && (
-          <p className="text-[10px] text-muted-foreground">🔒 كلمة مرور السائق لا تُعدّل من هنا؛ يغيّرها السائق بنفسه من لوحته.</p>
+          <p className="text-[11px] text-muted-foreground">🔒 كلمة مرور السائق لا تُعدّل من هنا؛ يغيّرها السائق بنفسه من لوحته.</p>
         )}
 
         <div>
@@ -1273,9 +1273,9 @@ function VehicleModal({
         </div>
         
         {/* DRIVER ASSIGNMENT SECTION */}
-        <div className="p-3.5 rounded-2xl border-2 border-[#1B5A78]/30 bg-[#1B5A78]/5 space-y-2.5">
+        <div className="p-3.5 rounded-2xl border-2 border-[#0B4F57]/30 bg-[#0B4F57]/5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#1B5A78] flex items-center gap-1.5">
+            <span className="text-xs font-black text-[#0B4F57] flex items-center gap-1.5">
               🧑‍✈️ {isAr ? "تعيين سائق مخصص للمركبة (سائق مخصص لا يتكرر):" : "Assign Dedicated Driver:"}
             </span>
             <span className="text-[11px] font-bold text-slate-500">
@@ -1290,7 +1290,7 @@ function VehicleModal({
                 value={selectedDriverLic}
                 onChange={(e) => setSelectedDriverLic(e.target.value)}
                 onKeyDown={handleKeyDownNext(statusRef)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-right outline-none focus:border-[#1B5A78]"
+                className="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-right outline-none focus:border-[#0B4F57]"
               >
                 <option value="">{isAr ? "-- بدون تعيين سائق حالياً --" : "-- No Driver Assigned --"}</option>
                 {selectableDrivers.map((d) => (
@@ -1299,7 +1299,7 @@ function VehicleModal({
                   </option>
                 ))}
               </select>
-              <p className="text-[10px] text-emerald-700 font-bold mt-1">
+              <p className="text-[11px] text-emerald-700 font-bold mt-1">
                 {isAr ? "✓ سياسة التخصيص: لكل حافلة سائق مخصص واحد فقط ولا يتكرر لمركبة أخرى." : "Dedicated policy: Each vehicle has a dedicated driver only."}
               </p>
             </div>
@@ -1399,11 +1399,11 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
         <label className="text-xs font-bold text-foreground">{label}</label>
         {value && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-emerald-600 font-bold">✓ تم التحميل والحفظ</span>
+            <span className="text-[11px] text-emerald-600 font-bold">✓ تم التحميل والحفظ</span>
             <button
               type="button"
               onClick={() => onChange("")}
-              className="text-[10px] text-red-500 hover:text-red-700 font-bold underline cursor-pointer"
+              className="text-[11px] text-red-500 hover:text-red-700 font-bold underline cursor-pointer"
             >
               حذف
             </button>
@@ -1427,7 +1427,7 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
             onChange={e => onChange(e.target.value)}
             placeholder="أو ضع رابط الصورة..."
             readOnly={Boolean(isBase64)}
-            className="w-full h-8 px-2 text-[10px] rounded-lg border border-border bg-white outline-none font-mono text-right"
+            className="w-full h-8 px-2 text-[11px] rounded-lg border border-border bg-white outline-none font-mono text-right"
           />
         </div>
       </div>
@@ -1467,7 +1467,7 @@ function LibyanPhoneField({ label, value, onChange, onKeyDown, inputRef }: { lab
         placeholder="09..."
         className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`}
       />
-      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+      {error && <div className="text-[11px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }

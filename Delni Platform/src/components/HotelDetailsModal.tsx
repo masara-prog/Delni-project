@@ -138,7 +138,7 @@ export function HotelDetailsModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Top Brand & Partnership Strip (Matching Delni Petrol & Amber identity) */}
-          <div className="bg-[#1B5A78] text-white px-5 py-2.5 text-xs font-bold flex items-center justify-between shadow-sm">
+          <div className="bg-[#0B4F57] text-white px-5 py-2.5 text-xs font-bold flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${hotel.partnership_status === "غير نشط" ? "bg-slate-400" : "bg-emerald-400 ring-4 ring-emerald-400/20 animate-pulse"}`} />
               <span className="font-black">
@@ -256,18 +256,18 @@ export function HotelDetailsModal({
             {/* Hours & Check-in Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Working Hours */}
-              <div className="p-3.5 rounded-2xl bg-[#1B5A78]/5 dark:from-slate-800 dark:to-slate-800/60 border border-[#1B5A78]/20 dark:border-slate-700 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1B5A78] text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
+              <div className="p-3.5 rounded-2xl bg-[#0B4F57]/5 dark:from-slate-800 dark:to-slate-800/60 border border-[#0B4F57]/20 dark:border-slate-700 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#0B4F57] text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
                   ⏱️
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                     {isAr ? "ساعات العمل والاستقبال:" : "Front Desk Hours:"}
                   </div>
-                  <div className="text-xs font-black text-[#1B5A78] dark:text-sky-300">
+                  <div className="text-xs font-black text-[#0B4F57] dark:text-teal-300">
                     {hotel.working_hours || (isAr ? "خدمة 24/7 على مدار الساعة" : "24/7 Round the Clock")}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-semibold">
+                  <div className="text-[11px] text-slate-500 font-semibold">
                     {isAr ? "استقبال وخدمة مستمرة" : "Always open"}
                   </div>
                 </div>
@@ -285,7 +285,7 @@ export function HotelDetailsModal({
                   <div className="text-xs font-black text-amber-700 dark:text-amber-300">
                     {isAr ? "وصول 14:00 · مغادرة 12:00" : "In: 14:00 · Out: 12:00"}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-semibold">
+                  <div className="text-[11px] text-slate-500 font-semibold">
                     {isAr ? "مرونة بالتنسيق المباشر" : "Flexible timing"}
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export function HotelDetailsModal({
                   <div className="text-xs font-black text-emerald-700 dark:text-emerald-300 truncate">
                     {hotel.city}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-semibold truncate">
+                  <div className="text-[11px] text-slate-500 font-semibold truncate">
                     {hotel.address || hotel.city}
                   </div>
                 </div>
@@ -313,7 +313,7 @@ export function HotelDetailsModal({
             {/* Bio / Description */}
             {hotel.description && (
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                <div className="text-xs font-black text-[#1B5A78] dark:text-sky-300 flex items-center gap-2">
+                <div className="text-xs font-black text-[#0B4F57] dark:text-teal-300 flex items-center gap-2">
                   <span>🏨</span>
                   <span>{isAr ? "نبذة تعريفية:" : "Overview:"}</span>
                 </div>
@@ -342,13 +342,13 @@ export function HotelDetailsModal({
           {/* ── 3. BOTTOM CONTACT & ACTION BAR ── */}
           <div className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner z-30">
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="w-9 h-9 rounded-xl bg-[#1B5A78]/10 text-[#1B5A78] dark:text-sky-300 flex items-center justify-center text-lg shrink-0 border border-[#1B5A78]/20">
+              <div className="w-9 h-9 rounded-xl bg-[#0B4F57]/10 text-[#0B4F57] dark:text-teal-300 flex items-center justify-center text-lg shrink-0 border border-[#0B4F57]/20">
                 🏨
               </div>
               <div>
                 <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                   <span>{isAr ? "دليل سياحي تعريفي (تواصل مباشر)" : "Direct Tourism Showcase"}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black">
                     {isAr ? "معتمد" : "Verified"}
                   </span>
                 </div>
@@ -362,7 +362,7 @@ export function HotelDetailsModal({
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <a
                 href={`tel:${hotel.phone}`}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#1B5A78] hover:bg-[#144258] text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#0B4F57] hover:bg-[#144258] text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
               >
                 <span>📞</span>
                 <span>{isAr ? `اتصال (${hotel.phone})` : `Call ${hotel.phone}`}</span>

@@ -52,7 +52,7 @@ function RoleDashboardsSidebar() {
           title={t('dashboards')}
         >
           <span className="text-xl animate-bounce">🧭</span>
-          <span className="[writing-mode:vertical-lr] text-[10px] font-black tracking-widest text-white/95 group-hover:text-white transition uppercase">
+          <span className="[writing-mode:vertical-lr] text-[11px] font-black tracking-widest text-white/95 group-hover:text-white transition uppercase">
             {language === 'ar' ? 'لوحات التحكم' : 'Dashboards'}
           </span>
         </button>
@@ -84,7 +84,7 @@ function RoleDashboardsSidebar() {
             <span className="text-xl">🧭</span>
             <div>
               <h3 className="font-black text-sm text-white">{language === 'ar' ? 'لوحات التحكم والأدوار' : 'Role Dashboards'}</h3>
-              <p className="text-[10px] text-teal-200/70 font-bold">{language === 'ar' ? 'التنقل السريع بين حسابات المنصة' : 'Quick role switcher'}</p>
+              <p className="text-[11px] text-teal-200/70 font-bold">{language === 'ar' ? 'التنقل السريع بين حسابات المنصة' : 'Quick role switcher'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ function RoleDashboardsSidebar() {
 
         {/* Links list */}
         <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
-          <div className="text-[10px] font-black text-slate-500 tracking-wider mb-2 px-2">{language === 'ar' ? 'التنقل العام' : 'General Navigation'}</div>
+          <div className="text-[11px] font-black text-slate-500 tracking-wider mb-2 px-2">{language === 'ar' ? 'التنقل العام' : 'General Navigation'}</div>
           {GENERAL_LINKS.map((link) => {
             const isActive = location.pathname === link.to;
             return (
@@ -120,7 +120,7 @@ function RoleDashboardsSidebar() {
 
           <div className="border-t border-slate-800 my-4" />
 
-          <div className="text-[10px] font-black text-slate-500 tracking-wider mb-2 px-2">{language === 'ar' ? 'لوحات التحكم للأدوار' : 'Role Dashboards'}</div>
+          <div className="text-[11px] font-black text-slate-500 tracking-wider mb-2 px-2">{language === 'ar' ? 'لوحات التحكم للأدوار' : 'Role Dashboards'}</div>
           {DASHBOARD_LINKS.map((link) => {
             const isActive = location.pathname === link.to;
             return (
@@ -135,7 +135,7 @@ function RoleDashboardsSidebar() {
               >
                 <span>{language === 'ar' ? link.label : link.labelEn}</span>
                 {link.badge && (
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
+                  <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-md ${
                     isActive ? "bg-white/30 text-gold-foreground" : "bg-slate-800 text-slate-400 group-hover:text-slate-300"
                   }`}>
                     {link.badge}
@@ -147,7 +147,7 @@ function RoleDashboardsSidebar() {
         </div>
 
         {/* Footer info inside sidebar */}
-        <div className="p-4 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-450 leading-relaxed">
+        <div className="p-4 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-450 leading-relaxed">
           <div className="font-bold text-slate-400">💡 {language === 'ar' ? 'تلميح للمعاينة:' : 'Preview Tip:'}</div>
           {language === 'ar' ? 'تتيح لك هذه اللوحة التنقل السريع بين أدوار المستخدمين المختلفة لمحاكاة تجربة الاستخدام بشكل كامل.' : 'Easily switch roles (Admin, Driver, Guide, Tourist, Transport) to simulate the full user experience.'}
         </div>
@@ -238,7 +238,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
               } catch { }
               reset();
             }}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#003580] hover:bg-[#00224f] px-6 py-2.5 text-xs font-black text-white shadow-md transition cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] px-6 py-2.5 text-xs font-black text-white shadow-md transition cursor-pointer"
           >
             <span>🔄</span>
             <span>إعادة المحاولة الآن</span>
@@ -284,7 +284,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap",
       },
     ],
   }),
