@@ -27,7 +27,7 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import transportHero from "@/assets/transport-hero.jpg";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
-import { getStoredSession, clearStoredSession, apiGetPlaces } from "@/lib/api";
+import { getStoredSession, clearStoredSession, laravelRequest } from "@/lib/api";
 
 
 
@@ -113,7 +113,6 @@ function HomePage() {
         <TrustStrip />
         <DepartureOffices />
         <WhyUs />
-        <LiveLandmarks />
         <CTABanner />
         <Footer />
       </div>
@@ -674,73 +673,6 @@ function WhyUs() {
   );
 }
 
-/* ---------- Live landmarks (read from DelniDB) ---------- */
-// Replaces the static testimonials: real landmarks from the database, each opening the landmarks page
-function LiveLandmarks() {
-  const { language } = useLanguage();
-  const isAr = language === "ar";
-  const [places, setPlaces] = useState<any[] | null>(null);
-  useEffect(() => {
-    let alive = true;
-    apiGetPlaces().then((rows) => alive && setPlaces(rows));
-    return () => { alive = false; };
-  }, []);
-  if (places !== null && places.length === 0) return null;
-  const shown = (places || []).slice(0, 8);
-
-  return (
-    <section className="py-14 md:py-20 bg-gradient-to-b from-white to-slate-50 overflow-hidden">
-      <div className="container mx-auto px-4">
-        <Reveal>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-            <div>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black">
-                <span className="relative flex w-2 h-2">
-                  <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#003580] opacity-60" />
-                  <span className="relative inline-flex rounded-full w-2 h-2 bg-[#003580]" />
-                </span>
-                {isAr ? "من قاعدة بيانات دلني مباشرة" : "Live from Delni"}
-              </span>
-              <h2 className="mt-3 text-3xl md:text-4xl font-black text-slate-900">{isAr ? "معالم تنتظرك في ليبيا" : "Landmarks waiting for you"}</h2>
-              <p className="mt-2 text-slate-500 font-medium">{isAr ? "اختر وجهتك القادمة من المعالم المسجلة في المنصة" : "Pick your next destination from the landmarks on Delni"}</p>
-            </div>
-            <Link to="/attractions" className="self-start md:self-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white text-sm font-black text-slate-800 hover:border-[#003580] hover:text-[#003580] transition">
-              {isAr ? "كل المعالم" : "All landmarks"} <span aria-hidden>{isAr ? "←" : "→"}</span>
-            </Link>
-          </div>
-        </Reveal>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-          {places === null
-            ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="aspect-[4/5] rounded-3xl bg-slate-200/70 motion-safe:animate-pulse" />)
-            : shown.map((pl, i) => (
-                <Reveal key={pl.place_id} delay={Math.min(i, 6) * 80}>
-                  <Link
-                    to="/attractions"
-                    className="group relative block aspect-[4/5] rounded-3xl overflow-hidden shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#003580]"
-                  >
-                    <img
-                      src={pl.place_image}
-                      alt={pl.place_name}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transition duration-700 ease-out motion-safe:group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B1B2B]/90 via-[#0B1B2B]/20 to-transparent" />
-                    {pl.category && (
-                      <span className="absolute top-3 start-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[11px] font-black text-slate-800">{pl.category}</span>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 p-4 text-white transition duration-500 motion-safe:group-hover:-translate-y-1">
-                      <div className="text-lg md:text-xl font-black leading-tight">{pl.place_name}</div>
-                      <div className="mt-1 text-xs font-bold text-white/80">📍 {pl.city}{pl.region ? ` · ${pl.region}` : ""}</div>
-                    </div>
-                  </Link>
-                </Reveal>
-              ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ---------- CTA banner ---------- */
 // Bright Libya photos (public/assets/libya, see CREDITS.md) that cross-fade with a slow zoom
 const CTA_SLIDES = [
@@ -956,61 +888,112 @@ function TripTypes() {
 
 function DepartureOffices() {
   const { language } = useLanguage();
-  const offices = getOffices(language);
+  const isAr = language === "ar";
+  // Trips currently open, counted by departure city (read from DelniDB; the same rule as the trips page)
+  const [counts, setCounts] = useState<{ tripoli: number; benghazi: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([laravelRequest<any[]>("GET", "/trips/daily"), laravelRequest<any[]>("GET", "/trips/weekly")]).then(([d, w]) => {
+      if (!alive) return;
+      const rows = [...(d.ok && Array.isArray(d.data) ? d.data : []), ...(w.ok && Array.isArray(w.data) ? w.data : [])];
+      const benghazi = rows.filter((t) => String(t.departure_city || "").includes("بنغازي")).length;
+      setCounts({ tripoli: rows.length - benghazi, benghazi });
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const cities = [
+    { key: "tripoli" as const, name: isAr ? "طرابلس" : "Tripoli", region: isAr ? "المكتب الرئيسي · الغرب الليبي" : "Main office · West", q: "طرابلس", dot: "bg-[#003580]", tone: "from-[#003580] to-[#0D5C96]" },
+    { key: "benghazi" as const, name: isAr ? "بنغازي" : "Benghazi", region: isAr ? "مكتب الشرق الليبي" : "East office", q: "بنغازي", dot: "bg-[#D96B27]", tone: "from-[#D96B27] to-[#E8913F]" },
+  ];
+  const steps = [
+    { icon: "🎫", title: isAr ? "احجز من المنصة" : "Book online", text: isAr ? "اختر رحلتك وعدد المقاعد واحصل على تذكرتك فوراً" : "Pick a trip and seats, get your ticket at once" },
+    { icon: "💵", title: isAr ? "ادفع في المكتب" : "Pay at the office", text: isAr ? "سدّد قيمة الحجز نقداً في المكتب قبل موعد الرحلة" : "Pay in cash at the office before the trip" },
+    { icon: "🚌", title: isAr ? "انطلق من المكتب" : "Depart from the office", text: isAr ? "يوم الرحلة يُمسح رمز تذكرتك وتنطلق مع المرشد" : "On the day your ticket is scanned and you set off" },
+  ];
+
   return (
-    <section className="py-20 md:py-28 bg-gradient-sand">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
+    <section className="relative py-20 md:py-28 bg-gradient-sand overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute -top-24 -start-24 w-80 h-80 rounded-full bg-[#003580]/10 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -end-24 w-80 h-80 rounded-full bg-[#D96B27]/10 blur-3xl" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <Reveal>
-            <div className="relative rounded-[2rem] overflow-hidden shadow-card">
-              <img src={transportHero} alt="مكتب دلني" className="w-full h-full object-cover" loading="lazy" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-6 right-6 text-white">
-                <div className="text-xs opacity-80">{language === 'ar' ? "من مكاتبنا الرسمية" : "From Our Official Offices"}</div>
-                <div className="text-2xl font-black">{language === 'ar' ? "نقاط الانطلاق" : "Departure Points"}</div>
+            <div className="relative rounded-[2rem] overflow-hidden shadow-card group">
+              <img src={transportHero} alt={isAr ? "مركبات دلني عند نقطة الانطلاق" : "Delni vehicles at the departure point"} className="w-full aspect-[4/3] object-cover transition duration-[1500ms] ease-out motion-safe:group-hover:scale-105" loading="lazy" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/80 via-[#0F172A]/10 to-transparent" />
+              <div className="absolute top-6 start-6 flex flex-col gap-2">
+                {cities.map((c) => (
+                  <div key={c.key} className="self-start flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur shadow-md text-xs font-black text-slate-800">
+                    <span className="relative flex w-2.5 h-2.5">
+                      <span className={`motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full ${c.dot} opacity-60`} />
+                      <span className={`relative inline-flex rounded-full w-2.5 h-2.5 ${c.dot}`} />
+                    </span>
+                    {c.name}
+                  </div>
+                ))}
+              </div>
+              <div className="absolute bottom-6 start-6 end-6 text-white">
+                <div className="text-xs font-bold opacity-80">{isAr ? "من مكاتبنا الرسمية" : "From our official offices"}</div>
+                <div className="text-2xl md:text-3xl font-black">{isAr ? "نقاط الانطلاق" : "Departure points"}</div>
               </div>
             </div>
           </Reveal>
+
           <div>
-            <h2 className="text-4xl md:text-5xl font-black text-foreground leading-tight">
-              {language === 'ar' ? "انطلق من أقرب " : "Depart From Your Nearest "}
-              <span className="text-gradient-sea">{language === 'ar' ? "مكتب لك" : "Office"}</span>
-            </h2>
-            <p className="mt-3 text-muted-foreground text-lg leading-relaxed">
-              {language === 'ar' 
-                ? "جميع الرحلات اليومية والأسبوعية والخاصة تنطلق من مكاتب الشركة الرسمية في طرابلس وبنغازي — لضمان أعلى مستويات الأمان والتنظيم." 
-                : "All daily, weekly, and private trips depart from our official company offices in Tripoli and Benghazi — to ensure the highest levels of safety and organization."}
-            </p>
-            <div className="mt-8 space-y-3">
-              {offices.map((o, i) => (
-                <Reveal key={o.city} delay={i * 100}>
-                  <div className="group p-5 rounded-2xl bg-white border border-border hover:border-primary/40 hover:shadow-card transition">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className={`w-12 h-12 rounded-xl grid place-items-center shrink-0 shadow-sm ${i === 0 ? 'bg-[#003580] text-white' : 'bg-[#D96B27] text-white'}`}>
-                          <Icon.Pin className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-black text-lg text-foreground">{o.city}</h3>
-                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 border border-amber-500/30 font-black uppercase">{o.role}</span>
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-0.5">{o.address}</div>
-                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/80">
-                            <span className="font-semibold">📞 {o.phone}</span>
-                            <span>{o.hours}</span>
-                          </div>
-                        </div>
+            <Reveal>
+              <span className="inline-flex px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black">{isAr ? "مكتبان · مدينتان" : "Two offices · two cities"}</span>
+              <h2 className="mt-3 text-4xl md:text-5xl font-black text-foreground leading-tight">
+                {isAr ? "انطلق من أقرب " : "Depart from your nearest "}
+                <span className="text-gradient-sea">{isAr ? "مكتب لك" : "office"}</span>
+              </h2>
+              <p className="mt-3 text-muted-foreground text-lg leading-relaxed">
+                {isAr
+                  ? "جميع الرحلات اليومية والأسبوعية والخاصة تنطلق من مكاتب الشركة الرسمية في طرابلس وبنغازي — لضمان أعلى مستويات الأمان والتنظيم."
+                  : "All daily, weekly and private trips depart from our official offices in Tripoli and Benghazi, for the highest safety and organisation."}
+              </p>
+            </Reveal>
+
+            <div className="mt-7 grid sm:grid-cols-2 gap-4">
+              {cities.map((c, i) => {
+                const n = counts?.[c.key];
+                return (
+                  <Reveal key={c.key} delay={i * 120}>
+                    <a
+                      href={`/trips?q=${encodeURIComponent(c.q)}`}
+                      className="group block h-full p-5 rounded-3xl bg-white border border-border shadow-sm hover:shadow-card hover:-translate-y-1 transition duration-300"
+                    >
+                      <div className={`w-12 h-12 rounded-2xl grid place-items-center text-white bg-gradient-to-br ${c.tone} shadow-md motion-safe:group-hover:scale-110 transition`}>
+                        <Icon.Pin className="w-6 h-6" />
                       </div>
-                      <button className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-[#003580]/10 text-[#003580] border border-[#003580]/20 text-xs font-black hover:bg-[#003580] hover:text-white transition">
-                        الاتجاهات
-                      </button>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
+                      <h3 className="mt-4 text-xl font-black text-foreground">{c.name}</h3>
+                      <div className="text-xs font-bold text-muted-foreground mt-0.5">{c.region}</div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <span className="text-sm font-black text-[#003580]">
+                          {counts === null ? (isAr ? "جارٍ التحميل…" : "Loading…") : n ? (isAr ? `${n} رحلة تنطلق من هنا` : `${n} trips depart here`) : (isAr ? "رحلات جديدة قريباً" : "New trips soon")}
+                        </span>
+                        <span aria-hidden className="w-8 h-8 rounded-full bg-slate-100 grid place-items-center text-slate-700 group-hover:bg-[#003580] group-hover:text-white transition">{isAr ? "←" : "→"}</span>
+                      </div>
+                    </a>
+                  </Reveal>
+                );
+              })}
             </div>
           </div>
+        </div>
+
+        <div className="mt-14 grid md:grid-cols-3 gap-6 relative">
+          <div aria-hidden className="hidden md:block absolute top-9 start-[16%] end-[16%] h-0.5 bg-gradient-to-l from-[#003580]/0 via-[#003580]/25 to-[#003580]/0" />
+          {steps.map((st, i) => (
+            <Reveal key={st.title} delay={i * 120}>
+              <div className="relative text-center px-4">
+                <div className="mx-auto w-[72px] h-[72px] rounded-full bg-white shadow-card grid place-items-center text-3xl ring-8 ring-[#F8F5EF]">{st.icon}</div>
+                <div className="mt-3 text-[11px] font-black text-[#D96B27]">{isAr ? `الخطوة ${i + 1}` : `Step ${i + 1}`}</div>
+                <h4 className="mt-1 font-black text-foreground">{st.title}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{st.text}</p>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
