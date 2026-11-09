@@ -621,7 +621,7 @@ class _GuideSignupScreenState extends State<GuideSignupScreen> {
             runSpacing: 8,
             children: _places!
                 .map((p) => _toggleChip(
-                      p.category.isEmpty ? p.name : '${p.name} • ${p.category}',
+                      p.name,
                       _placeIds.contains(p.id),
                       () => setState(() => _placeIds.contains(p.id) ? _placeIds.remove(p.id) : _placeIds.add(p.id)),
                     ))
