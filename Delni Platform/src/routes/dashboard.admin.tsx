@@ -830,7 +830,7 @@ function AdminDashboard() {
     setEditingCompany(null);
     return null;
   };
-  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض") => {
+  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض" | "موقوف") => {
     const targetGuide = guides.find(g => g.license_number === lic);
     const res = await apiVerifyGuide(lic, status);
     if (res.status !== "success") {
@@ -839,9 +839,12 @@ function AdminDashboard() {
     }
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
+    const name = targetGuide?.full_name || lic;
     alert(status === "موثق"
-      ? `✅ تم اعتماد وتفعيل حساب المرشد (${targetGuide?.full_name || lic}) بنجاح، ويمكنه الآن تسجيل الدخول ببريده الإلكتروني.`
-      : `❌ تم رفض طلب المرشد (${targetGuide?.full_name || lic}) وتحديث حالته بنجاح.`);
+      ? `✅ تم اعتماد وتفعيل حساب المرشد (${name}) بنجاح، ويمكنه الآن تسجيل الدخول ببريده الإلكتروني.`
+      : status === "موقوف"
+        ? `⛔ تم تقييد حساب المرشد (${name})، ولا يمكنه الدخول إلى المنصة أو التطبيق حتى تعيدي تفعيله.`
+        : `❌ تم رفض طلب المرشد (${name}) وتحديث حالته بنجاح.`);
   };
 
   // Transport directory, hotels and restaurants are read from DelniDB through Laravel only
@@ -1378,7 +1381,7 @@ function AdminDashboard() {
   const handleVerifyTicketCode = async (codeToSearch: string) => {
     const raw = codeToSearch.trim();
     if (!raw) {
-      setScanStatusMsg({ type: "error", msg: "يرجى كتابة أو مسح رمز التذكرة والباركود أولاً." });
+      setScanStatusMsg({ type: "error", msg: "يرجى كتابة رقم التذكرة أولاً." });
       return;
     }
     const res = await apiFindTicket(raw);
@@ -1598,27 +1601,6 @@ function AdminDashboard() {
                 >
                   <span>تحقق من التذكرة 🔍</span>
                 </button>
-              </div>
-
-              {/* Quick sample chips from real bookings */}
-              <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
-                <span className="text-slate-500 font-bold">تذاكر سريعة للتجربة:</span>
-                {[...dailyBookings.slice(0, 3), ...weeklyBookings.slice(0, 2)].map((b: any, idx) => {
-                  const c = b.booking_daily_id || b.booking_weekly_id || `DL-${10000 + idx}`;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => {
-                        setScanCode(c);
-                        handleVerifyTicketCode(c);
-                      }}
-                      className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs font-bold transition border border-slate-200 cursor-pointer"
-                    >
-                      {c} ({b.tourist_name || b.tourist_id || "سائح"})
-                    </button>
-                  );
-                })}
               </div>
 
               {/* Status Message */}
@@ -2457,7 +2439,7 @@ function AdminDashboard() {
                               ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
                               : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
-                            {cancelled ? "✕ حجز ملغى" : "📷 مسح وتحقق"}
+                            {cancelled ? "✕ حجز ملغى" : "🎫 تأكيد الدفع"}
                           </button>
                         </td>
                       </tr>
@@ -2544,7 +2526,7 @@ function AdminDashboard() {
                               ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
                               : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
-                            {cancelled ? "✕ حجز ملغى" : "📷 مسح وتحقق"}
+                            {cancelled ? "✕ حجز ملغى" : "🎫 تأكيد الدفع"}
                           </button>
                         </td>
                       </tr>
@@ -4477,7 +4459,7 @@ function GuideVerificationModal({
 }: {
   guide: Guide;
   onClose: () => void;
-  onVerify: (lic: string, status: "موثق" | "مرفوض") => void;
+  onVerify: (lic: string, status: "موثق" | "مرفوض" | "موقوف") => void;
 }) {
   const isImage =
     guide.digital_certificate_file?.startsWith("data:image/") ||
@@ -4649,20 +4631,41 @@ function GuideVerificationModal({
           >
             إلغاء وإغلاق
           </button>
-          <button
-            type="button"
-            onClick={() => onVerify(guide.license_number, "مرفوض")}
-            className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
-          >
-            ❌ رفض الطلب
-          </button>
-          <button
-            type="button"
-            onClick={() => onVerify(guide.license_number, "موثق")}
-            className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
-          >
-            ✅ قبول واعتماد المرشد
-          </button>
+          {/* An approved guide can only be restricted; a restricted one reactivated; a new request accepted or rejected */}
+          {guide.verification_status === "موثق" ? (
+            <button
+              type="button"
+              onClick={() => onVerify(guide.license_number, "موقوف")}
+              className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+            >
+              ⛔ تقييد حساب المرشد
+            </button>
+          ) : guide.verification_status === "موقوف" ? (
+            <button
+              type="button"
+              onClick={() => onVerify(guide.license_number, "موثق")}
+              className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+            >
+              ✅ إعادة تفعيل الحساب
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onVerify(guide.license_number, "مرفوض")}
+                className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+              >
+                ❌ رفض الطلب
+              </button>
+              <button
+                type="button"
+                onClick={() => onVerify(guide.license_number, "موثق")}
+                className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+              >
+                ✅ قبول واعتماد المرشد
+              </button>
+            </>
+          )}
         </div>
       </div>
     </ModalShell>

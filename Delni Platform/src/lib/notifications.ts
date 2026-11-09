@@ -395,7 +395,7 @@ export function notifyTicketVerified(
 ) {
   addNotification({
     type: "booking",
-    title: "✅ تم مسح التذكرة وتأكيد الحجز بنجاح!",
+    title: "✅ تم تأكيد تذكرتك والدفع بنجاح!",
     body: `تم تأكيد تسجيل وحضور (${touristName}) في رحلة (${tripTitle}) لعدد (${seats}) مقاعد بالرمز (${ticketCode}).`,
     recipientRole: "tourist",
     recipientId: touristId,

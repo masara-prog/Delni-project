@@ -418,7 +418,7 @@ class GuideDetailsScreen extends StatelessWidget {
                             textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
                       ),
                       const SizedBox(width: 6),
-                      const Icon(Icons.verified_rounded, color: Color(0xFF93C5FD), size: 22),
+                      const Icon(Icons.verified_rounded, color: AppColors.onDarkSoft, size: 22),
                     ],
                   ),
                   Text(context.tr('مرشد سياحي معتمد من دلّني', 'Delni licensed tour guide'),

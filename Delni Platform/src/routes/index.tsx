@@ -1,6 +1,7 @@
 import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { Banknote, BusFront, Ticket } from "lucide-react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destTripoli from "@/assets/dest-tripoli.jpg";
 import destTripoliOldCity from "@/assets/dest-tripoli-old-city.jpg";
@@ -27,7 +28,7 @@ import officeBusImg from "@/assets/office-bus.jpg";
 import transportHero from "@/assets/transport-hero.jpg";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
-import { getStoredSession, clearStoredSession } from "@/lib/api";
+import { getStoredSession, clearStoredSession, laravelRequest } from "@/lib/api";
 
 
 
@@ -111,9 +112,8 @@ function HomePage() {
       <div className="min-h-screen bg-background text-foreground font-sans">
         <Hero />
         <TrustStrip />
-        <DepartureOffices />
+        <HowItWorks />
         <WhyUs />
-        <Testimonials />
         <CTABanner />
         <Footer />
       </div>
@@ -446,11 +446,8 @@ function SearchCard() {
           </button>
         </div>
       </div>
-      {withDates && (
-        <p className={`px-3 pt-2 text-[11px] font-bold ${dateError ? "text-red-600" : "text-slate-500"}`}>
-          {dateError || (isAr ? "اختر الفترة التي تناسبك لتظهر الرحلات التي تنطلق خلالها (اختياري)." : "Pick a period to see the trips that run in it (optional).")}
-        </p>
-      )}
+      {/* Only an error is shown under the bar (the hint sentence was removed) */}
+      {withDates && dateError && <p className="px-3 pt-2 text-[11px] font-bold text-red-600">{dateError}</p>}
     </form>
   );
 }
@@ -677,123 +674,6 @@ function WhyUs() {
   );
 }
 
-/* ---------- Testimonials ---------- */
-function Testimonials() {
-  const { language } = useLanguage();
-  const items = [
-    {
-      name: language === 'ar' ? "أحمد الفيتوري" : "Ahmed Al-Fitouri",
-      city: language === 'ar' ? "بنغازي" : "Benghazi",
-      role: language === 'ar' ? "مسافر / سائح" : "Traveler",
-      avatar: "أ",
-      stars: 5,
-      text: language === 'ar'
-        ? "تجربة رائعة! حجزت رحلة إلى أوباري عبر دلني وكل شيء كان منظماً — من السائق إلى الفندق. أنصح به بشدة."
-        : "Amazing experience! Booked an Ubari trip via Dallani and everything was organized — from driver to hotel. Highly recommend!",
-      gradient: "from-teal-500 to-sky-500",
-    },
-    {
-      name: language === 'ar' ? "سارة الطرابلسي" : "Sarah Al-Tripoli",
-      city: language === 'ar' ? "طرابلس" : "Tripoli",
-      role: language === 'ar' ? "مسافرة / عائلية" : "Family Traveler",
-      avatar: "س",
-      stars: 5,
-      text: language === 'ar'
-        ? "أسهل منصة استخدمتها لحجز فندق داخل ليبيا. الأسعار ممتازة والدعم الفني سريع جداً."
-        : "Easiest platform to book a hotel in Libya. Great prices and very fast support. Will definitely use again!",
-      gradient: "from-orange-500 to-amber-400",
-    },
-    {
-      name: "Omar M.",
-      city: language === 'ar' ? "مصراتة" : "Misrata",
-      role: language === 'ar' ? "مسافر / مغامرة" : "Adventure Seeker",
-      avatar: "O",
-      stars: 5,
-      text: language === 'ar'
-        ? "منصة رائعة لاكتشاف كنوز ليبيا الخفية. جولة الصحراء إلى أكاكوس لن تُنسى."
-        : "Great platform to discover hidden gems in Libya. The desert tour to Acacus Mountains was absolutely unforgettable.",
-      gradient: "from-violet-500 to-purple-600",
-    },
-    {
-      name: language === 'ar' ? "خالد المصراتي" : "Khaled Al-Misrati",
-      city: language === 'ar' ? "مصراتة" : "Misrata",
-      role: language === 'ar' ? "رجل أعمال" : "Business Traveler",
-      avatar: "خ",
-      stars: 5,
-      text: language === 'ar'
-        ? "استخدمت دلني لحجز سيارة خاصة وسائق احترافي. الخدمة ممتازة والتواصل سريع."
-        : "Used Dallani to book a private car with a professional driver. Excellent service and fast communication!",
-      gradient: "from-emerald-500 to-teal-500",
-    },
-    {
-      name: language === 'ar' ? "فاطمة الجديدي" : "Fatima Al-Jadidi",
-      city: language === 'ar' ? "غدامس" : "Ghadames",
-      role: language === 'ar' ? "مرشدة سياحية" : "Tour Guide",
-      avatar: "ف",
-      stars: 5,
-      text: language === 'ar'
-        ? "كمرشدة سياحية، دلني غيّر طريقة تواصلي مع السلح وتنظيم جولاتي."
-        : "As a tour guide, Dallani transformed how I connect with tourists and manage my tours professionally.",
-      gradient: "from-rose-500 to-pink-500",
-    },
-  ];
-
-  return (
-    <section className="py-14 md:py-20 bg-slate-50 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
-            {language === 'ar' ? 'قصص من زوارنا' : 'Stories from our visitors'}
-          </h2>
-          <p className="mt-3 text-slate-600 text-lg">
-            {language === 'ar' ? 'تجارب زوار رحلات دلني' : 'What visitors say about their Dallani trips'}
-          </p>
-          
-        </div>
-
-        {/* Scrollable cards */}
-        <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-6 -mx-4 px-4 scroll-smooth">
-          {items.map((item, i) => (
-            <div
-              key={item.name + i}
-              className="group shrink-0 w-[300px] md:w-[340px] snap-start bg-white border border-slate-200 rounded-3xl p-7 hover:border-primary/40 hover:shadow-card hover:-translate-y-1 transition duration-300 flex flex-col"
-            >
-              {/* Quote icon */}
-              <div className="text-4xl text-slate-200 font-black leading-none mb-3">&ldquo;</div>
-              {/* Stars */}
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: item.stars }).map((_, k) => (
-                  <Icon.Star key={k} className="w-4 h-4 text-gold" />
-                ))}
-              </div>
-              {/* Text */}
-              <p className="text-slate-700 leading-relaxed flex-1 text-sm font-semibold">{item.text}</p>
-              {/* Divider */}
-              <div className="my-5 h-px bg-slate-100" />
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-black text-lg shadow-md`}>
-                  {item.avatar}
-                </div>
-                <div>
-                  <div className="font-black text-slate-900 text-sm">{item.name}</div>
-                  <div className="text-xs text-slate-500 flex items-center gap-1 font-medium mt-0.5">
-                    <Icon.Pin className="w-3 h-3" />
-                    {item.city} · {item.role}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="text-center text-xs text-slate-500 mt-2 font-medium">
-          {language === 'ar' ? '← اسحب لرؤية المزيد →' : '← Scroll for more →'}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ---------- CTA banner ---------- */
 // Bright Libya photos (public/assets/libya, see CREDITS.md) that cross-fade with a slow zoom
 const CTA_SLIDES = [
@@ -1007,64 +887,49 @@ function TripTypes() {
   );
 }
 
-function DepartureOffices() {
+// How a trip works on Delni, in the three steps the system really follows
+function HowItWorks() {
   const { language } = useLanguage();
-  const offices = getOffices(language);
+  const isAr = language === "ar";
+  const ease = { transitionTimingFunction: "var(--ease-out)" };
+  const steps = [
+    { icon: Ticket, title: isAr ? "احجز رحلتك" : "Book your trip", text: isAr ? "اختر الرحلة وعدد المقاعد، ويصلك رقم تذكرتك فوراً." : "Choose a trip and seats; your ticket number arrives at once." },
+    { icon: Banknote, title: isAr ? "ادفع في المكتب" : "Pay at the office", text: isAr ? "سدّد المبلغ نقداً، ويؤكد الموظف الدفع برقم تذكرتك." : "Pay in cash; the staff confirm it with your ticket number." },
+    { icon: BusFront, title: isAr ? "انطلق مع المرشد" : "Set off with your guide", text: isAr ? "في موعد الرحلة تنطلق من مكتب الشركة." : "On the trip day you set off from the office." },
+  ];
+
   return (
-    <section className="py-20 md:py-28 bg-gradient-sand">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
-          <Reveal>
-            <div className="relative rounded-[2rem] overflow-hidden shadow-card">
-              <img src={transportHero} alt="مكتب دلني" className="w-full h-full object-cover" loading="lazy" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-6 right-6 text-white">
-                <div className="text-xs opacity-80">{language === 'ar' ? "من مكاتبنا الرسمية" : "From Our Official Offices"}</div>
-                <div className="text-2xl font-black">{language === 'ar' ? "نقاط الانطلاق" : "Departure Points"}</div>
-              </div>
-            </div>
-          </Reveal>
-          <div>
+    <section className="relative py-20 md:py-28 bg-gradient-sand overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute -top-32 start-1/4 w-96 h-96 rounded-full bg-[#003580]/[0.06] blur-3xl" />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <Reveal>
+          <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-black text-foreground leading-tight">
-              {language === 'ar' ? "انطلق من أقرب " : "Depart From Your Nearest "}
-              <span className="text-gradient-sea">{language === 'ar' ? "مكتب لك" : "Office"}</span>
+              {isAr ? "رحلتك في " : "Your trip in "}
+              <span className="text-gradient-sea">{isAr ? "ثلاث خطوات" : "three steps"}</span>
             </h2>
-            <p className="mt-3 text-muted-foreground text-lg leading-relaxed">
-              {language === 'ar' 
-                ? "جميع الرحلات اليومية والأسبوعية والخاصة تنطلق من مكاتب الشركة الرسمية في طرابلس وبنغازي — لضمان أعلى مستويات الأمان والتنظيم." 
-                : "All daily, weekly, and private trips depart from our official company offices in Tripoli and Benghazi — to ensure the highest levels of safety and organization."}
-            </p>
-            <div className="mt-8 space-y-3">
-              {offices.map((o, i) => (
-                <Reveal key={o.city} delay={i * 100}>
-                  <div className="group p-5 rounded-2xl bg-white border border-border hover:border-primary/40 hover:shadow-card transition">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className={`w-12 h-12 rounded-xl grid place-items-center shrink-0 shadow-sm ${i === 0 ? 'bg-[#003580] text-white' : 'bg-[#D96B27] text-white'}`}>
-                          <Icon.Pin className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-black text-lg text-foreground">{o.city}</h3>
-                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 border border-amber-500/30 font-black uppercase">{o.role}</span>
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-0.5">{o.address}</div>
-                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/80">
-                            <span className="font-semibold">📞 {o.phone}</span>
-                            <span>{o.hours}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-[#003580]/10 text-[#003580] border border-[#003580]/20 text-xs font-black hover:bg-[#003580] hover:text-white transition">
-                        الاتجاهات
-                      </button>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
           </div>
-        </div>
+        </Reveal>
+
+        <ol className="relative mt-14 grid md:grid-cols-3 gap-6 md:gap-8">
+          <div aria-hidden className="hidden md:block absolute top-11 start-[17%] end-[17%] border-t-2 border-dashed border-[#003580]/20" />
+          {steps.map((st, k) => (
+            <Reveal key={st.title} delay={k * 60}>
+              <li
+                className="group relative h-full text-center p-7 pt-0 rounded-3xl transition-[transform] duration-200 hover:-translate-y-1"
+                style={ease}
+              >
+                <div className="relative mx-auto w-[88px] h-[88px]">
+                  <div className="absolute inset-0 rounded-full bg-white shadow-card ring-8 ring-[#F8F5EF] transition-transform duration-200 group-hover:scale-105" style={ease} />
+                  <div className="relative w-full h-full grid place-items-center text-[#003580]"><st.icon className="w-9 h-9" strokeWidth={1.75} aria-hidden /></div>
+                  <span className="absolute -top-1 -end-1 w-8 h-8 rounded-full bg-[#003580] text-white text-sm font-black grid place-items-center shadow-md ring-4 ring-[#F8F5EF]">{k + 1}</span>
+                </div>
+                <h3 className="mt-6 text-xl font-black text-foreground">{st.title}</h3>
+                <p className="mt-2 text-muted-foreground leading-relaxed">{st.text}</p>
+              </li>
+            </Reveal>
+          ))}
+        </ol>
       </div>
     </section>
   );

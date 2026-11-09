@@ -108,8 +108,7 @@ class AccountTab extends StatelessWidget {
                 const SignOutTile(),
             ],
           ),
-          const SizedBox(height: Gap.xxl),
-          const Center(child: DelniLogo(markSize: 34)),
+          const SizedBox(height: Gap.xl),
         ],
       ),
     );
