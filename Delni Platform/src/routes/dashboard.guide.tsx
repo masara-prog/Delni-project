@@ -180,11 +180,19 @@ function GuideDashboard() {
           availability_status: g.availability_status || "متاح",
         });
 
-        // Bookings that still count: not cancelled, and for a daily trip (it runs every week) only today's run date
+        // Bookings that still count: not cancelled, and for a daily trip (it runs every week) only one run date:
+        // today when it has bookings, otherwise the nearest coming date that has bookings
         const today = new Date().toLocaleDateString("en-CA");
-        const liveBookings = (trip: any, daily: boolean) =>
-          (Array.isArray(trip.bookings) ? trip.bookings : []).filter((b: any) =>
-            !String(b.booking_status || "").startsWith("ملغ") && (!daily || String(b.trip_date || "").slice(0, 10) === today));
+        const notCancelled = (trip: any) =>
+          (Array.isArray(trip.bookings) ? trip.bookings : []).filter((b: any) => !String(b.booking_status || "").startsWith("ملغ"));
+        const runDateOf = (trip: any): string =>
+          notCancelled(trip).map((b: any) => String(b.trip_date || "").slice(0, 10)).filter((d: string) => d >= today).sort()[0] || today;
+        const liveBookings = (trip: any, daily: boolean) => {
+          const runDate = daily ? runDateOf(trip) : "";
+          return notCancelled(trip).filter((b: any) => !daily || String(b.trip_date || "").slice(0, 10) === runDate);
+        };
+        const runDateLabel = (d: string) =>
+          d === today ? "اليوم" : new Date(`${d}T00:00:00`).toLocaleDateString("ar-LY", { weekday: "long", day: "numeric", month: "numeric" });
         const seatsOf = (rows: any[]) => rows.reduce((sum, b) => sum + (Number(b.number_of_seats) || 0), 0);
 
         // Map Real Assigned Trips from DelniDB
@@ -196,7 +204,7 @@ function GuideDashboard() {
               trip_name: d.trip_title || d.title || "رحلة يومية",
               type: "يومية",
               date: d.recurring_days || "أسبوعياً",
-              time_or_duration: "يوم كامل",
+              time_or_duration: `يوم كامل · موعد ${runDateLabel(runDateOf(d))}`,
               tourist_group_name: d.trip_title || d.title || "رحلة يومية",
               seats_booked: seatsOf(liveBookings(d, true)),
               // Like weekly trips, a daily trip waits for the guide's answer (empty = trip from before this step)
