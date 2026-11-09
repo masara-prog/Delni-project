@@ -226,7 +226,7 @@ function MessageBubble({ msg }: { msg: Msg }) {
       )}
       <div className={`max-w-[75%] px-4 py-2.5 text-sm ${isAdmin ? "bg-muted text-foreground rounded-2xl rounded-br-sm" : "bg-gradient-sea text-white rounded-2xl rounded-bl-sm shadow-soft"}`}>
         <div>{msg.text}</div>
-        <div className={`text-[10px] mt-1 ${isAdmin ? "text-muted-foreground" : "text-white/70"}`}>{msg.time}</div>
+        <div className={`text-[11px] mt-1 ${isAdmin ? "text-muted-foreground" : "text-white/70"}`}>{msg.time}</div>
       </div>
     </div>
   );

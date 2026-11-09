@@ -82,7 +82,7 @@ export function Logo({
               textColor === "light" ? "text-amber-200 opacity-95" : "text-[#D96B27]"
             } ${
               size === "sm"
-                ? "text-[9px]"
+                ? "text-[11px]"
                 : size === "md"
                 ? "text-[11px]"
                 : size === "lg"

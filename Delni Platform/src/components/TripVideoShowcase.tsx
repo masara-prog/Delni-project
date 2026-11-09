@@ -499,7 +499,7 @@ export function TripVideoShowcase({
 
         {/* Reel Recording Indicator & Audio Mode Switcher */}
         <div className="absolute top-3 left-3 z-20 flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white text-[10px] font-black shadow-soft">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white text-[11px] font-black shadow-soft">
             <span className={`w-2 h-2 rounded-full ${isPlaying && !isEnded ? "bg-red-500 animate-pulse" : "bg-zinc-400"}`} />
             <span className="tracking-wider uppercase">
               {chapters.length > 1
@@ -513,7 +513,7 @@ export function TripVideoShowcase({
             <button
               type="button"
               onClick={() => setAudioMode("video")}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-full text-[11px] font-black transition cursor-pointer flex items-center gap-1 ${
                 audioMode === "video"
                   ? "bg-[#D96B27] text-white shadow-xs"
                   : "text-white/75 hover:text-white"
@@ -527,7 +527,7 @@ export function TripVideoShowcase({
             <button
               type="button"
               onClick={() => setAudioMode("voice")}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-full text-[11px] font-black transition cursor-pointer flex items-center gap-1 ${
                 audioMode === "voice"
                   ? "bg-emerald-600 text-white shadow-xs"
                   : "text-white/75 hover:text-white"
@@ -541,7 +541,7 @@ export function TripVideoShowcase({
             <button
               type="button"
               onClick={() => setAudioMode("muted")}
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black transition cursor-pointer ${
+              className={`px-1.5 py-0.5 rounded-full text-[11px] font-black transition cursor-pointer ${
                 audioMode === "muted"
                   ? "bg-zinc-700 text-white"
                   : "text-white/60 hover:text-white"
@@ -680,7 +680,7 @@ export function TripVideoShowcase({
             <button
               type="button"
               onClick={() => setShowSubtitles(!showSubtitles)}
-              className={`px-2 py-1 rounded-lg border text-[10px] font-black transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2 py-1 rounded-lg border text-[11px] font-black transition flex items-center gap-1 cursor-pointer ${
                 showSubtitles
                   ? "bg-white/30 border-white/40 text-white"
                   : "bg-white/10 border-white/20 text-white/70 hover:text-white"
@@ -721,7 +721,7 @@ export function TripVideoTrailerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="relative w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl bg-[#0B132B] border border-white/10">
+      <div className="relative w-full max-w-4xl rounded-3xl overflow-hidden shadow-md bg-[#0B132B] border border-white/10">
         <button
           onClick={onClose}
           className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 text-white grid place-items-center transition cursor-pointer text-sm font-bold shadow-md"

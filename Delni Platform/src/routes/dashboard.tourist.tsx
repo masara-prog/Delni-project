@@ -302,7 +302,7 @@ function TouristDashboard() {
     >
       {/* Calm, Eye-Friendly Executive Welcome Banner - Matched exactly with Guide Dashboard */}
       <div className="rounded-2xl p-5 md:p-6 bg-[#0B1727] text-white border border-[#162942] shadow-xs mb-6 relative overflow-hidden text-right">
-        <div className="absolute top-0 left-0 w-80 h-80 bg-[#1B5A78]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-0 w-80 h-80 bg-[#0B4F57]/15 rounded-full blur-3xl pointer-events-none" />
         <div className="relative flex flex-wrap items-center gap-4 justify-between">
           <div>
             <div className="text-xs text-stone-400 font-medium">مرحباً بك 👋</div>
@@ -324,7 +324,7 @@ function TouristDashboard() {
           <div className="flex items-center gap-2">
             <Link
               to="/trips"
-              className="px-4 py-2 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition shadow-xs flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#0B4F57] hover:bg-[#13445C] text-white font-bold text-xs transition shadow-xs flex items-center gap-1.5"
             >
               <span>🧭</span>
               <span>استكشاف وحجز رحلة جديدة</span>
@@ -363,7 +363,7 @@ function TouristDashboard() {
                   </p>
                   <Link
                     to="/trips"
-                    className="inline-flex items-center gap-2 px-5 h-9 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition"
+                    className="inline-flex items-center gap-2 px-5 h-9 rounded-xl bg-[#0B4F57] hover:bg-[#13445C] text-white font-bold text-xs transition"
                   >
                     <span>🧭</span> استكشف الرحلات المتاحة للحجز
                   </Link>
@@ -373,12 +373,12 @@ function TouristDashboard() {
                   {bookings.map((b) => (
                     <div
                       key={b.code}
-                      className="flex flex-col sm:flex-row gap-3.5 p-3.5 rounded-xl border border-border bg-white hover:border-[#1B5A78]/40 transition shadow-2xs text-right"
+                      className="flex flex-col sm:flex-row gap-3.5 p-3.5 rounded-xl border border-border bg-white hover:border-[#0B4F57]/40 transition shadow-2xs text-right"
                     >
                       <div className="w-full sm:w-28 h-auto min-h-[90px] rounded-lg bg-stone-50 border border-stone-200 flex flex-col items-center justify-center p-2.5 shrink-0 text-center">
                         <span className="text-lg mb-1">🎫</span>
-                        <span className="text-[11px] font-mono font-bold text-[#1B5A78]">{b.code}</span>
-                        <span className="text-[10px] text-stone-500 font-medium mt-0.5">{b.type}</span>
+                        <span className="text-[11px] font-mono font-bold text-[#0B4F57]">{b.code}</span>
+                        <span className="text-[11px] text-stone-500 font-medium mt-0.5">{b.type}</span>
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -386,7 +386,7 @@ function TouristDashboard() {
                           <div className="font-bold text-foreground text-sm">{b.tripName}</div>
                           <div className="flex items-center gap-1.5">
                             <Badge tone={b.status === "مؤكدة" ? "green" : b.status === "ملغية" ? "red" : "sun"}>{b.statusLabel || b.status}</Badge>
-                            <span className="text-[10px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
+                            <span className="text-[11px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
                               {b.payment_status === "cash_at_office" ? "سداد نقدي بالفرع" : "مدفوع"}
                             </span>
                           </div>
@@ -400,7 +400,7 @@ function TouristDashboard() {
                         </div>
 
                         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
-                          <div className="font-bold text-[#1B5A78] text-xs">التكلفة الإجمالية: {b.price}</div>
+                          <div className="font-bold text-[#0B4F57] text-xs">التكلفة الإجمالية: {b.price}</div>
                           <div className="flex items-center gap-2">
                             {b.attended && isTripCompleted(b.endDate || "") ? (
                               <button
@@ -426,7 +426,7 @@ function TouristDashboard() {
                             )}
                             <button
                               onClick={() => setTicketModal(b)}
-                              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#1B5A78] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
+                              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#0B4F57] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
                             >
                               <span>📱</span> عرض التذكرة الرقمية
                             </button>
@@ -463,7 +463,7 @@ function TouristDashboard() {
               </p>
               <Link
                 to="/trips"
-                className="inline-flex items-center gap-2 px-5 h-9 rounded-xl bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition"
+                className="inline-flex items-center gap-2 px-5 h-9 rounded-xl bg-[#0B4F57] hover:bg-[#13445C] text-white font-bold text-xs transition"
               >
                 <span>🧭</span> استكشف الرحلات المتاحة للحجز
               </Link>
@@ -473,12 +473,12 @@ function TouristDashboard() {
               {bookings.map((b) => (
                 <div
                   key={b.code}
-                  className="flex flex-col sm:flex-row gap-3.5 p-3.5 rounded-xl border border-border bg-white hover:border-[#1B5A78]/40 transition shadow-2xs text-right"
+                  className="flex flex-col sm:flex-row gap-3.5 p-3.5 rounded-xl border border-border bg-white hover:border-[#0B4F57]/40 transition shadow-2xs text-right"
                 >
                   <div className="w-full sm:w-28 h-auto min-h-[90px] rounded-lg bg-stone-50 border border-stone-200 flex flex-col items-center justify-center p-2.5 shrink-0 text-center">
                     <span className="text-lg mb-1">🎫</span>
-                    <span className="text-[11px] font-mono font-bold text-[#1B5A78]">{b.code}</span>
-                    <span className="text-[10px] text-stone-500 font-medium mt-0.5">{b.type}</span>
+                    <span className="text-[11px] font-mono font-bold text-[#0B4F57]">{b.code}</span>
+                    <span className="text-[11px] text-stone-500 font-medium mt-0.5">{b.type}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -486,7 +486,7 @@ function TouristDashboard() {
                       <div className="font-bold text-foreground text-sm">{b.tripName}</div>
                       <div className="flex items-center gap-1.5">
                         <Badge tone={b.status === "مؤكدة" ? "green" : b.status === "ملغية" ? "red" : "sun"}>{b.statusLabel || b.status}</Badge>
-                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
+                        <span className="text-[11px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
                           {b.payment_status === "cash_at_office" ? "سداد نقدي بالفرع" : "مدفوع"}
                         </span>
                       </div>
@@ -500,7 +500,7 @@ function TouristDashboard() {
                     </div>
 
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
-                      <div className="font-bold text-[#1B5A78] text-xs">التكلفة: {b.price}</div>
+                      <div className="font-bold text-[#0B4F57] text-xs">التكلفة: {b.price}</div>
                       <div className="flex items-center gap-2">
                         {b.attended && isTripCompleted(b.endDate || "") ? (
                           <button
@@ -543,7 +543,7 @@ function TouristDashboard() {
                         )}
                         <button
                           onClick={() => setTicketModal(b)}
-                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#1B5A78] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#0B4F57] text-white hover:bg-[#13445C] transition flex items-center gap-1 cursor-pointer"
                         >
                           <span>📱</span> عرض التذكرة الرقمية
                         </button>
@@ -660,7 +660,7 @@ function TouristDashboard() {
                               className="inline-flex items-center gap-1.5 text-emerald-800 font-bold hover:text-emerald-950 hover:underline cursor-pointer bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 transition"
                             >
                               <span>🚍 مركبة النقل: <b>{p.assigned_vehicle}</b> {p.vehicle_model ? `(${p.vehicle_model})` : ""}</span>
-                              <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-black">تفاصيل 👁️</span>
+                              <span className="text-[11px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-black">تفاصيل 👁️</span>
                             </button>
                           )}
                         </div>
@@ -683,9 +683,9 @@ function TouristDashboard() {
                           <div>
                             <span className="text-slate-600 font-bold block text-[11px]">التسعيرة الرسمية المقترحة من الإدارة:</span>
                             <span className="text-base sm:text-lg font-black text-emerald-800">{p.quoted_price} د.ل</span>
-                            <span className="text-[10px] text-emerald-700 mr-2">(شاملة المرشد السياحي وسيارة النقل والخدمات)</span>
+                            <span className="text-[11px] text-emerald-700 mr-2">(شاملة المرشد السياحي وسيارة النقل والخدمات)</span>
                             {p.additional_expenses ? (
-                              <span className="inline-block text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded mr-2 font-bold border border-amber-300">
+                              <span className="inline-block text-[11px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded mr-2 font-bold border border-amber-300">
                                 منها {p.additional_expenses} د.ل مصروفات لوجستية وخدمات
                               </span>
                             ) : null}
@@ -718,14 +718,14 @@ function TouristDashboard() {
 
                         {/* Assigned Hotels List (From hotels_trip_private) */}
                         {p.hotels && p.hotels.length > 0 && (
-                          <div className="p-2.5 rounded-lg bg-blue-50/80 border border-blue-200 text-blue-950 space-y-1">
-                            <span className="font-black text-xs flex items-center gap-1.5 text-blue-900">
+                          <div className="p-2.5 rounded-lg bg-teal-50/80 border border-teal-200 text-teal-950 space-y-1">
+                            <span className="font-black text-xs flex items-center gap-1.5 text-teal-900">
                               <span>🏨</span>
                               <span>الفنادق وأماكن الإقامة المعتمدة للرحلة:</span>
                             </span>
                             <div className="flex flex-wrap gap-2 pt-1">
                               {p.hotels.map((h: any, hidx: number) => (
-                                <span key={hidx} className="px-2.5 py-1 rounded-md bg-white border border-blue-200 text-[11px] font-bold text-slate-800 shadow-2xs">
+                                <span key={hidx} className="px-2.5 py-1 rounded-md bg-white border border-teal-200 text-[11px] font-bold text-slate-800 shadow-2xs">
                                   {h.hotel_name || h.name} ({h.city || "ليبيا"}) {"★".repeat(h.star_rating || h.stars || 4)}
                                 </span>
                               ))}
@@ -748,7 +748,7 @@ function TouristDashboard() {
                               {parsedSteps.map((st, idx) => (
                                 <div key={idx} className="p-2.5 rounded-lg bg-white border border-emerald-200/70 space-y-1 shadow-2xs">
                                   <div className="flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold font-mono text-[10px] shrink-0">
+                                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold font-mono text-[11px] shrink-0">
                                       {st.time}
                                     </span>
                                     <h4 className="font-black text-slate-800 text-xs truncate">{st.title}</h4>
@@ -773,7 +773,7 @@ function TouristDashboard() {
                               <span className="text-xs font-black text-slate-800 block">
                                 هل توافق على جدول المحطات والتسعيرة المقترحة؟
                               </span>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-[11px] text-slate-500">
                                 عند التأكيد سيتم اعتماد الحجز وسداد الرسوم بحسب سياسة السداد بمقر الشركة.
                               </span>
                             </div>
@@ -877,7 +877,7 @@ function TouristDashboard() {
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <Link
                   to="/trips"
-                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-[#0B4F57] hover:bg-[#13445C] text-white font-bold text-xs transition"
                 >
                   🧭 استكشف الرحلات
                 </Link>
@@ -907,7 +907,7 @@ function TouristDashboard() {
                 const [itemType, ...idParts] = compositeKey.split(":");
                 const itemId = idParts.join(":");
                 const typeLabels: Record<string, { label: string; icon: string; link: string; color: string }> = {
-                  trip: { label: "رحلة سياحية", icon: "🧭", link: "/trips", color: "bg-sky-50 text-sky-800 border-sky-200" },
+                  trip: { label: "رحلة سياحية", icon: "🧭", link: "/trips", color: "bg-teal-50 text-teal-800 border-teal-200" },
                   hotel: { label: "فندق وإقامة", icon: "🏨", link: "/hotels", color: "bg-amber-50 text-amber-800 border-amber-200" },
                   restaurant: { label: "مطعم ومقهى", icon: "🍽️", link: "/restaurants", color: "bg-rose-50 text-rose-800 border-rose-200" },
                   vehicle: { label: "مركبة نقل", icon: "🚍", link: "/transport", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
@@ -917,11 +917,11 @@ function TouristDashboard() {
                 return (
                   <div
                     key={compositeKey}
-                    className="p-3.5 rounded-xl border border-border bg-white hover:border-[#1B5A78]/30 transition shadow-2xs flex flex-col justify-between"
+                    className="p-3.5 rounded-xl border border-border bg-white hover:border-[#0B4F57]/30 transition shadow-2xs flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${tInfo.color}`}>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${tInfo.color}`}>
                           <span>{tInfo.icon}</span> {tInfo.label}
                         </span>
                         <button
@@ -943,15 +943,15 @@ function TouristDashboard() {
                     </div>
 
                     <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between">
-                      <span className="text-[10px] text-stone-400 font-mono">
+                      <span className="text-[11px] text-stone-400 font-mono">
                         {itemId}
                       </span>
                       <Link
                         to={tInfo.link}
-                        className="text-xs font-bold text-[#1B5A78] hover:underline flex items-center gap-1"
+                        className="text-xs font-bold text-[#0B4F57] hover:underline flex items-center gap-1"
                       >
                         <span>عرض في الدليل</span>
-                        <span className="text-[10px]">←</span>
+                        <span className="text-[11px]">←</span>
                       </Link>
                     </div>
                   </div>
@@ -1002,7 +1002,7 @@ function TouristDashboard() {
                 disabled
                 className="w-full h-9 px-3 rounded-xl border border-border bg-stone-100 text-stone-600 font-mono text-xs font-bold text-right cursor-not-allowed select-none"
               />
-              <span className="text-[10px] text-stone-400 mt-0.5 block">كود الحساب ورقم جواز السفر المعتمد عند التسجيل (غير قابل للتعديل لأسباب أمنية)</span>
+              <span className="text-[11px] text-stone-400 mt-0.5 block">كود الحساب ورقم جواز السفر المعتمد عند التسجيل (غير قابل للتعديل لأسباب أمنية)</span>
             </div>
 
             <Field
@@ -1047,7 +1047,7 @@ function TouristDashboard() {
               />
             )}
 
-            <button className="px-5 h-9 bg-[#1B5A78] hover:bg-[#13445C] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer mt-2">
+            <button className="px-5 h-9 bg-[#0B4F57] hover:bg-[#13445C] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer mt-2">
               حفظ وتحديث بيانات الحساب ✓
             </button>
           </form>
@@ -1069,15 +1069,15 @@ function TouristDashboard() {
               <div className="bg-[#F4F1EA] p-3 sm:p-5 rounded-3xl text-right" dir="rtl">
                 <div className="relative bg-white rounded-[26px] overflow-hidden shadow-[0_20px_50px_-20px_rgba(15,23,42,0.45)]">
                   {/* Header band */}
-                  <div className="relative px-5 sm:px-6 py-5 bg-gradient-to-l from-[#0F172A] via-[#003580] to-[#1B5A78] text-white">
+                  <div className="relative px-5 sm:px-6 py-5 bg-gradient-to-l from-[#0F172A] via-[#00736F] to-[#0B4F57] text-white">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-blue-100">
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-teal-100">
                           <span className="px-2 py-0.5 rounded-full bg-white/15">🎫 تذكرة إلكترونية</span>
                           <span className="px-2 py-0.5 rounded-full bg-white/15">{ticketModal.type}</span>
                         </div>
                         <h3 className="mt-2 text-lg sm:text-xl font-black leading-snug">{ticketModal.tripName}</h3>
-                        <div className="mt-1 text-[11px] text-blue-100 font-semibold">منصة دلّني · السياحة الليبية بأبهى صورها</div>
+                        <div className="mt-1 text-[11px] text-teal-100 font-semibold">منصة دلّني · السياحة الليبية بأبهى صورها</div>
                       </div>
                       <span className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-black ${cancelled ? "bg-red-500/90 text-white" : "bg-emerald-400 text-[#0F172A]"}`}>
                         {cancelled ? `✕ ${ticketModal.statusLabel || "ملغية"}` : "✓ مؤكدة"}
@@ -1091,7 +1091,7 @@ function TouristDashboard() {
                       <div className="grid grid-cols-2 gap-3">
                         {facts.map((f) => (
                           <div key={f.label} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 min-w-0">
-                            <div className="text-[10px] font-bold text-slate-500">{f.icon} {f.label}</div>
+                            <div className="text-[11px] font-bold text-slate-500">{f.icon} {f.label}</div>
                             <div className="text-[13px] font-black text-[#0F172A] mt-0.5 leading-snug break-words">{f.value}</div>
                             {f.sub && <div className="text-[11px] text-slate-500 font-semibold">{f.sub}</div>}
                           </div>
@@ -1099,11 +1099,11 @@ function TouristDashboard() {
                       </div>
                       <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#1ABC9C]/10 border border-[#1ABC9C]/20">
                         <div>
-                          <div className="text-[10px] font-bold text-[#0E8C74]">👥 المقاعد</div>
+                          <div className="text-[11px] font-bold text-[#0E8C74]">👥 المقاعد</div>
                           <div className="text-base font-black text-[#0F172A]">{ticketModal.seats} {ticketModal.seats === 1 ? "مقعد" : "مقاعد"}</div>
                         </div>
                         <div className="text-left">
-                          <div className="text-[10px] font-bold text-[#0E8C74]">💰 الإجمالي</div>
+                          <div className="text-[11px] font-bold text-[#0E8C74]">💰 الإجمالي</div>
                           <div className="text-base font-black text-[#0F172A]">{ticketModal.price}</div>
                         </div>
                       </div>
@@ -1120,11 +1120,11 @@ function TouristDashboard() {
                       <div className="text-[11px] text-slate-500 font-bold">رقم التذكرة</div>
                       <div
                         dir="ltr"
-                        className={`w-full rounded-2xl bg-[#EEF4FB] border border-slate-200 px-3 py-4 font-mono text-lg font-black text-[#003580] tracking-wider select-all break-all ${cancelled ? "opacity-40 line-through" : ""}`}
+                        className={`w-full rounded-2xl bg-[#EEF4FB] border border-slate-200 px-3 py-4 font-mono text-lg font-black text-[#00736F] tracking-wider select-all break-all ${cancelled ? "opacity-40 line-through" : ""}`}
                       >
                         {ticketModal.code}
                       </div>
-                      <div className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                      <div className="text-[11px] text-slate-500 font-semibold leading-relaxed">
                         {cancelled ? "هذه التذكرة ملغاة ولا يمكن استخدامها" : "اذكر رقم التذكرة عند نقطة الانطلاق أو بمقر الشركة لتأكيد الحجز"}
                       </div>
                     </div>
@@ -1142,7 +1142,7 @@ function TouristDashboard() {
                       </button>
                       <button
                         onClick={() => setTicketModal(null)}
-                        className="px-5 h-10 rounded-full bg-[#003580] hover:bg-[#0F172A] text-white font-black text-xs transition cursor-pointer"
+                        className="px-5 h-10 rounded-full bg-[#00736F] hover:bg-[#0F172A] text-white font-black text-xs transition cursor-pointer"
                       >
                         إغلاق
                       </button>
@@ -1184,7 +1184,7 @@ function TouristDashboard() {
             <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 space-y-1">
               <div>📅 <b>تاريخ الرحلة:</b> {reviewModalTicket.date}{reviewModalTicket.time ? ` (${reviewModalTicket.time})` : ""}</div>
               <div>🚘 <b>المرشد السياحي:</b> {reviewModalTicket.guideName}{reviewModalTicket.guideLicense ? ` (${reviewModalTicket.guideLicense})` : ""}</div>
-              <div>🎫 <b>رقم التذكرة:</b> <span className="font-mono font-bold text-[#1B5A78]">{reviewModalTicket.code}</span></div>
+              <div>🎫 <b>رقم التذكرة:</b> <span className="font-mono font-bold text-[#0B4F57]">{reviewModalTicket.code}</span></div>
             </div>
 
             {reviewSuccessMsg && (
@@ -1243,9 +1243,9 @@ function TouristDashboard() {
                   placeholder="كيف كان التنظيم، التزام المرشد، خط السير، النقل والأمان؟ شاركنا رأيك..."
                   rows={3}
                   maxLength={500}
-                  className="w-full p-2.5 rounded-xl border border-border text-xs focus:ring-2 focus:ring-[#1B5A78]/20 focus:border-[#1B5A78] text-right"
+                  className="w-full p-2.5 rounded-xl border border-border text-xs focus:ring-2 focus:ring-[#0B4F57]/20 focus:border-[#0B4F57] text-right"
                 />
-                <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <div className="flex justify-between text-[11px] text-muted-foreground mt-0.5">
                   <span>التعليق سيظهر في صفحة تفاصيل الرحلة لجميع السياح مع شارة التحقق.</span>
                   <span>{reviewComment.length}/500</span>
                 </div>
@@ -1310,7 +1310,7 @@ function LibyanPhoneField({ label, value, onChange }: { label: string; value: st
           error ? "border-red-500" : "border-border focus:border-primary"
         }`}
       />
-      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+      {error && <div className="text-[11px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }
@@ -1356,7 +1356,7 @@ function Field({
           error ? "border-red-500" : "border-border focus:border-primary"
         }`}
       />
-      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+      {error && <div className="text-[11px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }

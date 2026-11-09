@@ -129,17 +129,17 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
       <div className="flex items-center justify-between gap-1.5 pb-2 mb-2 border-b border-amber-100">
         <div className="flex items-center gap-1.5">
           <span className="text-amber-500 text-sm animate-pulse">✨</span>
-          <span className="text-[11px] font-black text-[#003580]">
+          <span className="text-[11px] font-black text-[#00736F]">
             {isAr ? "عرض مقترح قريب بالوجهة" : "Nearby Destination Offer"}
           </span>
-          <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-full font-bold">
+          <span className="text-[11px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-full font-bold">
             {current.type === "hotel" ? "🏨 فندق" : "🍽️ مطعم"}
           </span>
         </div>
 
         <div className="flex items-center gap-1">
           {nearbyPromos.length > 1 && (
-            <div className="flex items-center gap-0.5 text-slate-500 font-bold text-[10px] bg-slate-100 rounded-lg px-1.5 py-0.5">
+            <div className="flex items-center gap-0.5 text-slate-500 font-bold text-[11px] bg-slate-100 rounded-lg px-1.5 py-0.5">
               <button
                 type="button"
                 onClick={handlePrev}
@@ -196,13 +196,13 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
           <div className="flex items-center justify-between gap-1 mb-0.5">
             <h4 className="font-black text-xs text-[#0F172A] truncate">{current.name}</h4>
           </div>
-          <div className="text-[10px] text-emerald-700 font-bold">
+          <div className="text-[11px] text-emerald-700 font-bold">
             🏷️ {current.discountText}
           </div>
-          <p className="text-[10px] text-slate-600 font-medium line-clamp-1 mt-0.5">
+          <p className="text-[11px] text-slate-600 font-medium line-clamp-1 mt-0.5">
             {current.description}
           </p>
-          <div className="text-[9px] text-slate-400 font-bold mt-1">
+          <div className="text-[11px] text-slate-400 font-bold mt-1">
             📍 {current.city} · بالقرب من مسار الرحلة
           </div>
         </div>
@@ -210,12 +210,12 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
 
       {/* Bottom Action Button */}
       <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-        <span className="text-[9px] text-slate-400 font-medium">
+        <span className="text-[11px] text-slate-400 font-medium">
           {isAr ? "عرض حصري لسياح المنصة" : "Delni Exclusive"}
         </span>
         <Link
           to={current.detailsUrl as any}
-          className="inline-flex items-center gap-1 px-3 py-1 bg-[#003580] hover:bg-[#002860] text-white text-[11px] font-black rounded-lg transition shadow-xs"
+          className="inline-flex items-center gap-1 px-3 py-1 bg-[#00736F] hover:bg-[#002860] text-white text-[11px] font-black rounded-lg transition shadow-xs"
         >
           <span>{isAr ? "استكشاف العرض" : "Explore"}</span>
           <span>➔</span>

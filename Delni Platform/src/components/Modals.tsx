@@ -309,7 +309,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
                 <div className="flex items-center gap-2 pt-0.5 flex-wrap">
                   <a
                     href="/auth/login?role=tourist"
-                    className="px-3 py-1.5 rounded-lg bg-[#003580] hover:bg-[#00224f] text-white font-black text-[11px] transition shadow-xs"
+                    className="px-3 py-1.5 rounded-lg bg-[#00736F] hover:bg-[#00224f] text-white font-black text-[11px] transition shadow-xs"
                   >
                     {isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}
                   </a>
@@ -329,9 +329,9 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             )}
 
             {/* Capacity & Driver Badge */}
-            <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200/80 text-xs space-y-2">
+            <div className="p-3.5 rounded-2xl bg-teal-50/90 border border-teal-200/80 text-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-black text-[#003580] flex items-center gap-1.5 text-xs">
+                <span className="font-black text-[#00736F] flex items-center gap-1.5 text-xs">
                   <span>🚌</span>
                   <span>{isAr ? `سعة الحافلة: ${busCapacity} راكب` : `Coach Capacity: ${busCapacity} Passengers`}</span>
                 </span>
@@ -572,7 +572,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
       <Modal open={open} onClose={onClose} size="2xl">
         <div dir={dir} className="p-6 sm:p-8 text-right bg-white relative overflow-hidden">
           {/* Subtle Ambient Corner Flares */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start relative z-10">
@@ -581,7 +581,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
             <div className="md:col-span-7 flex flex-col justify-between space-y-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black border border-[#003580]/20 flex items-center gap-1.5 shadow-2xs">
+                  <span className="px-3 py-1 rounded-full bg-[#00736F]/10 text-[#00736F] text-xs font-black border border-[#00736F]/20 flex items-center gap-1.5 shadow-2xs">
                     <span>📍</span>
                     <span>{item.subtitle || nearbyData.destination}</span>
                   </span>
@@ -594,7 +594,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                   </span>
                 </div>
                 
-                <h3 className="text-2xl sm:text-3xl font-black text-[#003580] leading-snug tracking-tight">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#00736F] leading-snug tracking-tight">
                   {item.title}
                 </h3>
               </div>
@@ -609,8 +609,8 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
               {item.info && item.info.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1">
                   {item.info.map((i) => (
-                    <div key={i.label} className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-blue-300 transition">
-                      <span className="text-[10px] text-[#003580] font-bold block mb-0.5">{i.label}</span>
+                    <div key={i.label} className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-teal-300 transition">
+                      <span className="text-[11px] text-[#00736F] font-bold block mb-0.5">{i.label}</span>
                       <span className="font-black text-slate-900 text-xs sm:text-sm leading-snug block">{i.value}</span>
                     </div>
                   ))}
@@ -620,14 +620,14 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
               {/* Key Highlights / Features tags if available */}
               {item.features && item.features.length > 0 && (
                 <div className="pt-1">
-                  <span className="text-[11px] font-bold text-[#003580] block mb-1.5">
+                  <span className="text-[11px] font-bold text-[#00736F] block mb-1.5">
                     {isAr ? "أبرز المعالم والتفاصيل المعمارية:" : "Key Highlights:"}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {item.features.map((feat, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1 rounded-full bg-blue-50/70 text-[#003580] text-xs font-bold border border-blue-200/70 hover:bg-blue-100/70 transition shadow-2xs"
+                        className="px-3 py-1 rounded-full bg-teal-50/70 text-[#00736F] text-xs font-bold border border-teal-200/70 hover:bg-teal-100/70 transition shadow-2xs"
                       >
                         ✓ {feat}
                       </span>
@@ -671,7 +671,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
               
               <div className="absolute top-3.5 right-3.5 left-3.5 flex items-center justify-between pointer-events-none text-white">
-                <span className="px-3 py-1 rounded-full bg-[#003580]/90 backdrop-blur-md text-[11px] font-black border border-white/20 shadow-md">
+                <span className="px-3 py-1 rounded-full bg-[#00736F]/90 backdrop-blur-md text-[11px] font-black border border-white/20 shadow-md">
                   📍 {nearbyData.destination}
                 </span>
                 <span className="px-3 py-1 rounded-full bg-emerald-600/90 backdrop-blur-md text-[11px] font-black text-white border border-white/20 shadow-md">
@@ -764,7 +764,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
           {/* Header Title & Subtitle */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580] font-black text-xs border border-[#003580]/20">
+              <span className="px-3 py-1 rounded-full bg-[#00736F]/10 text-[#00736F] font-black text-xs border border-[#00736F]/20">
                 📍 {nearbyData.destination}
               </span>
               {item.subtitle && <span className="text-xs text-slate-500 font-bold">· {item.subtitle}</span>}
@@ -777,14 +777,14 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
           {/* ── 2. VEHICLE & TRANSPORT DETAILS (بيانات المركبة المطلوبة فقط: نوع المركبة واسم الشركة وسائقها) ── */}
           {item.vehicle && (
             <div className="p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-2.5">
-              <div className="flex items-center gap-2 text-xs font-black text-[#003580]">
+              <div className="flex items-center gap-2 text-xs font-black text-[#00736F]">
                 <span className="text-base">🚌</span>
                 <span>{isAr ? "بيانات وسيلة النقل السياحية" : "Tour Transport Details"}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {/* 1. نوع المركبة */}
                 <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-[10px] font-bold text-slate-500 mb-0.5">
+                  <div className="text-[11px] font-bold text-slate-500 mb-0.5">
                     {isAr ? "نوع المركبة" : "Vehicle Type"}
                   </div>
                   <div className="font-black text-xs sm:text-sm text-[#0F172A] leading-snug">
@@ -793,7 +793,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                 </div>
                 {/* 2. اسم الشركة */}
                 <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-[10px] font-bold text-slate-500 mb-0.5">
+                  <div className="text-[11px] font-bold text-slate-500 mb-0.5">
                     {isAr ? "اسم الشركة" : "Company Name"}
                   </div>
                   <div className="font-black text-xs sm:text-sm text-[#0F172A] leading-snug">
@@ -802,7 +802,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                 </div>
                 {/* 3. السائق */}
                 <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-[10px] font-bold text-slate-500 mb-0.5">
+                  <div className="text-[11px] font-bold text-slate-500 mb-0.5">
                     {isAr ? "السائق" : "Driver"}
                   </div>
                   <div className="font-black text-xs sm:text-sm text-[#0F172A] leading-snug">
@@ -817,16 +817,16 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
           {item.guide && (
             <div className="p-3.5 rounded-2xl bg-white border border-[#E8E2D6] shadow-xs flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#003580] flex items-center justify-center text-xl shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-teal-100 text-[#00736F] flex items-center justify-center text-xl shrink-0">
                   🚘
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold text-[#526078]">{isAr ? "المرشد السياحي المرافق" : "Accompanying Tour Guide"}</div>
+                  <div className="text-[11px] font-bold text-[#526078]">{isAr ? "المرشد السياحي المرافق" : "Accompanying Tour Guide"}</div>
                   <div className="font-black text-xs sm:text-sm text-[#0F172A]">{item.guide.name}</div>
                 </div>
               </div>
               {item.guide.title && (
-                <span className="text-[10px] font-black text-[#003580] bg-[#003580]/10 px-2.5 py-1 rounded-full border border-[#003580]/15">
+                <span className="text-[11px] font-black text-[#00736F] bg-[#00736F]/10 px-2.5 py-1 rounded-full border border-[#00736F]/15">
                   {item.guide.title}
                 </span>
               )}
@@ -851,7 +851,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                   onClick={() => setCityTab("landmarks")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
                     cityTab === "landmarks"
-                      ? "bg-[#003580] text-white shadow-xs"
+                      ? "bg-[#00736F] text-white shadow-xs"
                       : "text-[#526078] hover:text-[#0F172A]"
                   }`}
                 >
@@ -863,7 +863,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
                   onClick={() => setCityTab("food")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
                     cityTab === "food"
-                      ? "bg-[#003580] text-white shadow-xs"
+                      ? "bg-[#00736F] text-white shadow-xs"
                       : "text-[#526078] hover:text-[#0F172A]"
                   }`}
                 >
@@ -877,11 +877,11 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
             {cityTab === "landmarks" && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
                 {nearbyData.landmarks?.slice(0, 3).map((lm: any, idx: number) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-[#FAF9F6] border border-[#EAE4D9] hover:border-[#003580]/30 transition space-y-1.5 flex flex-col justify-between">
+                  <div key={idx} className="p-3.5 rounded-2xl bg-[#FAF9F6] border border-[#EAE4D9] hover:border-[#00736F]/30 transition space-y-1.5 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-1.5 mb-1">
                         <span className="font-black text-xs text-[#0F172A]">{lm.name}</span>
-                        <span className="text-[9px] font-bold text-[#003580] bg-[#003580]/10 px-2 py-0.5 rounded-full shrink-0">
+                        <span className="text-[11px] font-bold text-[#00736F] bg-[#00736F]/10 px-2 py-0.5 rounded-full shrink-0">
                           {lm.tag}
                         </span>
                       </div>
@@ -941,7 +941,7 @@ export function DetailsModal({ open, onClose, item, onBook }: { open: boolean; o
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
               {item.info.map((i) => (
                 <div key={i.label} className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E8E2D6] shadow-xs">
-                  <div className="text-[10px] font-bold text-[#526078] mb-0.5">{i.label}</div>
+                  <div className="text-[11px] font-bold text-[#526078] mb-0.5">{i.label}</div>
                   <div className="font-black text-[#0F172A] text-xs sm:text-sm">{i.value}</div>
                 </div>
               ))}
@@ -1057,14 +1057,14 @@ function ReviewsSection({ itemId, itemTitle }: { itemId: string; itemTitle: stri
               <div key={r.id} className="p-3 rounded-xl bg-white border border-border space-y-1 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-black text-xs text-foreground flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] grid place-items-center font-bold">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] grid place-items-center font-bold">
                       {r.name.charAt(0)}
                     </span>
                     {r.name}
                   </span>
                   <div className="flex items-center gap-1">
                     <span className="text-amber-500 text-xs">{"★".repeat(r.rating)}</span>
-                    <span className="text-[10px] text-muted-foreground">({r.date})</span>
+                    <span className="text-[11px] text-muted-foreground">({r.date})</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{r.comment}</p>
@@ -1452,13 +1452,13 @@ export function TripScheduleModal({
                     </div>
                     <div className="text-left shrink-0">
                       {s.discount ? (
-                        <div className="text-[10px] font-black text-emerald-700 bg-emerald-50 rounded-full px-2 py-0.5 mb-0.5 text-center">
+                        <div className="text-[11px] font-black text-emerald-700 bg-emerald-50 rounded-full px-2 py-0.5 mb-0.5 text-center">
                           {isAr ? `عرض -${s.discount}%` : `Offer -${s.discount}%`}
                         </div>
                       ) : null}
                       {s.originalPrice ? <div className="text-[11px] text-slate-400 line-through">{s.originalPrice.toLocaleString()}</div> : null}
                       <div className="text-lg font-black text-[#D96B27]">{s.price.toLocaleString()}</div>
-                      <div className="text-[10px] text-[#526078]">{isAr ? "د.ل / شخص" : "LYD / person"}</div>
+                      <div className="text-[11px] text-[#526078]">{isAr ? "د.ل / شخص" : "LYD / person"}</div>
                     </div>
                     {isSelected && (
                       <div className="w-6 h-6 rounded-full bg-[#D96B27] grid place-items-center text-white text-xs font-black shrink-0">✓</div>
@@ -1483,7 +1483,7 @@ export function TripScheduleModal({
                 <div className="flex items-center gap-2 pt-1 flex-wrap">
                   <a
                     href="/auth/login"
-                    className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-block"
+                    className="px-4 py-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-block"
                   >
                     {isAr ? "تسجيل الدخول كسائح" : "Log In as Tourist"}
                   </a>
@@ -1573,7 +1573,7 @@ export function TripScheduleModal({
               <div className="flex items-center gap-2 pt-1 flex-wrap">
                 <a
                   href="/auth/signup?role=tourist"
-                  className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-block"
+                  className="px-4 py-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition shadow-sm inline-block"
                 >
                   {isAr ? "سجل في المنصة كسائح ➔" : "Sign Up as Tourist ➔"}
                 </a>
@@ -1657,9 +1657,9 @@ export function TripScheduleModal({
 
               return (
                 <div className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200/80 text-xs space-y-2">
+                  <div className="p-3.5 rounded-2xl bg-teal-50/90 border border-teal-200/80 text-xs space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-[#003580] flex items-center gap-1.5 text-xs">
+                      <span className="font-black text-[#00736F] flex items-center gap-1.5 text-xs">
                         <span>🚌</span>
                         <span>{isAr ? `سعة الحافلة: ${busCap} راكب` : `Coach: ${busCap} Seats`}</span>
                       </span>
@@ -1804,7 +1804,7 @@ export function TripScheduleModal({
           <div className="mt-5 p-4 rounded-2xl bg-stone-50 border border-stone-200 max-w-md mx-auto text-right space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500 font-bold">{isAr ? "رقم الحجز والتذكرة:" : "Booking Code:"}</span>
-              <span className="font-mono text-[#003580] font-black text-sm">{bookingConfirmedCode}</span>
+              <span className="font-mono text-[#00736F] font-black text-sm">{bookingConfirmedCode}</span>
             </div>
             <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
               <span className="text-slate-500 font-bold">{isAr ? "المقاعد المحجوزة:" : "Booked Seats:"}</span>
@@ -2352,12 +2352,12 @@ export function PrivateTripModal({
                     >
                       <span className="text-amber-600">🏛️</span>
                       <span>{isAr ? lm.name : lm.nameEn}</span>
-                      <span className="text-[10px] text-slate-400">({isAr ? lm.city : lm.cityEn})</span>
+                      <span className="text-[11px] text-slate-400">({isAr ? lm.city : lm.cityEn})</span>
                       <button
                         type="button"
                         onClick={() => toggleLandmark(lm.id)}
                         title={isAr ? "إزالة من المسار" : "Remove"}
-                        className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+                        className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white flex items-center justify-center text-[11px] transition cursor-pointer"
                       >
                         ✕
                       </button>
@@ -2465,7 +2465,7 @@ export function PrivateTripModal({
                             <div className="font-black text-xs text-slate-900 dark:text-white truncate">
                               {isAr ? lm.name : lm.nameEn}
                             </div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
                               <span>📍 {isAr ? lm.city : lm.cityEn}</span>
                               {lm.category && <span>• {lm.category}</span>}
                             </div>
@@ -2507,7 +2507,7 @@ export function PrivateTripModal({
                 <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
                   <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
                     <span>📅 {isAr ? "تاريخ الانطلاق المفضل" : "Preferred Start Date"}</span>
-                    <span className="text-[10px] text-[#B85D36] font-bold">({isAr ? "بعد 10 أيام كحد أدنى" : "Min 10 days ahead"})</span>
+                    <span className="text-[11px] text-[#B85D36] font-bold">({isAr ? "بعد 10 أيام كحد أدنى" : "Min 10 days ahead"})</span>
                   </label>
                   <input
                     type="date"
@@ -2779,14 +2779,14 @@ export function PrivateTripModal({
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-black text-xs text-slate-900 dark:text-white">{g.name}</span>
-                            <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold ${
+                            <span className={`px-2 py-0.2 rounded-full text-[11px] font-bold ${
                               g.gender === "female"
                                 ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                                : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
+                                : "bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300"
                             }`}>
                               {g.gender === "female" ? (isAr ? "مرشدة سياحية" : "Female Guide") : (isAr ? "مرشد سياحي" : "Male Guide")}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-400">({g.licenseNumber})</span>
+                            <span className="text-[11px] font-mono text-slate-400">({g.licenseNumber})</span>
                           </div>
 
                           <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
@@ -2799,7 +2799,7 @@ export function PrivateTripModal({
 
                           <div className="flex items-center gap-1 pt-0.5 flex-wrap">
                             {g.languages?.map((lang) => (
-                              <span key={lang.code} className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+                              <span key={lang.code} className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
                                 {isAr ? lang.nameAr : lang.nameEn}
                               </span>
                             ))}
@@ -2856,7 +2856,7 @@ export function PrivateTripModal({
                 <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
                   <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
                     <span>👤 {isAr ? "اسم السائح صاحب الحساب" : "Tourist Account Holder"}</span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "موثق من الحساب" : "Verified"}</span>
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "موثق من الحساب" : "Verified"}</span>
                   </label>
                   <div className="font-black text-xs text-slate-800 dark:text-slate-100 py-1">
                     {customerName || sessionData?.user?.full_name || sessionData?.user?.name || (isAr ? "سائح دلّني المعتمد" : "Verified Tourist")}
@@ -2867,7 +2867,7 @@ export function PrivateTripModal({
                 <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
                   <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
                     <span>📞 {isAr ? "رقم الهاتف المعتمد بالحساب" : "Registered Phone"}</span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "من ملفك الشخصي" : "Profile"}</span>
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "من ملفك الشخصي" : "Profile"}</span>
                   </label>
                   <div className="font-black text-xs text-slate-800 dark:text-slate-100 py-1 font-mono">
                     {phone || sessionData?.user?.phone_number || (isAr ? "مسجل في حسابك" : "On file")}
@@ -2927,7 +2927,7 @@ export function PrivateTripModal({
           ══════════════════════════════════════════════════════════════════════ */}
           {showAuthModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-amber-300 dark:border-amber-700 text-center space-y-4 animate-in zoom-in-95 duration-200" dir={dir}>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-md border border-amber-300 dark:border-amber-700 text-center space-y-4 animate-in zoom-in-95 duration-200" dir={dir}>
                 <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-xs">
                   🔒
                 </div>
@@ -2946,7 +2946,7 @@ export function PrivateTripModal({
                 <div className="flex flex-col gap-2.5 pt-2">
                   <a
                     href="/auth/login?role=tourist"
-                    className="w-full py-3 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition shadow-md flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-2xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition shadow-md flex items-center justify-center gap-2"
                   >
                     <span>🔑</span>
                     <span>{isAr ? "تسجيل الدخول بحساب سائح" : "Log In as Tourist"}</span>

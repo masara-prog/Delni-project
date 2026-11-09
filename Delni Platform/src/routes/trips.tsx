@@ -783,10 +783,10 @@ function TripDetailsView({
             <button
               type="button"
               onClick={onBack}
-              className="group inline-flex items-center gap-2.5 h-11 ps-1.5 pe-5 rounded-full bg-white/95 hover:bg-white text-[#0F172A] text-sm font-black shadow-lg shadow-black/20 ring-1 ring-white/60 hover:shadow-xl transition-all duration-200 cursor-pointer"
+              className="group inline-flex items-center gap-2.5 h-11 ps-1.5 pe-5 rounded-full bg-white/95 hover:bg-white text-[#0F172A] text-sm font-black shadow-lg shadow-black/20 ring-1 ring-white/60 hover:shadow-md transition-all duration-200 cursor-pointer"
               aria-label={isAr ? "العودة إلى قائمة الرحلات" : "Back to tours"}
             >
-              <span className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+              <span className="w-8 h-8 rounded-full bg-[#00736F] text-white flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
                 {dir === "rtl" ? <ArrowRight className="w-4 h-4" aria-hidden="true" /> : <ArrowLeft className="w-4 h-4" aria-hidden="true" />}
               </span>
               <span>{isAr ? "كل الرحلات" : "All tours"}</span>
@@ -870,7 +870,7 @@ function TripDetailsView({
                 <dd className={`mt-1 text-[15px] font-bold truncate ${f.tone || "text-[#0F172A]"}`} title={f.value}>{f.value}</dd>
                 {f.bar !== undefined && (
                   <div className="mt-2 h-1 rounded-full bg-slate-100 overflow-hidden flex">
-                    <div className="h-full rounded-full bg-[#003580] transition-[width] duration-500" style={{ width: `${f.bar}%` }} />
+                    <div className="h-full rounded-full bg-[#00736F] transition-[width] duration-500" style={{ width: `${f.bar}%` }} />
                   </div>
                 )}
               </div>
@@ -887,7 +887,7 @@ function TripDetailsView({
                   <span className="px-2 py-0.5 rounded-full bg-[#D96B27]/10 text-[#C2410C] text-[11px] font-black">-{info.offerDiscount}%</span>
                 </div>
               ) : (
-                <div className="mt-0.5 text-2xl sm:text-3xl font-bold text-[#003580] tabular-nums tracking-tight">{info.priceFormatted}</div>
+                <div className="mt-0.5 text-2xl sm:text-3xl font-bold text-[#00736F] tabular-nums tracking-tight">{info.priceFormatted}</div>
               )}
             </div>
             <button
@@ -947,7 +947,7 @@ function TripDetailsView({
                   </div>
                   <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-white text-[#C56A3D] flex flex-col items-center justify-center shadow-md">
                     <span className="text-2xl font-black leading-none">-{trip.activeOffer.discount}%</span>
-                    <span className="text-[10px] font-black mt-1">{isAr ? "خصم" : "off"}</span>
+                    <span className="text-[11px] font-black mt-1">{isAr ? "خصم" : "off"}</span>
                   </div>
                 </div>
               </div>
@@ -969,7 +969,7 @@ function TripDetailsView({
               {info.itinerary.length === 0 ? (
                 <div className="py-8 px-4 text-center bg-[#FAF7F2] border border-dashed border-[#E8E2D6] rounded-2xl space-y-2">
                   <span className="text-3xl block">📍</span>
-                  <h4 className="text-xs sm:text-sm font-black text-[#003580]">
+                  <h4 className="text-xs sm:text-sm font-black text-[#00736F]">
                     {isAr ? "لم يتم تسجيل محطات تفصيلية لهذا المسار بعد." : "No detailed itinerary stations registered for this tour yet."}
                   </h4>
                   <p className="text-[11px] text-slate-500 font-medium">
@@ -979,7 +979,7 @@ function TripDetailsView({
               ) : (
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] font-black">
-                    <span className="px-3 py-1 rounded-full bg-[#003580]/10 text-[#003580]">📍 {info.itinerary.length} {isAr ? "محطات" : "stops"}</span>
+                    <span className="px-3 py-1 rounded-full bg-[#00736F]/10 text-[#00736F]">📍 {info.itinerary.length} {isAr ? "محطات" : "stops"}</span>
                     {info.itinerary[0]?.time && (
                       <span className="px-3 py-1 rounded-full bg-[#D96B27]/10 text-[#B4541A]">
                         🕘 {info.itinerary[0].time} ← {info.itinerary[info.itinerary.length - 1].time}
@@ -990,14 +990,14 @@ function TripDetailsView({
                   <ol className="relative space-y-2.5 before:absolute before:top-2 before:bottom-2 before:right-[15px] before:w-0.5 before:bg-gradient-to-b before:from-[#1ABC9C] before:to-[#D96B27]">
                     {(showAllStops ? info.itinerary : info.itinerary.slice(0, 2)).map((step, idx) => (
                       <li key={idx} className="relative flex items-start gap-3 pr-10">
-                        <span className="absolute right-0 top-2 w-8 h-8 rounded-full bg-white border-2 border-[#1ABC9C] text-[#003580] flex items-center justify-center text-[11px] font-black shadow-xs">
+                        <span className="absolute right-0 top-2 w-8 h-8 rounded-full bg-white border-2 border-[#1ABC9C] text-[#00736F] flex items-center justify-center text-[11px] font-black shadow-xs">
                           {idx + 1}
                         </span>
                         <div className="flex-1 p-3.5 rounded-2xl bg-gradient-to-l from-[#FAF7F2] to-white border border-[#E8E2D6] hover:border-[#1ABC9C]/50 hover:shadow-xs transition">
                           <div className="flex items-start justify-between gap-2">
                             <h4 className="font-black text-sm text-[#0F172A] leading-snug">{step.title}</h4>
                             {step.time && (
-                              <span className="flex-shrink-0 text-[11px] font-black text-white bg-[#003580] px-2.5 py-0.5 rounded-full">{step.time}</span>
+                              <span className="flex-shrink-0 text-[11px] font-black text-white bg-[#00736F] px-2.5 py-0.5 rounded-full">{step.time}</span>
                             )}
                           </div>
                           {step.desc && <p className="text-xs text-slate-600 font-medium leading-relaxed mt-1">{step.desc}</p>}
@@ -1010,7 +1010,7 @@ function TripDetailsView({
                     <button
                       type="button"
                       onClick={() => setShowAllStops((v) => !v)}
-                      className="w-full py-2.5 rounded-xl border border-[#003580]/20 bg-[#003580]/5 hover:bg-[#003580]/10 text-[#003580] text-xs font-black transition cursor-pointer"
+                      className="w-full py-2.5 rounded-xl border border-[#00736F]/20 bg-[#00736F]/5 hover:bg-[#00736F]/10 text-[#00736F] text-xs font-black transition cursor-pointer"
                     >
                       {showAllStops
                         ? (isAr ? "إخفاء المحطات ▲" : "Show fewer stops ▲")
@@ -1045,7 +1045,7 @@ function TripDetailsView({
                       key={attr.placeId || aIdx}
                       type="button"
                       onClick={() => openLandmark(attr)}
-                      className="group relative h-48 rounded-2xl overflow-hidden text-right shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1ABC9C]/40"
+                      className="group relative h-48 rounded-2xl overflow-hidden text-right shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1ABC9C]/40"
                     >
                       <img
                         src={attr.image || destLeptisTheater}
@@ -1055,7 +1055,7 @@ function TripDetailsView({
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0F172A]/35 to-transparent" />
                       {attr.category && (
-                        <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[#003580] text-[11px] font-black shadow-sm">
+                        <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[#00736F] text-[11px] font-black shadow-sm">
                           {attr.category}
                         </span>
                       )}
@@ -1094,7 +1094,7 @@ function TripDetailsView({
                   </div>
                   <Link
                     to="/hotels"
-                    className="text-xs font-black text-[#003580] hover:underline flex items-center gap-1"
+                    className="text-xs font-black text-[#00736F] hover:underline flex items-center gap-1"
                   >
                     <span>{isAr ? "استعراض جميع الفنادق" : "View All"}</span>
                     <span>➔</span>
@@ -1119,14 +1119,14 @@ function TripDetailsView({
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-1 mb-0.5">
                                 <h4 className="font-black text-sm text-[#0F172A] truncate">{hName}</h4>
-                                <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                                <span className="text-[11px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
                                   {isAr ? "مشمول بالرحلة ✓" : "Included ✓"}
                                 </span>
                               </div>
                               <div className="text-xs text-amber-500 font-bold">
                                 {"★".repeat(Math.min(5, Math.max(1, hStars)))} · {isAr ? `فندق ${hStars} نجوم` : `${hStars} Stars`}
                               </div>
-                              <div className="text-[11px] text-[#003580] font-black mt-1">
+                              <div className="text-[11px] text-[#00736F] font-black mt-1">
                                 📍 {hCity}
                               </div>
                             </div>
@@ -1153,7 +1153,7 @@ function TripDetailsView({
                             )}
                             <Link
                               to="/hotels"
-                              className="py-1.5 px-3 rounded-xl bg-[#003580] text-white font-black text-xs text-center transition"
+                              className="py-1.5 px-3 rounded-xl bg-[#00736F] text-white font-black text-xs text-center transition"
                             >
                               {isAr ? "تفاصيل الفندق" : "Details"}
                             </Link>
@@ -1181,7 +1181,7 @@ function TripDetailsView({
                   </div>
                 <Link
                   to="/restaurants"
-                  className="text-xs font-black text-[#003580] hover:underline flex items-center gap-1"
+                  className="text-xs font-black text-[#00736F] hover:underline flex items-center gap-1"
                 >
                   <span>{isAr ? "استعراض المطاعم" : "View Dining"}</span>
                   <span>➔</span>
@@ -1207,7 +1207,7 @@ function TripDetailsView({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1 mb-0.5">
                               <span className="font-black text-sm text-[#0F172A] truncate">{rName}</span>
-                              <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                              <span className="text-[11px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
                                 {isAr ? "مشمول بالرحلة ✓" : "Included ✓"}
                               </span>
                             </div>
@@ -1219,7 +1219,7 @@ function TripDetailsView({
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
+                        <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#00736F]">
                           <span>📍 {rCity}</span>
                           <div className="flex items-center gap-2">
                             <FavoriteButton
@@ -1262,7 +1262,7 @@ function TripDetailsView({
                           <span className="font-black text-sm text-[#0F172A] truncate">
                             {info.restaurant.name}
                           </span>
-                          <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                          <span className="text-[11px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
                             {isAr ? "مشمول بالرحلة ✓" : "Included ✓"}
                           </span>
                         </div>
@@ -1274,7 +1274,7 @@ function TripDetailsView({
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#003580]">
+                    <div className="flex items-center justify-between pt-2 border-t border-[#E8E2D6] text-xs font-bold text-[#00736F]">
                       <span>📍 {info.restaurant.city || "طرابلس"} {info.restaurant.address ? `— ${info.restaurant.address}` : ""}</span>
                       <div className="flex items-center gap-2">
                         <FavoriteButton
@@ -1333,17 +1333,17 @@ function TripDetailsView({
                     <div key={rev.review_id} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D6] space-y-2">
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[#003580] text-white flex items-center justify-center font-black text-xs">
+                          <div className="w-8 h-8 rounded-full bg-[#00736F] text-white flex items-center justify-center font-black text-xs">
                             {(rev.tourist_name || "س").slice(0, 1)}
                           </div>
                           <div>
                             <div className="text-xs font-black text-[#0F172A] flex items-center gap-1.5">
                               <span>{rev.tourist_name || (isAr ? "سائح معتمد" : "Verified Tourist")}</span>
-                              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full font-bold">
+                              <span className="text-[11px] text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full font-bold">
                                 {isAr ? "مشارك مؤكد ✓" : "Verified ✓"}
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-400 font-medium">
+                            <div className="text-[11px] text-slate-400 font-medium">
                               {rev.created_at ? new Date(rev.created_at).toLocaleDateString('ar-LY') : ""}
                             </div>
                           </div>
@@ -1402,7 +1402,7 @@ function TripDetailsView({
                     </div>
                   </>
                 ) : (
-                  <div className="text-3xl font-bold text-[#003580] tabular-nums tracking-tight">
+                  <div className="text-3xl font-bold text-[#00736F] tabular-nums tracking-tight">
                     {info.priceFormatted}
                   </div>
                 )}
@@ -1462,7 +1462,7 @@ function TripDetailsView({
                     <div className="min-w-0">
                       <div className="font-black text-[#0F172A] text-sm">{info.guide.name}</div>
                       <div className="text-[11px] text-slate-500 font-medium">{info.guide.title || (isAr ? "مرشد سياحي معتمد" : "Certified Guide")}</div>
-                      {info.guide.phone && <div className="text-xs text-[#003580] font-bold mt-1">📞 {info.guide.phone}</div>}
+                      {info.guide.phone && <div className="text-xs text-[#00736F] font-bold mt-1">📞 {info.guide.phone}</div>}
                     </div>
                   </div>
 
@@ -1474,7 +1474,7 @@ function TripDetailsView({
                       phone: info.guide!.phone,
                       avatar: info.guide!.avatar,
                     })}
-                    className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#00736F] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <span>🚘</span>
                     <span>{isAr ? "عرض السيرة الذاتية ورخصة الإرشاد" : "View Certified CV"}</span>
@@ -1493,7 +1493,7 @@ function TripDetailsView({
                 <h3 className="text-sm font-bold text-[#0F172A]">
                   {isAr ? "مركبة وسائق الرحلة" : "Vehicle and driver"}
                 </h3>
-                <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="text-[11px] font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                   {isAr ? "معتمدة ✓" : "Certified ✓"}
                 </span>
               </div>
@@ -1513,7 +1513,7 @@ function TripDetailsView({
 
                     <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1">
                       <span>🏢</span>
-                      <span className="text-[#003580]">{info.vehicle.company}</span>
+                      <span className="text-[#00736F]">{info.vehicle.company}</span>
                       <span className="text-slate-400">·</span>
                       <span className="font-mono text-slate-700">{(info.vehicle.plateNumber || "").replace(/\?+/g, "").trim() || (isAr ? "لوحة معتمدة" : "Verified")}</span>
                     </div>
@@ -1524,7 +1524,7 @@ function TripDetailsView({
                         <span>{info.vehicle.driver}</span>
                       </div>
                       {info.vehicle.driverPhone && (
-                        <div className="text-[#003580] font-mono font-bold text-[11px]">
+                        <div className="text-[#00736F] font-mono font-bold text-[11px]">
                           📞 {info.vehicle.driverPhone}
                         </div>
                       )}
@@ -1545,7 +1545,7 @@ function TripDetailsView({
                       dailyRate: info.vehicle!.dailyRate,
                       vehicle_status: info.vehicle!.status,
                     })}
-                    className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003580] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 text-[#00736F] font-black text-xs border border-[#E8E2D6] transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <span>🚍</span>
                     <span>{isAr ? "عرض بيانات المركبة والسائق والتأمين" : "View Details"}</span>
@@ -1627,7 +1627,7 @@ function SpecialOffersSpotlight({
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-10">
       <div 
-        className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-xl relative overflow-hidden"
+        className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-10 border-2 border-orange-100 shadow-md relative overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -1649,7 +1649,7 @@ function SpecialOffersSpotlight({
         {/* Single Rotating Large Image Card */}
         <div className="relative z-10">
           <div 
-            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-2xl border-4 border-white cursor-pointer transition duration-500"
+            className="relative w-full h-[300px] sm:h-[400px] rounded-[30px] overflow-hidden group shadow-md border-4 border-white cursor-pointer transition duration-500"
             onClick={handleNextOffer}
           >
             <img
@@ -1663,7 +1663,7 @@ function SpecialOffersSpotlight({
 
             {/* Prominent Corner Triangle Discount Ribbon on Top-Right */}
             <div className="absolute top-0 right-0 w-48 h-48 overflow-hidden z-30 pointer-events-none">
-              <div className="absolute transform rotate-45 bg-red-600 text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-2xl border-b-4 border-white/40 drop-shadow-xl tracking-wide">
+              <div className="absolute transform rotate-45 bg-red-600 text-white font-black text-xl py-3 right-[-60px] top-[45px] w-[260px] text-center shadow-md border-b-4 border-white/40 drop-shadow-md tracking-wide">
                 {currentOffer.tag}
               </div>
             </div>
@@ -1800,7 +1800,7 @@ function CompactLocationHotelsFinder() {
             <span>{isDetecting ? "⏳" : "📍"}</span>
             <span>{isAr ? "تحديد الموقع الجغرافي المباشر" : "Nearby Accommodation & Dining"}</span>
           </button>
-          <h3 className="text-lg sm:text-xl font-black text-[#003580] tracking-tight">
+          <h3 className="text-lg sm:text-xl font-black text-[#00736F] tracking-tight">
             {isAr ? "حدد موقعك واستكشف الفنادق والمطاعم المجاورة" : "Locate Nearby Hotels, Resorts & Partner Dining"}
           </h3>
           <p className="text-xs text-slate-600 font-medium">
@@ -1827,7 +1827,7 @@ function CompactLocationHotelsFinder() {
             onClick={() => {
               sessionStorage.setItem("dallani_selected_city", selectedCity);
             }}
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-[#D96B27] hover:brightness-110 text-white shadow-xl transition flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-[#D96B27] hover:brightness-110 text-white shadow-md transition flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 border-2 border-orange-300/40 group relative"
             title={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
             aria-label={isAr ? "الانتقال إلى مطاعم وفنادق ليبيا" : "Explore Libya Stays & Dining"}
           >
@@ -2335,7 +2335,7 @@ function TripsPage() {
             <span>🧭</span>
             <span>{isAr ? "اكتشف دروب ليبيا الساحرة" : "Discover Libya's Enchanting Paths"}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black drop-shadow-xl tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black drop-shadow-md tracking-tight leading-tight">
             {isAr ? "الرحلات والتجارب السياحية المنظمة" : "All Organized Tours & Expeditions"}
           </h1>
           <p className="mt-2 text-white/95 max-w-2xl text-xs sm:text-sm font-semibold leading-relaxed drop-shadow-md">
@@ -2350,7 +2350,7 @@ function TripsPage() {
       {/* 1. FILTER PANEL (Floating Gracefully Over Hero Bottom)       */}
       {/* ============================================================ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-xl border border-[#E8E2D6] text-[#0F172A] space-y-4">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-md border border-[#E8E2D6] text-[#0F172A] space-y-4">
           
           {dateRange && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-black text-emerald-800">
@@ -2368,8 +2368,8 @@ function TripsPage() {
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Box */}
             <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-              <div className="bg-[#FAF7F2] p-2.5 px-3.5 rounded-2xl border border-[#E8E2D6] flex items-center gap-2.5 shadow-xs focus-within:border-[#003580] focus-within:bg-white transition">
-                <span className="text-[#003580] font-black text-sm">🔍</span>
+              <div className="bg-[#FAF7F2] p-2.5 px-3.5 rounded-2xl border border-[#E8E2D6] flex items-center gap-2.5 shadow-xs focus-within:border-[#00736F] focus-within:bg-white transition">
+                <span className="text-[#00736F] font-black text-sm">🔍</span>
                 <input
                   type="text"
                   value={searchInput}
@@ -2421,7 +2421,7 @@ function TripsPage() {
             
             {/* 1. Trip Type Checkboxes */}
             <div className="space-y-2">
-              <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
+              <span className="text-xs font-black text-[#00736F] flex items-center gap-1.5">
                 <span>🗓️</span>
                 <span>{isAr ? "نوع الرحلة (حدد نوع أو أكثر):" : "Tour Type:"}</span>
               </span>
@@ -2438,15 +2438,15 @@ function TripsPage() {
                       onClick={() => toggleType(item.id)}
                       className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer border select-none ${
                         isChecked
-                          ? "bg-[#003580] text-white border-[#003580] shadow-sm"
-                          : "bg-[#FAF7F2] text-[#1B5A78] border-[#E8E2D6] hover:bg-white hover:border-[#003580]/40"
+                          ? "bg-[#00736F] text-white border-[#00736F] shadow-sm"
+                          : "bg-[#FAF7F2] text-[#0B4F57] border-[#E8E2D6] hover:bg-white hover:border-[#00736F]/40"
                       }`}
                     >
                       {/* Checkbox Icon */}
                       <div
                         className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${
                           isChecked
-                            ? "bg-white text-[#003580] border-white"
+                            ? "bg-white text-[#00736F] border-white"
                             : "border-slate-300 bg-white text-transparent"
                         }`}
                       >
@@ -2457,7 +2457,7 @@ function TripsPage() {
                       <span>{item.icon}</span>
                       <span>{item.label}</span>
                       <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
                           isChecked ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                         }`}
                       >
@@ -2471,7 +2471,7 @@ function TripsPage() {
 
             {/* 2. Departure City Checkboxes */}
             <div className="space-y-2">
-              <span className="text-xs font-black text-[#003580] flex items-center gap-1.5">
+              <span className="text-xs font-black text-[#00736F] flex items-center gap-1.5">
                 <span>📍</span>
                 <span>{isAr ? "مدينة الانطلاق:" : "Departure City:"}</span>
               </span>
@@ -2496,15 +2496,15 @@ function TripsPage() {
                       onClick={() => toggleDeparture(item.id)}
                       className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer border select-none ${
                         isChecked
-                          ? "bg-[#1B5A78] text-white border-[#1B5A78] shadow-sm"
-                          : "bg-[#FAF7F2] text-[#1B5A78] border-[#E8E2D6] hover:bg-white hover:border-[#1B5A78]/40"
+                          ? "bg-[#0B4F57] text-white border-[#0B4F57] shadow-sm"
+                          : "bg-[#FAF7F2] text-[#0B4F57] border-[#E8E2D6] hover:bg-white hover:border-[#0B4F57]/40"
                       }`}
                     >
                       {/* Checkbox Icon */}
                       <div
                         className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${
                           isChecked
-                            ? "bg-white text-[#1B5A78] border-white"
+                            ? "bg-white text-[#0B4F57] border-white"
                             : "border-slate-300 bg-white text-transparent"
                         }`}
                       >
@@ -2515,7 +2515,7 @@ function TripsPage() {
                       <span>📍</span>
                       <span>{item.label}</span>
                       <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
                           isChecked ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                         }`}
                       >
@@ -2583,24 +2583,15 @@ function TripsPage() {
       <section ref={gallerySectionRef} id="trips-gallery" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mb-14 scroll-mt-24">
         {/* Header with Centered Title & Orange Styling */}
         <div className="text-center max-w-2xl mx-auto mb-8">
-          <span className="px-4 py-1.5 rounded-full bg-[#D96B27]/10 text-[#D96B27] border border-[#D96B27]/30 text-xs font-black tracking-wider uppercase inline-block mb-2">
-            OUR GALLERY
-          </span>
-          <h3 className="text-2xl sm:text-3xl font-black text-[#003580] tracking-tight">
-            {isAr ? "معرض دروب وتجارب الرحلات " : "Tours & Expeditions "}
-            <span className="text-[#D96B27]">{isAr ? "السياحية" : "Gallery"}</span>
+          <h3 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+            {isAr ? "الرحلات المتاحة" : "Available trips"}
           </h3>
-          <p className="text-xs text-slate-500 font-bold mt-1.5 max-w-lg mx-auto">
-            {isAr
-              ? "تصفح الرحلات المعروضة في شريط أفقي مريح مع تصميم الكروت المتموجة"
-              : "Browse through our curated staggered tour cards in an organic floating flow"}
-          </p>
         </div>
 
-        {/* Scroll Controls with Orange Buttons */}
-        <div className="flex items-center justify-between mb-4 px-2">
+        {/* Scroll controls only when there is something to scroll */}
+        <div className={`${filtered.length === 0 ? "hidden" : "flex"} items-center justify-between mb-4 px-2`}>
           <span className="text-xs font-black text-[#D96B27] bg-orange-50 px-3.5 py-1.5 rounded-full border border-orange-200">
-            {isAr ? `إجمالي الرحلات المعروضة: ${filtered.length}` : `Showing ${filtered.length} tours`}
+            {isAr ? `${filtered.length} رحلة` : `${filtered.length} trips`}
           </span>
 
           <div className="flex items-center gap-3">
@@ -2694,7 +2685,7 @@ function TripsPage() {
         {!isLoading && allTrips.length === 0 && (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#E8E2D6] shadow-sm my-8">
             <div className="text-4xl mb-3">🧭</div>
-            <h3 className="text-lg font-black text-[#003580] mb-1">
+            <h3 className="text-lg font-black text-[#00736F] mb-1">
               {isAr ? "لا توجد رحلات سياحية مجدولة حالياً" : "No Scheduled Tours Available Yet"}
             </h3>
             <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto mb-4">
@@ -2715,7 +2706,7 @@ function TripsPage() {
         {!isLoading && allTrips.length > 0 && filtered.length === 0 && (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#E8E2D6] shadow-sm my-8">
             <div className="text-4xl mb-3">🔍</div>
-            <h3 className="text-lg font-black text-[#003580] mb-1">
+            <h3 className="text-lg font-black text-[#00736F] mb-1">
               {isAr ? "لا توجد رحلات تطابق هذا التحديد" : "No Trips Matched Your Filter"}
             </h3>
             <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto mb-4">
@@ -2726,7 +2717,7 @@ function TripsPage() {
             <button
               type="button"
               onClick={resetFilters}
-              className="px-5 py-2.5 rounded-xl bg-[#003580] text-white text-xs font-black shadow-md cursor-pointer hover:bg-[#1B5A78] transition"
+              className="px-5 py-2.5 rounded-xl bg-[#00736F] text-white text-xs font-black shadow-md cursor-pointer hover:bg-[#0B4F57] transition"
             >
               {isAr ? "إظهار جميع الرحلات" : "Show All Trips"}
             </button>
@@ -2743,10 +2734,10 @@ function TripsPage() {
       {/* 6. CUSTOM PRIVATE TRIP VIP CALLOUT BOX (USER BUILDS IT)      */}
       {/* ============================================================ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="rounded-3xl bg-[#0B132B] text-white p-6 sm:p-10 shadow-2xl border border-white/20 relative overflow-hidden">
+        <div className="rounded-3xl bg-[#0B132B] text-white p-6 sm:p-10 shadow-md border border-white/20 relative overflow-hidden">
           {/* Decorative background accents */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-[#D96B27]/25 to-transparent rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-radial from-[#003580]/40 to-transparent rounded-full blur-2xl pointer-events-none -ml-20 -mb-20" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-radial from-[#00736F]/40 to-transparent rounded-full blur-2xl pointer-events-none -ml-20 -mb-20" />
 
           <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
             <div className="space-y-3 text-center lg:text-right max-w-2xl">
@@ -2770,7 +2761,7 @@ function TripsPage() {
               <button
                 type="button"
                 onClick={() => setPrivateOpen(true)}
-                className="px-8 py-4 rounded-2xl bg-[#D96B27] text-white font-black text-sm sm:text-base shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-2.5 border border-amber-300/40"
+                className="px-8 py-4 rounded-2xl bg-[#D96B27] text-white font-black text-sm sm:text-base shadow-md hover:shadow-md hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-2.5 border border-amber-300/40"
               >
                 <span>🧭</span>
                 <span>{isAr ? "صمّم رحلتك الخاصة الآن" : "Build Your Private Trip Now"}</span>
@@ -3035,8 +3026,8 @@ function TripCard({
       {/* Offer Badge — shown when this trip has an active offer */}
       {offer && (
         <div className="absolute top-16 left-0 z-20 pointer-events-none">
-          <div className="ps-3 pe-4 py-2 rounded-e-2xl bg-gradient-to-l from-[#E11D48] to-[#D96B27] text-white shadow-xl">
-            <div className="text-[10px] font-bold text-white/85 leading-none">{isAr ? "عرض لفترة محدودة" : "Limited offer"}</div>
+          <div className="ps-3 pe-4 py-2 rounded-e-2xl bg-gradient-to-l from-[#E11D48] to-[#D96B27] text-white shadow-md">
+            <div className="text-[11px] font-bold text-white/85 leading-none">{isAr ? "عرض لفترة محدودة" : "Limited offer"}</div>
             <div className="text-xl font-black leading-tight">{isAr ? `خصم ${offer.discountPercent}` : `${offer.discountPercent} OFF`}</div>
           </div>
         </div>
@@ -3077,7 +3068,7 @@ function TripCard({
                 }`}
               />
             ))}
-            <span className="text-[10px] text-amber-300 font-black ml-1 select-none">
+            <span className="text-[11px] text-amber-300 font-black ml-1 select-none">
               {activeImgIndex + 1}/5
             </span>
           </div>
@@ -3098,7 +3089,7 @@ function TripCard({
           </span>
 
           {seatsAvailable !== undefined && targetPersons !== undefined && (
-            <span className={`shrink-0 text-[10px] px-2.5 py-0.5 rounded-full font-black backdrop-blur-md border ${
+            <span className={`shrink-0 text-[11px] px-2.5 py-0.5 rounded-full font-black backdrop-blur-md border ${
               seatsAvailable <= 0
                 ? "bg-red-600/90 text-white border-red-400/40 animate-pulse"
                 : "bg-white/25 text-white border-white/20"
@@ -3113,7 +3104,7 @@ function TripCard({
         {/* Operating Days for Daily Trips */}
         {t.type === "daily" && "daysOfWeek" in t && (
           <div className="mb-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/25 text-amber-200 border border-amber-300/40 text-[10px] font-black backdrop-blur-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/25 text-amber-200 border border-amber-300/40 text-[11px] font-black backdrop-blur-xs">
               <span>🗓️</span>
               <span>{isAr ? `أيام الانطلاق: ${(t as any).daysOfWeek}` : `Days: ${(t as any).daysOfWeek}`}</span>
             </span>
@@ -3131,7 +3122,7 @@ function TripCard({
           <div>
             {t.type === "daily" && (
               <div>
-                <div className="text-[9px] text-white/70 font-semibold">{isAr ? "سعر المقعد" : "Seat Price"}</div>
+                <div className="text-[11px] text-white/70 font-semibold">{isAr ? "سعر المقعد" : "Seat Price"}</div>
                 {offer ? (
                   <>
                     <div className="flex items-baseline gap-2">
@@ -3140,7 +3131,7 @@ function TripCard({
                       </span>
                       <span className="text-sm font-bold text-white/60 line-through">{offer.oldPrice}</span>
                     </div>
-                    <div className="text-[10px] font-black text-emerald-300">
+                    <div className="text-[11px] font-black text-emerald-300">
                       {isAr ? `وفّر ${Number(offer.oldPrice) - Number(offer.price)} د.ل` : `Save ${Number(offer.oldPrice) - Number(offer.price)} LYD`}
                     </div>
                   </>
@@ -3153,7 +3144,7 @@ function TripCard({
             )}
             {t.type === "weekly" && (
               <div>
-                <div className="text-[9px] text-white/70 font-semibold">{isAr ? "شامل الإقامة" : "All Inclusive"}</div>
+                <div className="text-[11px] text-white/70 font-semibold">{isAr ? "شامل الإقامة" : "All Inclusive"}</div>
                 {offer && <div className="text-sm font-bold text-white/60 line-through leading-none">{offer.oldPrice}</div>}
                 <div className="text-lg font-black text-amber-300">
                   {offer ? offer.price : t.seatPrice} <span className="text-xs font-bold text-white/80">{isAr ? "د.ل" : "LYD"}</span>
@@ -3162,7 +3153,7 @@ function TripCard({
             )}
             {t.type === "private" && (
               <div>
-                <div className="text-[9px] text-white/70 font-semibold">{isAr ? "المدة المقترحة" : "Duration"}</div>
+                <div className="text-[11px] text-white/70 font-semibold">{isAr ? "المدة المقترحة" : "Duration"}</div>
                 <div className="text-sm font-black text-amber-300">{t.sampleDays}</div>
               </div>
             )}

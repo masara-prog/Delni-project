@@ -16,10 +16,10 @@
 }
 
 @theme inline {
-  --font-sans: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Cairo", "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --font-tajawal: "Tajawal", "Cairo", system-ui, sans-serif;
-  --font-alexandria: "Alexandria", "Cairo", system-ui, sans-serif;
+  --font-sans: "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-tajawal: "Cairo", system-ui, sans-serif;
+  --font-alexandria: "Cairo", system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -65,10 +65,11 @@
   --popover: #FFFFFF;
   --popover-foreground: #0F172A;
 
-  /* Royal Ocean Blue Primary Accent (#003580 / #0D5C96) */
-  --primary: #003580;                 /* Premium Royal Blue */
+  /* Delni brand (the logo): deep teal primary, desert orange secondary. The royal-blue design is kept at the tag platform-design-v1 */
+  --primary: #00736F;                 /* Logo teal, deepened so white text on it reads well (5.6:1) */
   --primary-foreground: #FFFFFF;
-  --primary-glow: #2563EB;            /* Soft royal blue glow */
+  --primary-glow: #009A94;            /* Logo teal */
+  --brand-orange: #D96B27;            /* Desert orange: secondary actions and highlighted words */
 
   /* Deep Navy (#0F172A) */
   --secondary: #0F172A;              /* Deep Navy Blue */
@@ -76,10 +77,10 @@
 
   /* Soft Warm Sand Beige Tint (#F4E1C1 / #F5EFE6) */
   --muted: #F3ECE1;                  /* Soft warm beige background */
-  --muted-foreground: #5A6A85;
+  --muted-foreground: #586A76;
 
   /* Fresh Emerald Green (#10B981) */
-  --accent: #10B981;                 /* Emerald Green Accent */
+  --accent: #0E9F6E;                 /* Success / available */
   --accent-foreground: #FFFFFF;
 
   /* Amber Gold (#F59E0B) */
@@ -91,13 +92,13 @@
 
   --border: #E8E2D6;                 /* Soft warm border */
   --input: #F3ECE1;
-  --ring: #003580;
+  --ring: #00736F;
 
   /* Flat brand surfaces: the old decorative gradients resolve to solid colours (the names stay, so no markup changes).
      The hero keeps a neutral scrim, the one gradient that serves legibility over photographs. */
   --gradient-hero: linear-gradient(180deg, rgba(15, 23, 42, 0.10) 0%, rgba(15, 23, 42, 0.55) 60%, rgba(15, 23, 42, 0.90) 100%);
-  --gradient-sun: #003580;
-  --gradient-sea: #003580;
+  --gradient-sun: #00736F;
+  --gradient-sea: #00736F;
   --gradient-sand: #FAF8F5;
 
   /* Quiet neutral elevation: surfaces at rest barely lift; only floating things (dialogs, menus) cast a real shadow */
@@ -161,9 +162,9 @@
   }
 }
 
-/* Accent words in headings: one solid colour each (emerald-700 keeps 4.5:1 contrast on white) */
+/* Accent words in headings: the brand orange (large text, 3:1+ on the cream background) */
 @utility text-gradient-sea {
-  color: #047857;
+  color: var(--brand-orange);
 }
 
 @utility text-gradient-sun {

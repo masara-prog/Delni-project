@@ -370,7 +370,7 @@ function AttractionsPage() {
             <span>{isAr ? "معالم ليبيا الخالدة وأسرار التاريخ" : "Immortal Landmarks of Libya & Ancient Wonders"}</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-xl tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-md tracking-tight leading-tight">
             {isAr ? "اكتشف أعظم آثار وحضارات ليبيا" : "Discover Libya's Greatest Historical Wonders"}
           </h1>
 
@@ -400,14 +400,14 @@ function AttractionsPage() {
 
       {/* Clean Filter Panel Floating Gracefully Below Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-md border border-[#E8E2D6] text-[#0F172A]">
           {/* Main Inputs Row (Simple Search & City Select with Booking.com Blue Theme) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-blue-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* Search Input */}
             <div className="sm:col-span-2 lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-blue-900 font-bold text-base">🔍</span>
+              <span className="text-teal-900 font-bold text-base">🔍</span>
               <div className="relative flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">البحث عن مدينة أو معلم سياحي:</label>
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">البحث عن مدينة أو معلم سياحي:</label>
                 <input
                   type="text"
                   value={searchQuery}
@@ -425,9 +425,9 @@ function AttractionsPage() {
 
             {/* City / Region Select */}
             <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-blue-900 font-bold text-base">📍</span>
+              <span className="text-teal-900 font-bold text-base">📍</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">اختر المدينة والمنطقة:</label>
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">اختر المدينة والمنطقة:</label>
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
@@ -443,9 +443,9 @@ function AttractionsPage() {
 
             {/* Category Select (archaeological sites, oases, old cities...) */}
             <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-blue-900 font-bold text-base">🏛️</span>
+              <span className="text-teal-900 font-bold text-base">🏛️</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">{isAr ? "تصنيف المعلم:" : "Landmark type:"}</label>
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">{isAr ? "تصنيف المعلم:" : "Landmark type:"}</label>
                 <select
                   value={placeCategory}
                   onChange={(e) => setPlaceCategory(e.target.value)}
@@ -466,20 +466,20 @@ function AttractionsPage() {
         {/* ── UNESCO World Heritage Showcase (Vibrant Pro, No Prev/Next Buttons, 5s Auto-Rotation, Expanded Width) ── */}
         {unescoSites.length > 0 && activeUnescoSite && (
         <div className="max-w-6xl mx-auto">
-          <section className="relative rounded-3xl bg-white border border-blue-900/15 p-6 sm:p-9 shadow-lg overflow-hidden text-[#0F172A]">
+          <section className="relative rounded-3xl bg-white border border-teal-900/15 p-6 sm:p-9 shadow-lg overflow-hidden text-[#0F172A]">
             {/* Dynamic Ambient Royal Blue & Vibrant Orange Glows */}
             <div className="absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
             <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
 
             {/* Header Banner - Royal Blue & Vibrant Orange Vibrancy */}
             <div className="text-center mb-7 relative z-10">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#003580]/10 text-[#003580] text-xs font-black border border-[#003580]/20 shadow-2xs mb-2.5">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00736F]/10 text-[#00736F] text-xs font-black border border-[#00736F]/20 shadow-2xs mb-2.5">
                 <span>🏛️</span>
                 <span>{isAr ? "التراث العالمي لليونسكو في ليبيا" : "UNESCO World Heritage in Libya"}</span>
                 <span className="w-2 h-2 rounded-full bg-[#EA580C] animate-pulse" />
               </div>
 
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#003580] tracking-tight">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#00736F] tracking-tight">
                 {isAr ? "اكتشف كنوز ليبيا التاريخية" : "Discover Libya's Ancient Treasures"}
               </h2>
 
@@ -501,7 +501,7 @@ function AttractionsPage() {
                       className={`px-4 py-2 rounded-full text-xs font-bold transition duration-300 cursor-pointer flex items-center gap-1.5 ${
                         isActive
                           ? "bg-[#D96B27] text-white shadow-md scale-105 font-black ring-2 ring-orange-300/50"
-                          : "bg-white hover:bg-blue-50/70 text-[#003580] border border-blue-900/15 shadow-2xs hover:border-[#003580]/40 font-bold"
+                          : "bg-white hover:bg-teal-50/70 text-[#00736F] border border-teal-900/15 shadow-2xs hover:border-[#00736F]/40 font-bold"
                       }`}
                     >
                       <span>{isActive ? "📍" : "🏛️"}</span>
@@ -529,7 +529,7 @@ function AttractionsPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-xl sm:text-2xl font-black text-[#003580] tracking-tight leading-snug">
+                  <h3 className="text-xl sm:text-2xl font-black text-[#00736F] tracking-tight leading-snug">
                     {isAr ? activeUnescoSite.name : activeUnescoSite.nameEn}
                   </h3>
 
@@ -540,8 +540,8 @@ function AttractionsPage() {
 
                 {/* Structured Specifications Grid (Compact, High-Contrast & Clean) */}
                 <div className="grid grid-cols-2 gap-2 my-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 shadow-2xs">
-                    <span className="text-[10px] text-[#003580] font-bold block mb-0.5">
+                  <div className="p-2.5 rounded-xl bg-teal-50/60 border border-teal-100 shadow-2xs">
+                    <span className="text-[11px] text-[#00736F] font-bold block mb-0.5">
                       📍 {isAr ? "الموقع" : "Location"}
                     </span>
                     <strong className="text-slate-900 font-black text-xs block truncate">
@@ -550,7 +550,7 @@ function AttractionsPage() {
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-orange-50/60 border border-orange-100 shadow-2xs">
-                    <span className="text-[10px] text-[#EA580C] font-bold block mb-0.5">
+                    <span className="text-[11px] text-[#EA580C] font-bold block mb-0.5">
                       📅 {isAr ? "أفضل وقت للزيارة" : "Best Season"}
                     </span>
                     <strong className="text-slate-900 font-black text-xs block truncate">
@@ -559,7 +559,7 @@ function AttractionsPage() {
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100 shadow-2xs">
-                    <span className="text-[10px] text-emerald-700 font-bold block mb-0.5">
+                    <span className="text-[11px] text-emerald-700 font-bold block mb-0.5">
                       🎟️ {isAr ? "الدخول" : "Entry"}
                     </span>
                     <strong className="text-emerald-800 font-black text-xs block truncate">
@@ -568,7 +568,7 @@ function AttractionsPage() {
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-100 shadow-2xs">
-                    <span className="text-[10px] text-amber-800 font-bold block mb-0.5">
+                    <span className="text-[11px] text-amber-800 font-bold block mb-0.5">
                       🛡️ {isAr ? "الحالة" : "Status"}
                     </span>
                     <strong className="text-slate-900 font-black text-xs block truncate">
@@ -593,7 +593,7 @@ function AttractionsPage() {
                         </span>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-xl bg-amber-200/80 text-amber-900 text-[10px] font-black shrink-0 border border-amber-300">
+                    <span className="px-2.5 py-1 rounded-xl bg-amber-200/80 text-amber-900 text-[11px] font-black shrink-0 border border-amber-300">
                       {isAr ? "محمي دولياً 🛡️" : "Protected 🛡️"}
                     </span>
                   </div>
@@ -612,7 +612,7 @@ function AttractionsPage() {
 
                 {/* Top Badges on Photo */}
                 <div className="absolute top-3.5 right-3.5 z-10 pointer-events-none flex items-center gap-2">
-                  <span className="px-3.5 py-1.5 rounded-full bg-[#003580]/90 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[11px] font-black flex items-center gap-1.5 shadow-md">
+                  <span className="px-3.5 py-1.5 rounded-full bg-[#00736F]/90 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[11px] font-black flex items-center gap-1.5 shadow-md">
                     <span>🏛️</span>
                     <span>{isAr ? `مسجل في اليونسكو • ${activeUnescoSite.unescoYear || 1982}` : `UNESCO Inscribed ${activeUnescoSite.unescoYear}`}</span>
                   </span>
@@ -639,7 +639,7 @@ function AttractionsPage() {
 
             {/* Sleek Dynamic 5s Auto-Play Indicator Strip (No Prev/Next buttons as requested!) */}
             <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-center gap-3">
-              <span className="text-xs font-mono font-black text-[#003580]">
+              <span className="text-xs font-mono font-black text-[#00736F]">
                 {(unescoIndex + 1).toString().padStart(2, "0")} / {unescoSites.length.toString().padStart(2, "0")}
               </span>
 
@@ -654,7 +654,7 @@ function AttractionsPage() {
                       className={`h-2 rounded-full transition duration-500 cursor-pointer ${
                         isActive
                           ? "w-8 bg-[#D96B27] shadow-sm"
-                          : "w-2 bg-blue-200 hover:bg-[#EA580C]/50"
+                          : "w-2 bg-teal-200 hover:bg-[#EA580C]/50"
                       }`}
                       title={site.name}
                     />
@@ -670,38 +670,6 @@ function AttractionsPage() {
         </div>
         )}
 
-        {/* ── Custom Private Trips System Notice ── */}
-        <section className="bg-amber-50/80 rounded-3xl p-5 border border-[#E6E1D6] shadow-soft flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#D96B27]/10 text-[#D96B27] text-2xl font-black grid place-items-center shrink-0 border border-[#D96B27]/20 shadow-xs">
-              🧭
-            </div>
-            <div>
-              <h3 className="font-black text-sm sm:text-base text-[#0B132B] flex items-center gap-2">
-                <span>{isAr ? "تصميم وإنشاء الرحلات الخاصة للمعالم السياحية" : "Create & Customize Private Tours to Landmarks"}</span>
-                <span className="text-[10px] bg-[#D96B27]/10 text-[#D96B27] font-black px-2.5 py-0.5 rounded-full border border-[#D96B27]/20">
-                  {isAr ? "رحلات خاصة 100%" : "100% Private Tours"}
-                </span>
-              </h3>
-              <p className="text-xs text-[#526078] mt-1 leading-relaxed">
-                {isAr
-                  ? "صمم برنامج رحلتك الخاصة لزيارة أي معلم أثري أو طبيعي في ليبيا مع حرية تامة في اختيار نوع المركبة، السائق، المرشد السياحي المعتمد، وتوقيت الانطلاق المناسب لك."
-                  : "Design your custom private tour to visit any historical or natural landmark in Libya with full freedom to choose vehicle, driver, certified guide, and preferred schedule."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
-            <button
-              onClick={() => setPrivateTripModalOpen(true)}
-              className="w-full md:w-auto px-6 py-3 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-xs sm:text-sm shadow-soft transition flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
-            >
-              <span>🧭</span>
-              <span>{isAr ? "إنشاء رحلة خاصة الآن" : "Create Private Tour Now"}</span>
-            </button>
-          </div>
-        </section>
-
         {/* ── Pure Photo Cards Cities & Destinations Showcase ── */}
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8E2D6] pb-5">
@@ -709,7 +677,7 @@ function AttractionsPage() {
               <span className="px-3.5 py-1 rounded-full bg-[#D96B27]/10 text-[#D96B27] border border-[#D96B27]/30 text-xs font-black tracking-wider uppercase inline-block mb-2">
                 {isAr ? "مدن ووجهات ليبيا السياحية" : "OUR DESTINATIONS"}
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-[#003580] tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#00736F] tracking-tight">
                 {isAr ? "استكشف المدن والوجهات " : "Explore Cities & "}
                 <span className="text-[#D96B27]">{isAr ? "السياحية" : "Destinations"}</span>
               </h2>
@@ -761,7 +729,7 @@ function AttractionsPage() {
                   setSearchQuery("");
                   setSelectedCity("all");
                 }}
-                className="px-5 py-2 rounded-xl bg-[#003580] text-white font-black text-xs cursor-pointer hover:bg-[#00224f] transition"
+                className="px-5 py-2 rounded-xl bg-[#00736F] text-white font-black text-xs cursor-pointer hover:bg-[#00224f] transition"
               >
                 {isAr ? "إلغاء التصفية وعرض الكل" : "Reset Filters"}
               </button>
@@ -772,7 +740,7 @@ function AttractionsPage() {
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
-                  className="min-w-[280px] sm:min-w-[310px] max-w-[330px] h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition duration-300 group shrink-0 select-none bg-stone-900"
+                  className="min-w-[280px] sm:min-w-[310px] max-w-[330px] h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-md hover:shadow-md border-2 border-white/80 cursor-pointer transition duration-300 group shrink-0 select-none bg-stone-900"
                 >
                   {/* Full Background Photo */}
                   <img
@@ -788,7 +756,7 @@ function AttractionsPage() {
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
                         <span className="text-amber-400 text-sm">★</span>
                         <span>{city.rating.toFixed(1)}</span>
-                        <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount} {isAr ? "تقييم" : "reviews"})</span>
+                        <span className="text-[11px] text-white/75 font-semibold">({city.reviewsCount} {isAr ? "تقييم" : "reviews"})</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-bold text-xs shadow-md">
@@ -839,7 +807,7 @@ function AttractionsPage() {
                 <div
                   key={city.id}
                   onClick={() => setSelectedCityForModal(city)}
-                  className="w-full h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-xl hover:shadow-2xl border-2 border-white/80 cursor-pointer transition duration-300 group select-none bg-stone-900"
+                  className="w-full h-[440px] sm:h-[500px] rounded-[32px] overflow-hidden relative shadow-md hover:shadow-md border-2 border-white/80 cursor-pointer transition duration-300 group select-none bg-stone-900"
                 >
                   {/* Full Background Photo */}
                   <img
@@ -855,7 +823,7 @@ function AttractionsPage() {
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-black text-xs shadow-md">
                         <span className="text-amber-400 text-sm">★</span>
                         <span>{city.rating.toFixed(1)}</span>
-                        <span className="text-[10px] text-white/75 font-semibold">({city.reviewsCount} {isAr ? "تقييم" : "reviews"})</span>
+                        <span className="text-[11px] text-white/75 font-semibold">({city.reviewsCount} {isAr ? "تقييم" : "reviews"})</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 text-white font-bold text-xs shadow-md">
@@ -907,7 +875,7 @@ function AttractionsPage() {
             <button
               type="button"
               onClick={() => setCityViewMode((prev) => (prev === "carousel" ? "grid" : "carousel"))}
-              className="px-8 py-3.5 rounded-full bg-white hover:bg-[#003580] text-[#003580] hover:text-white border-2 border-[#003580] font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition duration-300 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              className="px-8 py-3.5 rounded-full bg-white hover:bg-[#00736F] text-[#00736F] hover:text-white border-2 border-[#00736F] font-black text-xs sm:text-sm shadow-md hover:shadow-md transition duration-300 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
             >
               <span className="text-base">{cityViewMode === "carousel" ? "✨" : "🔄"}</span>
               <span>

@@ -95,16 +95,16 @@ function TripNotesBox({ raw }: { raw: unknown }) {
   const { customerNeeds, adminNotes } = splitTripNotes(raw);
   if (customerNeeds.length === 0 && adminNotes.length === 0) return null;
   const Group = ({ title, icon, items, tone }: { title: string; icon: string; items: string[]; tone: "amber" | "blue" }) => (
-    <div className={tone === "amber" ? "rounded-xl border border-amber-200/70 bg-amber-50/60 p-3" : "rounded-xl border border-blue-200/70 bg-blue-50/50 p-3"}>
-      <div className={`flex items-center gap-1.5 text-[11px] font-black mb-2 ${tone === "amber" ? "text-amber-900" : "text-blue-900"}`}>
+    <div className={tone === "amber" ? "rounded-xl border border-amber-200/70 bg-amber-50/60 p-3" : "rounded-xl border border-teal-200/70 bg-teal-50/50 p-3"}>
+      <div className={`flex items-center gap-1.5 text-[11px] font-black mb-2 ${tone === "amber" ? "text-amber-900" : "text-teal-900"}`}>
         <span aria-hidden="true">{icon}</span>
         <span>{title}</span>
-        <span className="mr-auto rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-slate-500">{items.length}</span>
+        <span className="mr-auto rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-slate-500">{items.length}</span>
       </div>
       <ul className="space-y-1.5">
         {items.map((it, i) => (
           <li key={i} className="flex items-start gap-2 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold leading-relaxed text-slate-800 shadow-2xs">
-            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${tone === "amber" ? "bg-amber-500" : "bg-blue-500"}`} aria-hidden="true" />
+            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${tone === "amber" ? "bg-amber-500" : "bg-teal-500"}`} aria-hidden="true" />
             <span className="min-w-0 break-words">{it}</span>
           </li>
         ))}
@@ -1557,19 +1557,19 @@ function AdminDashboard() {
       {active === "scanner" && (
         <div className="space-y-6 text-right animate-in fade-in duration-200">
           {/* Header Explanation Banner */}
-          <div className="p-5 rounded-2xl bg-blue-900 text-white shadow-md relative overflow-hidden">
+          <div className="p-5 rounded-2xl bg-teal-900 text-white shadow-md relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <span className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-lg">🎫</span>
                   <h2 className="text-xl font-black">مكتب تأكيد التذاكر الإلكترونية</h2>
                 </div>
-                <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium leading-relaxed">
+                <p className="text-xs sm:text-sm text-teal-100 max-w-2xl font-medium leading-relaxed">
                   عند حضور السائح لمقر الشركة أو نقطة الانطلاق، أدخل رقم التذكرة الظاهر في تذكرته لمطابقة بيانات الحجز وتأكيد الدفع والتسجيل فورياً.
                 </p>
               </div>
               <div className="shrink-0 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-center">
-                <div className="text-[10px] text-blue-200 font-bold">الحجوزات النشطة</div>
+                <div className="text-[11px] text-teal-200 font-bold">الحجوزات النشطة</div>
                 <div className="text-xl font-black text-white">{dailyBookings.length + weeklyBookings.length}</div>
               </div>
             </div>
@@ -1591,13 +1591,13 @@ function AdminDashboard() {
                     value={scanCode}
                     onChange={(e) => setScanCode(e.target.value)}
                     placeholder="اكتب رقم التذكرة (مثال: BKW-261107183218-4814)..."
-                    className="w-full h-13 px-4 rounded-2xl border-2 border-slate-200 focus:border-[#003580] focus:ring-4 focus:ring-blue-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
+                    className="w-full h-13 px-4 rounded-2xl border-2 border-slate-200 focus:border-[#00736F] focus:ring-4 focus:ring-teal-100 font-mono text-base font-black text-slate-800 outline-none transition bg-white"
                     autoFocus
                   />
                 </div>
                 <button
                   type="submit"
-                  className="px-8 h-13 rounded-2xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                  className="px-8 h-13 rounded-2xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
                 >
                   <span>تحقق من التذكرة 🔍</span>
                 </button>
@@ -1611,7 +1611,7 @@ function AdminDashboard() {
                       ? "bg-emerald-50 border-emerald-300 text-emerald-900"
                       : scanStatusMsg.type === "error"
                       ? "bg-red-50 border-red-300 text-red-900"
-                      : "bg-blue-50 border-blue-300 text-blue-900"
+                      : "bg-teal-50 border-teal-300 text-teal-900"
                   }`}
                 >
                   <span className="text-lg">
@@ -1629,7 +1629,7 @@ function AdminDashboard() {
               <div className="p-6 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#003580] text-white flex items-center justify-center text-2xl font-black shadow-sm">
+                    <div className="w-12 h-12 rounded-2xl bg-[#00736F] text-white flex items-center justify-center text-2xl font-black shadow-sm">
                       🎫
                     </div>
                     <div>
@@ -1656,7 +1656,7 @@ function AdminDashboard() {
                     <span
                       className={`px-3 py-1 rounded-xl font-black text-xs border ${
                         scannedTicket.attended
-                          ? "bg-blue-50 text-blue-800 border-blue-200"
+                          ? "bg-teal-50 text-teal-800 border-teal-200"
                           : "bg-stone-50 text-stone-600 border-stone-200"
                       }`}
                     >
@@ -1668,27 +1668,27 @@ function AdminDashboard() {
                 {/* Details Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="text-[10px] text-slate-400 font-bold mb-1">👤 السائح / المسافر</div>
+                    <div className="text-[11px] text-slate-400 font-bold mb-1">👤 السائح / المسافر</div>
                     <div className="font-black text-slate-800 text-sm truncate">{scannedTicket.touristName}</div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">{scannedTicket.touristId}</div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">{scannedTicket.touristId}</div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="text-[10px] text-slate-400 font-bold mb-1">👥 المقاعد المحجوزة</div>
-                    <div className="font-black text-[#003580] text-sm">{scannedTicket.seats} مقاعد معتمدة</div>
-                    <div className="text-[10px] text-emerald-700 font-bold mt-0.5">شاملة التأمين المعتمد</div>
+                    <div className="text-[11px] text-slate-400 font-bold mb-1">👥 المقاعد المحجوزة</div>
+                    <div className="font-black text-[#00736F] text-sm">{scannedTicket.seats} مقاعد معتمدة</div>
+                    <div className="text-[11px] text-emerald-700 font-bold mt-0.5">شاملة التأمين المعتمد</div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="text-[10px] text-slate-400 font-bold mb-1">💰 إجمالي المبلغ</div>
+                    <div className="text-[11px] text-slate-400 font-bold mb-1">💰 إجمالي المبلغ</div>
                     <div className="font-black text-emerald-600 text-base">{scannedTicket.totalPrice} د.ل</div>
-                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">الدفع نقداً أو إلكترونياً</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">الدفع نقداً أو إلكترونياً</div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="text-[10px] text-slate-400 font-bold mb-1">🧭 المرشد المرافق</div>
+                    <div className="text-[11px] text-slate-400 font-bold mb-1">🧭 المرشد المرافق</div>
                     <div className="font-black text-slate-800 text-sm truncate">{scannedTicket.guideName}</div>
-                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">مرشد سياحي معتمد</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">مرشد سياحي معتمد</div>
                   </div>
                 </div>
 
@@ -1743,7 +1743,7 @@ function AdminDashboard() {
                     <td className="py-3 font-mono text-xs font-bold">{c.contract_number}</td>
                     <td className="py-3 font-bold text-foreground">{c.name || c.company_name}</td>
                     <td className="py-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${c.city === "بنغازي" ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-blue-50 text-blue-800 border border-blue-200"}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${c.city === "بنغازي" ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-teal-50 text-teal-800 border border-teal-200"}`}>
                         📍 {c.city || "طرابلس"}
                       </span>
                     </td>
@@ -1753,7 +1753,7 @@ function AdminDashboard() {
                           href={c.address.startsWith("http") ? c.address : `https://${c.address}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition"
+                          className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition"
                         >
                           🗺️ الخريطة ↗
                         </a>
@@ -1793,7 +1793,7 @@ function AdminDashboard() {
                     <td className="py-3 font-bold text-primary text-xs">{d.contract_number}</td>
                     <td className="py-3 text-muted-foreground font-bold">
                       {d.assigned_vehicle_plate}
-                      {d.current_trip_stage && <div className="text-[10px] font-bold text-primary mt-0.5">🧭 {d.current_trip_stage}</div>}
+                      {d.current_trip_stage && <div className="text-[11px] font-bold text-primary mt-0.5">🧭 {d.current_trip_stage}</div>}
                     </td>
                     <td className="py-3"><Badge tone={d.account_status === "نشط" ? "green" : "red"}>{d.account_status}</Badge></td>
                   </tr>
@@ -1912,7 +1912,7 @@ function AdminDashboard() {
                             <span className="text-xs font-semibold text-slate-800 truncate max-w-[170px]" title={g.certificate_name || g.certificate}>
                               📄 {g.certificate_name || "مستند ترخيص"}
                             </span>
-                            <span className="text-[10px] text-emerald-600 font-bold">✓ وثيقة مرفوعة</span>
+                            <span className="text-[11px] text-emerald-600 font-bold">✓ وثيقة مرفوعة</span>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">لا يوجد ملف مرفق</span>
@@ -1961,18 +1961,18 @@ function AdminDashboard() {
       {active === "tourists" && (
         <div className="space-y-6 text-right">
           {/* Information & Privacy Notice */}
-          <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/70 text-xs font-semibold text-blue-950 flex items-center justify-between gap-3">
+          <div className="p-4 rounded-2xl border border-teal-200 bg-teal-50/70 text-xs font-semibold text-teal-950 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="text-3xl flex-shrink-0">👥</span>
               <div>
-                <span className="font-black block text-sm mb-0.5 text-[#003580]">
+                <span className="font-black block text-sm mb-0.5 text-[#00736F]">
                   إدارة ورقابة حسابات السياح المسجلين في منصة دلّني:
                 </span>
                 البحث الفوري بالاسم الكامل أو برقم الجواز، متابعة سجل الحجوزات والتقييمات، مع إمكانية تقييد الحساب فورياً لمنع الحجز غير الجاد وحماية خصوصية بيانات المرور وكلمات السر 100%.
               </div>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              <span className="px-3 py-1 rounded-xl bg-white border border-blue-200 text-[#003580] font-black text-xs">
+              <span className="px-3 py-1 rounded-xl bg-white border border-teal-200 text-[#00736F] font-black text-xs">
                 إجمالي السياح: {tourists.length}
               </span>
             </div>
@@ -1985,7 +1985,7 @@ function AdminDashboard() {
                 <div className="text-xs text-muted-foreground font-bold">إجمالي حسابات السياح</div>
                 <div className="text-2xl font-black text-foreground mt-1">{tourists.length} سائح</div>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-black">
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-xl font-black">
                 👥
               </div>
             </div>
@@ -2078,7 +2078,7 @@ function AdminDashboard() {
                               </div>
                             </td>
                             <td className="p-3">
-                              <span className="font-mono font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-900 border border-blue-200">
+                              <span className="font-mono font-bold px-2 py-0.5 rounded-lg bg-teal-50 text-teal-900 border border-teal-200">
                                 {t.tourist_id}
                               </span>
                             </td>
@@ -2092,7 +2092,7 @@ function AdminDashboard() {
                             <td className="p-3 text-center">
                               <button
                                 onClick={() => handleViewTourist(t)}
-                                className="px-3 py-1.5 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                className="px-3 py-1.5 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
                               >
                                 <span>👁️</span>
                                 <span>عرض الحجوزات والملف</span>
@@ -2113,7 +2113,7 @@ function AdminDashboard() {
       {active === "trips" && (
         <div className="space-y-6 text-right">
           {/* Daily Trips */}
-          <SectionCard title="🧭 إدارة الرحلات اليومية" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ رحلة يومية جديدة</button>}>
+          <SectionCard title="🧭 إدارة الرحلات اليومية" action={<button onClick={() => setShowAddTrip("daily")} className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ رحلة يومية جديدة</button>}>
             <div className="space-y-4">
               {dailyTrips.map((d) => (
                 <div key={d.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
@@ -2125,19 +2125,19 @@ function AdminDashboard() {
                       {d.guide_approval_status === "بانتظار رد المرشد" && <Badge tone="sun">⏳ بانتظار موافقة المرشد (غير منشورة)</Badge>}
                       {d.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
                       {d.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
-                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-black">
+                      <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-black">
                         📅 أيام الانطلاق: {Array.isArray(d.recurring_days) ? d.recurring_days.join(" و ") : (d.recurring_days || "غير محددة")}
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-black">
                         🚌 حافلة {d.bus_capacity || 50} راكب
                       </span>
                       {d.destination && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-black">
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[11px] font-black">
                           📍 {d.destination}
                         </span>
                       )}
                       {(d as any).activities && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black">
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-black">
                           🎯 {(d as any).activities}
                         </span>
                       )}
@@ -2152,9 +2152,9 @@ function AdminDashboard() {
                     </div>
                     {d.vehicle_plates && d.vehicle_plates.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] font-black text-muted-foreground">🚌 الحافلة المعينة:</span>
+                        <span className="text-[11px] font-black text-muted-foreground">🚌 الحافلة المعينة:</span>
                         {d.vehicle_plates.map(plate => (
-                          <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-black border border-blue-100">{plate}</span>
+                          <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-[11px] font-black border border-teal-100">{plate}</span>
                         ))}
                       </div>
                     )}
@@ -2169,7 +2169,7 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Trips */}
-          <SectionCard title="🗓️ إدارة الرحلات الأسبوعية (رحلات متعددة الأيام)" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ رحلة أسبوعية جديدة</button>}>
+          <SectionCard title="🗓️ إدارة الرحلات الأسبوعية (رحلات متعددة الأيام)" action={<button onClick={() => setShowAddTrip("weekly")} className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ رحلة أسبوعية جديدة</button>}>
             <div className="space-y-4">
               {weeklyTrips.map((w) => (
                 <div key={w.id} className="p-4 rounded-2xl border border-border bg-white flex flex-wrap gap-4 hover:shadow-soft transition-shadow text-right">
@@ -2181,14 +2181,14 @@ function AdminDashboard() {
                       {w.guide_approval_status === "بانتظار رد المرشد" && <Badge tone="sun">⏳ بانتظار موافقة المرشد (غير منشورة)</Badge>}
                       {w.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
                       {w.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black">
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-black">
                         🗓️ تبدأ يوم {w.weekly_day || weekdayOf(w.start_date) || "—"}
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-black">
                         🚍 حافلة {w.bus_capacity || 25} راكب
                       </span>
                       {w.destination && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-black">
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[11px] font-black">
                           📍 {w.destination}
                         </span>
                       )}
@@ -2203,9 +2203,9 @@ function AdminDashboard() {
                     </div>
                     {w.vehicle_plates && w.vehicle_plates.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] font-black text-muted-foreground">🚌 الحافلة المعينة:</span>
+                        <span className="text-[11px] font-black text-muted-foreground">🚌 الحافلة المعينة:</span>
                         {w.vehicle_plates.map(plate => (
-                          <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black border border-amber-100">{plate}</span>
+                          <span key={plate} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[11px] font-black border border-amber-100">{plate}</span>
                         ))}
                       </div>
                     )}
@@ -2256,7 +2256,7 @@ function AdminDashboard() {
                         category: (v as any).category || undefined,
                       })
                     }
-                    className="w-full h-9 rounded-xl bg-[#003580] hover:bg-blue-900 text-white text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full h-9 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     👁️ تفاصيل المركبة
                   </button>
@@ -2270,7 +2270,7 @@ function AdminDashboard() {
       {/* BOOKINGS TAB (DelniDB bookings_daily & bookings_weekly) */}
       {active === "bookings" && (
         <div className="space-y-6 text-right">
-          <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/70 text-xs font-semibold text-blue-950 flex items-center gap-3">
+          <div className="p-4 rounded-2xl border border-teal-200 bg-teal-50/70 text-xs font-semibold text-teal-950 flex items-center gap-3">
             <span className="text-2xl">🎟️</span>
             <div>
               <span className="font-black block text-sm mb-0.5">سجل الحجوزات الميدانية (حجوزات الرحلات اليومية والأسبوعية):</span>
@@ -2335,7 +2335,7 @@ function AdminDashboard() {
                         key={v}
                         type="button"
                         onClick={() => (setter as (x: any) => void)(v)}
-                        className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${value === v ? "bg-[#003580] text-white shadow-xs" : "text-slate-600 hover:bg-white"}`}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${value === v ? "bg-[#00736F] text-white shadow-xs" : "text-slate-600 hover:bg-white"}`}
                       >
                         {l}
                       </button>
@@ -2390,7 +2390,7 @@ function AdminDashboard() {
                         key={b.booking_daily_id}
                         className={cancelled
                           ? "bg-red-50/60 text-slate-400 line-through decoration-red-400/80 opacity-70"
-                          : "odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors"}
+                          : "odd:bg-white even:bg-slate-50/60 hover:bg-teal-50/50 transition-colors"}
                         title={cancelled ? `حجز ملغى (${b.booking_status})` : undefined}
                       >
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-mono text-xs font-bold text-primary">{b.booking_daily_id}</td>
@@ -2437,7 +2437,7 @@ function AdminDashboard() {
                             }}
                             className={cancelled
                               ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
-                              : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
+                              : "px-2.5 py-1 bg-[#00736F]/10 hover:bg-[#00736F]/20 text-[#00736F] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
                             {cancelled ? "✕ حجز ملغى" : "🎫 تأكيد الدفع"}
                           </button>
@@ -2481,7 +2481,7 @@ function AdminDashboard() {
                         key={b.booking_weekly_id}
                         className={cancelled
                           ? "bg-red-50/60 text-slate-400 line-through decoration-red-400/80 opacity-70"
-                          : "odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors"}
+                          : "odd:bg-white even:bg-slate-50/60 hover:bg-teal-50/50 transition-colors"}
                         title={cancelled ? `حجز ملغى (${b.booking_status})` : undefined}
                       >
                         <td className="px-4 py-3 align-middle border-l border-border/60 last:border-l-0 font-mono text-xs font-bold text-primary">{b.booking_weekly_id}</td>
@@ -2524,7 +2524,7 @@ function AdminDashboard() {
                             }}
                             className={cancelled
                               ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
-                              : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
+                              : "px-2.5 py-1 bg-[#00736F]/10 hover:bg-[#00736F]/20 text-[#00736F] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
                             {cancelled ? "✕ حجز ملغى" : "🎫 تأكيد الدفع"}
                           </button>
@@ -2551,7 +2551,7 @@ function AdminDashboard() {
           </div>
 
           {/* Daily Offers */}
-          <SectionCard title="🎯 عروض الرحلات اليومية" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة عرض يومي</button>}>
+          <SectionCard title="🎯 عروض الرحلات اليومية" action={<button onClick={() => setShowAddDailyOffer(true)} className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة عرض يومي</button>}>
             <CompactEntityList
               items={dailyOffers}
               emptyText="لا توجد عروض رحلات يومية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة يومية الآن."
@@ -2605,7 +2605,7 @@ function AdminDashboard() {
           </SectionCard>
 
           {/* Weekly Offers */}
-          <SectionCard title="🎁 عروض الرحلات الأسبوعية" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة عرض أسبوعي</button>}>
+          <SectionCard title="🎁 عروض الرحلات الأسبوعية" action={<button onClick={() => setShowAddWeeklyOffer(true)} className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة عرض أسبوعي</button>}>
             <CompactEntityList
               items={weeklyOffers}
               emptyText="لا توجد عروض رحلات أسبوعية منشأة حالياً. يمكنك إنشاء عرض جديد وربطه برحلة أسبوعية الآن."
@@ -2685,7 +2685,7 @@ function AdminDashboard() {
                 const isOpen = openPrivateTripId === pt.private_trip_id;
                 const placesCount = Array.isArray(pt.places) ? pt.places.length : 0;
                 return (
-                  <div key={pt.private_trip_id} className={`rounded-2xl border bg-white shadow-xs transition ${isOpen ? "border-[#003580]/30 p-5 space-y-3.5" : "border-border p-4 space-y-2.5"} ${isCancelled ? "opacity-70" : ""}`}>
+                  <div key={pt.private_trip_id} className={`rounded-2xl border bg-white shadow-xs transition ${isOpen ? "border-[#00736F]/30 p-5 space-y-3.5" : "border-border p-4 space-y-2.5"} ${isCancelled ? "opacity-70" : ""}`}>
                     <div className="flex justify-between items-start flex-wrap gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -2754,34 +2754,34 @@ function AdminDashboard() {
 
                     {/* Assigned Vehicle Rich Card with View Specs Modal Button */}
                     {pt.assigned_vehicle && (
-                      <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs">
+                      <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl bg-teal-50/60 border border-teal-200/80 text-xs">
                         <div className="flex items-center gap-2.5 flex-wrap">
                           {pt.vehicle_image ? (
                             <img
                               src={pt.vehicle_image}
                               alt={pt.vehicle_model || "المركبة"}
                               loading="lazy"
-                              className="w-16 h-12 rounded-lg object-cover border border-blue-200 bg-white"
+                              className="w-16 h-12 rounded-lg object-cover border border-teal-200 bg-white"
                             />
                           ) : (
-                            <span className="p-1.5 rounded-lg bg-blue-100 text-blue-900 text-base">🚍</span>
+                            <span className="p-1.5 rounded-lg bg-teal-100 text-teal-900 text-base">🚍</span>
                           )}
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-black text-blue-950">
+                              <span className="font-black text-teal-950">
                                 {pt.vehicle_model || "مركبة نقل سياحي معتمدة"}
                               </span>
-                              <span className="font-mono font-bold text-blue-800 bg-white px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                              <span className="font-mono font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200 text-[11px]">
                                 لوحة: {pt.assigned_vehicle}
                               </span>
                               {pt.vehicle_capacity && (
-                                <span className="bg-white px-2 py-0.5 rounded border border-blue-200 text-slate-700 font-bold text-[11px]">
+                                <span className="bg-white px-2 py-0.5 rounded border border-teal-200 text-slate-700 font-bold text-[11px]">
                                   👥 سعة {pt.vehicle_capacity} راكب
                                 </span>
                               )}
                             </div>
                             {pt.transport_company_name && (
-                              <div className="text-[11px] text-blue-700 font-medium mt-0.5">
+                              <div className="text-[11px] text-teal-700 font-medium mt-0.5">
                                 🏢 التابعة لـ: <span className="font-bold">{pt.transport_company_name}</span>
                               </div>
                             )}
@@ -2803,7 +2803,7 @@ function AdminDashboard() {
                               vehicle_status: pt.vehicle_status || "جاهزة",
                             });
                           }}
-                          className="px-3.5 py-1.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                          className="px-3.5 py-1.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
                         >
                           <span>👁️</span>
                           <span>عرض تفاصيل المركبة</span>
@@ -2824,7 +2824,7 @@ function AdminDashboard() {
                         </span>
                       )}
                       {Number(pt.additional_expenses) > 0 && (
-                        <span className="text-blue-800 font-black bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                        <span className="text-teal-800 font-black bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
                           🛠️ مصروفات الخدمات: {pt.additional_expenses} د.ل
                         </span>
                       )}
@@ -2834,23 +2834,23 @@ function AdminDashboard() {
                     {parsedSteps && parsedSteps.length > 0 && (
                       <div className="bg-[#FAF7F2] border border-[#E8E2D6] rounded-xl p-3 text-xs space-y-2">
                         <div className="font-black text-slate-800 flex items-center justify-between">
-                          <span className="flex items-center gap-1.5 text-[#003580]">
+                          <span className="flex items-center gap-1.5 text-[#00736F]">
                             <span>🧭</span>
                             <span>
                               جدول محطات الرحلة المقترح ({parsedSteps.length} محطات - {pt.duration_days > 1 ? "نظام الأيام" : "نظام الساعات"}):
                             </span>
                           </span>
-                          <span className="text-[10px] text-slate-500 font-bold">جاهز ومعتمد للعرض على السائح</span>
+                          <span className="text-[11px] text-slate-500 font-bold">جاهز ومعتمد للعرض على السائح</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {parsedSteps.map((st, sidx) => (
                             <div key={sidx} className="bg-white p-2 rounded-lg border border-slate-200 flex items-start gap-2 shadow-2xs">
-                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-mono font-black text-[10px] shrink-0">
+                              <span className="px-2 py-0.5 rounded bg-teal-100 text-teal-900 font-mono font-black text-[11px] shrink-0">
                                 {st.time}
                               </span>
                               <div className="min-w-0">
                                 <div className="font-bold text-slate-900 truncate">{st.title}</div>
-                                <div className="text-[10px] text-slate-500 line-clamp-1">{st.desc}</div>
+                                <div className="text-[11px] text-slate-500 line-clamp-1">{st.desc}</div>
                               </div>
                             </div>
                           ))}
@@ -2935,7 +2935,7 @@ function AdminDashboard() {
             action={
               <button
                 onClick={() => setShowAddHotel(true)}
-                className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition"
+                className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition"
               >
                 + إضافة مكان إقامة جديد
               </button>
@@ -2975,7 +2975,7 @@ function AdminDashboard() {
           )}
 
           {active === "restaurants" && (
-          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة مطعم/مقهى بالدليل</button>}>
+          <SectionCard title="🍽️ دليل المطاعم والمقاهي (دليل تعريفي — نبذة وساعات عمل وخرائط و5 صور)" action={<button onClick={() => setShowAddRestaurant(true)} className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة مطعم/مقهى بالدليل</button>}>
             <CompactEntityList
               items={restaurants}
               emptyText="لا توجد مطاعم أو مقاهٍ مسجلة بعد"
@@ -3009,7 +3009,7 @@ function AdminDashboard() {
           )}
 
           {active === "landmarks" && (
-          <SectionCard title="🏛️ المعالم والوجهات السياحية المعتمدة (برقم البلدية ID + خريطة Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-[#003580] hover:bg-blue-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة وتوثيق معلم</button>}>
+          <SectionCard title="🏛️ المعالم والوجهات السياحية المعتمدة (برقم البلدية ID + خريطة Google Maps)" action={<button onClick={() => setShowAddAttraction(true)} className="px-4 py-2 bg-[#00736F] hover:bg-teal-900 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer transition">+ إضافة وتوثيق معلم</button>}>
             <CompactEntityList
               items={attractions}
               emptyText="لا توجد معالم سياحية مسجلة بعد"
@@ -3026,7 +3026,7 @@ function AdminDashboard() {
                   <div key={a.id} className="p-4 rounded-2xl border border-border bg-white space-y-3 shadow-2xs hover:shadow-xs transition">
                     <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-lg bg-blue-100/80 text-blue-900 font-mono text-xs font-black border border-blue-200">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-teal-100/80 text-teal-900 font-mono text-xs font-black border border-teal-200">
                           🏛️ رقم البلدية: {munId}
                         </span>
                       </div>
@@ -3049,7 +3049,7 @@ function AdminDashboard() {
                       <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 leading-snug space-y-1.5">
                         {a.highlights && (
                           <div>
-                            <strong className="text-[#003580] font-bold">✨ أبرز المحطات: </strong>
+                            <strong className="text-[#00736F] font-bold">✨ أبرز المحطات: </strong>
                             <span>{Array.isArray(a.highlights) ? a.highlights.join("، ") : a.highlights}</span>
                           </div>
                         )}
@@ -3058,11 +3058,11 @@ function AdminDashboard() {
 
                     {(a.latitude || a.google_maps_url) && (
                       <div className="p-2.5 rounded-xl flex items-center justify-between gap-2" style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.15)" }}>
-                        <div className="text-xs font-bold text-blue-700">
+                        <div className="text-xs font-bold text-teal-700">
                           📍 {a.latitude && a.longitude ? `${a.latitude}°N, ${a.longitude}°E` : "موقع مضاف"}
                         </div>
                         {a.google_maps_url && (
-                          <a href={a.google_maps_url} target="_blank" rel="noreferrer" className="flex-shrink-0 px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition">
+                          <a href={a.google_maps_url} target="_blank" rel="noreferrer" className="flex-shrink-0 px-3 py-1 bg-teal-600 text-white rounded-lg text-[11px] font-black hover:bg-teal-700 transition">
                             🗺️ فتح الخريطة
                           </a>
                         )}
@@ -3201,12 +3201,12 @@ function AdminDashboard() {
                       </span>
                       <div className="flex items-center gap-1.5">
                         {s.unread && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-xs animate-pulse">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[11px] font-black shadow-xs animate-pulse">
                             <span className="w-1.5 h-1.5 rounded-full bg-white" />
                             <span>جديد</span>
                           </span>
                         )}
-                        <span className="text-[10px] text-muted-foreground font-semibold">{s.time}</span>
+                        <span className="text-[11px] text-muted-foreground font-semibold">{s.time}</span>
                       </div>
                     </div>
                     <div className={`text-xs mt-0.5 truncate ${s.unread ? "font-black text-slate-900" : "text-muted-foreground"}`}>
@@ -3215,7 +3215,7 @@ function AdminDashboard() {
                     <div className="mt-2 flex items-center justify-between">
                       <Badge tone={s.user_type === "سائح" ? "sea" : "sun"}>{s.user_type}</Badge>
                       {s.unread && (
-                        <span className="text-[10px] font-black text-red-600 bg-red-100/60 px-2 py-0.5 rounded-md">
+                        <span className="text-[11px] font-black text-red-600 bg-red-100/60 px-2 py-0.5 rounded-md">
                           بانتظار رد الإدارة ⏳
                         </span>
                       )}
@@ -3271,7 +3271,7 @@ function AdminDashboard() {
                   {/* Bot status bar */}
                   <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs font-black text-emerald-700">🤖 الشات بوت نشط</span>
-                    <span className="text-[10px] text-emerald-600">— يرد تلقائياً ويحول المعقد للمشرف</span>
+                    <span className="text-[11px] text-emerald-600">— يرد تلقائياً ويحول المعقد للمشرف</span>
                   </div>
 
                   {/* Messages */}
@@ -3286,12 +3286,12 @@ function AdminDashboard() {
                             : "bg-gradient-sea text-white rounded-bl-sm"
                         }`}>
                           {msg.from !== "user" && (
-                            <div className="text-[10px] opacity-70 mb-0.5">
+                            <div className="text-[11px] opacity-70 mb-0.5">
                               {msg.from === "admin" ? "👤 مشرف" : "🤖 دلّني بوت"}
                             </div>
                           )}
                           <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
-                          <div className="text-[10px] opacity-60 mt-1">{msg.time}</div>
+                          <div className="text-[11px] opacity-60 mt-1">{msg.time}</div>
                         </div>
                       </div>
                     ))}
@@ -3299,7 +3299,7 @@ function AdminDashboard() {
 
                   {/* Input */}
                   <div className="p-4 border-t border-border flex-shrink-0">
-                    <div className="text-[10px] font-black text-muted-foreground mb-1.5">رد المشرف (يظهر كـ Admin Override):</div>
+                    <div className="text-[11px] font-black text-muted-foreground mb-1.5">رد المشرف (يظهر كـ Admin Override):</div>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -3313,7 +3313,7 @@ function AdminDashboard() {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {["أهلاً وسهلاً! كيف يمكنني مساعدتك؟", "سيتواصل معك أحد المشرفين قريباً", "يمكنك الحجز من صفحة الرحلات"].map(q => (
-                        <button key={q} onClick={() => setBotInput(q)} className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black hover:bg-primary/20 transition">{q}</button>
+                        <button key={q} onClick={() => setBotInput(q)} className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-[11px] font-black hover:bg-primary/20 transition">{q}</button>
                       ))}
                     </div>
                   </div>
@@ -3380,7 +3380,7 @@ function FacilityDetails({
       {shown.length > 0 && (
         <div className="grid grid-cols-5 gap-2 pt-3">
           {shown.map((src, i) => (
-            <a key={i} href={src} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-xl overflow-hidden ring-1 ring-slate-200 hover:ring-[#003580]/40 transition">
+            <a key={i} href={src} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-xl overflow-hidden ring-1 ring-slate-200 hover:ring-[#00736F]/40 transition">
               <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
             </a>
           ))}
@@ -3389,7 +3389,7 @@ function FacilityDetails({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {facts.filter((f) => f.value).map((f) => (
           <div key={f.label} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
-            <div className="text-[10px] font-bold text-slate-500">{f.label}</div>
+            <div className="text-[11px] font-bold text-slate-500">{f.label}</div>
             <div className="text-xs font-black text-[#0F172A] mt-0.5 truncate" title={f.value}>{f.value}</div>
           </div>
         ))}
@@ -3397,11 +3397,11 @@ function FacilityDetails({
       {description && <p className="text-xs text-slate-600 leading-relaxed">{description}</p>}
       <div className="flex flex-wrap items-center justify-end gap-2">
         {mapUrl && (
-          <a href={mapUrl} target="_blank" rel="noreferrer" className="px-3.5 h-9 rounded-xl bg-white border border-slate-200 text-[#003580] text-xs font-black hover:bg-slate-50 transition inline-flex items-center gap-1.5">
+          <a href={mapUrl} target="_blank" rel="noreferrer" className="px-3.5 h-9 rounded-xl bg-white border border-slate-200 text-[#00736F] text-xs font-black hover:bg-slate-50 transition inline-flex items-center gap-1.5">
             🗺️ الموقع على الخريطة
           </a>
         )}
-        <button type="button" onClick={onEdit} className="px-4 h-9 rounded-xl bg-[#003580] hover:bg-blue-900 text-white text-xs font-black transition cursor-pointer">
+        <button type="button" onClick={onEdit} className="px-4 h-9 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white text-xs font-black transition cursor-pointer">
           ✏️ تعديل البيانات
         </button>
       </div>
@@ -3437,7 +3437,7 @@ function CompactEntityList<T>({
         const s = summary(item);
         const open = openKey === s.key;
         return (
-          <div key={s.key} className={`rounded-2xl border bg-white transition ${open ? "border-[#003580]/40 shadow-sm" : "border-border hover:border-[#003580]/30 hover:shadow-2xs"}`}>
+          <div key={s.key} className={`rounded-2xl border bg-white transition ${open ? "border-[#00736F]/40 shadow-sm" : "border-border hover:border-[#00736F]/30 hover:shadow-2xs"}`}>
             <button
               type="button"
               onClick={() => setOpenKey(open ? null : s.key)}
@@ -3454,11 +3454,11 @@ function CompactEntityList<T>({
                 <span className="block text-[11px] text-muted-foreground font-semibold truncate mt-0.5">{s.sub}</span>
               </span>
               {s.suspended !== undefined && (
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border flex-shrink-0 ${s.suspended ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border flex-shrink-0 ${s.suspended ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
                   {s.suspended ? "موقوف" : "نشط"}
                 </span>
               )}
-              <span className={`text-xs font-black text-[#003580] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
+              <span className={`text-xs font-black text-[#00736F] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
             </button>
             {open && <div className="px-3 pb-3">{details(item)}</div>}
           </div>
@@ -3468,7 +3468,7 @@ function CompactEntityList<T>({
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="w-full py-2.5 rounded-xl border border-dashed border-[#003580]/30 text-[#003580] text-xs font-black hover:bg-[#003580]/5 transition cursor-pointer"
+          className="w-full py-2.5 rounded-xl border border-dashed border-[#00736F]/30 text-[#00736F] text-xs font-black hover:bg-[#00736F]/5 transition cursor-pointer"
         >
           {showAll ? "عرض أقل ▲" : `عرض المزيد (${items.length - limit}) ▼`}
         </button>
@@ -3506,7 +3506,7 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[9px] font-black transition ${
+              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 grid place-items-center text-[11px] font-black transition ${
                 selected.includes(v.plate_number) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
               }`}>
                 {selected.includes(v.plate_number) && "✓"}
@@ -3514,12 +3514,12 @@ function VehiclesMultiSelect({ vehicles, selected, onChange }: { vehicles: Vehic
               <div className="min-w-0">
                 <div className="font-black text-foreground text-xs flex items-center gap-1.5">
                   <span>{v.plate_number}</span>
-                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold">🏢 {v.company_name}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[11px] font-bold">🏢 {v.company_name}</span>
                 </div>
-                <div className="text-[10px] text-muted-foreground truncate mt-0.5">{v.vehicle_type} · 👥 سعة {v.capacity} مقعد</div>
+                <div className="text-[11px] text-muted-foreground truncate mt-0.5">{v.vehicle_type} · 👥 سعة {v.capacity} مقعد</div>
               </div>
             </div>
-            <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${
+            <span className={`flex-shrink-0 text-[11px] font-black px-2 py-0.5 rounded-full ${
               v.status === "جاهزة" ? "bg-emerald-100 text-emerald-700" : v.status === "في رحلة" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
             }`}>{v.status}</span>
           </button>
@@ -3643,7 +3643,7 @@ function AddPrivateTripModal({ onClose, onAdd, guides, tourists = [] }: { onClos
                 {isAr ? "اختيار سائح مسجل (تعبئة الـ ID والبيانات تلقائياً):" : "Select Registered Tourist (Auto-fills ID & Info):"}
               </span>
               {touristId && (
-                <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                <span className="text-[11px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                   ID: {touristId}
                 </span>
               )}
@@ -3873,7 +3873,7 @@ function LocationMapPickerModal({
   return (
     <ModalShell title={`🗺️ تحديد مقر الشركة على الخريطة (${initialCity})`} onClose={onClose}>
       <div className="space-y-3 text-right">
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed font-semibold">
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-900 leading-relaxed font-semibold">
           📍 انقر في أي مكان داخل الخريطة أو اسحب العلامة لتحديد المقر بدقة، وسيتولد الرابط تلقائياً.
         </div>
 
@@ -3882,7 +3882,7 @@ function LocationMapPickerModal({
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(initialCity + ' ليبيا')}`}
             target="_blank"
             rel="noreferrer"
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition flex items-center gap-1 cursor-pointer"
+            className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-bold hover:bg-teal-700 transition flex items-center gap-1 cursor-pointer"
           >
             ↗️ فتح خرائط Google في نافذة جديدة
           </a>
@@ -4053,7 +4053,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
           {/* 1. البيانات الأساسية والعقد */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+            <div className="flex items-center gap-2 text-xs font-black text-[#00736F] border-b border-slate-200/80 pb-2">
               <span>🏢</span>
               <span>بيانات الشركة والتعاقد الرسمي</span>
             </div>
@@ -4070,7 +4070,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
                   onChange={(e) => setContractNo(e.target.value.replace(/\D/g, ""))}
                   placeholder="أرقام فقط (مثال: 123445)"
                   required
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none text-xs font-semibold shadow-xs"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#00736F] focus:ring-2 focus:ring-[#00736F]/15 outline-none text-xs font-semibold shadow-xs"
                 />
               </div>
 
@@ -4083,7 +4083,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
                 <select
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none shadow-xs"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#00736F] focus:ring-2 focus:ring-[#00736F]/15 outline-none shadow-xs"
                 >
                   <option value="طرابلس">طرابلس</option>
                   <option value="بنغازي">بنغازي</option>
@@ -4094,7 +4094,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
           {/* 2. الموقع الجغرافي وحساب الدخول */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+            <div className="flex items-center gap-2 text-xs font-black text-[#00736F] border-b border-slate-200/80 pb-2">
               <span>📍</span>
               <span>الموقع الجغرافي وبيانات الحساب</span>
             </div>
@@ -4105,7 +4105,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
                 <button
                   type="button"
                   onClick={() => setShowMapPicker(true)}
-                  className="text-xs font-bold text-[#003580] hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition shadow-xs"
+                  className="text-xs font-bold text-[#00736F] hover:bg-teal-100 flex items-center gap-1.5 cursor-pointer bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 transition shadow-xs"
                 >
                   🗺️ تحديد دقيق من الخريطة
                 </button>
@@ -4116,7 +4116,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="https://maps.google.com/?q=... أو اختر من الخريطة مباشرة"
                 required
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/15 outline-none text-xs font-semibold shadow-xs"
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#00736F] focus:ring-2 focus:ring-[#00736F]/15 outline-none text-xs font-semibold shadow-xs"
               />
               <div className="flex justify-between items-center mt-1.5">
                 {address && (address.startsWith("http") || address.includes("maps")) ? (
@@ -4124,7 +4124,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
                     href={address.startsWith("http") ? address : `https://${address}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1"
+                    className="text-[11px] text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1"
                   >
                     📍 معاينة رابط المقر في Google Maps ↗
                   </a>
@@ -4144,7 +4144,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
           {/* 3. سعة الأسطول وفترة التعاقد والحالة */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+            <div className="flex items-center gap-2 text-xs font-black text-[#00736F] border-b border-slate-200/80 pb-2">
               <span>📊</span>
               <span>الأسطول والتعاقد</span>
             </div>
@@ -4186,7 +4186,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
             <button
               type="submit"
               disabled={saving}
-              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+              className="px-6 h-11 rounded-xl bg-[#00736F] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
             >
               <span>{saving ? "جاري الحفظ..." : "حفظ واعتماد الشركة في المنظومة"}</span>
               <span>✓</span>
@@ -4306,7 +4306,7 @@ available_cars: totalV,
 
           {/* 1. البيانات الأساسية والعقد */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+            <div className="flex items-center gap-2 text-xs font-black text-[#00736F] border-b border-slate-200/80 pb-2">
               <span>🏢</span>
               <span>البيانات الرسمية والتعاقد</span>
             </div>
@@ -4315,7 +4315,7 @@ available_cars: totalV,
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
                   <span>رقم العقد الورقي (المعرف) 🔒</span>
-                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">رقم ثابت</span>
+                  <span className="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">رقم ثابت</span>
                 </label>
                 <input
                   type="text"
@@ -4330,7 +4330,7 @@ available_cars: totalV,
 
           {/* 2. بيانات التواصل والمدينة */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+            <div className="flex items-center gap-2 text-xs font-black text-[#00736F] border-b border-slate-200/80 pb-2">
               <span>📞</span>
               <span>بيانات التواصل والمقر الجغرافي</span>
             </div>
@@ -4345,7 +4345,7 @@ available_cars: totalV,
                 <select
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#003580] outline-none shadow-xs"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-bold text-right bg-white focus:border-[#00736F] outline-none shadow-xs"
                 >
                   <option value="طرابلس">طرابلس</option>
                   <option value="بنغازي">بنغازي</option>
@@ -4358,7 +4358,7 @@ available_cars: totalV,
                   <button
                     type="button"
                     onClick={() => setShowMapPicker(true)}
-                    className="text-xs font-bold text-[#003580] hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition shadow-xs"
+                    className="text-xs font-bold text-[#00736F] hover:bg-teal-100 flex items-center gap-1.5 cursor-pointer bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 transition shadow-xs"
                   >
                     🗺️ تحديد دقيق من الخريطة
                   </button>
@@ -4369,7 +4369,7 @@ available_cars: totalV,
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="https://maps.google.com/?q=..."
                   required
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#003580] outline-none text-xs font-semibold shadow-xs"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-right focus:border-[#00736F] outline-none text-xs font-semibold shadow-xs"
                 />
                 <div className="flex justify-between items-center mt-1.5">
                   {address && (address.startsWith("http") || address.includes("maps")) && (
@@ -4377,7 +4377,7 @@ available_cars: totalV,
                       href={address.startsWith("http") ? address : `https://${address}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[11px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1"
+                      className="text-[11px] text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1"
                     >
                       📍 معاينة رابط المقر في Google Maps ↗
                     </a>
@@ -4389,7 +4389,7 @@ available_cars: totalV,
 
           {/* 3. سعة الأسطول وفترة التعاقد والحالة */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-black text-[#003580] border-b border-slate-200/80 pb-2">
+            <div className="flex items-center gap-2 text-xs font-black text-[#00736F] border-b border-slate-200/80 pb-2">
               <span>📊</span>
               <span>الأسطول والتعاقد</span>
             </div>
@@ -4431,7 +4431,7 @@ available_cars: totalV,
             <button
               type="submit"
               disabled={saving}
-              className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+              className="px-6 h-11 rounded-xl bg-[#00736F] hover:bg-[#00224f] disabled:opacity-60 disabled:cursor-wait text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
             >
               <span>{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</span>
               <span>✓</span>
@@ -4518,7 +4518,7 @@ function GuideVerificationModal({
             <div className="flex-1 min-w-0">
               <div className="font-black text-[#0F172A] text-base truncate">{guide.full_name}</div>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                <span className="font-mono text-[11px] font-black text-[#003580] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
+                <span className="font-mono text-[11px] font-black text-[#00736F] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-lg">
                   🪪 {guide.license_number}
                 </span>
                 <Badge tone={guide.verification_status === "موثق" ? "green" : guide.verification_status === "مرفوض" ? "red" : "sun"}>
@@ -4538,7 +4538,7 @@ function GuideVerificationModal({
                 { label: "🟢 حالة التوافر", value: guide.availability_status || "متاح" },
               ].map((row) => (
                 <div key={row.label} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
-                  <div className="text-[10px] font-bold text-muted-foreground">{row.label}</div>
+                  <div className="text-[11px] font-bold text-muted-foreground">{row.label}</div>
                   <div className="text-[13px] font-black text-[#0F172A] mt-0.5 truncate" title={row.value || ""}>{row.value || "—"}</div>
                 </div>
               ))}
@@ -4546,7 +4546,7 @@ function GuideVerificationModal({
                 const expired = !!guide.license_expiry_date && guide.license_expiry_date <= new Date().toLocaleDateString("en-CA");
                 return (
                   <div className={`p-2.5 rounded-xl border min-w-0 ${!guide.license_expiry_date ? "bg-amber-50 border-amber-200" : expired ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-100"}`}>
-                    <div className="text-[10px] font-bold text-muted-foreground">📅 انتهاء الترخيص</div>
+                    <div className="text-[11px] font-bold text-muted-foreground">📅 انتهاء الترخيص</div>
                     <div className={`text-[13px] font-black mt-0.5 ${!guide.license_expiry_date ? "text-amber-700" : expired ? "text-red-700" : "text-[#0F172A]"}`}>
                       {guide.license_expiry_date ? `${guide.license_expiry_date}${expired ? " (منتهٍ)" : ""}` : "غير مسجل"}
                     </div>
@@ -4611,7 +4611,7 @@ function GuideVerificationModal({
             <button
               type="button"
               onClick={handleOpenInNewTab}
-              className="px-3.5 py-2 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs transition cursor-pointer flex items-center gap-1.5"
             >
               🔍 تكبير وعرض
             </button>
@@ -4739,7 +4739,7 @@ function TripItineraryTimelineEditor({
     <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E8E2D6] shadow-sm space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-base sm:text-lg font-black text-[#003580] flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-black text-[#00736F] flex items-center gap-2">
             <span>{mode === "days" ? "📅" : "⏱️"}</span>
             <span>{mode === "days" ? "محطات وجدول الأيام خطوة بخطوة" : "محطات وخط سير الرحلة خطوة بخطوة"}</span>
           </h3>
@@ -4766,7 +4766,7 @@ function TripItineraryTimelineEditor({
             type="button"
             onClick={() => setIsEditing(!isEditing)}
             className={`px-3 py-1.5 text-xs font-black rounded-xl border transition cursor-pointer flex items-center gap-1.5 ${
-              isEditing ? "bg-blue-600 text-white border-blue-700" : "bg-white text-[#003580] border-blue-200 hover:bg-blue-50"
+              isEditing ? "bg-teal-600 text-white border-teal-700" : "bg-white text-[#00736F] border-teal-200 hover:bg-teal-50"
             }`}
           >
             <span>{isEditing ? "✓ تم التعديل" : "✏️ تخصيص وتعديل المحطات"}</span>
@@ -4795,7 +4795,7 @@ function TripItineraryTimelineEditor({
 
           return (
             <div key={idx} className="relative flex items-start gap-3.5 pr-8">
-              <div className="absolute right-1 top-2 w-5 h-5 rounded-full bg-[#003580] text-white flex items-center justify-center text-[10px] font-black shadow-xs ring-4 ring-white">
+              <div className="absolute right-1 top-2 w-5 h-5 rounded-full bg-[#00736F] text-white flex items-center justify-center text-[11px] font-black shadow-xs ring-4 ring-white">
                 {idx + 1}
               </div>
 
@@ -4807,7 +4807,7 @@ function TripItineraryTimelineEditor({
                       {mode === "time" && <button
                         type="button"
                         onClick={() => handleDeleteStep(idx)}
-                        className="px-2 py-0.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-[10px] font-black transition cursor-pointer flex items-center gap-1"
+                        className="px-2 py-0.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-black transition cursor-pointer flex items-center gap-1"
                         title="حذف هذه المحطة من خط السير"
                       >
                         <span>🗑️</span>
@@ -4816,7 +4816,7 @@ function TripItineraryTimelineEditor({
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2">
-                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                        <label className="text-[11px] font-bold text-slate-500 block mb-0.5">
                           {mode === "days" ? `عنوان محطة اليوم ${idx + 1}` : `عنوان المحطة ${idx + 1}`}
                         </label>
                         <input
@@ -4828,7 +4828,7 @@ function TripItineraryTimelineEditor({
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                        <label className="text-[11px] font-bold text-slate-500 block mb-0.5">
                           {mode === "days" ? "اليوم" : "التوقيت"}
                         </label>
                         <input
@@ -4841,7 +4841,7 @@ function TripItineraryTimelineEditor({
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">شرح وتفاصيل المحطة</label>
+                      <label className="text-[11px] font-bold text-slate-500 block mb-0.5">شرح وتفاصيل المحطة</label>
                       <textarea
                         value={step.desc}
                         onChange={(e) => handleStepChange(idx, "desc", e.target.value)}
@@ -4866,7 +4866,7 @@ function TripItineraryTimelineEditor({
                           </button>
                         )}
                       </div>
-                      <span className="text-[11px] font-black text-[#003580] bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-xs">
+                      <span className="text-[11px] font-black text-[#00736F] bg-white px-2 py-0.5 rounded-md border border-teal-100 shadow-xs">
                         {step.time}
                       </span>
                     </div>
@@ -4874,7 +4874,7 @@ function TripItineraryTimelineEditor({
                       {displayDesc}
                     </p>
                     {isLunchStep && selectedRestaurant && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/70 border border-amber-300 text-amber-900 rounded-lg text-[10px] font-black">
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/70 border border-amber-300 text-amber-900 rounded-lg text-[11px] font-black">
                         <span>🍽️ المطعم المعتمد:</span>
                         <span>{selectedRestaurant.name} ({selectedRestaurant.city})</span>
                       </div>
@@ -5022,7 +5022,7 @@ function TripVehicleAndDriverSelector({
         </div>
         <div className="flex items-center gap-2">
           {startDate && (
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-black border border-blue-200">
+            <span className="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 text-[11px] font-black border border-teal-200">
               📅 تاريخ الانطلاق: {startDate}
             </span>
           )}
@@ -5045,7 +5045,7 @@ function TripVehicleAndDriverSelector({
           <div className="text-2xl">🚐</div>
           <div className="min-w-0 flex-1">
             <div className="font-black text-xs text-slate-900">15 راكب</div>
-            <div className="text-[10px] text-slate-500 font-bold truncate">فان سياحي مجهز (تويوتا/مرسيدس)</div>
+            <div className="text-[11px] text-slate-500 font-bold truncate">فان سياحي مجهز (تويوتا/مرسيدس)</div>
           </div>
           {busCapacity === 15 && <span className="text-emerald-600 text-sm font-black">✓</span>}
         </button>
@@ -5062,7 +5062,7 @@ function TripVehicleAndDriverSelector({
           <div className="text-2xl">🚌</div>
           <div className="min-w-0 flex-1">
             <div className="font-black text-xs text-slate-900">25 راكب</div>
-            <div className="text-[10px] text-slate-500 font-bold truncate">ميني باص سياحي (كوستر فاخر)</div>
+            <div className="text-[11px] text-slate-500 font-bold truncate">ميني باص سياحي (كوستر فاخر)</div>
           </div>
           {busCapacity === 25 && <span className="text-emerald-600 text-sm font-black">✓</span>}
         </button>
@@ -5079,13 +5079,13 @@ function TripVehicleAndDriverSelector({
           <div className="text-2xl">🚍</div>
           <div className="min-w-0 flex-1">
             <div className="font-black text-xs text-slate-900">50 راكب</div>
-            <div className="text-[10px] text-slate-500 font-bold truncate">حافلة سياحية كبرى VIP</div>
+            <div className="text-[11px] text-slate-500 font-bold truncate">حافلة سياحية كبرى VIP</div>
           </div>
           {busCapacity === 50 && <span className="text-emerald-600 text-sm font-black">✓</span>}
         </button>
       </div>
 
-      <div className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 text-[11px] text-blue-900 font-bold flex items-center gap-2">
+      <div className="p-2.5 bg-teal-50/80 rounded-xl border border-teal-200 text-[11px] text-teal-900 font-bold flex items-center gap-2">
         <span>🔒</span>
         <span>
           نظام حجز الأسطول: تظهر المركبات الشاغرة فقط في موعد الانطلاق، وبمجرد اختيار الحافلة تصبح محجوزة وغير متاحة لأي رحلة أخرى طوال مدة الرحلة.
@@ -5101,7 +5101,7 @@ function TripVehicleAndDriverSelector({
             <button
               type="button"
               onClick={() => setShowUnavailable(!showUnavailable)}
-              className="text-[10px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+              className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
             >
               {showUnavailable ? "إخفاء المركبات غير الشاغرة" : `عرض المركبات المشغولة (${unavailableVehicles.length})`}
             </button>
@@ -5134,40 +5134,40 @@ function TripVehicleAndDriverSelector({
                         {v.vehicle_type || "مركبة سياحية"}
                       </span>
                       <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                        <span className="text-[11px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
                           {cap} راكب
                         </span>
                         {isSelected ? (
-                          <span className="text-[10px] font-black text-white bg-emerald-700 px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] font-black text-white bg-emerald-700 px-1.5 py-0.5 rounded">
                             مختارة ومحجوزة ✓
                           </span>
                         ) : (
-                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                          <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                             شاغرة ومتاحة
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 font-bold">
+                    <div className="text-[11px] text-slate-500 font-bold">
                       لوحة: <span className="text-slate-800 font-black">{v.plate_number}</span> | {v.company_name || "شركة النقل"}
                     </div>
-                    <div className="mt-1 pt-1 border-t border-slate-100 text-[10px] flex items-center justify-between">
+                    <div className="mt-1 pt-1 border-t border-slate-100 text-[11px] flex items-center justify-between">
                       <span className="text-emerald-900 font-black truncate">
                         🚘 {assignedDriver ? assignedDriver.full_name : "سائق معتمد من الشركة"}
                       </span>
                       {assignedDriver?.phone_number && (
-                        <span className="text-slate-600 font-bold text-[9px] mr-1">
+                        <span className="text-slate-600 font-bold text-[11px] mr-1">
                           📞 {assignedDriver.phone_number}
                         </span>
                       )}
                     </div>
                     {vehicleAvailability.get(v.plate_number)?.warning && (
-                      <div className="mt-1 text-[9px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      <div className="mt-1 text-[11px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                         ⚠️ {vehicleAvailability.get(v.plate_number)?.warning}
                       </div>
                     )}
                     {isSelected && (
-                      <div className="mt-1 text-[9px] text-emerald-800 font-bold bg-emerald-100/60 px-2 py-0.5 rounded">
+                      <div className="mt-1 text-[11px] text-emerald-800 font-bold bg-emerald-100/60 px-2 py-0.5 rounded">
                         🔒 تصبح غير متاحة طوال فترة الرحلة لضمان التفرغ الكامل.
                       </div>
                     )}
@@ -5192,7 +5192,7 @@ function TripVehicleAndDriverSelector({
               {unavailableVehicles.map((v) => {
                 const info = vehicleAvailability.get(v.plate_number);
                 return (
-                  <div key={v.plate_number} className="p-2.5 rounded-xl border border-red-200 bg-red-50/50 text-[10px]">
+                  <div key={v.plate_number} className="p-2.5 rounded-xl border border-red-200 bg-red-50/50 text-[11px]">
                     <div className="flex justify-between font-bold text-slate-800">
                       <span>{v.vehicle_type} ({v.plate_number})</span>
                       <span className="text-red-700 font-black">غير شاغرة</span>
@@ -5448,15 +5448,15 @@ function TripRestaurantSelector({
                     <span className="font-black text-xs text-slate-900 truncate">{r.name}</span>
                   </div>
                   {isSelected ? (
-                    <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[10px] font-black rounded-md">مختار ✓</span>
+                    <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[11px] font-black rounded-md">مختار ✓</span>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-bold">+ تحديد</span>
+                    <span className="text-[11px] text-slate-400 font-bold">+ تحديد</span>
                   )}
                 </div>
-                <div className="text-[10px] text-orange-900 font-bold mb-0.5">
+                <div className="text-[11px] text-orange-900 font-bold mb-0.5">
                   {r.type || (isCafe ? "كافيه ومقهى" : "مطعم مأكولات")} · <span className="text-orange-700 font-black">مدينة {r.city}</span>
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium truncate">
+                <div className="text-[11px] text-slate-500 font-medium truncate">
                   📍 {r.address || "ليبيا"} | خصم {r.discount_percentage ?? 0}%
                 </div>
               </div>
@@ -5499,40 +5499,40 @@ function TripHotelSelector({
   }, [hotels, showAllCities, effectiveTargetCities]);
 
   return (
-    <div className="p-4 bg-sky-50/70 rounded-2xl border border-sky-200 space-y-3">
+    <div className="p-4 bg-teal-50/70 rounded-2xl border border-teal-200 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="font-black text-sky-950 text-sm flex items-center gap-1.5">
+        <div className="font-black text-teal-950 text-sm flex items-center gap-1.5">
           <span>🏨</span>
           <span>فنادق ومخيمات الإقامة (إمكانية اختيار أكثر من فندق وتصفية بالمدينة)</span>
         </div>
         <div className="flex items-center gap-2">
           {selectedHotelIds.length > 0 && (
-            <span className="px-2.5 py-0.5 rounded-full bg-sky-700 text-white text-[11px] font-black">
+            <span className="px-2.5 py-0.5 rounded-full bg-teal-700 text-white text-[11px] font-black">
               تم تحديد ({selectedHotelIds.length}) أماكن إقامة
             </span>
           )}
           <button
             type="button"
             onClick={() => setShowAllCities(!showAllCities)}
-            className="text-[11px] font-bold text-sky-700 hover:underline cursor-pointer"
+            className="text-[11px] font-bold text-teal-700 hover:underline cursor-pointer"
           >
             {showAllCities ? "تصفية بمدن الرحلة فقط" : "عرض كافة المدن"}
           </button>
         </div>
       </div>
 
-      <p className="text-[11px] text-sky-900/90 font-medium">
+      <p className="text-[11px] text-teal-900/90 font-medium">
         اختر مكان إقامة أو أكثر (فنادق، منتجعات، مخيمات صحراوية) للمبيت وتوزيع النزلاء أثناء الرحلة الأسبوعية.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
         {filteredHotels.length === 0 && (
-          <div className="col-span-full text-center text-xs text-sky-800 py-4 font-bold bg-sky-100/60 rounded-xl space-y-1">
+          <div className="col-span-full text-center text-xs text-teal-800 py-4 font-bold bg-teal-100/60 rounded-xl space-y-1">
             <p>لا توجد فنادق مسجلة في مدينة الوجهة المحددة ({targetCities.join("، ")}).</p>
             <button
               type="button"
               onClick={() => setShowAllCities(true)}
-              className="text-sky-700 underline font-black text-xs hover:text-sky-950"
+              className="text-teal-700 underline font-black text-xs hover:text-teal-950"
             >
               عرض فنادق كافة المدن
             </button>
@@ -5546,8 +5546,8 @@ function TripHotelSelector({
               onClick={() => onToggleHotel(h.id)}
               className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-3 ${
                 isSelected
-                  ? "bg-sky-50 border-sky-600 shadow-sm ring-2 ring-sky-500/20"
-                  : "bg-white border-slate-200 hover:border-sky-300"
+                  ? "bg-teal-50 border-teal-600 shadow-sm ring-2 ring-teal-500/20"
+                  : "bg-white border-slate-200 hover:border-teal-300"
               }`}
             >
               <img
@@ -5559,15 +5559,15 @@ function TripHotelSelector({
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="font-black text-xs text-slate-900 truncate">{h.name}</span>
                   {isSelected ? (
-                    <span className="px-1.5 py-0.5 bg-sky-700 text-white text-[10px] font-black rounded-md">مختار ✓</span>
+                    <span className="px-1.5 py-0.5 bg-teal-700 text-white text-[11px] font-black rounded-md">مختار ✓</span>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-bold">+ تحديد</span>
+                    <span className="text-[11px] text-slate-400 font-bold">+ تحديد</span>
                   )}
                 </div>
-                <div className="text-[10px] text-sky-900 font-bold mb-0.5">
-                  ⭐ {h.stars || 4} نجوم · <span className="text-sky-700 font-black">مدينة {h.city}</span>
+                <div className="text-[11px] text-teal-900 font-bold mb-0.5">
+                  ⭐ {h.stars || 4} نجوم · <span className="text-teal-700 font-black">مدينة {h.city}</span>
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium truncate">
+                <div className="text-[11px] text-slate-500 font-medium truncate">
                   📍 {h.address} | خصم {h.discount_percentage || 15}%
                 </div>
               </div>
@@ -5993,7 +5993,7 @@ function CreateTripModal({
                     ? "معالم ووجهات الرحلة اليومية (يمكنك اختيار معلَم أو أكثر) *"
                     : "معالم ووجهات الرحلة الأسبوعية (يمكنك اختيار معلَم أو أكثر) *"}
                 </label>
-                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 border border-teal-200">
                   {multiDestinations.length} {multiDestinations.length === 1 ? "معلم مختار" : "معالم مختارة"}
                 </span>
               </div>
@@ -6002,9 +6002,9 @@ function CreateTripModal({
                   <span className="text-slate-400 font-normal">اضغط على المعالم المسجلة بالأسفل لاختيارها (يمكنك اختيار معلَم واحد أو عدة معالم)...</span>
                 )}
                 {multiDestinations.map(d => (
-                  <span key={d} className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-blue-200 shadow-2xs">
+                  <span key={d} className="bg-teal-100 text-teal-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-teal-200 shadow-2xs">
                     <span>🏛️ {d}</span>
-                    <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-600 font-black cursor-pointer">×</button>
+                    <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-teal-500 hover:text-red-600 font-black cursor-pointer">×</button>
                   </span>
                 ))}
               </div>
@@ -6016,7 +6016,7 @@ function CreateTripModal({
               <label className="text-[11px] font-bold text-slate-600 block">
                 اضغط لاختيار أو إلغاء المعالم السياحية المسجلة في المنصة:
               </label>
-              <span className="text-[10px] text-slate-400">يمكن تحديد أكثر من معلَم سياحي</span>
+              <span className="text-[11px] text-slate-400">يمكن تحديد أكثر من معلَم سياحي</span>
             </div>
             <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-white rounded-xl border border-slate-200">
               {(attractions || []).length === 0 ? (
@@ -6031,11 +6031,11 @@ function CreateTripModal({
                       type="button"
                       onClick={() => handleMultiDestToggle(aName)}
                       className={`px-3 py-1.5 rounded-xl border text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
-                        isSelected ? "bg-[#003580] text-white border-[#003580] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
+                        isSelected ? "bg-[#00736F] text-white border-[#00736F] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
                       }`}
                     >
                       <span>📍 {aName}</span>
-                      {a.city && a.city !== aName && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                      {a.city && a.city !== aName && <span className={`text-[11px] ${isSelected ? "text-teal-200" : "text-slate-400"}`}>({a.city})</span>}
                       {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
                     </button>
                   );
@@ -6084,13 +6084,13 @@ function CreateTripModal({
 
         {/* 2. Schedule Selector */}
         {isDaily ? (
-          <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200 space-y-2.5">
+          <div className="p-4 bg-teal-50/80 rounded-2xl border border-teal-200 space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="font-black text-blue-900 text-xs flex items-center gap-1.5">
+              <label className="font-black text-teal-900 text-xs flex items-center gap-1.5">
                 <span>📅</span>
                 <span>جدول أيام الانطلاق الأسبوعية (اختر يوماً واحداً أو يومين):</span>
               </label>
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[11px] font-black">
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-200 text-teal-900 text-[11px] font-black">
                 {recurringDays.length} يوم مختار ({recurringDays.join(" و ")})
               </span>
             </div>
@@ -6105,17 +6105,17 @@ function CreateTripModal({
                     onClick={() => toggleDailyDay(d)}
                     className={`py-2 rounded-xl text-xs font-black border transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
                       isSelected
-                        ? "bg-blue-600 text-white border-blue-700 shadow-sm ring-2 ring-blue-500/20"
-                        : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
+                        ? "bg-teal-600 text-white border-teal-700 shadow-sm ring-2 ring-teal-500/20"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-teal-300"
                     }`}
                   >
                     <span>{d}</span>
-                    {isSelected && <span className="text-[10px]">✓</span>}
+                    {isSelected && <span className="text-[11px]">✓</span>}
                   </button>
                 );
               })}
             </div>
-            <p className="text-[10px] text-blue-700 font-bold">
+            <p className="text-[11px] text-teal-700 font-bold">
               * النظام يتيح للرحلة اليومية أن تنطلق في يوم واحد أو يومين ثابتين كل أسبوع (مثال: الأحد والأربعاء).
             </p>
           </div>
@@ -6213,7 +6213,7 @@ function CreateTripModal({
           <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
             <label className="text-xs font-bold text-slate-800 block">
               🧭 المرشد السياحي المعين للرحلة {isDaily && !showAllGuides && (
-                <span className="text-blue-700 font-black">
+                <span className="text-teal-700 font-black">
                   (مفلتر تلقائياً وفقاً لأيام عمل المرشد لتناسب أيام الرحلة: {recurringDays.join(" و ")})
                 </span>
               )}:
@@ -6222,7 +6222,7 @@ function CreateTripModal({
               <button
                 type="button"
                 onClick={() => setShowAllGuides(!showAllGuides)}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 cursor-pointer transition"
+                className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 cursor-pointer transition"
               >
                 {showAllGuides ? "🔍 إعادة تفعيل فلترة أيام العمل فقط" : "👁️ عرض كافة المرشدين"}
               </button>
@@ -6236,7 +6236,7 @@ function CreateTripModal({
                 <button
                   type="button"
                   onClick={() => setShowAllGuides(true)}
-                  className="text-xs text-blue-700 font-black hover:underline cursor-pointer"
+                  className="text-xs text-teal-700 font-black hover:underline cursor-pointer"
                 >
                   اضغط هنا لعرض كافة المرشدين وتجاوز الفلترة
                 </button>
@@ -6271,25 +6271,25 @@ function CreateTripModal({
                       <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
                       {isSelected && <span className="text-amber-600 text-xs font-black">✅</span>}
                     </div>
-                    {g.title && <div className="text-[10px] text-blue-700 font-bold truncate">{g.title}</div>}
-                    <div className="text-[9px] text-slate-500 font-bold">
+                    {g.title && <div className="text-[11px] text-teal-700 font-bold truncate">{g.title}</div>}
+                    <div className="text-[11px] text-slate-500 font-bold">
                       رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
                     </div>
-                    <div className="text-[9px] text-slate-600 font-bold mt-0.5 flex items-center gap-1">
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5 flex items-center gap-1">
                       <span>📅 أيام العمل:</span>
                       <span className="text-slate-800 font-black">{daysLabel}</span>
                     </div>
-                    <div className="text-[9px] text-emerald-700 font-black mt-0.5">
+                    <div className="text-[11px] text-emerald-700 font-black mt-0.5">
                       {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                     </div>
                     {g.places && g.places.length > 0 && (
-                      <div className="text-[9px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                      <div className="text-[11px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
                         <span>🏛️ المعالم المعتمدة: </span>
                         <span>{g.places.map((p: any) => p.place_name || p.name).join("، ")}</span>
                       </div>
                     )}
                     {multiDestinations.length > 0 && (g.places || []).some((p: any) => multiDestinations.includes(p.place_name || p.name)) && (
-                      <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-black">
+                      <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px] font-black">
                         <span>🌟</span>
                         <span>خبير بمعالم هذه الرحلة</span>
                       </div>
@@ -6521,7 +6521,7 @@ function DailyTripEditModal({
               <label className="text-xs font-bold text-slate-800">
                 المعالم والوجهات السياحية للرحلة اليومية (يمكنك اختيار معلَم أو أكثر) *
               </label>
-              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 border border-teal-200">
                 {multiDestinations.length} {multiDestinations.length === 1 ? "معلم مختار" : "معالم مختارة"}
               </span>
             </div>
@@ -6530,9 +6530,9 @@ function DailyTripEditModal({
                 <span className="text-slate-400 font-normal">اضغط على المعالم بالأسفل لاختيارها (يمكنك اختيار معلَم واحد أو عدة معالم)...</span>
               )}
               {multiDestinations.map(d => (
-                <span key={d} className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-blue-200 shadow-2xs">
+                <span key={d} className="bg-teal-100 text-teal-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 border border-teal-200 shadow-2xs">
                   <span>🏛️ {d}</span>
-                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-600 font-black cursor-pointer">×</button>
+                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-teal-500 hover:text-red-600 font-black cursor-pointer">×</button>
                 </span>
               ))}
             </div>
@@ -6545,7 +6545,7 @@ function DailyTripEditModal({
             <label className="text-[11px] font-bold text-slate-600 block">
               اضغط لاختيار أو إلغاء المعالم السياحية المسجلة في المنصة للرحلة اليومية:
             </label>
-            <span className="text-[10px] text-slate-400">يمكن تحديد أكثر من معلَم سياحي</span>
+            <span className="text-[11px] text-slate-400">يمكن تحديد أكثر من معلَم سياحي</span>
           </div>
           <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-white rounded-xl border border-slate-200">
             {(attractions || []).length === 0 ? (
@@ -6560,11 +6560,11 @@ function DailyTripEditModal({
                     type="button"
                     onClick={() => handleMultiDestToggle(aName)}
                     className={`px-3 py-1.5 rounded-xl border text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
-                      isSelected ? "bg-[#003580] text-white border-[#003580] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
+                      isSelected ? "bg-[#00736F] text-white border-[#00736F] shadow-xs" : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
                   >
                     <span>📍 {aName}</span>
-                    {a.city && a.city !== aName && <span className={`text-[10px] ${isSelected ? "text-blue-200" : "text-slate-400"}`}>({a.city})</span>}
+                    {a.city && a.city !== aName && <span className={`text-[11px] ${isSelected ? "text-teal-200" : "text-slate-400"}`}>({a.city})</span>}
                     {isSelected && <span className="mr-1 text-emerald-300 font-black">✓</span>}
                   </button>
                 );
@@ -6575,8 +6575,8 @@ function DailyTripEditModal({
         <Field label="السعر (د.ل)" type="number" value={price} onChange={setPrice} />
 
         {/* 1 or 2 Days Selector */}
-        <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-          <div className="font-black text-blue-900 text-xs flex justify-between">
+        <div className="p-3 bg-teal-50 rounded-xl border border-teal-200 space-y-2">
+          <div className="font-black text-teal-900 text-xs flex justify-between">
             <span>📅 جدول الأيام (يوم واحد أو يومين أسبوعياً):</span>
             <span className="text-emerald-700">المختار: {recurringDays.join(" و ")}</span>
           </div>
@@ -6587,7 +6587,7 @@ function DailyTripEditModal({
                 type="button"
                 onClick={() => toggleDailyDay(d)}
                 className={`py-1.5 rounded-lg text-xs font-black border transition ${
-                  recurringDays.includes(d) ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-700 border-slate-200"
+                  recurringDays.includes(d) ? "bg-teal-600 text-white border-teal-700" : "bg-white text-slate-700 border-slate-200"
                 }`}
               >
                 {d}
@@ -6631,7 +6631,7 @@ function DailyTripEditModal({
           <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
             <label className="text-xs font-bold text-slate-800 block">
               🧭 المرشد السياحي المعين للرحلة {!showAllGuides && (
-                <span className="text-blue-700 font-black">
+                <span className="text-teal-700 font-black">
                   (مفلتر تلقائياً وفقاً لأيام عمل المرشد: {recurringDays.join(" و ")})
                 </span>
               )}:
@@ -6639,7 +6639,7 @@ function DailyTripEditModal({
             <button
               type="button"
               onClick={() => setShowAllGuides(!showAllGuides)}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 cursor-pointer transition"
+              className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 cursor-pointer transition"
             >
               {showAllGuides ? "🔍 إعادة تفعيل فلترة أيام العمل فقط" : "👁️ عرض كافة المرشدين"}
             </button>
@@ -6652,7 +6652,7 @@ function DailyTripEditModal({
                 <button
                   type="button"
                   onClick={() => setShowAllGuides(true)}
-                  className="text-xs text-blue-700 font-black hover:underline cursor-pointer"
+                  className="text-xs text-teal-700 font-black hover:underline cursor-pointer"
                 >
                   اضغط هنا لعرض كافة المرشدين وتجاوز الفلترة
                 </button>
@@ -6686,15 +6686,15 @@ function DailyTripEditModal({
                       <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
                       {guide === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
                     </div>
-                    {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
-                    <div className="text-[9px] text-slate-500 font-bold">
+                    {g.title && <div className="text-[11px] text-primary font-bold truncate">{g.title}</div>}
+                    <div className="text-[11px] text-slate-500 font-bold">
                       رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
                     </div>
-                    <div className="text-[9px] text-slate-600 font-bold mt-0.5 flex items-center gap-1">
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5 flex items-center gap-1">
                       <span>📅 أيام العمل:</span>
                       <span className="text-slate-800 font-black">{daysLabel}</span>
                     </div>
-                    <div className="text-[9px] text-emerald-700 font-black mt-0.5">
+                    <div className="text-[11px] text-emerald-700 font-black mt-0.5">
                       {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                     </div>
                   </div>
@@ -6947,23 +6947,23 @@ function WeeklyTripEditModal({
               <label className="text-xs font-bold text-slate-800">
                 الوجهات والمعالم السياحية للرحلة الأسبوعية (يمكنك اختيار معلَم أو أكثر)
               </label>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+              <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 border border-teal-200">
                 {multiDestinations.length} {multiDestinations.length === 1 ? "معلم مختار" : "معالم مختارة"}
               </span>
             </div>
             <div className="w-full min-h-10 px-3 py-2 rounded-xl border border-slate-200 bg-white flex flex-wrap gap-1">
-              {multiDestinations.length === 0 && <span className="text-slate-400 text-[10px]">اختر معلماً أو أكثر من المعالم المسجلة أدناه...</span>}
+              {multiDestinations.length === 0 && <span className="text-slate-400 text-[11px]">اختر معلماً أو أكثر من المعالم المسجلة أدناه...</span>}
               {multiDestinations.map(d => (
-                <span key={d} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <span key={d} className="bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1">
                   🏛️ {d}
-                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-blue-500 hover:text-red-500 font-bold mr-1">×</button>
+                  <button type="button" onClick={() => handleMultiDestToggle(d)} className="text-teal-500 hover:text-red-500 font-bold mr-1">×</button>
                 </span>
               ))}
             </div>
           </div>
         </div>
         <div className="space-y-1">
-          <div className="text-[10px] text-slate-500 font-bold">
+          <div className="text-[11px] text-slate-500 font-bold">
             اختر المعالم السياحية من منصة دلني (تم اختيار {multiDestinations.length} معالم):
           </div>
           <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50">
@@ -6979,7 +6979,7 @@ function WeeklyTripEditModal({
                     type="button"
                     onClick={() => handleMultiDestToggle(name)}
                     className={`px-2.5 py-1 rounded-lg border text-[11px] font-black transition cursor-pointer ${
-                      isSelected ? "bg-[#003580] text-white border-[#003580]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+                      isSelected ? "bg-[#00736F] text-white border-[#00736F]" : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
                   >
                     🏛️ {name} {attr.city && attr.city !== name ? `(${attr.city})` : ""} {isSelected && "✓"}
@@ -7071,21 +7071,21 @@ function WeeklyTripEditModal({
                     <div className="font-black text-xs text-slate-900 truncate">{g.full_name}</div>
                     {guide === g.license_number && <div className="text-amber-600 text-xs">✅</div>}
                   </div>
-                  {g.title && <div className="text-[10px] text-primary font-bold truncate">{g.title}</div>}
-                  <div className="text-[9px] text-slate-500 font-bold">
+                  {g.title && <div className="text-[11px] text-primary font-bold truncate">{g.title}</div>}
+                  <div className="text-[11px] text-slate-500 font-bold">
                     رخصة: {g.license_number} | خبرة {g.years_of_experience} سنوات
                   </div>
-                  <div className="text-[9px] text-emerald-700 font-black">
+                  <div className="text-[11px] text-emerald-700 font-black">
                     {(g.daily_rate || g.price_per_day) ? `${g.daily_rate || g.price_per_day} د.ل / اليوم` : "السعر غير محدد"}
                   </div>
                   {g.places && g.places.length > 0 && (
-                    <div className="text-[9px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                    <div className="text-[11px] text-amber-900 font-bold mt-1 bg-amber-50 p-1 rounded-lg border border-amber-200">
                       <span>🏛️ المعالم المعتمدة: </span>
                       <span>{g.places.map((p: any) => p.place_name || p.name).join("، ")}</span>
                     </div>
                   )}
                   {multiDestinations.length > 0 && (g.places || []).some((p: any) => multiDestinations.includes(p.place_name || p.name)) && (
-                    <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-black">
+                    <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px] font-black">
                       <span>🌟</span>
                       <span>خبير بمعالم هذه الرحلة</span>
                     </div>
@@ -7448,14 +7448,14 @@ function EvaluatePrivateTripModal({
 
           {/* Live Vehicle Preview Card with Inspect Modal Trigger */}
           {selectedVehicle && (
-            <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between gap-3 flex-wrap mt-2">
+            <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between gap-3 flex-wrap mt-2">
               <div className="flex items-center gap-3">
-                <span className="p-2 rounded-xl bg-blue-100 text-blue-900 text-xl">🚍</span>
+                <span className="p-2 rounded-xl bg-teal-100 text-teal-900 text-xl">🚍</span>
                 <div>
-                  <div className="font-black text-xs text-blue-950">
+                  <div className="font-black text-xs text-teal-950">
                     {selectedVehicle.vehicle_type} — {selectedVehicle.company_name}
                   </div>
-                  <div className="text-[11px] text-blue-800 flex items-center gap-2 mt-0.5 font-bold">
+                  <div className="text-[11px] text-teal-800 flex items-center gap-2 mt-0.5 font-bold">
                     <span className="font-mono">لوحة: {selectedVehicle.plate_number}</span>
                     <span>•</span>
                     <span>سعة {selectedVehicle.capacity || 25} راكب</span>
@@ -7476,7 +7476,7 @@ function EvaluatePrivateTripModal({
                     vehicle_status: selectedVehicle.status || "جاهزة",
                   });
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs cursor-pointer shadow-xs transition flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs cursor-pointer shadow-xs transition flex items-center gap-1.5"
               >
                 <span>👁️</span>
                 <span>فحص مواصفات وتفاصيل المركبة</span>
@@ -7490,13 +7490,13 @@ function EvaluatePrivateTripModal({
         )}
 
         {/* Multi-Hotel Selection - Admin Duty (M:N Relational Table: hotels_trip_private) */}
-        <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 space-y-2">
+        <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/40 space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-blue-900 block flex items-center gap-1.5">
+            <label className="text-xs font-black text-teal-900 block flex items-center gap-1.5">
               <span>🏨</span>
               <span>تخصيص أماكن الإقامة والفنادق المقترحة (يمكن اختيار أكثر من فندق):</span>
             </label>
-            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
               {selectedHotelIds.length} فنادق مختارة
             </span>
           </div>
@@ -7518,20 +7518,20 @@ function EvaluatePrivateTripModal({
                   }}
                   className={`p-2 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
                     isSelected
-                      ? "bg-white border-blue-600 shadow-xs ring-1 ring-blue-600 font-bold"
+                      ? "bg-white border-teal-600 shadow-xs ring-1 ring-teal-600 font-bold"
                       : "bg-white/80 border-slate-200 hover:bg-white text-slate-700"
                   }`}
                 >
                   <div className="min-w-0 pr-1">
                     <div className="truncate font-black text-[11px] text-slate-900">{h.name}</div>
-                    <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <div className="text-[11px] text-slate-500 flex items-center gap-1">
                       <span>📍 {h.city}</span>
                       <span>•</span>
                       <span>{"★".repeat(h.stars || 4)}</span>
                     </div>
                   </div>
-                  <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-black shrink-0 ${
-                    isSelected ? "bg-blue-600 text-white" : "border border-slate-300"
+                  <span className={`w-4 h-4 rounded flex items-center justify-center text-[11px] font-black shrink-0 ${
+                    isSelected ? "bg-teal-600 text-white" : "border border-slate-300"
                   }`}>
                     {isSelected ? "✓" : ""}
                   </span>
@@ -7851,15 +7851,15 @@ function HotelModal({
         )}
 
         {/* Notice Banner */}
-        <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs text-[#003580] flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-teal-50/90 border border-teal-200 text-xs text-[#00736F] flex items-center justify-between gap-3">
           <div className="space-y-0.5">
             <span className="font-black text-sm block">🏨 إدارة عقد وبيانات مكان الإقامة:</span>
-            <p className="text-[11px] text-blue-900/90 font-medium">
+            <p className="text-[11px] text-teal-900/90 font-medium">
               يبدأ العقد تلقائياً من يوم التسجيل.
             </p>
           </div>
           {discountPct !== "" && (
-            <span className="px-2.5 py-1 rounded-xl bg-[#003580] text-white text-[11px] font-black shrink-0">
+            <span className="px-2.5 py-1 rounded-xl bg-[#00736F] text-white text-[11px] font-black shrink-0">
               خصم {discountPct}% معتمد
             </span>
           )}
@@ -7879,7 +7879,7 @@ function HotelModal({
             className={`w-full h-11 px-3.5 rounded-xl border text-xs font-bold text-right transition ${
               !isNew
                 ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
-                : "bg-white text-slate-900 border-slate-200 focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/10"
+                : "bg-white text-slate-900 border-slate-200 focus:border-[#00736F] focus:ring-2 focus:ring-[#00736F]/10"
             }`}
           />
         </div>
@@ -7890,7 +7890,7 @@ function HotelModal({
             <label className="text-xs font-black text-slate-800 block">
               📑 فترة العقد وحالة النشاط بالمنصة:
             </label>
-            <span className="text-[10px] font-bold text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500">
               * البداية تلقائياً من يوم التسجيل
             </span>
           </div>
@@ -7907,7 +7907,7 @@ function HotelModal({
                   readOnly
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-800 text-right outline-none cursor-default font-mono select-none"
                 />
-                <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
+                <span className="absolute left-2.5 top-2.5 text-[11px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
                   تلقائي
                 </span>
               </div>
@@ -7925,7 +7925,7 @@ function HotelModal({
                   setErrorMsg(null);
                 }}
                 min={minFutureDate(hotel?.contract_end_date)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-[#003580] font-mono focus:ring-1 focus:ring-[#003580]"
+                className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 text-right outline-none focus:border-[#00736F] font-mono focus:ring-1 focus:ring-[#00736F]"
               />
             </div>
 
@@ -7977,12 +7977,12 @@ function HotelModal({
                   onClick={() => setPropertyType(opt.id)}
                   className={`p-3 rounded-2xl border cursor-pointer transition text-center space-y-1 select-none ${
                     isSelected
-                      ? "border-2 border-[#003580] bg-blue-50/80 shadow-sm"
+                      ? "border-2 border-[#00736F] bg-teal-50/80 shadow-sm"
                       : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
                 >
                   <div className="text-sm font-black text-slate-900">{opt.label}</div>
-                  <div className="text-[10px] text-slate-500 leading-tight">{opt.desc}</div>
+                  <div className="text-[11px] text-slate-500 leading-tight">{opt.desc}</div>
                 </div>
               );
             })}
@@ -7999,7 +7999,7 @@ function HotelModal({
             <select
               value={city}
               onChange={e => setCity(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#00736F] bg-white"
             >
               <option value="">اختر المدينة</option>
               {libyanCities.map(c => <option key={c} value={c}>{c}</option>)}
@@ -8010,7 +8010,7 @@ function HotelModal({
             <select
               value={stars}
               onChange={e => setStars(Number(e.target.value))}
-              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white"
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#00736F] bg-white"
             >
               <option value={0}>اختر التصنيف</option>
               <option value={5}>⭐⭐⭐⭐⭐ 5 نجوم (فاخر)</option>
@@ -8040,7 +8040,7 @@ function HotelModal({
                   const digits = e.target.value.replace(/[^0-9٠-٩]/g, "").replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
                   setDiscountPct(digits === "" ? "" : Math.min(100, Number(digits)));
                 }}
-                className="w-full h-10 ps-3 pe-9 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
+                className="w-full h-10 ps-3 pe-9 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#00736F] bg-white font-mono"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-black pointer-events-none">%</span>
             </div>
@@ -8059,14 +8059,14 @@ function HotelModal({
               value={mapsUrl}
               onChange={e => setMapsUrl(e.target.value)}
               placeholder="https://maps.google.com/?q=..."
-              className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-[#003580] text-right font-mono"
+              className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs outline-none focus:border-[#00736F] text-right font-mono"
             />
             {mapsUrl && (
               <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 h-10 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-blue-700"
+                className="px-3 h-10 bg-teal-600 text-white rounded-xl text-xs font-black flex items-center shrink-0 hover:bg-teal-700"
               >
                 🗺️ فتح ↗
               </a>
@@ -8089,13 +8089,13 @@ function HotelModal({
                   onClick={() => toggleAmenity(am.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
                     isChecked
-                      ? "bg-[#003580] text-white border-[#003580] shadow-xs"
+                      ? "bg-[#00736F] text-white border-[#00736F] shadow-xs"
                       : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                   }`}
                 >
                   <span>{am.icon}</span>
                   <span>{am.id}</span>
-                  {isChecked && <span className="text-[10px]">✓</span>}
+                  {isChecked && <span className="text-[11px]">✓</span>}
                 </button>
               );
             })}
@@ -8112,7 +8112,7 @@ function HotelModal({
             onChange={e => { setDescription(e.target.value); setErrorMsg(null); }}
             rows={2}
             placeholder="اكتب نبذة تعريفية عن المنشأة، موقعها، الغرف والأجنحة الفاخرة، والإطلالات..."
-            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-right outline-none focus:border-[#003580] leading-relaxed"
+            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-right outline-none focus:border-[#00736F] leading-relaxed"
           />
         </div>
 
@@ -8122,7 +8122,7 @@ function HotelModal({
             <label className="text-xs font-black text-slate-900 block">
               🖼️ معرض الصور الخمسة لمكان الإقامة (تظهر في الكرت والمعاينة):
             </label>
-            <span className="text-[10px] text-slate-500 font-bold">5 صور مطلوبة *</span>
+            <span className="text-[11px] text-slate-500 font-bold">5 صور مطلوبة *</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -8148,7 +8148,7 @@ function HotelModal({
           <button
             type="submit"
             disabled={saving}
-            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
+            className="px-6 h-11 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
             <span>{saving ? "جارٍ الحفظ..." : "حفظ مكان الإقامة بالدليل ✓"}</span>
           </button>
@@ -8390,7 +8390,7 @@ function RestaurantModal({
             className={`w-full h-11 px-3.5 rounded-xl border text-xs font-bold text-right transition ${
               !isNew
                 ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
-                : "bg-white text-slate-900 border-slate-200 focus:border-[#003580] focus:ring-2 focus:ring-[#003580]/10"
+                : "bg-white text-slate-900 border-slate-200 focus:border-[#00736F] focus:ring-2 focus:ring-[#00736F]/10"
             }`}
           />
         </div>
@@ -8401,7 +8401,7 @@ function RestaurantModal({
             <label className="text-xs font-black text-slate-800 block">
               📑 فترة العقد وحالة النشاط بالمنصة:
             </label>
-            <span className="text-[10px] font-bold text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500">
               * البداية تلقائياً من يوم التسجيل
             </span>
           </div>
@@ -8418,7 +8418,7 @@ function RestaurantModal({
                   readOnly
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-100 text-xs font-bold text-slate-800 text-right outline-none cursor-default font-mono select-none"
                 />
-                <span className="absolute left-2.5 top-2.5 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
+                <span className="absolute left-2.5 top-2.5 text-[11px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-black">
                   تلقائي
                 </span>
               </div>
@@ -8493,7 +8493,7 @@ function RestaurantModal({
                   }`}
                 >
                   <div className="text-sm font-black text-slate-900">{opt.label}</div>
-                  <div className="text-[10px] text-slate-500 leading-tight">{opt.desc}</div>
+                  <div className="text-[11px] text-slate-500 leading-tight">{opt.desc}</div>
                 </div>
               );
             })}
@@ -8535,7 +8535,7 @@ function RestaurantModal({
                   const digits = e.target.value.replace(/[^0-9٠-٩]/g, "").replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
                   setDiscountPct(digits === "" ? "" : Math.min(100, Number(digits)));
                 }}
-                className="w-full h-10 ps-3 pe-9 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#003580] bg-white font-mono"
+                className="w-full h-10 ps-3 pe-9 rounded-xl border border-slate-200 text-xs font-bold text-right outline-none focus:border-[#00736F] bg-white font-mono"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-black pointer-events-none">%</span>
             </div>
@@ -8590,7 +8590,7 @@ function RestaurantModal({
                 >
                   <span>{f.icon}</span>
                   <span>{f.id}</span>
-                  {isChecked && <span className="text-[10px]">✓</span>}
+                  {isChecked && <span className="text-[11px]">✓</span>}
                 </button>
               );
             })}
@@ -8617,7 +8617,7 @@ function RestaurantModal({
             <label className="text-xs font-black text-slate-900 block">
               🖼️ معرض الصور الخمسة للمنشأة (تظهر في الكرت والمعاينة):
             </label>
-            <span className="text-[10px] text-slate-500 font-bold">5 صور مطلوبة *</span>
+            <span className="text-[11px] text-slate-500 font-bold">5 صور مطلوبة *</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -8643,7 +8643,7 @@ function RestaurantModal({
           <button
             type="submit"
             disabled={saving}
-            className="px-6 h-11 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
+            className="px-6 h-11 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs shadow-md cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5"
           >
             <span>{saving ? "جارٍ الحفظ..." : "حفظ المطعم / المقهى ✓"}</span>
           </button>
@@ -8826,7 +8826,7 @@ function AttractionModal({
         <div className="pt-3 border-t border-border space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-black text-foreground block">📍 الإحداثيات الجغرافية *</label>
-            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+            <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
               ✓ يُولّد رابط الخريطة تلقائياً
             </span>
           </div>
@@ -8910,7 +8910,7 @@ function TouristDetailsModal({
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#003580] text-white flex items-center justify-center text-lg font-black shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#00736F] text-white flex items-center justify-center text-lg font-black shadow-xs">
                 {tourist.full_name ? tourist.full_name[0] : "س"}
               </div>
               <div>
@@ -8920,18 +8920,18 @@ function TouristDetailsModal({
                 </div>
               </div>
             </div>
-            <span className="font-mono text-xs font-black px-3 py-1 rounded-xl bg-blue-100 text-blue-900 border border-blue-200">
+            <span className="font-mono text-xs font-black px-3 py-1 rounded-xl bg-teal-100 text-teal-900 border border-teal-200">
               جواز السفر / ID: {tourist.tourist_id}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-              <span className="text-slate-400 block text-[10px] font-bold">البريد الإلكتروني</span>
+              <span className="text-slate-400 block text-[11px] font-bold">البريد الإلكتروني</span>
               <span className="font-bold text-slate-800">{tourist.email || "غير مسجل"}</span>
             </div>
             <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-              <span className="text-slate-400 block text-[10px] font-bold">رقم الهاتف</span>
+              <span className="text-slate-400 block text-[11px] font-bold">رقم الهاتف</span>
               <span className="font-mono font-bold text-slate-800" dir="ltr">{tourist.phone_number || "غير مسجل"}</span>
             </div>
           </div>
@@ -8962,7 +8962,7 @@ function TouristDetailsModal({
               {/* Daily Bookings */}
               {dailyBookings.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-xs font-black text-blue-900">الرحلات اليومية:</div>
+                  <div className="text-xs font-black text-teal-900">الرحلات اليومية:</div>
                   <div className="overflow-x-auto border border-border rounded-xl">
                     <table className="w-full text-xs text-right">
                       <thead className="bg-slate-50 border-b border-border text-[11px] text-slate-500">
@@ -8978,7 +8978,7 @@ function TouristDetailsModal({
                       <tbody className="divide-y divide-border">
                         {dailyBookings.map((b: any) => (
                           <tr key={b.booking_daily_id} className="hover:bg-slate-50/50">
-                            <td className="p-2.5 font-mono font-bold text-blue-800">{b.booking_daily_id}</td>
+                            <td className="p-2.5 font-mono font-bold text-teal-800">{b.booking_daily_id}</td>
                             <td className="p-2.5 font-bold text-slate-900">{b.trip_title || b.daily_trip_id}</td>
                             <td className="p-2.5 text-slate-500">
                               {b.booking_date ? new Date(b.booking_date).toLocaleDateString('ar-LY') : "-"}
@@ -8986,7 +8986,7 @@ function TouristDetailsModal({
                             <td className="p-2.5 text-center font-black">{b.number_of_seats} مقاعد</td>
                             <td className="p-2.5 text-center font-black text-emerald-700">{b.total_price} د.ل</td>
                             <td className="p-2.5 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
                                 b.payment_status === "paid" || b.payment_status === "مسدد"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : "bg-amber-100 text-amber-800"
@@ -9029,7 +9029,7 @@ function TouristDetailsModal({
                             <td className="p-2.5 text-center font-black">{b.number_of_seats} مقاعد</td>
                             <td className="p-2.5 text-center font-black text-emerald-700">{b.total_price} د.ل</td>
                             <td className="p-2.5 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
                                 b.payment_status === "paid" || b.payment_status === "مسدد"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : "bg-amber-100 text-amber-800"
@@ -9065,7 +9065,7 @@ function TouristDetailsModal({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-slate-900">{r.target_name || "عنصر سياحي"}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-bold">
                         {r.target_type}
                       </span>
                     </div>
@@ -9073,7 +9073,7 @@ function TouristDetailsModal({
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className="text-amber-500 font-bold">{"★".repeat(Math.max(1, Math.min(5, Number(r.stars_rating) || 1)))}</span>
-                    <span className="text-[10px] text-slate-400">{r.created_at || ""}</span>
+                    <span className="text-[11px] text-slate-400">{r.created_at || ""}</span>
                   </div>
                 </div>
               ))}
@@ -9205,7 +9205,7 @@ function DailyOfferModal({
               </option>
             ))}
           </select>
-          {errors.tripId && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.tripId}</p>}
+          {errors.tripId && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.tripId}</p>}
         </div>
 
         <div>
@@ -9219,7 +9219,7 @@ function DailyOfferModal({
               errors.ot ? "border-red-400 bg-red-50" : "border-slate-300"
             }`}
           />
-          {errors.ot && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ot}</p>}
+          {errors.ot && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.ot}</p>}
         </div>
 
         <div>
@@ -9233,7 +9233,7 @@ function DailyOfferModal({
               errors.desc ? "border-red-400 bg-red-50" : "border-slate-300"
             }`}
           />
-          {errors.desc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.desc}</p>}
+          {errors.desc && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.desc}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -9248,7 +9248,7 @@ function DailyOfferModal({
                 errors.disc ? "border-red-400 bg-red-50" : "border-slate-300"
               }`}
             />
-            {errors.disc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.disc}</p>}
+            {errors.disc && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.disc}</p>}
           </div>
           <div className="pt-5 text-xs text-slate-500 font-bold">
             {selectedTrip && (
@@ -9270,7 +9270,7 @@ function DailyOfferModal({
                 errors.ds ? "border-red-400 bg-red-50" : "border-slate-300"
               }`}
             />
-            {errors.ds && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ds}</p>}
+            {errors.ds && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.ds}</p>}
           </div>
           <div>
             <label className="text-xs font-bold mb-1 block">تاريخ نهاية العرض <span className="text-red-500">*</span></label>
@@ -9282,7 +9282,7 @@ function DailyOfferModal({
                 errors.de ? "border-red-400 bg-red-50" : "border-slate-300"
               }`}
             />
-            {errors.de && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.de}</p>}
+            {errors.de && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.de}</p>}
           </div>
         </div>
 
@@ -9300,7 +9300,7 @@ function DailyOfferModal({
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             إلغاء
           </button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md transition cursor-pointer">
+          <button type="submit" className="px-5 h-10 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs shadow-md transition cursor-pointer">
             حفظ العرض اليومي
           </button>
         </div>
@@ -9416,7 +9416,7 @@ function WeeklyOfferModal({
               </option>
             ))}
           </select>
-          {errors.tripId && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.tripId}</p>}
+          {errors.tripId && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.tripId}</p>}
         </div>
 
         <div>
@@ -9430,7 +9430,7 @@ function WeeklyOfferModal({
               errors.ot ? "border-red-400 bg-red-50" : "border-slate-300"
             }`}
           />
-          {errors.ot && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ot}</p>}
+          {errors.ot && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.ot}</p>}
         </div>
 
         <div>
@@ -9444,7 +9444,7 @@ function WeeklyOfferModal({
               errors.desc ? "border-red-400 bg-red-50" : "border-slate-300"
             }`}
           />
-          {errors.desc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.desc}</p>}
+          {errors.desc && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.desc}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -9459,7 +9459,7 @@ function WeeklyOfferModal({
                 errors.disc ? "border-red-400 bg-red-50" : "border-slate-300"
               }`}
             />
-            {errors.disc && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.disc}</p>}
+            {errors.disc && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.disc}</p>}
           </div>
           <div className="pt-5 text-xs text-slate-500 font-bold">
             {selectedTrip && (
@@ -9481,7 +9481,7 @@ function WeeklyOfferModal({
                 errors.ds ? "border-red-400 bg-red-50" : "border-slate-300"
               }`}
             />
-            {errors.ds && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.ds}</p>}
+            {errors.ds && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.ds}</p>}
           </div>
           <div>
             <label className="text-xs font-bold mb-1 block">تاريخ نهاية العرض <span className="text-red-500">*</span></label>
@@ -9493,7 +9493,7 @@ function WeeklyOfferModal({
                 errors.de ? "border-red-400 bg-red-50" : "border-slate-300"
               }`}
             />
-            {errors.de && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.de}</p>}
+            {errors.de && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.de}</p>}
           </div>
         </div>
 
@@ -9511,7 +9511,7 @@ function WeeklyOfferModal({
           <button type="button" onClick={onClose} className="px-4 h-10 rounded-xl border font-black text-xs">
             إلغاء
           </button>
-          <button type="submit" className="px-5 h-10 rounded-xl bg-[#003580] hover:bg-blue-900 text-white font-black text-xs shadow-md transition cursor-pointer">
+          <button type="submit" className="px-5 h-10 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs shadow-md transition cursor-pointer">
             حفظ العرض الأسبوعي
           </button>
         </div>
@@ -9664,7 +9664,7 @@ function TripImagesFiveManager({
           <span>📸</span>
           <span>معرض صور الرحلة (5 صور إلزامية للتنقل بينها في كرت وصفحة الرحلة)</span>
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">
           {safeImages.filter(Boolean).length}/5 صور جاهزة
         </span>
       </div>
@@ -9680,7 +9680,7 @@ function TripImagesFiveManager({
               key={pack.name}
               type="button"
               onClick={() => applyPreset(pack.photos)}
-              className="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 text-[10px] font-black transition cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-slate-700 text-[11px] font-black transition cursor-pointer shadow-2xs"
             >
               {pack.name}
             </button>
@@ -9696,7 +9696,7 @@ function TripImagesFiveManager({
             onClick={() => setActiveSlot(i)}
             className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition flex flex-col items-center justify-center h-20 bg-white ${
               activeSlot === i
-                ? "border-blue-600 shadow-md ring-2 ring-blue-500/20"
+                ? "border-teal-600 shadow-md ring-2 ring-teal-500/20"
                 : "border-slate-200 hover:border-slate-300"
             }`}
           >
@@ -9705,14 +9705,14 @@ function TripImagesFiveManager({
             ) : (
               <div className="flex flex-col items-center justify-center p-1 text-center">
                 <span className="text-sm text-slate-400">📷</span>
-                <span className="text-[9px] text-slate-400 font-bold">صورة {i + 1}</span>
+                <span className="text-[11px] text-slate-400 font-bold">صورة {i + 1}</span>
               </div>
             )}
-            <div className="absolute top-1 right-1 px-1.5 py-0.2 rounded-md bg-black/60 text-white text-[9px] font-black backdrop-blur-xs">
+            <div className="absolute top-1 right-1 px-1.5 py-0.2 rounded-md bg-black/60 text-white text-[11px] font-black backdrop-blur-xs">
               {i + 1}
             </div>
             {i === 0 && (
-              <div className="absolute bottom-0 inset-x-0 bg-blue-600/90 text-white text-[8px] font-black py-0.5 text-center">
+              <div className="absolute bottom-0 inset-x-0 bg-teal-600/90 text-white text-[11px] font-black py-0.5 text-center">
                 الغلاف
               </div>
             )}
@@ -9724,13 +9724,13 @@ function TripImagesFiveManager({
       <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-xs font-black text-slate-800">
-            تعديل: <span className="text-blue-700">{slotLabels[activeSlot]}</span>
+            تعديل: <span className="text-teal-700">{slotLabels[activeSlot]}</span>
           </label>
           {safeImages[activeSlot] && (
             <button
               type="button"
               onClick={() => updateSlot(activeSlot, "")}
-              className="text-[10px] text-red-600 hover:text-red-700 font-bold cursor-pointer"
+              className="text-[11px] text-red-600 hover:text-red-700 font-bold cursor-pointer"
             >
               مسح الصورة
             </button>
@@ -9785,7 +9785,7 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
     <div className="p-2.5 rounded-xl border border-border bg-muted/20 space-y-1.5 text-right">
       <div className="flex justify-between items-center">
         <label className="text-xs font-bold text-foreground">{label}</label>
-        {value && <span className="text-[10px] text-emerald-600 font-bold">✓ تم التحميل</span>}
+        {value && <span className="text-[11px] text-emerald-600 font-bold">✓ تم التحميل</span>}
       </div>
       <div className="flex items-center gap-2">
         {value ? <img src={value} alt="" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-xs flex-shrink-0" /> : <div className="w-12 h-12 rounded-lg bg-muted border border-dashed border-border grid place-items-center text-xs text-muted-foreground flex-shrink-0">📷</div>}
@@ -9794,7 +9794,7 @@ function ImageFilePicker({ label, value, onChange }: { label: string; value: str
             📁 اختيار من الجهاز
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
           </label>
-          <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder="أو ضع رابط الصورة..." className="w-full h-8 px-2 text-[10px] rounded-lg border border-border bg-white outline-none font-mono text-right" />
+          <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder="أو ضع رابط الصورة..." className="w-full h-8 px-2 text-[11px] rounded-lg border border-border bg-white outline-none font-mono text-right" />
         </div>
       </div>
     </div>
@@ -9835,7 +9835,7 @@ function LibyanPhoneField({ label, value, onChange, allowLandline = false }: { l
     <div>
       <label className="text-xs font-bold text-foreground mb-1 block">{label}</label>
       <input type="tel" inputMode="numeric" maxLength={10} pattern={allowLandline ? "^(09\\d{8}|021\\d{7})$" : "^09\\d{8}$"} required title={message} value={value} onChange={e => handleChange(e.target.value)} placeholder={allowLandline ? "09... / 021..." : "09..."} className={`w-full h-10 px-3 rounded-xl border bg-white text-right focus:outline-none text-xs font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`} />
-      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+      {error && <div className="text-[11px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }

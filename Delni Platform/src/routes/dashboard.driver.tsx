@@ -270,7 +270,7 @@ function DriverDashboard() {
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-muted-foreground">تُحفظ المرحلة فوراً وتظهر لشركة النقل وإدارة المنصة.</p>
+      <p className="text-[11px] text-muted-foreground">تُحفظ المرحلة فوراً وتظهر لشركة النقل وإدارة المنصة.</p>
     </div>
   );
 
@@ -354,7 +354,7 @@ function DriverDashboard() {
                     <div key={n.id} onClick={() => openNotification(n)} className="p-3 rounded-xl bg-muted/40 text-xs text-right cursor-pointer hover:bg-muted/70 transition">
                       <div className="font-black text-foreground">{n.title}</div>
                       <p className="text-muted-foreground mt-0.5">{n.body}</p>
-                      <span className="text-[10px] text-muted-foreground mt-1 block">{n.time}</span>
+                      <span className="text-[11px] text-muted-foreground mt-1 block">{n.time}</span>
                     </div>
                   ))}
                 </div>
@@ -429,14 +429,14 @@ function DriverDashboard() {
                 </div>
 
                 {/* Company Affiliation Card on the Left */}
-                <div className="p-4 rounded-2xl border-2 border-[#1B5A78]/25 space-y-2">
-                  <div className="text-[11px] font-black text-[#1B5A78] flex items-center gap-1.5">
+                <div className="p-4 rounded-2xl border-2 border-[#0B4F57]/25 space-y-2">
+                  <div className="text-[11px] font-black text-[#0B4F57] flex items-center gap-1.5">
                     <span>🏢</span>
                     <span>شركة النقل السياحي المعتمدة التابع لها:</span>
                   </div>
                   <div className="font-black text-foreground text-lg flex items-center justify-between">
                     <span>{driverInfo.company_name || "شركة النقل السياحي"}</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">✓ معتمد</span>
+                    <span className="text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">✓ معتمد</span>
                   </div>
 
                 </div>
@@ -650,7 +650,7 @@ function Field({ label, type = "text", value, onChange, placeholder, pattern, er
         placeholder={placeholder}
         className={`w-full h-11 px-3 rounded-xl border bg-white text-right focus:outline-none text-sm font-semibold ${error ? "border-red-500" : "border-border focus:border-primary"}`}
       />
-      {error && <div className="text-[10px] text-red-500 mt-1 font-bold">{error}</div>}
+      {error && <div className="text-[11px] text-red-500 mt-1 font-bold">{error}</div>}
     </div>
   );
 }

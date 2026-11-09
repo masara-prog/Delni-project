@@ -387,7 +387,7 @@ function TransportPage() {
       <Header active="transport" />
 
       {/* ── 1. UNIFIED HERO SECTION (Identical Standard Height & Aesthetics as Hotels, Attractions & Restaurants) ── */}
-      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#003580]">
+      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#00736F]">
         <HeroSlideshow
           images={[
             "/assets/transport-hero.jpg",
@@ -398,7 +398,7 @@ function TransportPage() {
           alt="السيارات ووسائل النقل السياحي في ليبيا"
           brightness="brightness-90"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#003580]/90 via-[#003580]/45 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#00736F]/90 via-[#00736F]/45 to-transparent z-10" />
         <div className="relative z-20 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center pt-12 text-white">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-black w-fit mb-2.5 border border-white/25">
             🚌 {isAr ? "أسطول النقل والمواصلات السياحية المعتمد في ليبيا" : "Certified Tourist Fleet in Libya"}
@@ -416,13 +416,13 @@ function TransportPage() {
 
       {/* ── 2. UNIFIED FLOATING FILTER PANEL (Matching Hotels, Attractions & Restaurants) ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-blue-100">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-md border border-[#E8E2D6] text-[#0F172A]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* 1. Search Input */}
             <div className="lg:col-span-5 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">🔍</span>
+              <span className="text-[#00736F] font-bold text-base">🔍</span>
               <div className="relative flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "البحث عن وسيلة نقل أو شركة:" : "Search Transport or Company:"}
                 </label>
                 <input
@@ -445,9 +445,9 @@ function TransportPage() {
 
             {/* 2. Vehicle Category Select */}
             <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">🚌</span>
+              <span className="text-[#00736F] font-bold text-base">🚌</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "نوع وسيلة النقل:" : "Vehicle Type:"}
                 </label>
                 <select
@@ -465,9 +465,9 @@ function TransportPage() {
 
             {/* 3. City Select - Strictly Tripoli & Benghazi per user requirement */}
             <div className="lg:col-span-3 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">📍</span>
+              <span className="text-[#00736F] font-bold text-base">📍</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "المدينة:" : "City:"}
                 </label>
                 <select
@@ -491,10 +491,10 @@ function TransportPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xl sm:text-2xl font-black text-[#003580] tracking-tight">
+              <h3 className="text-xl sm:text-2xl font-black text-[#00736F] tracking-tight">
                 {isAr ? "معرض أسطول النقل المعتمد" : "Certified Fleet Showcase"}
               </h3>
-              <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-blue-50 text-[#003580] border border-blue-200">
+              <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-teal-50 text-[#00736F] border border-teal-200">
                 {filtered.length} {isAr ? "مركبة" : "vehicles"}
               </span>
               {!isViewAll && filtered.length > 1 && (
@@ -519,7 +519,7 @@ function TransportPage() {
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer shadow-xs ${
                 isViewAll
                   ? "bg-[#D96B27] text-white"
-                  : "bg-white hover:bg-slate-50 text-[#003580] border-2 border-blue-200"
+                  : "bg-white hover:bg-slate-50 text-[#00736F] border-2 border-teal-200"
               }`}
             >
               {isViewAll ? <Columns3 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
@@ -541,7 +541,7 @@ function TransportPage() {
                   type="button"
                   onClick={() => scrollSlider("left")}
                   aria-label="Previous"
-                  className="w-9 h-9 rounded-xl bg-white hover:bg-blue-50 text-[#003580] border-2 border-blue-200 flex items-center justify-center transition shadow-xs cursor-pointer active:scale-95"
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-teal-50 text-[#00736F] border-2 border-teal-200 flex items-center justify-center transition shadow-xs cursor-pointer active:scale-95"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -549,7 +549,7 @@ function TransportPage() {
                   type="button"
                   onClick={() => scrollSlider("right")}
                   aria-label="Next"
-                  className="w-9 h-9 rounded-xl bg-white hover:bg-blue-50 text-[#003580] border-2 border-blue-200 flex items-center justify-center transition shadow-xs cursor-pointer active:scale-95"
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-teal-50 text-[#00736F] border-2 border-teal-200 flex items-center justify-center transition shadow-xs cursor-pointer active:scale-95"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -564,7 +564,7 @@ function TransportPage() {
             <div className="w-14 h-14 rounded-2xl bg-orange-50 text-[#D96B27] flex items-center justify-center text-3xl mx-auto mb-3">
               🚌
             </div>
-            <h4 className="text-base font-black text-[#003580] mb-1">
+            <h4 className="text-base font-black text-[#00736F] mb-1">
               {vehiclesFailed && rawVehicles.length === 0
                 ? (isAr ? "تعذر تحميل أسطول المركبات" : "Could not load the fleet")
                 : (isAr ? "لا توجد مركبات مطابقة للبحث" : "No matching vehicles found")}
@@ -582,7 +582,7 @@ function TransportPage() {
                 setCity("all");
                 setSearchQuery("");
               }}
-              className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white text-xs font-bold transition shadow-sm"
+              className="px-4 py-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white text-xs font-bold transition shadow-sm"
             >
               {isAr ? "عرض كل الأسطول" : "Show All Fleet"}
             </button>
@@ -603,7 +603,7 @@ function TransportPage() {
                   <div
                     key={v.id}
                     onClick={() => openVehicleModal(v, "specs")}
-                    className="w-[320px] sm:w-[350px] shrink-0 snap-start group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#003580] shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                    className="w-[320px] sm:w-[350px] shrink-0 snap-start group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#00736F] shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                   >
                     {/* Photo Container */}
                     <div className="relative h-52 bg-slate-800 overflow-hidden">
@@ -616,7 +616,7 @@ function TransportPage() {
 
                       {/* Category Badge */}
                       <div className="absolute top-3.5 right-3.5 z-10">
-                        <span className="px-2.5 py-1 rounded-full bg-[#D96B27] text-white text-[10px] font-black shadow-md flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-full bg-[#D96B27] text-white text-[11px] font-black shadow-md flex items-center gap-1">
                           <Sparkles className="w-3 h-3" />
                           {isAr ? v.categoryLabelAr : v.categoryLabelEn}
                         </span>
@@ -634,7 +634,7 @@ function TransportPage() {
 
                       {/* Libyan Plate Frame + City Badge */}
                       <div className="absolute bottom-3 right-3 left-3 z-10 flex items-center justify-between">
-                        <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg border-2 border-[#003580]/30 shadow-md flex items-center gap-1 font-mono text-[10px] font-black text-[#003580] tracking-wider">
+                        <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg border-2 border-[#00736F]/30 shadow-md flex items-center gap-1 font-mono text-[11px] font-black text-[#00736F] tracking-wider">
                           <span>🇱🇾</span>
                           <span>{v.plateNumber}</span>
                         </div>
@@ -651,38 +651,38 @@ function TransportPage() {
                       <div>
                         {/* Company Badge */}
                         <div className="flex items-center justify-between text-xs mb-1.5">
-                          <div className="text-[11px] font-black text-[#003580] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 flex items-center gap-1">
+                          <div className="text-[11px] font-black text-[#00736F] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100 flex items-center gap-1">
                             <Building2 className="w-3 h-3" />
                             <span className="truncate max-w-[150px]">{v.company}</span>
                           </div>
-                          <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                             ✓ {v.vehicleStatus}
                           </div>
                         </div>
 
                         {/* Title */}
-                        <h4 className="text-base font-black text-[#0F172A] group-hover:text-[#003580] transition-colors leading-tight line-clamp-1">
+                        <h4 className="text-base font-black text-[#0F172A] group-hover:text-[#00736F] transition-colors leading-tight line-clamp-1">
                           {v.vehicleType}
                         </h4>
 
                         {/* Specs row */}
                         <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center text-xs">
                           <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                            <div className="text-[9px] font-bold text-slate-400">{isAr ? "السعة" : "Seats"}</div>
+                            <div className="text-[11px] font-bold text-slate-400">{isAr ? "السعة" : "Seats"}</div>
                             <div className="font-black text-slate-800 text-xs flex items-center justify-center gap-1 mt-0.5">
                               <Users className="w-3 h-3 text-[#D96B27]" />
                               <span>{v.seats || "—"}</span>
                             </div>
                           </div>
                           <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                            <div className="text-[9px] font-bold text-slate-400">{isAr ? "التكييف" : "AC"}</div>
-                            <div className="font-black text-emerald-700 text-[10px] mt-0.5">
+                            <div className="text-[11px] font-bold text-slate-400">{isAr ? "التكييف" : "AC"}</div>
+                            <div className="font-black text-emerald-700 text-[11px] mt-0.5">
                               {isAr ? "مركزي ❄️" : "Central"}
                             </div>
                           </div>
                           <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                            <div className="text-[9px] font-bold text-slate-400">{isAr ? "التأمين" : "Insurance"}</div>
-                            <div className="font-black text-blue-700 text-[10px] mt-0.5">
+                            <div className="text-[11px] font-bold text-slate-400">{isAr ? "التأمين" : "Insurance"}</div>
+                            <div className="font-black text-teal-700 text-[11px] mt-0.5">
                               {isAr ? "شامل 🛡️" : "Full"}
                             </div>
                           </div>
@@ -691,12 +691,12 @@ function TransportPage() {
                         {/* Dedicated Driver Snippet */}
                         <div className="mt-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2">
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ring-2 ring-white shadow-sm ${
-                          v.hasDriver ? "bg-gradient-to-br from-[#003580] to-[#0D5C96] text-white" : "bg-slate-200 text-slate-500"
+                          v.hasDriver ? "bg-gradient-to-br from-[#00736F] to-[#009A94] text-white" : "bg-slate-200 text-slate-500"
                         }`} aria-hidden="true">
                           {v.hasDriver ? driverInitials(v.driverName) : "—"}
                         </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[9px] font-bold text-slate-400">{isAr ? "السائق المعتمد" : "Driver"}</div>
+                            <div className="text-[11px] font-bold text-slate-400">{isAr ? "السائق المعتمد" : "Driver"}</div>
                             <div className={`text-[11px] font-black truncate ${v.hasDriver ? "text-slate-900" : "text-amber-800"}`}>
                               {v.hasDriver ? v.driverName : (isAr ? "لم يتم تعيين سائق لهذه المركبة" : "No driver assigned")}
                             </div>
@@ -707,9 +707,9 @@ function TransportPage() {
                       {/* Card Footer: Specs CTA (Delni Blue instead of black) */}
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400">{isAr ? "التسعير الاسترشادي" : "Tour Rate"}</div>
-                          <div className="text-base font-black text-[#003580]">
-                            {v.pricePerDay || "—"} <span className="text-[10px] font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
+                          <div className="text-[11px] font-bold text-slate-400">{isAr ? "التسعير الاسترشادي" : "Tour Rate"}</div>
+                          <div className="text-base font-black text-[#00736F]">
+                            {v.pricePerDay || "—"} <span className="text-[11px] font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
                           </div>
                         </div>
 
@@ -719,7 +719,7 @@ function TransportPage() {
                             e.stopPropagation();
                             openVehicleModal(v, "specs");
                           }}
-                          className="px-4 py-2 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                          className="px-4 py-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>{isAr ? "المواصفات والاعتماد" : "View Specs"}</span>
@@ -740,7 +740,7 @@ function TransportPage() {
                 <div
                   key={v.id}
                   onClick={() => openVehicleModal(v, "specs")}
-                  className="group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#003580] shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                  className="group bg-white rounded-3xl border-2 border-[#D8DEE4] hover:border-[#00736F] shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                 >
                   {/* Photo Container */}
                   <div className="relative h-56 bg-slate-800 overflow-hidden">
@@ -752,7 +752,7 @@ function TransportPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/20" />
 
                     <div className="absolute top-3.5 right-3.5 z-10">
-                      <span className="px-2.5 py-1 rounded-full bg-[#D96B27] text-white text-[10px] font-black shadow-md flex items-center gap-1">
+                      <span className="px-2.5 py-1 rounded-full bg-[#D96B27] text-white text-[11px] font-black shadow-md flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
                         {isAr ? v.categoryLabelAr : v.categoryLabelEn}
                       </span>
@@ -768,7 +768,7 @@ function TransportPage() {
                     </div>
 
                     <div className="absolute bottom-3 right-3 left-3 z-10 flex items-center justify-between">
-                      <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg border-2 border-[#003580]/30 shadow-md flex items-center gap-1 font-mono text-[10px] font-black text-[#003580] tracking-wider">
+                      <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg border-2 border-[#00736F]/30 shadow-md flex items-center gap-1 font-mono text-[11px] font-black text-[#00736F] tracking-wider">
                         <span>🇱🇾</span>
                         <span>{v.plateNumber}</span>
                       </div>
@@ -784,36 +784,36 @@ function TransportPage() {
                   <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                     <div>
                       <div className="flex items-center justify-between text-xs mb-2">
-                        <div className="text-[11px] font-black text-[#003580] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 flex items-center gap-1">
+                        <div className="text-[11px] font-black text-[#00736F] bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100 flex items-center gap-1">
                           <Building2 className="w-3 h-3" />
                           <span className="truncate max-w-[150px]">{v.company}</span>
                         </div>
-                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                           ✓ {v.vehicleStatus}
                         </div>
                       </div>
 
-                      <h4 className="text-lg font-black text-[#0F172A] group-hover:text-[#003580] transition-colors leading-tight">
+                      <h4 className="text-lg font-black text-[#0F172A] group-hover:text-[#00736F] transition-colors leading-tight">
                         {v.vehicleType}
                       </h4>
 
                       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                         <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                          <div className="text-[10px] font-bold text-slate-400">{isAr ? "السعة" : "Seats"}</div>
+                          <div className="text-[11px] font-bold text-slate-400">{isAr ? "السعة" : "Seats"}</div>
                           <div className="font-black text-slate-800 flex items-center justify-center gap-1 mt-0.5">
                             <Users className="w-3.5 h-3.5 text-[#D96B27]" />
                             <span>{v.seats || "—"}</span>
                           </div>
                         </div>
                         <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                          <div className="text-[10px] font-bold text-slate-400">{isAr ? "التكييف" : "AC"}</div>
+                          <div className="text-[11px] font-bold text-slate-400">{isAr ? "التكييف" : "AC"}</div>
                           <div className="font-black text-emerald-700 text-[11px] mt-0.5">
                             {isAr ? "مركزي ❄️" : "Central"}
                           </div>
                         </div>
                         <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                          <div className="text-[10px] font-bold text-slate-400">{isAr ? "التأمين" : "Insurance"}</div>
-                          <div className="font-black text-blue-700 text-[11px] mt-0.5">
+                          <div className="text-[11px] font-bold text-slate-400">{isAr ? "التأمين" : "Insurance"}</div>
+                          <div className="font-black text-teal-700 text-[11px] mt-0.5">
                             {isAr ? "شامل 🛡️" : "Full"}
                           </div>
                         </div>
@@ -821,12 +821,12 @@ function TransportPage() {
 
                       <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2.5">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ring-2 ring-white shadow-sm ${
-                          v.hasDriver ? "bg-gradient-to-br from-[#003580] to-[#0D5C96] text-white" : "bg-slate-200 text-slate-500"
+                          v.hasDriver ? "bg-gradient-to-br from-[#00736F] to-[#009A94] text-white" : "bg-slate-200 text-slate-500"
                         }`} aria-hidden="true">
                           {v.hasDriver ? driverInitials(v.driverName) : "—"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[10px] font-bold text-slate-400">{isAr ? "السائق المعتمد" : "Driver"}</div>
+                          <div className="text-[11px] font-bold text-slate-400">{isAr ? "السائق المعتمد" : "Driver"}</div>
                           <div className={`text-xs font-black truncate ${v.hasDriver ? "text-slate-900" : "text-amber-800"}`}>
                             {v.hasDriver ? v.driverName : (isAr ? "لم يتم تعيين سائق لهذه المركبة" : "No driver assigned")}
                           </div>
@@ -836,8 +836,8 @@ function TransportPage() {
 
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <div>
-                        <div className="text-[10px] font-bold text-slate-400">{isAr ? "التسعير الاسترشادي" : "Tour Rate"}</div>
-                        <div className="text-lg font-black text-[#003580]">
+                        <div className="text-[11px] font-bold text-slate-400">{isAr ? "التسعير الاسترشادي" : "Tour Rate"}</div>
+                        <div className="text-lg font-black text-[#00736F]">
                           {v.pricePerDay || "—"} <span className="text-xs font-bold text-slate-500">{isAr ? "د.ل/يوم" : "LYD"}</span>
                         </div>
                       </div>
@@ -848,7 +848,7 @@ function TransportPage() {
                           e.stopPropagation();
                           openVehicleModal(v, "specs");
                         }}
-                        className="px-4 py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                        className="px-4 py-2.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>{isAr ? "المواصفات والاعتماد" : "View Specs"}</span>
@@ -864,8 +864,8 @@ function TransportPage() {
 
       {/* ── 4. VERIFIED TRANSPORT PARTNERS ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="bg-[#0B1E38] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-[#0B1E38] rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-300 uppercase tracking-wider mb-1">
@@ -925,26 +925,26 @@ function TransportPage() {
             onClick={() => setSelectedVehicle(null)}
           />
 
-          <div className="relative bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto z-10 border-2 border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-3xl shadow-md max-w-3xl w-full max-h-[92vh] overflow-y-auto z-10 border-2 border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#003580] flex items-center justify-center font-black text-lg">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#00736F] flex items-center justify-center font-black text-lg">
                   🚌
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono bg-[#003580] text-white text-[10px] px-2.5 py-0.5 rounded-md font-bold">
+                    <span className="font-mono bg-[#00736F] text-white text-[11px] px-2.5 py-0.5 rounded-md font-bold">
                       🇱🇾 {selectedVehicle.plateNumber}
                     </span>
-                    <span className="bg-orange-50 text-[#D96B27] text-[10px] font-black px-2 py-0.5 rounded-md">
+                    <span className="bg-orange-50 text-[#D96B27] text-[11px] font-black px-2 py-0.5 rounded-md">
                       {selectedVehicle.categoryLabelAr}
                     </span>
-                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                    <span className="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2 py-0.5 rounded-md">
                       ✓ {selectedVehicle.vehicleStatus}
                     </span>
                   </div>
-                  <h3 className="text-lg font-black text-[#003580] mt-0.5">{selectedVehicle.vehicleType}</h3>
+                  <h3 className="text-lg font-black text-[#00736F] mt-0.5">{selectedVehicle.vehicleType}</h3>
                 </div>
               </div>
 
@@ -964,7 +964,7 @@ function TransportPage() {
                 onClick={() => setModalTab("specs")}
                 className={`py-3 px-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
                   modalTab === "specs"
-                    ? "border-[#003580] text-[#003580]"
+                    ? "border-[#00736F] text-[#00736F]"
                     : "border-transparent text-slate-500 hover:text-slate-900"
                 }`}
               >
@@ -977,7 +977,7 @@ function TransportPage() {
                 onClick={() => setModalTab("driver")}
                 className={`py-3 px-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
                   modalTab === "driver"
-                    ? "border-[#003580] text-[#003580]"
+                    ? "border-[#00736F] text-[#00736F]"
                     : "border-transparent text-slate-500 hover:text-slate-900"
                 }`}
               >
@@ -1007,7 +1007,7 @@ function TransportPage() {
                       <div>
                         <div className="text-[11px] font-bold text-slate-500">{isAr ? "التسعير الاسترشادي للرحلات" : "Tour Rate"}</div>
                         <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-3xl font-black text-[#003580]">{selectedVehicle.pricePerDay || "—"}</span>
+                          <span className="text-3xl font-black text-[#00736F]">{selectedVehicle.pricePerDay || "—"}</span>
                           <span className="text-xs font-bold text-slate-500">{isAr ? "د.ل / يوم" : "LYD / day"}</span>
                         </div>
                         <div className="text-xs text-emerald-700 font-bold mt-1">✓ فحص فني ساري وتأمين ركاب</div>
@@ -1016,7 +1016,7 @@ function TransportPage() {
                       {selectedVehicle.companyPhone && (
                         <a
                           href={`tel:${selectedVehicle.companyPhone}`}
-                          className="w-full py-2.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
+                          className="w-full py-2.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
                         >
                           <Phone className="w-3.5 h-3.5" />
                           <span>{isAr ? "اتصال للاستفسار المباشر" : "Direct Inquiry"}</span>
@@ -1027,51 +1027,51 @@ function TransportPage() {
 
                   {/* Technical Specs Table */}
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
-                    <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
+                    <h4 className="text-sm font-black text-[#00736F] flex items-center gap-2">
                       <Car className="w-4 h-4 text-[#D96B27]" />
                       <span>{isAr ? "جدول المواصفات الفنية المعتمدة" : "Technical Specifications"}</span>
                     </h4>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "رقم اللوحة السياحية" : "Plate Number"}</div>
-                        <div className="font-mono font-black text-[#003580] mt-0.5">{selectedVehicle.plateNumber}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "رقم اللوحة السياحية" : "Plate Number"}</div>
+                        <div className="font-mono font-black text-[#00736F] mt-0.5">{selectedVehicle.plateNumber}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "سعة المقاعد" : "Seats"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "سعة المقاعد" : "Seats"}</div>
                         <div className="font-black text-slate-900 mt-0.5">{selectedVehicle.seats ? `${selectedVehicle.seats} مقعد` : "—"}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "الفئة والتصنيف" : "Category"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "الفئة والتصنيف" : "Category"}</div>
                         <div className="font-black text-slate-900 mt-0.5">{selectedVehicle.categoryLabelAr}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "التكييف" : "AC"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "التكييف" : "AC"}</div>
                         <div className="font-black text-emerald-700 mt-0.5">مركزي فائق البرودة ❄️</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "حالة الفحص" : "Inspection"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "حالة الفحص" : "Inspection"}</div>
                         <div className="font-black text-emerald-700 mt-0.5">{selectedVehicle.vehicleStatus}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "المدينة" : "Base City"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "المدينة" : "Base City"}</div>
                         <div className="font-black text-slate-900 mt-0.5">{selectedVehicle.city}</div>
                       </div>
                     </div>
 
                     {/* Insurance Row with Instant Image Lightbox Preview */}
-                    <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center justify-between text-xs">
+                    <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-100 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-5 h-5 text-blue-700 shrink-0" />
+                        <ShieldCheck className="w-5 h-5 text-teal-700 shrink-0" />
                         <div>
-                          <div className="font-black text-blue-900">{isAr ? "وثيقة التأمين والركاب" : "Insurance"}</div>
-                          <div className="text-[11px] text-blue-800">{selectedVehicle.insuranceDetails || (isAr ? "لم تُسجل تفاصيل التأمين" : "No insurance details recorded")}</div>
+                          <div className="font-black text-teal-900">{isAr ? "وثيقة التأمين والركاب" : "Insurance"}</div>
+                          <div className="text-[11px] text-teal-800">{selectedVehicle.insuranceDetails || (isAr ? "لم تُسجل تفاصيل التأمين" : "No insurance details recorded")}</div>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setPreviewDocUrl(selectedVehicle.insuranceDocument || "/assets/test-enhanced.jpg")}
-                        className="px-3.5 py-1.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                        className="px-3.5 py-1.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                       >
                         <span>📄</span>
                         <span>{isAr ? "معاينة ورقة التأمين" : "Preview Document"}</span>
@@ -1086,12 +1086,12 @@ function TransportPage() {
                   {/* Driver Dossier */}
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
+                      <h4 className="text-sm font-black text-[#00736F] flex items-center gap-2">
                         <UserCheck className="w-4 h-4 text-[#D96B27]" />
                         <span>{isAr ? "بيانات السائق المعتمد" : "Dedicated Driver"}</span>
                       </h4>
                       <span
-                        className={`text-[10px] font-black px-2.5 py-1 rounded-md ${
+                        className={`text-[11px] font-black px-2.5 py-1 rounded-md ${
                           selectedVehicle.hasDriver ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
                         }`}
                       >
@@ -1102,21 +1102,21 @@ function TransportPage() {
                     {selectedVehicle.hasDriver ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div className="p-3 rounded-xl bg-white border border-slate-200">
-                          <div className="text-[10px] text-slate-400 font-bold">{isAr ? "اسم السائق" : "Driver Name"}</div>
+                          <div className="text-[11px] text-slate-400 font-bold">{isAr ? "اسم السائق" : "Driver Name"}</div>
                           <div className="font-black text-slate-900 text-sm mt-0.5">{selectedVehicle.driverName}</div>
                         </div>
                         <div className="p-3 rounded-xl bg-white border border-slate-200">
-                          <div className="text-[10px] text-slate-400 font-bold">{isAr ? "المدينة التابع لها" : "Base City"}</div>
+                          <div className="text-[11px] text-slate-400 font-bold">{isAr ? "المدينة التابع لها" : "Base City"}</div>
                           <div className="font-black text-slate-800 mt-0.5">{selectedVehicle.city}</div>
                         </div>
                         <div className="p-3 rounded-xl bg-white border border-slate-200">
-                          <div className="text-[10px] text-slate-400 font-bold">{isAr ? "الحالة التشغيلية" : "Status"}</div>
+                          <div className="text-[11px] text-slate-400 font-bold">{isAr ? "الحالة التشغيلية" : "Status"}</div>
                           <div className="font-black text-emerald-700 mt-0.5">{selectedVehicle.driverOperationalStatus}</div>
                         </div>
                         {selectedVehicle.driverPhone && (
                           <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between">
                             <div>
-                              <div className="text-[10px] text-slate-400 font-bold">{isAr ? "هاتف السائق" : "Phone"}</div>
+                              <div className="text-[11px] text-slate-400 font-bold">{isAr ? "هاتف السائق" : "Phone"}</div>
                               <div className="font-mono font-black text-slate-900 mt-0.5" dir="ltr">{selectedVehicle.driverPhone}</div>
                             </div>
                             <a
@@ -1138,27 +1138,27 @@ function TransportPage() {
 
                   {/* Company Dossier */}
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
-                    <h4 className="text-sm font-black text-[#003580] flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-[#003580]" />
+                    <h4 className="text-sm font-black text-[#00736F] flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-[#00736F]" />
                       <span>{isAr ? "بيانات شركة النقل المشغلة" : "Operating Company"}</span>
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "اسم الشركة" : "Company"}</div>
-                        <div className="font-black text-[#003580] text-sm mt-0.5">{selectedVehicle.company}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "اسم الشركة" : "Company"}</div>
+                        <div className="font-black text-[#00736F] text-sm mt-0.5">{selectedVehicle.company}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "البريد الإلكتروني للشركة" : "Company Email"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "البريد الإلكتروني للشركة" : "Company Email"}</div>
                         <div className="font-mono font-bold text-slate-800 text-xs mt-0.5 truncate">{selectedVehicle.companyEmail || "transport@dalni.ly"}</div>
                       </div>
                       <div className="p-3 rounded-xl bg-white border border-slate-200">
-                        <div className="text-[10px] text-slate-400 font-bold">{isAr ? "المدينة والمقر" : "City & HQ"}</div>
+                        <div className="text-[11px] text-slate-400 font-bold">{isAr ? "المدينة والمقر" : "City & HQ"}</div>
                         <div className="font-black text-slate-800 mt-0.5">{selectedVehicle.companyAddress}</div>
                       </div>
                       {selectedVehicle.companyPhone && (
                         <div className="p-3 rounded-xl bg-white border border-slate-200">
-                          <div className="text-[10px] text-slate-400 font-bold">{isAr ? "هاتف الشركة" : "Phone"}</div>
+                          <div className="text-[11px] text-slate-400 font-bold">{isAr ? "هاتف الشركة" : "Phone"}</div>
                           <div className="font-mono font-black text-slate-900 mt-0.5" dir="ltr">{selectedVehicle.companyPhone}</div>
                         </div>
                       )}
@@ -1169,7 +1169,7 @@ function TransportPage() {
                         href={selectedVehicle.googleMapsUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-[#003580] border border-slate-200 font-black text-xs transition flex items-center justify-center gap-2"
+                        className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-[#00736F] border border-slate-200 font-black text-xs transition flex items-center justify-center gap-2"
                       >
                         <MapPin className="w-4 h-4 text-red-500" />
                         <span>{isAr ? "عرض موقع مقر الشركة على خرائط Google" : "View HQ on Google Maps"}</span>
@@ -1191,10 +1191,10 @@ function TransportPage() {
           onClick={() => setPreviewDocUrl(null)}
         >
           <div
-            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-200 flex flex-col"
+            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-md border-2 border-slate-200 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 bg-[#003580] text-white flex items-center justify-between">
+            <div className="p-4 bg-[#00736F] text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🛡️</span>
                 <span className="font-black text-sm">
@@ -1238,7 +1238,7 @@ function TransportPage() {
                 <button
                   type="button"
                   onClick={() => setPreviewDocUrl(null)}
-                  className="px-4 py-1.5 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black transition cursor-pointer"
+                  className="px-4 py-1.5 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black transition cursor-pointer"
                 >
                   {isAr ? "إغلاق" : "Close"}
                 </button>

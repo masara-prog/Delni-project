@@ -94,11 +94,11 @@ export function DashboardSupportChatModal({
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full flex flex-col h-[600px] max-h-[90vh] overflow-hidden border border-slate-200 animate-in zoom-in-95"
+        className="relative bg-white rounded-3xl shadow-md max-w-lg w-full flex flex-col h-[600px] max-h-[90vh] overflow-hidden border border-slate-200 animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#003580] text-white p-4 flex items-center justify-between shadow-md">
+        <div className="bg-[#00736F] text-white p-4 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-sun text-gold-foreground grid place-items-center text-lg font-black shadow-soft">
               💬
@@ -129,7 +129,7 @@ export function DashboardSupportChatModal({
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             <span>{isAr ? "مشرفو المنصة متاحون للرد المباشر" : "Admin team is online to assist"}</span>
           </div>
-          <span className="text-[10px] text-emerald-600 font-semibold">{isAr ? "متوسط الرد: دقيقة" : "Avg response: 1 min"}</span>
+          <span className="text-[11px] text-emerald-600 font-semibold">{isAr ? "متوسط الرد: دقيقة" : "Avg response: 1 min"}</span>
         </div>
 
         {/* Messages Body */}
@@ -141,21 +141,21 @@ export function DashboardSupportChatModal({
                 <div
                   className={`max-w-[85%] p-3.5 text-xs sm:text-sm rounded-2xl shadow-xs ${
                     isMe
-                      ? "bg-[#003580] text-white font-semibold rounded-bl-xs"
+                      ? "bg-[#00736F] text-white font-semibold rounded-bl-xs"
                       : m.from === "admin"
                       ? "bg-emerald-700 text-white rounded-br-xs font-semibold"
                       : "bg-white border border-slate-200 text-slate-800 rounded-br-xs font-medium"
                   }`}
                 >
                   {!isMe && (
-                    <div className="text-[10px] font-black text-amber-300 mb-1 flex items-center gap-1">
+                    <div className="text-[11px] font-black text-amber-300 mb-1 flex items-center gap-1">
                       <span>👤</span>
                       <span>{isAr ? "مشرف إدارة دلّني" : "Dalni Admin Support"}</span>
                     </div>
                   )}
                   <div className="whitespace-pre-line leading-relaxed">{m.text}</div>
                   <div
-                    className={`text-[9px] mt-1.5 font-mono ${
+                    className={`text-[11px] mt-1.5 font-mono ${
                       isMe ? "text-white/75" : "text-white/80"
                     }`}
                   >
@@ -174,7 +174,7 @@ export function DashboardSupportChatModal({
               key={q}
               type="button"
               onClick={() => handleSend(q)}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-[#003580] hover:text-[#003580] text-[11px] font-bold shrink-0 transition cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-[#00736F] hover:text-[#00736F] text-[11px] font-bold shrink-0 transition cursor-pointer shadow-2xs"
             >
               {q}
             </button>
@@ -194,7 +194,7 @@ export function DashboardSupportChatModal({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isAr ? "اكتب رسالتك للإدارة هنا..." : "Type your message to Admin here..."}
-            className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#003580] outline-none transition"
+            className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#00736F] outline-none transition"
           />
           <button
             type="submit"

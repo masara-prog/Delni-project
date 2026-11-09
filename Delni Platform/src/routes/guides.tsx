@@ -280,7 +280,7 @@ function GuidesPage() {
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
             <span>{isAr ? "المرشدون السياحيون المعتمدون" : "Certified Tour Guides"}</span>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-xl tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black drop-shadow-md tracking-tight leading-tight">
             {isAr ? "المرشدون السياحيون في جميع مناطق ليبيا" : "Certified Tour Guides Across Libya"}
           </h1>
           <p className="text-white/95 max-w-2xl text-xs sm:text-sm md:text-base font-semibold leading-relaxed drop-shadow-md">
@@ -293,7 +293,7 @@ function GuidesPage() {
 
       {/* Clean Filter Panel Floating Gracefully Below Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-xl border border-[#E8E2D6] text-[#0F172A] space-y-4">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 shadow-md border border-[#E8E2D6] text-[#0F172A] space-y-4">
             {/* Sub Radio Options Row (Screenshot Style) */}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-xs font-bold text-[#0F172A]">
@@ -303,13 +303,13 @@ function GuidesPage() {
                   { value: "male", label: isAr ? "مرشدون ذكور 👨" : "Male Guides" },
                   { value: "female", label: isAr ? "مرشدات إناث 👩" : "Female Guides" },
                 ].map((g) => (
-                  <label key={g.value} className="flex items-center gap-1.5 cursor-pointer hover:text-[#1B5A78]">
+                  <label key={g.value} className="flex items-center gap-1.5 cursor-pointer hover:text-[#0B4F57]">
                     <input
                       type="radio"
                       name="genderFilter"
                       checked={genderFilter === g.value}
                       onChange={() => handleFilterSelect(setGenderFilter, g.value as any)}
-                      className="w-4 h-4 accent-[#1B5A78]"
+                      className="w-4 h-4 accent-[#0B4F57]"
                     />
                     <span>{g.label}</span>
                   </label>
@@ -323,13 +323,13 @@ function GuidesPage() {
                   { value: "full", label: isAr ? "طوال الأسبوع (7 أيام)" : "All Week" },
                   { value: "weekend", label: isAr ? "نهاية الأسبوع فقط" : "Weekends Only" },
                 ].map((w) => (
-                  <label key={w.value} className="flex items-center gap-1.5 cursor-pointer hover:text-[#1B5A78]">
+                  <label key={w.value} className="flex items-center gap-1.5 cursor-pointer hover:text-[#0B4F57]">
                     <input
                       type="radio"
                       name="workDaysFilter"
                       checked={workDaysFilter === w.value}
                       onChange={() => handleFilterSelect(setWorkDaysFilter, w.value as any)}
-                      className="w-4 h-4 accent-[#1B5A78]"
+                      className="w-4 h-4 accent-[#0B4F57]"
                     />
                     <span>{w.label}</span>
                   </label>
@@ -341,7 +341,7 @@ function GuidesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D6]">
               {/* Search Keyword - Name Only */}
               <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs">
-                <label className="text-[10px] font-black text-[#5A6A85] block mb-1">اسم المرشد فقط:</label>
+                <label className="text-[11px] font-black text-[#5A6A85] block mb-1">اسم المرشد فقط:</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -363,7 +363,7 @@ function GuidesPage() {
 
               {/* Languages (Pure Arabic Text) */}
               <div className="lg:col-span-3 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs">
-                <label className="text-[10px] font-black text-[#5A6A85] block mb-1">اللغات المتقنة:</label>
+                <label className="text-[11px] font-black text-[#5A6A85] block mb-1">اللغات المتقنة:</label>
                 <select
                   value={langFilter}
                   onChange={(e) => handleFilterSelect(setLangFilter, e.target.value)}
@@ -379,7 +379,7 @@ function GuidesPage() {
 
               {/* Region */}
               <div className="lg:col-span-3 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs">
-                <label className="text-[10px] font-black text-[#5A6A85] block mb-1">المنطقة والمدينة:</label>
+                <label className="text-[11px] font-black text-[#5A6A85] block mb-1">المنطقة والمدينة:</label>
                 <select
                   value={regionFilter}
                   onChange={(e) => handleFilterSelect(setRegionFilter, e.target.value)}
@@ -394,7 +394,7 @@ function GuidesPage() {
 
               {/* Experience */}
               <div className="lg:col-span-2 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs">
-                <label className="text-[10px] font-black text-[#5A6A85] block mb-1">سنوات الخبرة:</label>
+                <label className="text-[11px] font-black text-[#5A6A85] block mb-1">سنوات الخبرة:</label>
                 <select
                   value={expFilter}
                   onChange={(e) => handleFilterSelect(setExpFilter, e.target.value)}
@@ -418,7 +418,7 @@ function GuidesPage() {
           <div className="flex items-center gap-3">
             <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] flex items-center gap-2">
               <span>المرشدون السياحيون المتاحون</span>
-              <span className="px-3 py-0.5 rounded-full bg-[#1B5A78] text-white text-xs font-bold">
+              <span className="px-3 py-0.5 rounded-full bg-[#0B4F57] text-white text-xs font-bold">
                 {filteredGuides.length} مرشد
               </span>
             </h2>
@@ -429,7 +429,7 @@ function GuidesPage() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "carousel" ? "grid" : "carousel")}
-              className="px-4 py-2 rounded-full bg-transparent hover:bg-[#1B5A78]/10 text-[#1B5A78] border border-[#1B5A78]/30 text-xs font-black flex items-center gap-1.5 backdrop-blur-xs shadow-2xs transition cursor-pointer"
+              className="px-4 py-2 rounded-full bg-transparent hover:bg-[#0B4F57]/10 text-[#0B4F57] border border-[#0B4F57]/30 text-xs font-black flex items-center gap-1.5 backdrop-blur-xs shadow-2xs transition cursor-pointer"
               title={viewMode === "carousel" ? "عرض جميع المرشدين كـ قائمة تحت بعض في نفس الصفحة" : "العودة للشريط الأفقي"}
             >
               <span>{viewMode === "carousel" ? "📜" : "↔️"}</span>
@@ -442,7 +442,7 @@ function GuidesPage() {
                 <button
                   type="button"
                   onClick={scrollRight}
-                  className="w-9 h-9 rounded-full bg-transparent border border-[#E8E2D6] hover:bg-[#1B5A78]/10 hover:text-[#1B5A78] text-[#0F172A] grid place-items-center transition cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-transparent border border-[#E8E2D6] hover:bg-[#0B4F57]/10 hover:text-[#0B4F57] text-[#0F172A] grid place-items-center transition cursor-pointer"
                   title="التمرير لليمين"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -450,7 +450,7 @@ function GuidesPage() {
                 <button
                   type="button"
                   onClick={scrollLeft}
-                  className="w-9 h-9 rounded-full bg-transparent border border-[#E8E2D6] hover:bg-[#1B5A78]/10 hover:text-[#1B5A78] text-[#0F172A] grid place-items-center transition cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-transparent border border-[#E8E2D6] hover:bg-[#0B4F57]/10 hover:text-[#0B4F57] text-[#0F172A] grid place-items-center transition cursor-pointer"
                   title="التمرير لليسار"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -480,7 +480,7 @@ function GuidesPage() {
                   onClick={() => setSelectedGuide(guide)}
                   className={`${
                     viewMode === "grid" ? "w-full" : "w-72 sm:w-[285px] shrink-0 snap-start"
-                  } bg-white rounded-[24px] shadow-card hover:shadow-2xl hover:-translate-y-1.5 border border-[#E8E2D6] transition duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
+                  } bg-white rounded-[24px] shadow-card hover:shadow-md hover:-translate-y-1.5 border border-[#E8E2D6] transition duration-300 flex flex-col group cursor-pointer overflow-hidden relative`}
                 >
                   {/* Top Image Section with Guide Photo */}
                   <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100 flex items-center justify-center">
@@ -491,9 +491,8 @@ function GuidesPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#1B5A78]/10 flex flex-col items-center justify-center text-slate-400 group-hover:scale-105 transition-transform duration-300">
-                        <span className="text-5xl">👤</span>
-                        <span className="text-xs font-black text-slate-500 mt-2">مرشد سياحي مسجل</span>
+                      <div className="w-full h-full bg-[#0B4F57]/10 flex flex-col items-center justify-center text-slate-400 group-hover:scale-105 transition-transform duration-300">
+                        <User className="w-14 h-14 text-[#00736F]/40" strokeWidth={1.5} aria-hidden />
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
@@ -520,11 +519,11 @@ function GuidesPage() {
                   <div className="p-4 bg-white space-y-2.5 flex-1 flex flex-col justify-between">
                     <div>
                       {/* Guide Name */}
-                      <h3 className="font-black text-lg text-[#0F172A] leading-snug group-hover:text-[#1B5A78] transition-colors truncate">
+                      <h3 className="font-black text-lg text-[#0F172A] leading-snug group-hover:text-[#0B4F57] transition-colors truncate">
                         {guide.name}
                       </h3>
                       {guide.onLeave && (
-                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200">
+                        <span className="inline-block mt-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200">
                           🌙 في إجازة حالياً
                         </span>
                       )}
@@ -603,7 +602,7 @@ function GuidesPage() {
                 setExpFilter("all");
                 setWorkDaysFilter("all");
               }}
-              className="mt-6 px-6 py-2.5 rounded-xl bg-[#1B5A78] text-white font-bold text-xs hover:bg-[#13445C] transition cursor-pointer"
+              className="mt-6 px-6 py-2.5 rounded-xl bg-[#0B4F57] text-white font-bold text-xs hover:bg-[#13445C] transition cursor-pointer"
             >
               عرض كافة المرشدين ↺
             </button>
@@ -611,11 +610,11 @@ function GuidesPage() {
         )}
 
         {/* Guide Registration CTA Banner Card (Image 2 style) */}
-        <section className="bg-[#1B5A78] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl border border-white/10 mt-12">
+        <section className="bg-[#0B4F57] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-md border border-white/10 mt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
             {/* Left Image (Image 2 style Traveller/Guide) */}
             <div className="lg:col-span-4 flex justify-center">
-              <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden border-4 border-white/20 shadow-2xl transform -rotate-3 hover:rotate-0 transition duration-300">
+              <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden border-4 border-white/20 shadow-md transform -rotate-3 hover:rotate-0 transition duration-300">
                 <img
                   src="/assets/guide-mohammed.jpg"
                   alt="انضم كمرشد سياحي"
@@ -643,7 +642,7 @@ function GuidesPage() {
               <div className="pt-2 flex flex-wrap items-center gap-4">
                 <Link
                   to="/auth/signup"
-                  className="px-8 py-4 rounded-2xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-sm shadow-xl hover:scale-105 transition flex items-center gap-2 cursor-pointer"
+                  className="px-8 py-4 rounded-2xl bg-[#D96B27] hover:bg-[#C25B1E] text-white font-black text-sm shadow-md hover:scale-105 transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>تسجيل الدخول / الانضمام كمرشد سياحي</span>
                   <span className="text-lg">🧭</span>

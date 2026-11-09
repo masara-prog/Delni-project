@@ -56,9 +56,9 @@ export function PlatformAlert() {
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/45 backdrop-blur-sm grid place-items-center p-4 animate-overlay-in" dir="rtl" onClick={() => close(false)}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden text-right animate-dialog-in">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-3xl shadow-md overflow-hidden text-right animate-dialog-in">
 
-        <div className={`px-5 py-3 text-white font-black text-sm flex items-center gap-2 ${isError ? "bg-red-600" : isSuccess ? "bg-emerald-600" : "bg-[#003580]"}`}>
+        <div className={`px-5 py-3 text-white font-black text-sm flex items-center gap-2 ${isError ? "bg-red-600" : isSuccess ? "bg-emerald-600" : "bg-[#00736F]"}`}>
           <span>{isConfirm ? "❓" : isError ? "⚠️" : isSuccess ? "✅" : "ℹ️"}</span>
           <span>منصة دَلِّني</span>
         </div>
@@ -77,7 +77,7 @@ export function PlatformAlert() {
             type="button"
             autoFocus
             onClick={() => close(true)}
-            className="px-6 h-10 rounded-xl bg-[#003580] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer"
+            className="px-6 h-10 rounded-xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition cursor-pointer"
           >
             {isConfirm ? "نعم، متأكد" : "حسناً"}
           </button>

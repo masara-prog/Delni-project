@@ -37,7 +37,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     const toast = document.createElement("div");
     toast.id = "delni-fav-toast";
     toast.className =
-      "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/90 text-white backdrop-blur-md shadow-2xl text-xs font-black flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200";
+      "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/90 text-white backdrop-blur-md shadow-md text-xs font-black flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200";
     toast.innerHTML = `<span>${active ? "🤍" : "❤️"}</span><span>${res.message}</span>`;
     document.body.appendChild(toast);
     setTimeout(() => {

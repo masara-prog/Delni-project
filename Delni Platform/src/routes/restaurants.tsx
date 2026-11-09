@@ -149,7 +149,7 @@ function RestaurantDetailsView({
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-[#D96B27] selection:text-white" dir={dir}>
       {/* ── 1. LUXURY TOP FLOATING NAVIGATION ── */}
-      <div className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40 shadow-2xl">
+      <div className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <button
             type="button"
@@ -183,7 +183,7 @@ function RestaurantDetailsView({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-24">
         
         {/* Luxury Hero Header Bar */}
-        <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-800/90 border border-white/15 p-6 sm:p-8 shadow-md backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 bg-orange-600/15 rounded-full blur-3xl pointer-events-none" />
 
@@ -237,14 +237,14 @@ function RestaurantDetailsView({
             </div>
 
             {/* Rating Box & Gourmet Score */}
-            <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto bg-white/5 border border-white/15 p-4 rounded-3xl backdrop-blur-xl shadow-xl">
+            <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto bg-white/5 border border-white/15 p-4 rounded-3xl backdrop-blur-xl shadow-md">
               <div className="text-right">
                 <div className="text-sm font-black text-white">{restaurant.rating > 0 ? (restaurant.ratingWord || (isAr ? "تقييم معتمد" : "Verified")) : (isAr ? "مكان معتمد جديد" : "Newly Verified")}</div>
                 <div className="text-xs text-slate-400 font-bold">{restaurant.reviewsCount > 0 ? `${restaurant.reviewsCount} ${isAr ? "تقييم زائر معتمد" : "verified reviews"}` : (isAr ? "لا توجد تقييمات بعد" : "No reviews yet")}</div>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-[#D96B27] text-white flex flex-col items-center justify-center font-black shrink-0 shadow-lg ring-2 ring-white/20">
                 <span className="text-lg leading-tight font-black">{restaurant.rating > 0 ? restaurant.rating : "—"}</span>
-                <span className="text-[9px] text-amber-200 font-bold">{restaurant.rating > 0 ? (isAr ? "من 5" : "/5") : (isAr ? "جديد" : "New")}</span>
+                <span className="text-[11px] text-amber-200 font-bold">{restaurant.rating > 0 ? (isAr ? "من 5" : "/5") : (isAr ? "جديد" : "New")}</span>
               </div>
             </div>
           </div>
@@ -257,7 +257,7 @@ function RestaurantDetailsView({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             
             {/* Featured Hero Photo (8 cols) */}
-            <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[500px] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-2xl group cursor-pointer"
+            <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[500px] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-md group cursor-pointer"
               onClick={() => setLightboxOpen(true)}
             >
               <img
@@ -286,7 +286,7 @@ function RestaurantDetailsView({
                     e.stopPropagation();
                     setLightboxOpen(true);
                   }}
-                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="pointer-events-auto bg-white/90 hover:bg-white text-slate-900 text-xs font-black px-3.5 py-1.5 rounded-full shadow-md transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>🔍</span>
                   <span>{isAr ? "تكبير واستعراض الشاشة الكاملة" : "Expand Fullscreen"}</span>
@@ -300,7 +300,7 @@ function RestaurantDetailsView({
                   e.stopPropagation();
                   prevPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 right-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة السابقة" : "Previous photo"}
               >
                 {dir === "rtl" ? "→" : "←"}
@@ -311,7 +311,7 @@ function RestaurantDetailsView({
                   e.stopPropagation();
                   nextPhoto();
                 }}
-                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="absolute top-1/2 -translate-y-1/2 left-4 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
                 title={isAr ? "الصورة التالية" : "Next photo"}
               >
                 {dir === "rtl" ? "←" : "→"}
@@ -353,7 +353,7 @@ function RestaurantDetailsView({
                     onClick={() => setActivePhoto(idx)}
                     className={`relative h-28 sm:h-36 lg:h-[155px] rounded-3xl overflow-hidden cursor-pointer group transition duration-300 bg-slate-950 border ${
                       isSelected
-                        ? "border-amber-400 ring-2 ring-amber-400/50 scale-[1.02] shadow-xl"
+                        ? "border-amber-400 ring-2 ring-amber-400/50 scale-[1.02] shadow-md"
                         : "border-white/10 hover:border-white/40 opacity-80 hover:opacity-100"
                     }`}
                   >
@@ -434,7 +434,7 @@ function RestaurantDetailsView({
 
             {/* A. Overview & Heritage */}
             {activeTab === "overview" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-4 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-4 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>🍽️</span>
                   <h2>{isAr ? "نبذة عن المطعم وفلسفة الطهي" : "About the Dining Experience"}</h2>
@@ -465,7 +465,7 @@ function RestaurantDetailsView({
 
             {/* C. Atmosphere & Seating */}
             {activeTab === "features" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>🌟</span>
                   <h2>{isAr ? "المميزات وتجهيزات الجلسات" : "Dining Atmosphere & Amenities"}</h2>
@@ -488,7 +488,7 @@ function RestaurantDetailsView({
 
             {/* D. Location & Timings */}
             {activeTab === "location" && (
-              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-xl">
+              <div className="rounded-3xl bg-slate-800/60 border border-white/10 p-6 sm:p-8 space-y-5 backdrop-blur-xl animate-in fade-in duration-300 shadow-md">
                 <div className="flex items-center gap-2.5 text-amber-400 font-black text-lg sm:text-xl">
                   <span>📍</span>
                   <h2>{isAr ? "الموقع الجغرافي وساعات العمل" : "Location & Operating Hours"}</h2>
@@ -546,7 +546,7 @@ function RestaurantDetailsView({
           <div className="lg:col-span-4 sticky top-20 space-y-4">
             
             {/* VIP Dallani Pass Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-amber-500/20 border border-amber-400/30 p-6 shadow-2xl backdrop-blur-xl space-y-5">
+            <div className="relative overflow-hidden rounded-3xl bg-amber-500/20 border border-amber-400/30 p-6 shadow-md backdrop-blur-xl space-y-5">
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
               <div className="space-y-2">
@@ -570,7 +570,7 @@ function RestaurantDetailsView({
               <div className="space-y-3">
                 <a
                   href={`tel:${restaurant.phone}`}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-md active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">📞</span>
                   <span>{isAr ? `اتصال مباشر وحجز طاولة (${restaurant.phone})` : `Call Restaurant (${restaurant.phone})`}</span>
@@ -582,7 +582,7 @@ function RestaurantDetailsView({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition flex items-center justify-center gap-2.5 shadow-md active:scale-98 cursor-pointer"
                 >
                   <span className="text-base">💬</span>
                   <span>{isAr ? "مراسلة واستعلام عبر واتساب" : "WhatsApp Table Reservation"}</span>
@@ -656,21 +656,21 @@ function RestaurantDetailsView({
             <img
               src={photos[activePhoto]}
               alt={restaurant.name}
-              className="max-h-[70vh] max-w-full rounded-3xl object-contain shadow-2xl border border-white/20"
+              className="max-h-[70vh] max-w-full rounded-3xl object-contain shadow-md border border-white/20"
             />
             
             {/* Chevrons */}
             <button
               type="button"
               onClick={prevPhoto}
-              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
+              className="absolute right-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "→" : "←"}
             </button>
             <button
               type="button"
               onClick={nextPhoto}
-              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-2xl flex items-center justify-center font-black text-xl transition cursor-pointer"
+              className="absolute left-4 w-12 h-12 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 shadow-md flex items-center justify-center font-black text-xl transition cursor-pointer"
             >
               {dir === "rtl" ? "←" : "→"}
             </button>
@@ -883,7 +883,7 @@ function RestaurantsPage() {
       <Header active="restaurants" />
 
       {/* ── 1. HERO SECTION (Professional Animated Slideshow) ── */}
-      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#003580]">
+      <div className="relative h-80 sm:h-96 overflow-hidden bg-[#00736F]">
         <HeroSlideshow
           images={[
             "/assets/restaurant-libya.jpg",
@@ -894,7 +894,7 @@ function RestaurantsPage() {
           alt="المطاعم والمقاهي في ليبيا"
           brightness="brightness-90"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#003580]/90 via-[#003580]/45 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#00736F]/90 via-[#00736F]/45 to-transparent z-10" />
         <div className="relative z-20 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center pt-12 text-white">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-black w-fit mb-2.5 border border-white/25">
             🍽️ {isAr ? "دليل واستعراض المطاعم والمقاهي في ليبيا (للعرض والتعريف فقط)" : "Dining & Cafes Directory in Libya (Showcase Only)"}
@@ -912,13 +912,13 @@ function RestaurantsPage() {
 
       {/* ── 2. UNIFIED FLOATING FILTER PANEL (Matching Hotels & Attractions) ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 mb-8">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E8E2D6] text-[#0F172A]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-blue-100">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 shadow-md border border-[#E8E2D6] text-[#0F172A]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3 bg-[#F0F4F8] rounded-2xl border border-teal-100">
             {/* Search Input */}
             <div className="lg:col-span-5 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">🔍</span>
+              <span className="text-[#00736F] font-bold text-base">🔍</span>
               <div className="relative flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "البحث عن مطعم أو طبق:" : "Search Restaurant or Dish:"}
                 </label>
                 <input
@@ -946,9 +946,9 @@ function RestaurantsPage() {
 
             {/* City / Destination Select */}
             <div className="lg:col-span-4 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center gap-2">
-              <span className="text-[#003580] font-bold text-base">📍</span>
+              <span className="text-[#00736F] font-bold text-base">📍</span>
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "المدينة والمنطقة:" : "City & Region:"}
                 </label>
                 <select
@@ -973,7 +973,7 @@ function RestaurantsPage() {
             {/* Cuisine Category Dropdown Filter */}
             <div className="lg:col-span-3 bg-white p-3 rounded-xl border border-[#E8E2D6] shadow-xs flex items-center justify-between gap-2">
               <div className="flex-1">
-                <label className="text-[10px] font-black text-[#003580] block mb-0.5">
+                <label className="text-[11px] font-black text-[#00736F] block mb-0.5">
                   {isAr ? "تصنيف المأكولات:" : "Cuisine Category:"}
                 </label>
                 <select
@@ -1037,8 +1037,8 @@ function RestaurantsPage() {
                 count: restaurants.filter((x) => x.category === "seafood").length,
                 img: "/assets/seafood_category.jpg",
                 badge: isAr ? "صيد بحري طازج" : "Fresh Catch",
-                badgeBg: "bg-blue-700",
-                border: "border-blue-500 ring-4 ring-blue-500/25",
+                badgeBg: "bg-teal-700",
+                border: "border-teal-500 ring-4 ring-teal-500/25",
               },
               {
                 id: "traditional",
@@ -1078,7 +1078,7 @@ function RestaurantsPage() {
                   onClick={() => {
                     setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
                   }}
-                  className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
+                  className={`group relative h-64 sm:h-72 rounded-3xl overflow-hidden shadow-md hover:shadow-md transition duration-300 cursor-pointer border select-none flex flex-col justify-between p-4 ${
                     isSelected
                       ? `${cat.border} scale-[1.02]`
                       : "border-slate-200 hover:border-slate-400"
@@ -1093,11 +1093,11 @@ function RestaurantsPage() {
 
                   {/* Top Badge */}
                   <div className="relative z-10 flex items-center justify-between">
-                    <span className={`px-3 py-1 rounded-full text-white text-[10px] font-black shadow-xs ${cat.badgeBg}`}>
+                    <span className={`px-3 py-1 rounded-full text-white text-[11px] font-black shadow-xs ${cat.badgeBg}`}>
                       {cat.badge}
                     </span>
                     {isSelected && (
-                      <span className="w-6 h-6 rounded-full bg-white text-[#003580] flex items-center justify-center text-xs font-black shadow-md">
+                      <span className="w-6 h-6 rounded-full bg-white text-[#00736F] flex items-center justify-center text-xs font-black shadow-md">
                         ✓
                       </span>
                     )}
@@ -1128,7 +1128,7 @@ function RestaurantsPage() {
           {!selectedCategory ? (
             <div className="text-center py-14 px-4 bg-white rounded-3xl border-2 border-dashed border-amber-300 shadow-sm space-y-3 my-4">
               <div className="text-5xl">🍽️</div>
-              <h4 className="text-lg sm:text-xl font-black text-[#003580]">
+              <h4 className="text-lg sm:text-xl font-black text-[#00736F]">
                 {isAr ? "اختر أحد تصنيفات المأكولات والمقاهي أعلاه لعرض الخيارات المتاحة" : "Select a Dining Category Above"}
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 font-semibold max-w-lg mx-auto leading-relaxed">
@@ -1140,11 +1140,11 @@ function RestaurantsPage() {
           ) : (
             /* B. When Category IS Selected -> Show Filtered Results */
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#EBF3FF] rounded-2xl border border-blue-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#EBF3FF] rounded-2xl border border-teal-200">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">✅</span>
                   <div>
-                    <h3 className="text-base sm:text-lg font-black text-[#003580]">
+                    <h3 className="text-base sm:text-lg font-black text-[#00736F]">
                       {isAr ? "قائمة الخيارات المتاحة لـ: " : "Available Places for: "}
                       <span className="text-[#D96B27]">
                         {selectedCategory === "seafood"
@@ -1165,7 +1165,7 @@ function RestaurantsPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedCategory(null)}
-                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-[#003580] text-xs font-black border border-[#003580]/30 transition cursor-pointer"
+                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-[#00736F] text-xs font-black border border-[#00736F]/30 transition cursor-pointer"
                 >
                   {isAr ? "اختيار تصنيف آخر ✕" : "Change Category ✕"}
                 </button>
@@ -1179,7 +1179,7 @@ function RestaurantsPage() {
                     <article
                       key={r.id}
                       onClick={() => setSelectedRest(r)}
-                      className="group bg-white rounded-3xl border border-slate-200 hover:border-[#D96B27]/50 shadow-sm hover:shadow-xl transition p-4 sm:p-5 cursor-pointer flex flex-col md:flex-row gap-5"
+                      className="group bg-white rounded-3xl border border-slate-200 hover:border-[#D96B27]/50 shadow-sm hover:shadow-md transition p-4 sm:p-5 cursor-pointer flex flex-col md:flex-row gap-5"
                     >
                       {/* Photo */}
                       <div className="relative w-full md:w-72 h-52 sm:h-56 rounded-2xl overflow-hidden shrink-0 bg-slate-900">
@@ -1196,7 +1196,7 @@ function RestaurantsPage() {
                             size="sm"
                           />
                         </div>
-                        <div className="absolute top-2.5 left-2.5 bg-[#003580] text-white text-[10px] font-black px-3 py-1 rounded-full shadow-sm">
+                        <div className="absolute top-2.5 left-2.5 bg-[#00736F] text-white text-[11px] font-black px-3 py-1 rounded-full shadow-sm">
                           {r.type}
                         </div>
                       </div>
@@ -1205,20 +1205,20 @@ function RestaurantsPage() {
                       <div className="flex-1 flex flex-col justify-between space-y-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            <h4 className="text-lg sm:text-xl font-black text-[#003580] group-hover:text-[#D96B27] transition-colors">
+                            <h4 className="text-lg sm:text-xl font-black text-[#00736F] group-hover:text-[#D96B27] transition-colors">
                               {r.name}
                             </h4>
-                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                            <span className="text-[11px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                               مفتوح الآن · {r.hours}
                             </span>
-                            <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                               <span>❤️</span>
                               <span>{isFav ? (Number(r.reviewsCount) || 0) + 1 : (Number(r.reviewsCount) || 0)} {isAr ? "إعجاب" : "likes"}</span>
                             </span>
                           </div>
 
                           <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                            <span className="text-[#003580] font-bold">📍 {r.city}</span>
+                            <span className="text-[#00736F] font-bold">📍 {r.city}</span>
                             <span>·</span>
                             <span>{r.address}</span>
                           </div>
