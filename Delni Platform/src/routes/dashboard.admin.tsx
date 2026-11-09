@@ -1381,7 +1381,7 @@ function AdminDashboard() {
   const handleVerifyTicketCode = async (codeToSearch: string) => {
     const raw = codeToSearch.trim();
     if (!raw) {
-      setScanStatusMsg({ type: "error", msg: "يرجى كتابة أو مسح رمز التذكرة والباركود أولاً." });
+      setScanStatusMsg({ type: "error", msg: "يرجى كتابة رقم التذكرة أولاً." });
       return;
     }
     const res = await apiFindTicket(raw);
@@ -1601,27 +1601,6 @@ function AdminDashboard() {
                 >
                   <span>تحقق من التذكرة 🔍</span>
                 </button>
-              </div>
-
-              {/* Quick sample chips from real bookings */}
-              <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
-                <span className="text-slate-500 font-bold">تذاكر سريعة للتجربة:</span>
-                {[...dailyBookings.slice(0, 3), ...weeklyBookings.slice(0, 2)].map((b: any, idx) => {
-                  const c = b.booking_daily_id || b.booking_weekly_id || `DL-${10000 + idx}`;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => {
-                        setScanCode(c);
-                        handleVerifyTicketCode(c);
-                      }}
-                      className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs font-bold transition border border-slate-200 cursor-pointer"
-                    >
-                      {c} ({b.tourist_name || b.tourist_id || "سائح"})
-                    </button>
-                  );
-                })}
               </div>
 
               {/* Status Message */}
@@ -2460,7 +2439,7 @@ function AdminDashboard() {
                               ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
                               : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
-                            {cancelled ? "✕ حجز ملغى" : "📷 مسح وتحقق"}
+                            {cancelled ? "✕ حجز ملغى" : "🎫 تأكيد الدفع"}
                           </button>
                         </td>
                       </tr>
@@ -2547,7 +2526,7 @@ function AdminDashboard() {
                               ? "px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-black no-underline cursor-not-allowed"
                               : "px-2.5 py-1 bg-[#003580]/10 hover:bg-[#003580]/20 text-[#003580] rounded-lg text-xs font-black transition cursor-pointer"}
                           >
-                            {cancelled ? "✕ حجز ملغى" : "📷 مسح وتحقق"}
+                            {cancelled ? "✕ حجز ملغى" : "🎫 تأكيد الدفع"}
                           </button>
                         </td>
                       </tr>

@@ -1,6 +1,7 @@
 import { platformConfirm } from "@/components/PlatformAlert";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { Banknote, BusFront, Ticket } from "lucide-react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destTripoli from "@/assets/dest-tripoli.jpg";
 import destTripoliOldCity from "@/assets/dest-tripoli-old-city.jpg";
@@ -892,9 +893,9 @@ function HowItWorks() {
   const isAr = language === "ar";
   const ease = { transitionTimingFunction: "var(--ease-out)" };
   const steps = [
-    { icon: "🎫", title: isAr ? "احجز رحلتك" : "Book your trip", text: isAr ? "اختر الرحلة وعدد المقاعد، وتصلك تذكرتك فوراً." : "Choose a trip and seats; your ticket arrives at once." },
-    { icon: "💵", title: isAr ? "ادفع في المكتب" : "Pay at the office", text: isAr ? "سدّد قيمة الحجز نقداً قبل موعد الرحلة." : "Pay in cash before the trip day." },
-    { icon: "🚌", title: isAr ? "انطلق مع المرشد" : "Set off with your guide", text: isAr ? "يوم الرحلة تُمسح تذكرتك وتبدأ المغامرة." : "On the day your ticket is scanned and you set off." },
+    { icon: Ticket, title: isAr ? "احجز رحلتك" : "Book your trip", text: isAr ? "اختر الرحلة وعدد المقاعد، ويصلك رقم تذكرتك فوراً." : "Choose a trip and seats; your ticket number arrives at once." },
+    { icon: Banknote, title: isAr ? "ادفع في المكتب" : "Pay at the office", text: isAr ? "سدّد المبلغ نقداً، ويؤكد الموظف الدفع برقم تذكرتك." : "Pay in cash; the staff confirm it with your ticket number." },
+    { icon: BusFront, title: isAr ? "انطلق مع المرشد" : "Set off with your guide", text: isAr ? "في موعد الرحلة تنطلق من مكتب الشركة." : "On the trip day you set off from the office." },
   ];
 
   return (
@@ -920,7 +921,7 @@ function HowItWorks() {
               >
                 <div className="relative mx-auto w-[88px] h-[88px]">
                   <div className="absolute inset-0 rounded-full bg-white shadow-card ring-8 ring-[#F8F5EF] transition-transform duration-200 group-hover:scale-105" style={ease} />
-                  <div className="relative w-full h-full grid place-items-center text-4xl">{st.icon}</div>
+                  <div className="relative w-full h-full grid place-items-center text-[#003580]"><st.icon className="w-9 h-9" strokeWidth={1.75} aria-hidden /></div>
                   <span className="absolute -top-1 -end-1 w-8 h-8 rounded-full bg-[#003580] text-white text-sm font-black grid place-items-center shadow-md ring-4 ring-[#F8F5EF]">{k + 1}</span>
                 </div>
                 <h3 className="mt-6 text-xl font-black text-foreground">{st.title}</h3>
@@ -929,18 +930,6 @@ function HowItWorks() {
             </Reveal>
           ))}
         </ol>
-
-        <Reveal delay={180}>
-          <div className="mt-12 text-center">
-            <a
-              href="/trips"
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-[#003580] text-white font-black shadow-md transition-[transform,background-color] duration-200 hover:bg-[#002866] hover:-translate-y-0.5 active:scale-[0.97]"
-              style={ease}
-            >
-              {isAr ? "ابدأ رحلتك" : "Start your trip"} <span aria-hidden>{isAr ? "←" : "→"}</span>
-            </a>
-          </div>
-        </Reveal>
       </div>
     </section>
   );
