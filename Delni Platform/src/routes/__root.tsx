@@ -9,7 +9,7 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Compass, Home, RotateCw } from "lucide-react";
+import { Home, RotateCw } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { FloatingChat } from "@/components/FloatingChat";
@@ -158,16 +158,15 @@ function RoleDashboardsSidebar() {
 }
 
 // One simple screen for "page not found" and "page could not load": logo, icon, a short title and one action
-function StatusScreen({ dir, icon, title, actions }: { dir: "rtl" | "ltr"; icon: ReactNode; title: string; actions: ReactNode }) {
+function StatusScreen({ dir, title, actions }: { dir: "rtl" | "ltr"; title: string; actions: ReactNode }) {
   return (
     <div dir={dir} className="relative min-h-screen overflow-hidden bg-[#F7F5F0] px-4 py-12 flex items-center justify-center">
       <div aria-hidden className="pointer-events-none absolute -top-40 -start-32 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle,rgba(0,115,111,0.14),transparent_65%)]" />
       <div aria-hidden className="pointer-events-none absolute -bottom-48 -end-32 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(217,107,39,0.12),transparent_65%)]" />
       <div className="relative w-full max-w-[380px] text-center">
-        <img src="/logo.png" alt="دلّني" className="mx-auto h-24 w-auto object-contain mix-blend-multiply" />
-        <div className="mt-8 rounded-[28px] bg-white px-8 py-10 ring-1 ring-black/[0.05] shadow-[0_24px_60px_-28px_rgba(11,27,43,0.25)]">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#FFF2E8] text-[#D2621F]">{icon}</div>
-          <h1 className="mt-6 text-[22px] leading-snug font-extrabold text-[#0B1B2B]">{title}</h1>
+        <div className="rounded-[28px] bg-white px-8 pt-8 pb-10 ring-1 ring-black/[0.05] shadow-[0_24px_60px_-28px_rgba(11,27,43,0.25)]">
+          <img src="/logo.png" alt="دلّني" className="mx-auto h-28 w-auto object-contain" />
+          <h1 className="mt-4 text-[22px] leading-snug font-extrabold text-[#0B1B2B]">{title}</h1>
           <div className="mt-7 flex flex-col items-center gap-3">{actions}</div>
         </div>
       </div>
@@ -189,7 +188,6 @@ function NotFoundComponent() {
   return (
     <StatusScreen
       dir={isAr ? "rtl" : "ltr"}
-      icon={<Compass className="h-8 w-8" strokeWidth={1.75} />}
       title={isAr ? "الصفحة غير متوفرة" : "Page not found"}
       actions={
         <Link to="/" className={btnPrimary}>
@@ -212,7 +210,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <StatusScreen
       dir="rtl"
-      icon={<RotateCw className="h-8 w-8" strokeWidth={1.75} />}
       title="حدث خطأ، حاول مجدداً"
       actions={
         <>

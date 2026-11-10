@@ -15,11 +15,11 @@ export function renderErrorPage(): string {
       .blob.a { width: 480px; height: 480px; top: -160px; right: -130px; background: radial-gradient(circle, rgba(0,115,111,.14), transparent 65%); }
       .blob.b { width: 520px; height: 520px; bottom: -190px; left: -130px; background: radial-gradient(circle, rgba(217,107,39,.12), transparent 65%); }
       .wrap { position: relative; width: 100%; max-width: 380px; text-align: center; }
-      .logo { height: 96px; mix-blend-mode: multiply; }
-      .card { margin-top: 32px; background: #fff; border-radius: 28px; padding: 40px 32px; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 24px 60px -28px rgba(11,27,43,.25); }
+      .logo { height: 112px; display: block; margin: 0 auto; }
+      .card { margin-top: 0; background: #fff; border-radius: 28px; padding: 32px 32px 40px; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 24px 60px -28px rgba(11,27,43,.25); }
       .icon { width: 64px; height: 64px; margin: 0 auto; border-radius: 16px; background: #FFF2E8; color: #D2621F; display: grid; place-items: center; }
       .eyebrow { margin: 20px 0 0; font-size: 12px; font-weight: 700; color: #00736F; }
-      h1 { margin: 24px 0 0; font-size: 22px; line-height: 1.35; font-weight: 800; }
+      h1 { margin: 16px 0 0; font-size: 22px; line-height: 1.35; font-weight: 800; }
       p.body { margin: 12px auto 0; max-width: 340px; color: #5B6B70; }
       .actions { margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
       .quiet { font-size: 13.5px; font-weight: 600; color: #5B6B70; text-decoration: none; }
@@ -37,11 +37,8 @@ export function renderErrorPage(): string {
   <body>
     <div class="blob a"></div><div class="blob b"></div>
     <div class="page"><div class="wrap">
-      <img class="logo" src="/logo.png" alt="دلّني" />
       <div class="card">
-        <div class="icon" aria-hidden="true">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-        </div>
+        <img class="logo" src="/logo.png" alt="دلّني" />
         <h1>حدث خطأ، حاول مجدداً</h1>
         <div class="actions">
           <button class="btn primary" onclick="location.reload()">إعادة تحميل الصفحة</button>
