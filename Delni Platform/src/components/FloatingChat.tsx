@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { BotMessageSquare } from "lucide-react";
+import { laravelRequest } from "@/lib/api";
+import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
 type Msg = { 
   id: number; 
@@ -11,39 +13,8 @@ type Msg = {
   badge?: string;
 };
 
-const quickButtons = [
-  "📷 التعرف على معلم بالصورة",
-  "🗣️ ترجمة لهجة ومصطلحات ليبية",
-  "☀️ طقس وأفضل أوقات الزيارة",
-  "🚨 بلاغ عاجل للإدارة"
-];
 
-const libyanTerms: Record<string, string> = {
-  "شن الجو": "كيف حالك؟ وما هي الأخبار؟ (تحية شعبية متداولة بكثرة)",
-  "شاهي باللوز": "الشاي الليبي التقليدي المركز المزين باللوز المحمص أو الكاوكاو.",
-  "مربوعة": "غرفة الاستقبال الرئيسية للضيوف في البيت الليبي الأصيل.",
-  "باستيل": "فطائر طرابلسية محشوة باللحم المفروم والبيض، من أشهى المأكولات.",
-  "حولي": "الزي التقليدي الليبي الرجالي الفاخر المنسوج من الصوف أو الحرير.",
-  "عين الفرس": "النبع المائي الشهير المؤرخ لتأسيس واحة مدينة غدامس القديمة."
-};
 
-const landmarkSamples = [
-  {
-    name: "قوس سيبتيموس سيفيروس - لبدة الكبرى",
-    info: "🏛️ تم التعرف بالذكاء الاصطناعي: هذا قوس النصر الشهير بالإمبراطور الروماني سيبتيموس سيفيروس بمدينة لبدة الكبرى (تأسس عام 203م). يقع في الخمس ويعتبر تحفة المعمار الروماني بليبيا.",
-    img: "/assets/ai_ruins.jpg"
-  },
-  {
-    name: "بحيرة قبرعون - أوباري فزان",
-    info: "🌵 تم التعرف بالذكاء الاصطناعي: هذه بحيرة قبرعون المالحة بين كثبان رملة أوباري الذهبية بجرماء الصحراء الكبرى. تتميز بالنخيل الباسق والمياه الدافئة عالية الملوحة.",
-    img: "/assets/ai_ghadames.jpg"
-  },
-  {
-    name: "غدامس القديمة - لؤلؤة الصحراء",
-    info: "🏡 تم التعرف بالذكاء الاصطناعي: شوارع وممرات غدامس البيضاء التراثية المسجلة بليونسكو. تمتاز بالنظام الهيدروليكي والمنازل الطينية المسقوفة ذات العزل الحراري العالي.",
-    img: "/assets/ai_ghadames.jpg"
-  }
-];
 
 import { useLanguage } from "@/lib/i18n";
 import { getOrCreateUserSession, sendUserMessage, pullUserSession, type ChatSession } from "@/lib/supportChat";
@@ -129,8 +100,8 @@ export function FloatingChat() {
       from: "ai", 
       time: now(), 
       text: language === 'ar' 
-        ? "مرحباً بك في «ذكاء دلني» 🤖👋\nأنا مساعدك الذكي لخدمات السياحة: يمكنك رفع صورة لمعلم سياحي للتعرف عليه، أو السؤال عن أي رحلة وفندق!"
-        : "Welcome to Delni Smart AI 🤖👋\nI am your travel assistant: Feel free to ask about any trip, hotel, attraction, or upload a photo to identify landmarks!" 
+        ? "مرحباً بك في «ذكاء دلني» 👋\nاسألني عن أي شيء في ليبيا: المعالم، الطقس، الزي والأكلات، الرحلات… أو ارفع صورة وسأتعرف عليها."
+        : "Welcome to Delni AI 👋\nAsk me anything about Libya: landmarks, weather, dress and food, trips… or upload a photo and I will tell you what it is."
     },
   ]);
 
@@ -154,134 +125,66 @@ export function FloatingChat() {
     return null;
   }
 
-  const handleSend = (text: string) => {
-    const t = text.trim();
-    if (!t) return;
+  // The last turns sent with each question, so follow-up questions are understood
+  const historyFor = (list: Msg[]) =>
+    list
+      .filter((m) => (m.from === "user" || m.from === "ai") && m.id !== 1 && m.text)
+      .slice(-8)
+      .map((m) => ({ role: m.from === "user" ? "user" : "model", text: m.text.slice(0, 4000) }));
 
-    setMessages((m) => [...m, { id: Date.now(), from: "user", text: t, time: now() }]);
-    setInput("");
-    setTyping(true);
-
-    setTimeout(() => {
-      setTyping(false);
-
-      // Check if term matches Libyan dialect dictionary
-      const termMatch = Object.keys(libyanTerms).find(k => t.includes(k));
-      if (termMatch) {
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            from: "ai",
-            badge: "🗣️ ترجمة لهجة ليبية",
-            text: `معنى "${termMatch}":\n${libyanTerms[termMatch]}`,
-            time: now()
-          }
-        ]);
-        return;
-      }
-
-      if (t.includes("طقس") || t.includes("أوقات الزيارة")) {
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            from: "ai",
-            badge: "🌤️ توصية الطقس والرحلات",
-            text: "الطقس الموصى به:\n• المدن الساحلية (طرابلس، بنغازي): الأجواء ممتازة ومعتدلة.\n• الصحراء والواحات (أوباري، غدامس): الأوقات المثالية للزيارة من أكتوبر حتى أبريل لتجنب حرارة الصيف.",
-            time: now()
-          }
-        ]);
-        return;
-      }
-
-      if (t.includes("بلاغ") || t.includes("عاجل")) {
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            from: "admin",
-            badge: language === 'ar' ? "🚨 استقبال بلاغ فوراً" : "🚨 Urgent Report Received",
-            text: language === 'ar' 
-              ? "تم استلام بلاغك وإخطار فريق إدارة دلني الميداني فوراً. سيتم التواصل معك على هاتفك للحصول على المساعدة المباشرة."
-              : "Your report has been received and the field management team has been notified immediately. We will contact you directly.",
-            time: now()
-          }
-        ]);
-        return;
-      }
-
-      // Intelligent local client-side response
-      const lower = t.toLowerCase();
-      let reply = "";
-      const has = (...words: string[]) => words.some((w) => lower.includes(w));
-      // Recommendations by interest: historical places, beaches and relaxation (the desert follows below)
-      if (has("تاريخ", "أثري", "أثرية", "آثار", "اثار", "تراث", "historic", "history", "ruins")) {
-        reply = language === 'ar'
-          ? "🏛️ أقترح عليك هذه المعالم التاريخية:\n• لبدة الكبرى (الخمس): أكبر مدينة رومانية محفوظة على المتوسط.\n• صبراتة: المسرح الروماني المطل على البحر.\n• شحات (قورينا) وأبولونيا في الجبل الأخضر: آثار إغريقية.\n• مدينة غدامس القديمة: «لؤلؤة الصحراء» المسجلة في اليونسكو.\n• المدينة القديمة وقوس ماركوس أوريليوس في طرابلس.\nتجد الرحلات اليومية إلى لبدة وصبراتة في صفحة الرحلات."
-          : "🏛️ Historical places I recommend:\n• Leptis Magna (Al Khums)\n• Sabratha and its seaside Roman theatre\n• Cyrene and Apollonia in the Green Mountain\n• The old town of Ghadames (UNESCO)\n• Tripoli's old town and the Arch of Marcus Aurelius\nDaily trips to Leptis and Sabratha are on the trips page.";
-      } else if (has("بحر", "شاطئ", "شواطئ", "استرخاء", "راحة", "ترفيه", "beach", "relax")) {
-        reply = language === 'ar'
-          ? "🏖️ للاسترخاء والترفيه أقترح:\n• شواطئ طرابلس والخمس وزوارة الهادئة.\n• منطقة رأس الهلال وسوسة في الجبل الأخضر حيث يلتقي البحر بالغابات.\n• جولة مسائية في المدينة القديمة بطرابلس مع المقاهي التراثية.\nيمكنك أيضاً طلب رحلة خاصة بالمعالم التي تختارها."
-          : "🏖️ For relaxing: the beaches of Tripoli, Al Khums and Zuwara; Ras Al Hilal and Susa in the Green Mountain; an evening in Tripoli's old town. You can also request a private trip.";
-      } else if (lower.includes("أوباري") || lower.includes("صحراء") || lower.includes("سفاري")) {
-        reply = language === 'ar'
-          ? "أهلاً بك! 🐪 بحيرات أوباري وصحراء فزان وجهة عالمية فريدة للتخييم وسفاري الكثبان الذهبية (أفضل موسم: نوفمبر - مارس). لدينا رحلات أسبوعية بسيارات دفع رباعي وسائقين محترفين."
-          : "Welcome! The Ubari lakes and Fezzan desert are world-class destinations for camping and sand dune safaris. We offer weekly tours with 4WD vehicles and experienced drivers.";
-      } else if (lower.includes("لبدة") || lower.includes("رومان") || lower.includes("صبراتة")) {
-        reply = language === 'ar'
-          ? "مرحباً بك! 🏛️ لبدة الكبرى وصبراتة هما درتا التراث الروماني على البحر المتوسط المصنفتان في اليونسكو. نوفر رحلات يومية بحافلات مكيفة ومرشدين معتمدين."
-          : "Welcome! Leptis Magna and Sabratha are UNESCO-listed Roman heritage gems. We offer daily tours with air-conditioned coaches and certified guides.";
-      } else if (lower.includes("مرشد") || lower.includes("دليل")) {
-        reply = language === 'ar'
-          ? "جميع المرشدين في منصة دلني مرخصون ومعتمدون من وزارة السياحة، ويمكنك استعراض ملفاتهم واختيار المرشد الأنسب لرحلتك من صفحة المرشدين."
-          : "All tour guides on Dalni are certified. You can browse their profiles and choose the best guide from the guides page.";
-      } else {
-        reply = language === 'ar'
-          ? `شكراً لاستفسارك! في منصة دَلِّني نسعد بتقديم كافة التسهيلات حول المعالم السياحية الليبية، الرحلات اليومية والأسبوعية، وخدمات النقل والإرشاد. يمكنك أيضاً رفع صورة أي معلم سياحي للتعرف عليه فوراً!`
-          : `Thanks for your inquiry! At Dalni, we are happy to assist with Libyan landmarks, tours, transport, and certified guides. You can also upload a landmark photo for instant recognition!`;
-      }
-
-      setMessages((m) => [
-        ...m,
-        {
-          id: Date.now() + 1,
-          from: "ai",
-          badge: language === 'ar' ? "✨ مساعد دَلِّني الذكي" : "✨ Dalni Smart Assistant",
-          text: reply,
-          time: now(),
-        },
-      ]);
-    }, 400);
-  };
-
-  const handleImageSimulate = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const imageUrl = URL.createObjectURL(file);
+  const ask = async (text: string, image?: string) => {
+    const history = historyFor(messages);
+    setTyping(!image);
+    setAnalyzingImage(Boolean(image));
+    const res = await laravelRequest<any>("POST", "/ai/chat", { message: text, image, history });
+    setTyping(false);
+    setAnalyzingImage(false);
+    const body: any = res.ok ? res.body : null;
+    const sources: { title: string; url: string }[] = Array.isArray(body?.sources) ? body.sources : [];
     setMessages((m) => [
       ...m,
-      { id: Date.now(), from: "user", text: language === 'ar' ? "📷 قمت برفع صورة معلم سياحي للتعرف عليه بالذكاء الاصطناعي..." : "📷 Uploaded a landmark image for AI identification...", image: imageUrl, time: now() }
+      res.ok && body?.reply
+        ? {
+            id: Date.now() + 1,
+            from: "ai",
+            badge: language === "ar" ? "✨ ذكاء دلني" : "✨ Delni AI",
+            text: body.reply + (sources.length ? "\n\n" + (language === "ar" ? "المصادر: " : "Sources: ") + sources.map((x) => x.title || x.url).join(" · ") : ""),
+            time: now(),
+          }
+        : {
+            id: Date.now() + 1,
+            from: "admin",
+            text: res.ok ? (language === "ar" ? "لم يصل رد، حاول مرة أخرى." : "No answer came back, please try again.") : res.error,
+            time: now(),
+          },
     ]);
+  };
 
-    setAnalyzingImage(true);
+  const handleSend = (text: string) => {
+    const t = text.trim();
+    if (!t || typing || analyzingImage) return;
+    setMessages((m) => [...m, { id: Date.now(), from: "user", text: t, time: now() }]);
+    setInput("");
+    void ask(t);
+  };
 
-    setTimeout(() => {
-      setAnalyzingImage(false);
-      const sample = landmarkSamples[Math.floor(Math.random() * landmarkSamples.length)];
-      setMessages((m) => [
-        ...m,
-        {
-          id: Date.now() + 1,
-          from: "ai",
-          badge: language === 'ar' ? "👁️ نتائج التعرف البصري" : "👁️ Computer Vision Result",
-          text: sample.info,
-          image: sample.img,
-          time: now()
-        }
-      ]);
-    }, 800);
+  // A photo is shrunk in the browser (at most 1280 px) and sent with the typed text, if any
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || typing || analyzingImage) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setMessages((m) => [...m, { id: Date.now(), from: "admin", text: language === "ar" ? "يرجى اختيار صورة JPG أو PNG أو WEBP." : "Please choose a JPG, PNG or WEBP photo.", time: now() }]);
+      return;
+    }
+    const dataUrl = await fileToCompressedDataUrl(file, { maxSide: 1280, quality: 0.82 });
+    const caption = input.trim();
+    setInput("");
+    setMessages((m) => [
+      ...m,
+      { id: Date.now(), from: "user", text: caption || (language === "ar" ? "📷 ما الذي في هذه الصورة؟" : "📷 What is in this photo?"), image: dataUrl, time: now() },
+    ]);
+    void ask(caption, dataUrl);
   };
 
   // No support / AI buttons on the login and signup screens or in the admin dashboard
@@ -374,7 +277,7 @@ export function FloatingChat() {
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleImageSimulate}
+              onChange={handleImage}
               accept="image/*"
               className="hidden"
             />

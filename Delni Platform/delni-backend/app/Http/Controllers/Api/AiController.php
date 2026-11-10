@@ -60,71 +60,120 @@ class AiController extends Controller
     ];
 
     /**
-     * Intelligent Tourism Chat Endpoint
+     * «ذكاء دلني»: a question (and optionally a photo) answered by Google Gemini.
+     * Body: message (text), image (optional data URL: jpeg / png / webp), history (optional [{role: user|model, text}]).
+     * Gemini may search Google for current facts (weather, opening times); the answer is in the visitor's language.
      */
     public function chat(Request $request)
     {
-        $message = $request->input('message', '');
-        if (empty($message)) {
-            return response()->json([
-                'reply' => 'مرحباً بك في منصة دَلِّني السياحية! 🌟 كيف يمكنني مساعدتك اليوم؟',
-                'suggested_places' => ['لبدة الكبرى', 'بحيرات أوباري', 'غدامس', 'شحات'],
-                'suggested_trips' => ['جولة لبدة الكبرى اليومية', 'مغامرة أوباري الصحراوية'],
-                'source' => 'delni_ai_core',
-            ]);
-        }
-
-        // Native Intelligent Libyan Assistant (Laravel is the only server; the separate Python service was removed)
-        $lower = mb_strtolower($message, 'UTF-8');
-        $suggestedPlaces = [];
-        $suggestedTrips = [];
-        $reply = '';
-
-        if (str_contains($lower, 'أوباري') || str_contains($lower, 'صحراء') || str_contains($lower, 'سفاري') || str_contains($lower, 'قبر عون')) {
-            $dest = $this->destinations['بحيرات أوباري'];
-            $reply = "أهلاً بك في سحر الصحراء الليبية! 🐪 بحيرات أوباري (خاصة بحيرة قبر عون وأم الماء) من أروع الوجهات الطبيعية العالمية. ننصحك بزيارتها خلال موسم الشتاء (نوفمبر - مارس). توفر المنصة رحلات أسبوعية بسيارات دفع رباعي مجهزة وسائقين محليين محترفين.";
-            $suggestedPlaces = ['بحيرات أوباري', 'قبر عون', 'تكركيبة'];
-            $suggestedTrips = $dest['trips'];
-        } elseif (str_contains($lower, 'لبدة') || str_contains($lower, 'رومان') || str_contains($lower, 'خمس')) {
-            $dest = $this->destinations['لبدة الكبرى'];
-            $reply = "مرحباً بك! 🏛️ لبدة الكبرى بالخمس تعد من أكبر وأروع المدن الرومانية المحفوظة في العالم ومصنفة ضمن قائمة التراث العالمي لليونسكو. لدينا رحلات يومية تنطلق صباحاً من طرابلس تشمل الانتقال والتذكرة والإرشاد السياحي.";
-            $suggestedPlaces = ['لبدة الكبرى', 'قوس سبتيموس', 'متحف لبدة'];
-            $suggestedTrips = $dest['trips'];
-        } elseif (str_contains($lower, 'صبراتة') || str_contains($lower, 'مسرح')) {
-            $dest = $this->destinations['صبراتة'];
-            $reply = "أهلاً بك! 🎭 صبراتة الأثرية تقع على الساحل الغربي وتشتهر بمسرحها الروماني الأسطوري ذي الواجهة ذات الأعمدة الرخامية البديعة المطلة على البحر. تنظم المنصة رحلات يومية إليها أسبوعياً.";
-            $suggestedPlaces = ['مسرح صبراتة', 'المدينة الفينيقية', 'متحف صبراتة'];
-            $suggestedTrips = $dest['trips'];
-        } elseif (str_contains($lower, 'غدامس')) {
-            $dest = $this->destinations['غدامس'];
-            $reply = "مرحباً بك في لؤلؤة الصحراء! 🌴 غدامس تتميز بطرازها المعماري الفريد وممراتها المظللة المصممة للوقاية من حرارة الشمس وعين الفرس التاريخية. لدينا برامج رحلات أسبوعية كاملة تشمل الإقامة والوجبات التراثية.";
-            $suggestedPlaces = ['غدامس القديمة', 'عين الفرس', 'متحف غدامس'];
-            $suggestedTrips = $dest['trips'];
-        } elseif (str_contains($lower, 'شحات') || str_contains($lower, 'قورينا') || str_contains($lower, 'جبل أخضر')) {
-            $dest = $this->destinations['قورينا وشحات'];
-            $reply = "أهلاً بك في الجبل الأخضر! 🌿 قورينا (شحات) كانت عاصمة الإغريق في شمال إفريقيا، وتتميز بطبيعتها الخلابة ومعابدها التاريخية كمعبد زيوس وأبولو ووادي الكوف الجميل.";
-            $suggestedPlaces = ['قورينا (شحات)', 'معبد أبولو', 'وادي الكوف'];
-            $suggestedTrips = $dest['trips'];
-        } elseif (str_contains($lower, 'حجز') || str_contains($lower, 'سعر') || str_contains($lower, 'تكلفة')) {
-            $reply = "يمكنك استعراض كافة الرحلات اليومية والأسبوعية والأسعار مباشرة من قسم 'الرحلات'. الأسعار تشمل النقل المريح والإرشاد السياحي، ويمكنك الدفع نقداً عند التجمع أو عبر المنصة.";
-            $suggestedPlaces = ['طرابلس', 'لبدة الكبرى', 'أوباري'];
-            $suggestedTrips = ['جولة لبدة الكبرى اليومية', 'مغامرة أوباري الصحراوية'];
-        } elseif (str_contains($lower, 'مرشد') || str_contains($lower, 'دليل')) {
-            $reply = "منصة دلّني توفر قائمة بمرشدين سياحيين معتمدين ومرخصين من وزارة السياحة يتحدثون لغات متعددة (عربي، إنجليزي، إيطالي، فرنسي). يمكنك اختيار المرشد الأنسب لرحلتك من تبويب 'المرشدون'.";
-            $suggestedPlaces = ['لبدة الكبرى', 'شحات', 'صبراتة'];
-            $suggestedTrips = ['جولة خاصة مع مرشد سياحي'];
-        } else {
-            $reply = "مرحباً بك في منصة دَلِّني السياحية! 🌟 أنا مساعدك السياحي الذكي الذاتي، يسعدني إرشادك لأجمل الوجهات السياحية والأثرية والصحراوية في ليبيا وتنظيم برنامج سفرك.";
-            $suggestedPlaces = ['لبدة الكبرى', 'صبراتة', 'بحيرات أوباري', 'غدامس', 'قورينا'];
-            $suggestedTrips = ['جولة لبدة الكبرى اليومية', 'مغامرة أوباري وبحيرات الصحراء'];
-        }
-
-        return response()->json([
-            'reply' => $reply,
-            'suggested_places' => $suggestedPlaces,
-            'suggested_trips' => $suggestedTrips,
-            'source' => 'delni_ai_native',
+        $data = $request->validate([
+            'message' => 'nullable|string|max:2000',
+            'image' => 'nullable|string|max:8000000',
+            'history' => 'nullable|array|max:12',
+            'history.*.role' => 'required_with:history|string|in:user,model',
+            'history.*.text' => 'required_with:history|string|max:4000',
+        ], [
+            'message.max' => 'الرسالة طويلة جداً (2000 حرف على الأكثر)',
+            'image.max' => 'الصورة كبيرة جداً',
         ]);
+        $message = trim((string) ($data['message'] ?? ''));
+        $image = $data['image'] ?? null;
+        if ($message === '' && !$image) {
+            return response()->json(['success' => false, 'message' => 'يرجى كتابة سؤال أو إرفاق صورة'], 422);
+        }
+
+        $key = (string) config('services.gemini.key');
+        if ($key === '') {
+            return response()->json(['success' => false, 'message' => 'لم يُضبط مفتاح Google Gemini بعد في ملف .env للخادم (GEMINI_API_KEY).'], 503);
+        }
+
+        // The photo: only real raster images, sent as inline data
+        $parts = [];
+        if ($image) {
+            if (!preg_match('/^data:image\/(jpeg|png|webp);base64,(.+)$/s', $image, $m) || ($bytes = base64_decode($m[2], true)) === false) {
+                return response()->json(['success' => false, 'message' => 'صيغة الصورة غير مدعومة؛ يرجى رفع صورة JPG أو PNG أو WEBP'], 422);
+            }
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+            if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                return response()->json(['success' => false, 'message' => 'صيغة الصورة غير مدعومة؛ يرجى رفع صورة JPG أو PNG أو WEBP'], 422);
+            }
+            $parts[] = ['inline_data' => ['mime_type' => $mime, 'data' => base64_encode($bytes)]];
+        }
+        $parts[] = ['text' => $message !== '' ? $message : 'ما الذي يظهر في هذه الصورة؟ وإن كان معلماً أو زياً أو طعاماً ليبياً فعرّفني به.'];
+
+        $contents = [];
+        foreach ($data['history'] ?? [] as $turn) {
+            $contents[] = ['role' => $turn['role'], 'parts' => [['text' => $turn['text']]]];
+        }
+        $contents[] = ['role' => 'user', 'parts' => $parts];
+
+        $model = (string) config('services.gemini.model', 'gemini-2.5-flash');
+        try {
+            $res = Http::timeout(60)
+                ->withHeaders(['x-goog-api-key' => $key])
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                    'systemInstruction' => ['parts' => [['text' => $this->systemPrompt()]]],
+                    'contents' => $contents,
+                    'tools' => [['google_search' => (object) []]],
+                    'generationConfig' => ['temperature' => 0.6, 'maxOutputTokens' => 1200],
+                ]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'تعذر الاتصال بخدمة Google للذكاء الاصطناعي. تحقق من اتصال الخادم بالإنترنت.'], 502);
+        }
+
+        if (!$res->successful()) {
+            $status = $res->status();
+            $msg = match (true) {
+                $status === 429 => 'تم تجاوز الحد المسموح من الطلبات على مفتاح Gemini مؤقتاً. حاول بعد قليل.',
+                in_array($status, [400, 401, 403], true) && str_contains((string) $res->body(), 'API key') => 'مفتاح Google Gemini غير صالح. تحقق من GEMINI_API_KEY في ملف .env.',
+                $status === 404 => "نموذج Gemini ({$model}) غير متاح. غيّر GEMINI_MODEL في ملف .env إلى نموذج متاح.",
+                default => 'لم تتمكن خدمة الذكاء الاصطناعي من الإجابة الآن. حاول مرة أخرى.',
+            };
+            return response()->json(['success' => false, 'message' => $msg], 502);
+        }
+
+        $reply = collect($res->json('candidates.0.content.parts') ?? [])->pluck('text')->filter()->implode("\n");
+        if (trim($reply) === '') {
+            return response()->json(['success' => false, 'message' => 'لم يصل رد من الذكاء الاصطناعي لهذا السؤال. جرّب صياغة أخرى.'], 502);
+        }
+        $sources = collect($res->json('candidates.0.groundingMetadata.groundingChunks') ?? [])
+            ->map(fn ($c) => ['title' => $c['web']['title'] ?? '', 'url' => $c['web']['uri'] ?? ''])
+            ->filter(fn ($c) => $c['url'] !== '')->take(3)->values();
+
+        return response()->json(['success' => true, 'reply' => trim($reply), 'sources' => $sources, 'source' => 'gemini']);
+    }
+
+    // Who «ذكاء دلني» is, and what is on the platform today (read only: landmarks and open trips)
+    private function systemPrompt(): string
+    {
+        $today = now('Africa/Tripoli');
+        $places = PlaceTourist::query()->limit(40)->get(['place_name', 'city'])
+            ->map(fn ($p) => "{$p->place_name} ({$p->city})")->implode('، ');
+        $weekly = \DB::table('weekly_trips')->where('is_active', true)->where('end_date', '>=', $today->toDateString())
+            ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', 'وافق المرشد'))
+            ->limit(15)->get(['trip_title', 'start_date', 'seat_per_price', 'departure_city'])
+            ->map(fn ($t) => "رحلة أسبوعية «{$t->trip_title}» من {$t->departure_city} تبدأ " . substr((string) $t->start_date, 0, 10) . " بسعر {$t->seat_per_price} د.ل للمقعد");
+        $daily = \DB::table('daily_trips')->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', 'وافق المرشد'))
+            ->limit(15)->get(['trip_title', 'price_per_seat', 'departure_city'])
+            ->map(fn ($t) => "رحلة يومية «{$t->trip_title}» من {$t->departure_city} بسعر {$t->price_per_seat} د.ل للمقعد");
+        $trips = $weekly->concat($daily)->implode("\n");
+
+        return <<<PROMPT
+أنت «ذكاء دلني»، المساعد السياحي الذكي لمنصة «دلني» للسياحة الداخلية في ليبيا.
+- أجب بلغة السائل نفسها (العربية، الإنجليزية، الإيطالية، الفرنسية أو غيرها)، وبأسلوب ودود وواضح ومختصر.
+- تخصصك ليبيا: المعالم والمدن والتاريخ والتراث والزي التقليدي والأكلات والعادات واللهجة الليبية والطقس وأفضل أوقات الزيارة ونصائح السفر داخل ليبيا.
+- للمعلومات الحديثة مثل طقس اليوم أو الأحداث الجارية استخدم بحث Google، واذكر أن المعلومة قد تتغير.
+- إذا أرفق المستخدم صورة: صف ما فيها، وإن كانت لمعلم أو زي أو طعام أو منطقة في ليبيا فعرّف بها وبتاريخها، وإن لم تكن متأكداً فقل ذلك بوضوح ولا تخمّن.
+- عند الحديث عن الحجز: الحجز يتم من صفحة الرحلات في منصة دلني، والدفع نقداً في مكتب الشركة في طرابلس أو بنغازي، ويؤكد الموظف الدفع برقم التذكرة. لا تخترع رحلات أو أسعاراً غير المذكورة أدناه.
+- إذا سُئلت عن موضوع لا علاقة له بالسفر أو بليبيا فأجب باختصار ثم أعد الحديث بلطف إلى السياحة في ليبيا.
+- تاريخ اليوم: {$today->toDateString()}.
+
+المعالم المسجلة في منصة دلني: {$places}
+
+الرحلات المتاحة للحجز الآن في منصة دلني:
+{$trips}
+PROMPT;
     }
 
     /**

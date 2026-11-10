@@ -14,6 +14,12 @@ return [
     |
     */
 
+    // «ذكاء دلني»: Google Gemini (key from https://aistudio.google.com, kept only in .env)
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
