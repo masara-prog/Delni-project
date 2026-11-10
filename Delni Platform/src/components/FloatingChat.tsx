@@ -120,17 +120,15 @@ export function FloatingChat() {
 
   return (
     <>
-      {/* Launcher: one clear sparkle (the assistant) and the name, on Delni's desert orange */}
+      {/* Launcher: a round orange button with the sparkle (the assistant) */}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={ar ? "ذكاء دلّني" : "Delni AI"}
+        title={ar ? "ذكاء دلّني" : "Delni AI"}
         aria-expanded={open}
-        className={`fixed bottom-6 ${side} z-[90] hidden md:flex items-center gap-2.5 h-14 ps-1.5 pe-6 rounded-full text-white bg-gradient-to-l from-[#EE8A45] to-[#D2621F] shadow-[0_12px_30px_-12px_rgba(210,98,31,0.75)] ring-1 ring-white/20 transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-12px_rgba(210,98,31,0.85)] active:translate-y-0 active:scale-[0.97]`}
+        className={`fixed bottom-6 ${side} z-[90] hidden md:grid place-items-center w-[60px] h-[60px] rounded-full text-white bg-gradient-to-l from-[#EE8A45] to-[#D2621F] shadow-[0_12px_30px_-10px_rgba(210,98,31,0.8)] ring-1 ring-white/25 transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-10px_rgba(210,98,31,0.9)] active:translate-y-0 active:scale-[0.95]`}
       >
-        <span className="grid place-items-center w-11 h-11 rounded-full bg-white/15 ring-1 ring-white/30">
-          {open ? <X className="w-5 h-5" strokeWidth={2.5} /> : <Sparkles className="w-[22px] h-[22px]" strokeWidth={2} />}
-        </span>
-        <span className="text-[15px] font-extrabold tracking-tight">{ar ? "ذكاء دلّني" : "Delni AI"}</span>
+        {open ? <X className="w-6 h-6" strokeWidth={2.5} /> : <Sparkles className="w-7 h-7" strokeWidth={2} />}
       </button>
 
       {open && (
@@ -145,8 +143,8 @@ export function FloatingChat() {
           <div className="px-5 pt-5 pb-4 bg-gradient-to-br from-[#0B4F57] to-[#00736F] text-white">
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
-                <div className="w-11 h-11 rounded-full bg-white overflow-hidden ring-2 ring-white/25">
-                  <img src="/logo.png" alt="" className="w-full h-full object-cover scale-[2.1] origin-[50%_30%]" />
+                <div className="grid place-items-center w-11 h-11 rounded-full bg-gradient-to-l from-[#EE8A45] to-[#D2621F] ring-2 ring-white/30 shadow-[0_4px_12px_-4px_rgba(210,98,31,0.8)]">
+                  <Sparkles className="w-[22px] h-[22px] text-white" strokeWidth={2} />
                 </div>
                 <span className="absolute -bottom-0.5 -end-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[#0B4F57]" />
               </div>
