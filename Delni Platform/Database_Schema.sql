@@ -398,7 +398,8 @@ BEGIN
         [tourist_id] VARCHAR(50) NULL,
         [customer_requirements] NVARCHAR(MAX) NULL,
         [vehicle_plate] VARCHAR(30) NULL,
-        [created_at] DATETIME NOT NULL DEFAULT (getdate())
+        [created_at] DATETIME NOT NULL DEFAULT (getdate()),
+        [departure_city] NVARCHAR(50) NULL
     );
 END;
 GO

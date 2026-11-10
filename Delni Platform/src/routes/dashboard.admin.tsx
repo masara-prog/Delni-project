@@ -289,6 +289,7 @@ type PrivateTripRequest = {
   customer_email?: string;
   customer_description?: string; 
   preferred_start_date: string; 
+  departure_city?: string | null; // طرابلس | بنغازي
   duration_days: number; 
   number_of_companions: number; 
   quoted_price?: number; 
@@ -2700,6 +2701,7 @@ function AdminDashboard() {
                           </span>
                         </div>
                         <div className="text-[11px] text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-bold">
+                          {pt.departure_city && <span>📍 من {pt.departure_city}</span>}
                           <span>📅 {formatTripDate(pt.preferred_start_date)}</span>
                           <span>⏱️ {pt.duration_days} {pt.duration_days > 1 ? "أيام" : "يوم"}</span>
                           <span>👥 {pt.number_of_companions}</span>
@@ -2816,6 +2818,11 @@ function AdminDashboard() {
                       <span className="text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
                         📅 تاريخ الانطلاق: <b className="text-foreground">{formatTripDate(pt.preferred_start_date)}</b>
                       </span>
+                      {pt.departure_city && (
+                        <span className="text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                          📍 مدينة الانطلاق: <b className="text-foreground">{pt.departure_city}</b>
+                        </span>
+                      )}
                       <span>⏱️ مدة الرحلة: {pt.duration_days} {pt.duration_days > 1 ? "أيام" : "يوم واحد"}</span>
                       <span>👥 عدد المرافقين: {pt.number_of_companions} أفراد</span>
                       {pt.quoted_price && (
@@ -7336,6 +7343,9 @@ function EvaluatePrivateTripModal({
             <span className="text-slate-800">
               📅 تاريخ الانطلاق المفضل: <b className="text-primary font-black">{formatTripDate(trip.preferred_start_date)}</b>
             </span>
+            {trip.departure_city && (
+              <span className="text-slate-800">📍 مدينة الانطلاق: <b className="text-primary font-black">{trip.departure_city}</b></span>
+            )}
             <span>👥 عدد المرافقين: <b className="text-slate-800">{trip.number_of_companions} أفراد</b></span>
             <span>⏳ مدة الرحلة: <b className="text-slate-800">{trip.duration_days} {trip.duration_days > 1 ? "أيام" : "يوم"}</b></span>
           </div>

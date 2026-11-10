@@ -25,6 +25,7 @@ class PrivateTrip extends Model
         'vehicle_plate',
         'created_at',
         'additional_expenses',
+        'departure_city',
     ];
 
     protected $casts = [

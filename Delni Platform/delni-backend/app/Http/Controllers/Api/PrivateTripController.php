@@ -105,10 +105,12 @@ class PrivateTripController extends Controller
             'place_ids.*' => 'string|max:50',
             'guide_license_number' => 'nullable|string|max:50',
             'customer_requirements' => 'nullable|string|max:4000',
+            // where the trip leaves from: the platform's offices (optional for older app versions)
+            'departure_city' => 'nullable|string|in:طرابلس,بنغازي',
         ], [
             'tourist_id' => 'حساب السائح', 'preferred_start_date' => 'تاريخ بدء الرحلة', 'duration_days' => 'مدة الرحلة بالأيام',
             'number_of_companions' => 'عدد المرافقين', 'place_ids' => 'المعالم السياحية المطلوبة', 'guide_license_number' => 'المرشد المفضل',
-            'customer_requirements' => 'المتطلبات والملاحظات',
+            'customer_requirements' => 'المتطلبات والملاحظات', 'departure_city' => 'مدينة الانطلاق',
         ]);
         if ($data instanceof JsonResponse) {
             return $data;
@@ -163,6 +165,7 @@ class PrivateTripController extends Controller
                 'tourist_id' => $tourist->tourist_id,
                 'customer_requirements' => trim((string) ($data['customer_requirements'] ?? '')) ?: null,
                 'additional_expenses' => 0,
+                'departure_city' => $data['departure_city'] ?? null,
                 'created_at' => now('Africa/Tripoli'),
             ]);
             foreach ($placeIds as $i => $placeId) {

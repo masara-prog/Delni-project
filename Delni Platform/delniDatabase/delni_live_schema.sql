@@ -412,7 +412,8 @@ BEGIN
         [customer_requirements] NVARCHAR(MAX) NULL,
         [vehicle_plate] VARCHAR(30) NULL,
         [created_at] DATETIME NOT NULL DEFAULT (getdate()),
-        [additional_expenses] DECIMAL(10, 2) NULL DEFAULT ((0))
+        [additional_expenses] DECIMAL(10, 2) NULL DEFAULT ((0)),
+        [departure_city] NVARCHAR(50) NULL
     );
 END;
 GO

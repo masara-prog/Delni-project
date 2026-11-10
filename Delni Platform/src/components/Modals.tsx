@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { MapPin, Check, Search, CalendarDays, X, Loader2, Lock } from "lucide-react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destCyrene from "@/assets/dest-cyrene.jpg";
 import destGhadames from "@/assets/dest-ghadames.jpg";
@@ -1914,10 +1915,11 @@ export function PrivateTripModal({
       const pid = String(p.place_id || p.id || "").trim();
       return {
         id: pid,
-        name: p.place_name || p.name || pid,
-        nameEn: p.place_name || p.name || pid,
-        city: p.city || "ليبيا",
-        cityEn: p.city || "Libya",
+        name: p.place_name || p.city || p.name || pid,
+        nameEn: p.place_name || p.city || p.name || pid,
+        // the region (without its description in brackets) is what the landmarks are filtered by
+        city: String(p.region || "ليبيا").split(" (")[0].trim(),
+        cityEn: String(p.region || "Libya").split(" (")[0].trim(),
         region: p.region || p.city || "ليبيا",
         category: p.category || "معلم سياحي",
         image: p.place_image || p.photo || resolveTripImage(p.place_name),
@@ -2023,6 +2025,8 @@ export function PrivateTripModal({
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  // where the trip leaves from: the platform's offices in Tripoli or Benghazi (required)
+  const [departureCity, setDepartureCity] = useState<"" | "طرابلس" | "بنغازي">("");
   const [formError, setFormError] = useState<string | null>(null);
   const [createdTripId, setCreatedTripId] = useState("");
 
@@ -2051,6 +2055,7 @@ export function PrivateTripModal({
           if (parsed.notes) setNotes(parsed.notes);
           if (parsed.phone) setPhone(parsed.phone);
           if (parsed.customerName) setCustomerName(parsed.customerName);
+          if (parsed.departureCity === "طرابلس" || parsed.departureCity === "بنغازي") setDepartureCity(parsed.departureCity);
           sessionStorage.removeItem("delni_pending_private_trip");
         }
       } catch (_) {}
@@ -2078,13 +2083,6 @@ export function PrivateTripModal({
       }
     }
   }, [open, initialDestination, initialGuide]);
-
-  // Set default landmark when database landmarks arrive if none selected yet
-  useEffect(() => {
-    if (allAttractions.length > 0 && selectedLandmarkIds.length === 0) {
-      setSelectedLandmarkIds([allAttractions[0].id]);
-    }
-  }, [allAttractions, selectedLandmarkIds.length]);
 
   // Selected landmarks array derived from database IDs
   const selectedLandmarks = useMemo(() => {
@@ -2114,9 +2112,6 @@ export function PrivateTripModal({
   const toggleLandmark = (id: string) => {
     setSelectedLandmarkIds((prev) => {
       if (prev.includes(id)) {
-        if (prev.length === 1) {
-          return prev; // keep at least one
-        }
         return prev.filter((item) => item !== id);
       } else {
         return [...prev, id];
@@ -2162,6 +2157,12 @@ export function PrivateTripModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    // 0. Departure city
+    if (!departureCity) {
+      setFormError(isAr ? "اختر مدينة الانطلاق: طرابلس أو بنغازي." : "Choose the departure city: Tripoli or Benghazi.");
+      return;
+    }
 
     // 1. Validate destination landmarks selection
     if (selectedLandmarkIds.length === 0) {
@@ -2209,6 +2210,7 @@ export function PrivateTripModal({
             notes,
             customerName,
             phone,
+            departureCity,
           })
         );
       } catch (_) {}
@@ -2249,7 +2251,7 @@ export function PrivateTripModal({
       ? `المرشد المفضل: ${selectedGuide.name} [ترخيص: ${selectedGuide.licenseNumber} - ${selectedGuide.gender === "female" ? "مرشدة" : "مرشد"}]. `
       : "المرشد: تكليف مرشد سياحي معتمد بمعرفة إدارة المنصة. ";
 
-    const requirements = `المعالم السياحية المستهدفة: ${placesWithCities}. ${guideRequirement}${notes ? `ملاحظات ومتطلبات السائح: ${notes}` : ""}`.trim();
+    const requirements = `مدينة الانطلاق: ${departureCity}. المعالم السياحية المستهدفة: ${placesWithCities}. ${guideRequirement}${notes ? `ملاحظات ومتطلبات السائح: ${notes}` : ""}`.trim();
 
     // The id, status and price are set by the server; the tourist only sends the request details
     const payload = {
@@ -2260,6 +2262,7 @@ export function PrivateTripModal({
       tourist_id: touristId,
       customer_requirements: requirements,
       place_ids: selectedLandmarkIds,
+      departure_city: departureCity,
     };
 
     try {
@@ -2277,773 +2280,453 @@ export function PrivateTripModal({
     }
   };
 
+  const today = new Date();
+  const minStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10).toLocaleDateString("en-CA");
+  const days = Math.max(1, parseInt(durationDays, 10) || 1);
+  const pax = Math.max(1, parseInt(companions, 10) || 1);
+  const endDate = (() => {
+    const d = new Date(`${startDate}T00:00:00`);
+    if (isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() + days - 1);
+    return d.toLocaleDateString("en-CA");
+  })();
+  const fmt = (iso: string) => {
+    const d = new Date(`${iso}T00:00:00`);
+    return isNaN(d.getTime()) ? iso : d.toLocaleDateString(isAr ? "ar-LY" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+  };
+  const DEPARTURES = [
+    { id: "طرابلس" as const, en: "Tripoli", office: isAr ? "مكتب دلّني — النوفليين" : "Delni office, Al-Nofliyeen" },
+    { id: "بنغازي" as const, en: "Benghazi", office: isAr ? "مكتب دلّني — الفويهات" : "Delni office, Al-Fuwayhat" },
+  ];
+  const departureLabel = departureCity ? (isAr ? departureCity : DEPARTURES.find((d) => d.id === departureCity)?.en) : "";
+  const stepper = (value: string, set: (v: string) => void, min: number, max: number, unit: string, label: string) => (
+    <div className="flex flex-col justify-center rounded-2xl border border-border bg-white px-3 h-16">
+      <span className="text-[11px] font-bold text-muted-foreground">{label}</span>
+      <div className="flex items-center justify-between gap-1 -mx-1">
+        <button
+          type="button"
+          aria-label={isAr ? "إنقاص" : "Decrease"}
+          onClick={() => set(String(Math.max(min, (parseInt(value, 10) || min) - 1)))}
+          className="w-8 h-8 rounded-lg text-lg font-bold text-primary hover:bg-primary/10 cursor-pointer transition focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          −
+        </button>
+        <span className="min-w-14 text-center text-sm font-black tabular-nums text-foreground">
+          {Math.min(max, Math.max(min, parseInt(value, 10) || min))} <span className="text-xs font-semibold text-muted-foreground">{unit}</span>
+        </span>
+        <button
+          type="button"
+          aria-label={isAr ? "زيادة" : "Increase"}
+          onClick={() => set(String(Math.min(max, (parseInt(value, 10) || min) + 1)))}
+          className="w-8 h-8 rounded-lg text-lg font-bold text-primary hover:bg-primary/10 cursor-pointer transition focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+  const sectionHead = (n: number, title: string, hint: string, aside?: ReactNode) => (
+    <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 w-7 h-7 shrink-0 rounded-full bg-primary/10 text-primary grid place-items-center text-sm font-black tabular-nums">{n}</span>
+        <div>
+          <h3 className="text-[17px] font-black text-foreground leading-snug">{title}</h3>
+          <p className="text-[13px] text-muted-foreground mt-0.5 leading-relaxed">{hint}</p>
+        </div>
+      </div>
+      {aside}
+    </div>
+  );
+
+  // The route panel: departure city, then the chosen landmarks in order, then the facts of the request
+  const routePanel = (
+    <div className="rounded-3xl bg-white border border-border p-5 space-y-5">
+      <div>
+        <h3 className="text-[15px] font-black text-foreground">{isAr ? "مسار رحلتك" : "Your route"}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{isAr ? "يتحدّث مع كل اختيار." : "Updates as you choose."}</p>
+      </div>
+      <ol className="relative space-y-3 ps-5">
+        <span aria-hidden="true" className="absolute top-2 bottom-2 start-[5px] w-0.5 rounded-full bg-primary/20" />
+        <li className="relative">
+          <span aria-hidden="true" className={`absolute -start-5 top-1 w-3 h-3 rounded-full ring-4 ring-white ${departureCity ? "bg-[#D96B27]" : "bg-border"}`} />
+          <div className="text-[11px] font-bold text-muted-foreground">{isAr ? "الانطلاق" : "Departure"}</div>
+          <div className={`text-sm font-black ${departureCity ? "text-foreground" : "text-muted-foreground/70"}`}>
+            {departureLabel || (isAr ? "اختر مدينة الانطلاق" : "Choose a city")}
+          </div>
+        </li>
+        {selectedLandmarks.map((lm) => (
+          <li key={lm.id} className="relative">
+            <span aria-hidden="true" className="absolute -start-5 top-1.5 w-3 h-3 rounded-full bg-primary ring-4 ring-white" />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-bold text-foreground truncate">{isAr ? lm.name : lm.nameEn}</span>
+              {step === "form" && <button
+                type="button"
+                onClick={() => toggleLandmark(lm.id)}
+                aria-label={isAr ? `إزالة ${lm.name}` : `Remove ${lm.name}`}
+                className="w-6 h-6 shrink-0 rounded-full grid place-items-center text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>}
+            </div>
+          </li>
+        ))}
+        {selectedLandmarks.length === 0 && (
+          <li className="relative">
+            <span aria-hidden="true" className="absolute -start-5 top-1.5 w-3 h-3 rounded-full border-2 border-dashed border-primary/40 bg-white" />
+            <div className="text-sm text-muted-foreground/80">{isAr ? "أضف المعالم التي تريد زيارتها" : "Add the landmarks you want to visit"}</div>
+          </li>
+        )}
+      </ol>
+      <dl className="grid grid-cols-2 gap-3 pt-4 border-t border-border text-[13px]">
+        <div>
+          <dt className="text-muted-foreground text-xs">{isAr ? "من" : "From"}</dt>
+          <dd className="font-bold text-foreground mt-0.5">{fmt(startDate)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">{isAr ? "إلى" : "To"}</dt>
+          <dd className="font-bold text-foreground mt-0.5">{endDate ? fmt(endDate) : "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">{isAr ? "المسافرون" : "Travellers"}</dt>
+          <dd className="font-bold text-foreground mt-0.5">{isAr ? `${pax} ${pax === 1 ? "شخص" : pax === 2 ? "شخصان" : pax <= 10 ? "أشخاص" : "شخصاً"}` : `${pax}`}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">{isAr ? "المرشد" : "Guide"}</dt>
+          <dd className="font-bold text-foreground mt-0.5 truncate">{selectedGuide ? selectedGuide.name : (isAr ? "تختاره الإدارة" : "Chosen by Delni")}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+
   return (
     <Modal open={open} onClose={onClose} size="2xl">
       {step === "form" ? (
-        <div className="p-5 sm:p-8 pb-10 sm:pb-12 bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-6 relative" dir={dir}>
-          
-          {/* ── 1. Header Banner: Clean Libyan Heritage Aesthetic (NO LOGIN BANNER AT TOP) ── */}
-          <div className="text-center pt-1 border-b border-[#E8E2D6] dark:border-slate-800 pb-5">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <span className="h-px w-12 sm:w-24 bg-[#D4A373]/60" />
-              <span className="text-xs sm:text-sm font-bold text-[#B85D36] flex items-center gap-1.5 tracking-wide">
-                <span>🏛️</span>
-                <span>{isAr ? "السياحة والتراث في ليبيا • رحلات كبار الشخصيات VIP" : "Libyan Heritage & VIP Custom Tours"}</span>
-              </span>
-              <span className="h-px w-12 sm:w-24 bg-[#D4A373]/60" />
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl font-black text-[#0B132B] dark:text-white tracking-tight">
-              {isAr ? "طلب رحلة سياحية خاصة مخصصة" : "Custom Private Tour Request"}
+        <div className="bg-background text-foreground" dir={dir}>
+          {/* Header: what this is and what happens next, nothing more */}
+          <div className="px-5 sm:px-8 pt-7 pb-6 border-b border-border">
+            <h2 className="text-2xl sm:text-[28px] font-black leading-tight text-foreground">
+              {isAr ? "صمّم رحلتك الخاصة" : "Plan your private trip"}
             </h2>
-
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl leading-relaxed">
               {isAr
-                ? "صمّم خط سير رحلتك الخاصة باختيار معالمك المفضلة من قاعدة بيانات المنصة وتحديد مواصفات المرشد السياحي، لتتولى إدارة المنصة دراسة المسار وتقديم تسعيرة رسمية معتمدة."
-                : "Curate your bespoke private itinerary across Libyan landmarks with tailor-fit tour guide filtering and official administration quotation."}
+                ? "اختر من أين تنطلق والمعالم التي تريدها والموعد. تراجع إدارة دلّني المسار وتجهّز المركبة والمرشد، ثم يصلك عرض السعر لتؤكده."
+                : "Choose where you leave from, the landmarks and the dates. Delni plans the route, the vehicle and the guide, then sends you a price to confirm."}
             </p>
           </div>
 
-          {formError && (
-            <div className="p-4 rounded-2xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-              <span className="text-base shrink-0">⚠️</span>
-              <span>{formError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* ══════════════════════════════════════════════════════════════════════
-                قسم 1: اختيار المعالم السياحية
-            ══════════════════════════════════════════════════════════════════════ */}
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
-                    1
-                  </span>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                      {isAr ? "اختيار المعالم والوجهات السياحية" : "Select Destinations from Database"}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {isAr
-                        ? "معالم حقيقية مسجلة بالمنصة. يمكنك اختيار معلم واحد أو عدة معالم لتشكيل مسار متكامل"
-                        : "Live landmarks from platform catalog. Select one or multiple to curate your custom route"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-xs font-black px-3 py-1 rounded-full bg-[#FAF7F2] dark:bg-slate-800 text-[#B85D36] border border-[#E8E2D6] dark:border-slate-700">
-                  {isAr ? `تم اختيار (${selectedLandmarkIds.length}) معالم` : `(${selectedLandmarkIds.length}) Selected`}
-                </div>
-              </div>
-
-              {/* Selected Landmarks Chips Bar */}
-              <div className="p-3 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800/60 border border-[#E8E2D6] dark:border-slate-700/80">
-                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
-                  {isAr ? "المعالم المحددة في مسارك الحالي:" : "Selected Landmarks in your Itinerary:"}
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {selectedLandmarks.map((lm) => (
-                    <span
-                      key={lm.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-[#B85D36]/40 text-slate-800 dark:text-slate-100 text-xs font-bold shadow-2xs"
-                    >
-                      <span className="text-amber-600">🏛️</span>
-                      <span>{isAr ? lm.name : lm.nameEn}</span>
-                      <span className="text-[11px] text-slate-400">({isAr ? lm.city : lm.cityEn})</span>
-                      <button
-                        type="button"
-                        onClick={() => toggleLandmark(lm.id)}
-                        title={isAr ? "إزالة من المسار" : "Remove"}
-                        className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white flex items-center justify-center text-[11px] transition cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                  {selectedLandmarks.length === 0 && (
-                    <span className="text-xs text-rose-500 font-bold">
-                      {isAr ? "يرجى اختيار معلم سياحي واحد على الأقل من القائمة أدناه" : "Please select at least one landmark"}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Search & City Filter Bar */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
-                {/* Search Text Input */}
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={landmarkSearch}
-                    onChange={(e) => setLandmarkSearch(e.target.value)}
-                    placeholder={isAr ? "🔍 ابحث عن معلم أو مدينة (طرابلس، الخمس، غريان، أوباري، بنغازي...)" : "Search landmark or city..."}
-                    className="w-full h-9 px-3 text-xs font-bold rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 outline-none focus:border-[#B85D36]"
-                  />
-                  {landmarkSearch && (
-                    <button
-                      type="button"
-                      onClick={() => setLandmarkSearch("")}
-                      className="absolute left-2.5 top-2 text-xs text-slate-400 hover:text-slate-600"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* City Filter Dropdown */}
-                {availableCities.length > 0 && (
-                  <div className="sm:w-44">
-                    <select
-                      value={landmarkCityFilter}
-                      onChange={(e) => setLandmarkCityFilter(e.target.value)}
-                      className="w-full h-9 px-2.5 rounded-xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
-                    >
-                      <option value="all">{isAr ? "جميع المدن" : "All Cities"}</option>
-                      {availableCities.map((city) => (
-                        <option key={city} value={city}>
-                          📍 {city}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Multi-Select Landmarks Grid with Loading / Error / Dynamic Cards */}
-              {loadingPlaces ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-2">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-20 rounded-2xl bg-slate-200/60 dark:bg-slate-800 animate-pulse border border-slate-200/50" />
-                  ))}
-                </div>
-              ) : placesError ? (
-                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs flex flex-col items-center justify-center gap-2 text-center">
-                  <span>⚠️ {placesError}</span>
-                  <button
-                    type="button"
-                    onClick={loadLandmarks}
-                    className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition text-xs cursor-pointer shadow-sm"
-                  >
-                    {isAr ? "إعادة المحاولة" : "Retry"}
-                  </button>
-                </div>
-              ) : filteredLandmarks.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400 font-bold border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
-                  {isAr ? "لا توجد معالم تطابق معايير البحث والفلترة المحددة." : "No landmarks match your search criteria."}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1.5 border border-[#E8E2D6]/80 dark:border-slate-800 rounded-2xl bg-[#FAF7F2]/40 dark:bg-slate-900/50">
-                  {filteredLandmarks.map((lm) => {
-                    const isChecked = selectedLandmarkIds.includes(lm.id);
+          <form onSubmit={handleSubmit} className="px-5 sm:px-8 py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8">
+            <div className="space-y-9 min-w-0">
+              {/* 1. Departure city */}
+              <section aria-labelledby="pt-departure">
+                {sectionHead(1, isAr ? "من أين تنطلق؟" : "Where do you leave from?", isAr ? "تبدأ الرحلة وتنتهي في مكتب دلّني بالمدينة التي تختارها." : "The trip starts and ends at the Delni office in this city.")}
+                <div role="radiogroup" id="pt-departure" className="grid grid-cols-2 gap-3">
+                  {DEPARTURES.map((d) => {
+                    const on = departureCity === d.id;
                     return (
-                      <div
-                        key={lm.id}
-                        onClick={() => toggleLandmark(lm.id)}
-                        className={`p-3 rounded-2xl border text-right transition cursor-pointer select-none flex items-center justify-between gap-3 ${
-                          isChecked
-                            ? "bg-amber-50/70 dark:bg-slate-800 border-[#B85D36] ring-2 ring-[#B85D36]/30 shadow-xs"
-                            : "bg-white dark:bg-slate-900 border-[#E8E2D6] dark:border-slate-800 hover:border-[#B85D36]/50"
+                      <button
+                        key={d.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => { setDepartureCity(d.id); setFormError(null); }}
+                        className={`relative text-start rounded-2xl border-2 px-4 py-4 transition cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                          on ? "border-primary bg-primary/[0.06]" : "border-border bg-white hover:border-primary/40"
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {lm.image ? (
-                            <img
-                              src={lm.image}
-                              alt={lm.name}
-                              className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-[#B85D36]/10 text-[#B85D36] flex items-center justify-center text-xl shrink-0 font-bold">
-                              🏛️
-                            </div>
-                          )}
-                          <div className="space-y-0.5 min-w-0 flex-1">
-                            <div className="font-black text-xs text-slate-900 dark:text-white truncate">
-                              {isAr ? lm.name : lm.nameEn}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
-                              <span>📍 {isAr ? lm.city : lm.cityEn}</span>
-                              {lm.category && <span>• {lm.category}</span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-black shrink-0 transition ${
-                          isChecked ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
-                        }`}>
-                          {isChecked ? "✓" : ""}
-                        </div>
-                      </div>
+                        <span className={`absolute top-4 end-4 w-5 h-5 rounded-full grid place-items-center transition ${on ? "bg-primary text-white" : "border-2 border-border"}`}>
+                          {on && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                        </span>
+                        <MapPin className={`w-5 h-5 mb-2 ${on ? "text-[#D96B27]" : "text-muted-foreground"}`} />
+                        <div className="text-lg font-black text-foreground">{isAr ? d.id : d.en}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{d.office}</div>
+                      </button>
                     );
                   })}
                 </div>
-              )}
-            </div>
+              </section>
 
-            {/* ══════════════════════════════════════════════════════════════════════
-                قسم 2: توقيت الرحلة، المدة، وعدد المسافرين
-            ══════════════════════════════════════════════════════════════════════ */}
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
-                  2
-                </span>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                    {isAr ? "توقيت وتفاصيل الرحلة والمرافقين" : "Trip Schedule & Party Details"}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {isAr ? "حدد تاريخ الانطلاق المفضل والمدة التقديرية وعدد الركاب" : "Specify start date, duration, and number of passengers"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Preferred Start Date */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
-                    <span>📅 {isAr ? "تاريخ الانطلاق المفضل" : "Preferred Start Date"}</span>
-                    <span className="text-[11px] text-[#B85D36] font-bold">({isAr ? "بعد 10 أيام كحد أدنى" : "Min 10 days ahead"})</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    min={new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
-                  />
-                </div>
-
-                {/* Duration in Days */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
-                    ⏱️ {isAr ? "مدة الرحلة (بالأيام)" : "Duration (Days)"}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDurationDays(String(Math.max(1, (parseInt(durationDays, 10) || 1) - 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      required
-                      value={durationDays}
-                      onChange={(e) => setDurationDays(e.target.value)}
-                      className="w-14 text-center bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDurationDays(String(Math.min(30, (parseInt(durationDays, 10) || 1) + 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
-                    >
-                      +
-                    </button>
-                    <span className="text-xs text-slate-400 font-bold">{isAr ? "أيام" : "days"}</span>
-                  </div>
-                </div>
-
-                {/* Companions Count */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
-                    👥 {isAr ? "عدد المسافرين / المرافقين" : "Companions / Pax"}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCompanions(String(Math.max(1, (parseInt(companions, 10) || 1) - 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      required
-                      value={companions}
-                      onChange={(e) => setCompanions(e.target.value)}
-                      className="w-14 text-center bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setCompanions(String(Math.min(50, (parseInt(companions, 10) || 1) + 1)))}
-                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
-                    >
-                      +
-                    </button>
-                    <span className="text-xs text-slate-400 font-bold">{isAr ? "أفراد" : "pax"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dedicated Vehicle & Driver Notice */}
-              <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-start gap-2.5 text-xs">
-                <span className="text-base text-emerald-700 dark:text-emerald-300">🚍</span>
-                <div>
-                  <span className="font-black text-emerald-900 dark:text-emerald-200 block">
-                    {isAr ? "وسيلة النقل والسائق السياحي المعتمد:" : "Vehicle & Professional Driver:"}
-                  </span>
-                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5 leading-relaxed font-medium">
-                    {isAr
-                      ? "تُعين وسيلة النقل (حافلة سياحية VIP حديثة أو سيارة دفع رباعي 4x4 للطرق الصحراوية) مع سائق محترف مرخص بمعرفة إدارة المنصة بناءً على عدد الأفراد وطبيعة تضاريس المعالم المختارة."
-                      : "Vehicles (VIP modern van or 4x4 desert SUV) and licensed professional drivers are assigned directly by platform administration based on itinerary terrain and party size."}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* ══════════════════════════════════════════════════════════════════════
-                قسم 3: المرشد السياحي والفلترة الذكية (Gender & Language Filters)
-            ══════════════════════════════════════════════════════════════════════ */}
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
-                    3
-                  </span>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                      {isAr ? "اختيار المرشد السياحي المعتمد والفلترة الذكية" : "Tour Guide Selection & Smart Filters"}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {isAr
-                        ? "فلترة واختيار المرشد الأنسب لرحلتك من حيث الجنس (مرشد / مرشدة)، اللغات المتحدثة، والمنطقة"
-                        : "Filter guides by gender, spoken languages, and operating regions to match your group"}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedGuide && (
-                  <div className="text-xs font-black px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300">
-                    {isAr ? `المرشد المفضل: ${selectedGuide.name}` : `Selected: ${selectedGuide.name}`}
-                  </div>
+              {/* 2. Landmarks */}
+              <section aria-labelledby="pt-places">
+                {sectionHead(
+                  2,
+                  isAr ? "المعالم التي تريد زيارتها" : "Landmarks to visit",
+                  isAr ? "اختر معلماً واحداً أو أكثر، بالترتيب الذي تفضّله." : "Pick one or more, in the order you prefer.",
+                  selectedLandmarkIds.length > 0 ? (
+                    <span className="shrink-0 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full tabular-nums">
+                      {isAr ? `${selectedLandmarkIds.length} مختارة` : `${selectedLandmarkIds.length} chosen`}
+                    </span>
+                  ) : undefined,
                 )}
-              </div>
-
-              {/* Guide Filters Toolbar */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800/60 border border-[#E8E2D6] dark:border-slate-700 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                  
-                  {/* Filter: Gender (ذكور / إناث) */}
-                  <div className="sm:col-span-5 space-y-1">
-                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
-                      👤 {isAr ? "تفضيل جنس المرشد السياحي:" : "Guide Gender Preference:"}
-                    </label>
-                    <div className="grid grid-cols-3 gap-1 text-xs font-bold">
-                      <button
-                        type="button"
-                        onClick={() => setGuideGenderFilter("all")}
-                        className={`h-8 rounded-xl transition cursor-pointer ${
-                          guideGenderFilter === "all"
-                            ? "bg-[#B85D36] text-white shadow-xs"
-                            : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        {isAr ? "الكل" : "All"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGuideGenderFilter("male")}
-                        className={`h-8 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 ${
-                          guideGenderFilter === "male"
-                            ? "bg-[#0B132B] text-white shadow-xs"
-                            : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span>👨</span>
-                        <span>{isAr ? "مرشد (ذكر)" : "Male"}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGuideGenderFilter("female")}
-                        className={`h-8 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 ${
-                          guideGenderFilter === "female"
-                            ? "bg-emerald-700 text-white shadow-xs"
-                            : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span>👩</span>
-                        <span>{isAr ? "مرشدة (أنثى)" : "Female"}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Filter: Spoken Language */}
-                  <div className="sm:col-span-4 space-y-1">
-                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
-                      🌐 {isAr ? "اللغات المتحدثة:" : "Spoken Languages:"}
-                    </label>
+                <div className="flex flex-col sm:flex-row gap-2 mb-3" id="pt-places">
+                  <label className="relative flex-1">
+                    <span className="sr-only">{isAr ? "ابحث عن معلم" : "Search landmarks"}</span>
+                    <Search className="w-4 h-4 text-muted-foreground absolute top-1/2 -translate-y-1/2 start-3 pointer-events-none" />
+                    <input
+                      type="search"
+                      value={landmarkSearch}
+                      onChange={(e) => setLandmarkSearch(e.target.value)}
+                      placeholder={isAr ? "ابحث باسم المعلم أو المنطقة" : "Search by name or region"}
+                      className="w-full h-11 ps-9 pe-3 rounded-xl bg-white border border-border text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition"
+                    />
+                  </label>
+                  {availableCities.length > 1 && (
                     <select
-                      value={guideLanguageFilter}
-                      onChange={(e) => setGuideLanguageFilter(e.target.value)}
-                      className="w-full h-8 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                      value={landmarkCityFilter}
+                      onChange={(e) => setLandmarkCityFilter(e.target.value)}
+                      aria-label={isAr ? "المنطقة" : "Region"}
+                      className="sm:w-52 h-11 px-3 rounded-xl bg-white border border-border text-sm outline-none focus:border-primary cursor-pointer"
                     >
-                      <option value="all">{isAr ? "جميع اللغات" : "All Languages"}</option>
-                      <option value="AR">{isAr ? "العربية" : "Arabic"}</option>
-                      <option value="EN">{isAr ? "الإنجليزية" : "English"}</option>
-                      <option value="FR">{isAr ? "الفرنسية" : "French"}</option>
-                      <option value="IT">{isAr ? "الإيطالية" : "Italian"}</option>
-                    </select>
-                  </div>
-
-                  {/* Filter: Operating Region */}
-                  <div className="sm:col-span-3 space-y-1">
-                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
-                      📍 {isAr ? "المنطقة / التخصص:" : "Region:"}
-                    </label>
-                    <select
-                      value={guideRegionFilter}
-                      onChange={(e) => setGuideRegionFilter(e.target.value)}
-                      className="w-full h-8 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
-                    >
-                      <option value="all">{isAr ? "جميع المناطق" : "All Regions"}</option>
-                      {Array.from(new Set(allGuides.flatMap((g) => g.operatingRegions || []))).sort().map((c) => (
+                      <option value="all">{isAr ? "كل المناطق" : "All regions"}</option>
+                      {availableCities.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
-                  </div>
+                  )}
                 </div>
 
-                {/* Guide Name Search */}
-                <div>
-                  <input
-                    type="text"
-                    value={guideSearchTerm}
-                    onChange={(e) => setGuideSearchTerm(e.target.value)}
-                    placeholder={isAr ? "🔍 ابحث باسم المرشد أو الترخيص..." : "Search guide by name or license..."}
-                    className="w-full h-8 px-3 text-xs font-bold rounded-xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-700 outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Guide Selection Options */}
-              <div className="space-y-2 max-h-56 overflow-y-auto p-1">
-                {/* Default Choice: No Guide Preference (Platform Assigns) */}
-                <div
-                  onClick={() => setSelectedGuideLicense("")}
-                  className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
-                    selectedGuideLicense === ""
-                      ? "bg-amber-50/80 dark:bg-amber-950/40 border-[#B85D36] ring-1 ring-[#B85D36] shadow-xs"
-                      : "bg-[#FAF7F2] dark:bg-slate-800/50 border-[#E8E2D6] dark:border-slate-700 hover:border-[#B85D36]/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-bold text-sm shrink-0">
-                      ⭐
-                    </span>
-                    <div>
-                      <div className="font-black text-xs text-slate-900 dark:text-white">
-                        {isAr ? "بدون مرشد مفضل (تكليف مرشد معتمد بمعرفة إدارة المنصة)" : "No Guide Preference (Assigned by Platform Admin)"}
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {isAr
-                          ? "ستقوم الإدارة باختيار المرشد الأنسب تلقائياً بناءً على طبيعة المعالم ولغات الفوج السياحي"
-                          : "Administration will automatically pair you with the best available guide for your itinerary"}
-                      </p>
-                    </div>
+                {loadingPlaces ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" aria-busy="true">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="aspect-[4/3] rounded-2xl bg-muted animate-pulse" />
+                    ))}
                   </div>
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                    selectedGuideLicense === "" ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
-                  }`}>
-                    {selectedGuideLicense === "" ? "✓" : ""}
+                ) : placesError ? (
+                  <div className="rounded-2xl border border-border bg-white p-5 text-center space-y-3">
+                    <p className="text-sm text-foreground">{isAr ? "لم تُحمَّل المعالم. تأكد من تشغيل خادم المنصة ثم أعد المحاولة." : "Landmarks did not load. Check the platform server is running, then try again."}</p>
+                    <button type="button" onClick={loadLandmarks} className="h-10 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-bold cursor-pointer hover:bg-primary/90 transition">
+                      {isAr ? "إعادة المحاولة" : "Try again"}
+                    </button>
                   </div>
-                </div>
+                ) : filteredLandmarks.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    {isAr ? "لا يوجد معلم بهذا الاسم. جرّب كلمة أخرى أو اختر «كل المناطق»." : "No landmark matches. Try another word or choose all regions."}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {filteredLandmarks.map((lm) => {
+                      const order = selectedLandmarkIds.indexOf(lm.id);
+                      const on = order >= 0;
+                      return (
+                        <button
+                          key={lm.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => { toggleLandmark(lm.id); setFormError(null); }}
+                          className={`group relative aspect-[4/3] rounded-2xl overflow-hidden text-start cursor-pointer transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                            on ? "ring-[3px] ring-primary" : "ring-1 ring-border hover:ring-primary/50"
+                          }`}
+                        >
+                          {lm.image ? (
+                            <img src={lm.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                          ) : (
+                            <div className="absolute inset-0 bg-primary/15" />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                          <span className={`absolute top-2.5 end-2.5 w-7 h-7 rounded-full grid place-items-center text-xs font-black tabular-nums transition ${
+                            on ? "bg-primary text-white" : "bg-white/85 text-transparent"
+                          }`}>
+                            {on ? order + 1 : ""}
+                          </span>
+                          <div className="absolute bottom-0 inset-x-0 p-3">
+                            <div className="text-white text-[15px] font-black leading-tight drop-shadow-sm">{isAr ? lm.name : lm.nameEn}</div>
+                            {lm.category && <div className="text-white/80 text-[11px] font-semibold mt-0.5 truncate">{lm.category}</div>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
 
-                {/* Filtered Guide Cards */}
-                {filteredGuides.map((g) => {
-                  const isSelected = selectedGuideLicense === g.licenseNumber;
-                  return (
-                    <div
-                      key={g.licenseNumber}
-                      onClick={() => setSelectedGuideLicense(g.licenseNumber)}
-                      className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
-                        isSelected
-                          ? "bg-white dark:bg-slate-800 border-[#B85D36] ring-1 ring-[#B85D36] shadow-xs"
-                          : "bg-white dark:bg-slate-900 border-[#E8E2D6] dark:border-slate-800 hover:border-[#B85D36]/50"
+              {/* 3. Dates and travellers */}
+              <section aria-labelledby="pt-when">
+                {sectionHead(3, isAr ? "الموعد والمسافرون" : "Dates and travellers", isAr ? "أقرب موعد متاح بعد 10 أيام، لتجهيز المسار والمركبة والمرشد." : "The earliest start is 10 days from today, to prepare the route, vehicle and guide.")}
+                <div className="grid sm:grid-cols-3 gap-3" id="pt-when">
+                  <label className="flex flex-col justify-center gap-1 rounded-2xl border border-border bg-white px-3 h-16 focus-within:border-primary transition">
+                    <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" />{isAr ? "تاريخ الانطلاق" : "Start date"}</span>
+                    <input
+                      type="date"
+                      required
+                      min={minStart}
+                      value={startDate}
+                      onChange={(e) => { setStartDate(e.target.value); setFormError(null); }}
+                      className="bg-transparent text-sm font-bold text-foreground outline-none cursor-pointer"
+                    />
+                  </label>
+                  {stepper(durationDays, setDurationDays, 1, 30, isAr ? "يوم" : "days", isAr ? "المدة" : "Length")}
+                  {stepper(companions, setCompanions, 1, 50, isAr ? "فرد" : "people", isAr ? "المسافرون" : "Travellers")}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                  {isAr
+                    ? "تخصّص الإدارة مركبة مناسبة لعدد المسافرين وطبيعة الطريق، مع سائق مرخّص، وتظهر تكلفتها في عرض السعر."
+                    : "Delni assigns a vehicle suited to your group and the roads, with a licensed driver; its cost is in the quote."}
+                </p>
+              </section>
+
+              {/* 4. Guide */}
+              <section aria-labelledby="pt-guide">
+                {sectionHead(4, isAr ? "المرشد السياحي" : "Tour guide", isAr ? "اختياري: اختر مرشداً بعينه، أو اترك الاختيار لإدارة دلّني." : "Optional: pick a guide, or let Delni choose.")}
+                <div className="flex flex-wrap items-center gap-2 mb-3" id="pt-guide">
+                  {([
+                    ["all", isAr ? "الكل" : "All"],
+                    ["male", isAr ? "مرشد" : "Male"],
+                    ["female", isAr ? "مرشدة" : "Female"],
+                  ] as const).map(([v, l]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={guideGenderFilter === v}
+                      onClick={() => setGuideGenderFilter(v)}
+                      className={`h-9 px-4 rounded-full text-sm font-bold cursor-pointer transition ${
+                        guideGenderFilter === v ? "bg-foreground text-white" : "bg-white border border-border text-foreground hover:border-foreground/30"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-slate-200 shrink-0">
-                          {g.gender === "female" ? "👩" : "👨"}
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-black text-xs text-slate-900 dark:text-white">{g.name}</span>
-                            <span className={`px-2 py-0.2 rounded-full text-[11px] font-bold ${
-                              g.gender === "female"
-                                ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                                : "bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300"
-                            }`}>
-                              {g.gender === "female" ? (isAr ? "مرشدة سياحية" : "Female Guide") : (isAr ? "مرشد سياحي" : "Male Guide")}
-                            </span>
-                            <span className="text-[11px] font-mono text-slate-400">({g.licenseNumber})</span>
-                          </div>
-
-                          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
-                            <span>{g.reviewsCount > 0 ? `★ ${g.rating.toFixed(1)} (${g.reviewsCount})` : (isAr ? "مرشد معتمد جديد" : "New Certified Guide")}</span>
-                            <span>•</span>
-                            <span>{g.title}</span>
-                            <span>•</span>
-                            <span className="text-[#B85D36] font-bold">{g.pricePerDay} د.ل / يوم</span>
-                          </div>
-
-                          <div className="flex items-center gap-1 pt-0.5 flex-wrap">
-                            {g.languages?.map((lang) => (
-                              <span key={lang.code} className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                                {isAr ? lang.nameAr : lang.nameEn}
+                      {l}
+                    </button>
+                  ))}
+                  <select
+                    value={guideLanguageFilter}
+                    onChange={(e) => setGuideLanguageFilter(e.target.value)}
+                    aria-label={isAr ? "اللغة" : "Language"}
+                    className="h-9 px-3 rounded-full bg-white border border-border text-sm font-bold outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{isAr ? "كل اللغات" : "Any language"}</option>
+                    <option value="EN">{isAr ? "يتحدث الإنجليزية" : "English"}</option>
+                    <option value="FR">{isAr ? "يتحدث الفرنسية" : "French"}</option>
+                    <option value="IT">{isAr ? "يتحدث الإيطالية" : "Italian"}</option>
+                  </select>
+                </div>
+                <div role="radiogroup" className="rounded-2xl border border-border bg-white divide-y divide-border overflow-hidden">
+                  {[null, ...filteredGuides].map((g) => {
+                    const lic = g ? g.licenseNumber : "";
+                    const on = selectedGuideLicense === lic;
+                    return (
+                      <button
+                        key={lic || "none"}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => setSelectedGuideLicense(lic)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-start cursor-pointer transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${on ? "bg-primary/[0.06]" : "hover:bg-muted/50"}`}
+                      >
+                        <span className={`w-5 h-5 shrink-0 rounded-full grid place-items-center transition ${on ? "bg-primary text-white" : "border-2 border-border"}`}>
+                          {on && <Check className="w-3 h-3" strokeWidth={3} />}
+                        </span>
+                        {g ? (
+                          <>
+                            <img src={g.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 bg-muted" loading="lazy" />
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-sm font-black text-foreground truncate">{g.name}</span>
+                              <span className="block text-xs text-muted-foreground truncate">
+                                {[g.gender === "female" ? (isAr ? "مرشدة" : "Guide") : (isAr ? "مرشد" : "Guide"), g.languages.map((l) => (isAr ? l.nameAr : l.nameEn)).join("، "), g.reviewsCount > 0 ? `★ ${g.rating.toFixed(1)}` : ""].filter(Boolean).join(isAr ? " — " : " — ")}
                               </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                        isSelected ? "bg-[#B85D36] text-white" : "border border-slate-300 dark:border-slate-600"
-                      }`}>
-                        {isSelected ? "✓" : ""}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {filteredGuides.length === 0 && (
-                  <div className="text-center py-4 text-xs text-slate-400 font-bold">
-                    {isAr ? "لا توجد مرشدين يطابقون معايير الفلترة المحددة. يمكنك تعديل خيارات الفلترة أو اختيار (بدون مرشد مفضل)." : "No guides match your filter."}
-                  </div>
+                            </span>
+                            <span className="shrink-0 text-sm font-bold text-foreground tabular-nums">
+                              {Number(g.pricePerDay)} <span className="text-xs text-muted-foreground font-semibold">{isAr ? "د.ل/يوم" : "LYD/day"}</span>
+                            </span>
+                          </>
+                        ) : (
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-sm font-black text-foreground">{isAr ? "اترك الاختيار لإدارة دلّني" : "Let Delni choose"}</span>
+                            <span className="block text-xs text-muted-foreground">{isAr ? "نختار المرشد الأنسب للمعالم ولغات مجموعتك." : "We match a guide to your landmarks and languages."}</span>
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {filteredGuides.length === 0 && allGuides.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">{isAr ? "لا يوجد مرشد بهذه المواصفات حالياً. غيّر الاختيار أو اترك الاختيار للإدارة." : "No guide matches. Change the filter or let Delni choose."}</p>
                 )}
-              </div>
-            </div>
+              </section>
 
-            {/* ══════════════════════════════════════════════════════════════════════
-                قسم 4: بيانات التواصل وملاحظات السائح (Auto-populated for tourists)
-            ══════════════════════════════════════════════════════════════════════ */}
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-[#B85D36]/15 text-[#B85D36] flex items-center justify-center font-black text-sm">
-                    4
-                  </span>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-[#0B132B] dark:text-white">
-                      {isAr ? "بيانات التواصل وملاحظات السائح" : "Contact Information & Tourist Notes"}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {isAr ? "يرجى التحقق من صحة رقم الهاتف لتلقي إشعار التسعيرة الرسمية" : "Ensure contact number is correct to receive your official quote"}
-                    </p>
-                  </div>
-                </div>
-
-                {isTourist && (
-                  <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold border border-emerald-300/60 flex items-center gap-1.5">
-                    <span>✓</span>
-                    <span>{isAr ? "تم جلب بياناتك تلقائياً من حسابك" : "Auto-filled from account"}</span>
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Tourist Name (Auto-fetched from account) */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
-                    <span>👤 {isAr ? "اسم السائح صاحب الحساب" : "Tourist Account Holder"}</span>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "موثق من الحساب" : "Verified"}</span>
-                  </label>
-                  <div className="font-black text-xs text-slate-800 dark:text-slate-100 py-1">
-                    {customerName || sessionData?.user?.full_name || sessionData?.user?.name || (isAr ? "سائح دلّني المعتمد" : "Verified Tourist")}
-                  </div>
-                </div>
-
-                {/* Phone (Auto-fetched from account) */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1">
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block flex items-center justify-between">
-                    <span>📞 {isAr ? "رقم الهاتف المعتمد بالحساب" : "Registered Phone"}</span>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">🔒 {isAr ? "من ملفك الشخصي" : "Profile"}</span>
-                  </label>
-                  <div className="font-black text-xs text-slate-800 dark:text-slate-100 py-1 font-mono">
-                    {phone || sessionData?.user?.phone_number || (isAr ? "مسجل في حسابك" : "On file")}
-                  </div>
-                </div>
-              </div>
-
-              {/* Special Requests */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-slate-800 border border-[#E8E2D6] dark:border-slate-700 space-y-1.5">
-                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">
-                  📝 {isAr ? "ملاحظات أو متطلبات خاصة (اختياري)" : "Special Requests or Notes (Optional)"}
-                </label>
+              {/* 5. Notes */}
+              <section aria-labelledby="pt-notes">
+                {sectionHead(5, isAr ? "ملاحظات للإدارة" : "Notes for Delni", isAr ? "اختياري: فندق معيّن، احتياجات خاصة، أو أي تفصيل يهمك." : "Optional: a hotel you want, special needs, anything that matters.")}
                 <textarea
-                  rows={2}
+                  id="pt-notes"
+                  rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder={isAr
-                    ? "أي تفاصيل إضافية تود إبلاغ إدارة المنصة بها (حجز فنادق محددة، معدات تخييم، سيارات دفع رباعي صحراوية، تصاريح أمنية، وجبات غذائية)..."
-                    : "Any specific accommodation, 4x4 desert permits, or dietary requirements..."}
-                  className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none font-medium resize-none leading-relaxed"
+                  placeholder={isAr ? "مثال: نفضّل فندقاً قرب المدينة القديمة، ومعنا طفلان." : "e.g. A hotel near the old town; two children with us."}
+                  className="w-full rounded-2xl bg-white border border-border px-4 py-3 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 resize-none transition"
                 />
-              </div>
+              </section>
             </div>
 
-            {/* ══════════════════════════════════════════════════════════════════════
-                زر تأكيد طلب الرحلة الخاصة للإدارة
-            ══════════════════════════════════════════════════════════════════════ */}
-            <div className="pt-2 space-y-2 text-center">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full h-12 rounded-full font-black text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer bg-[#B85D36] hover:bg-[#a04e2c] text-white hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>{isAr ? "جارٍ معالجة وتأكيد الطلب..." : "Processing Custom Tour Request..."}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{isAr ? "تأكيد طلب الرحلة الخاصة للإدارة (تسعير واعتماد المسار)" : "Confirm Custom Tour Request"}</span>
-                    <span className="text-base">➔</span>
-                  </>
+            {/* Route panel + send: beside the form on wide screens, after it on phones */}
+            <aside className="mt-9 lg:mt-0">
+              <div className="lg:sticky lg:top-4 space-y-4">
+                {routePanel}
+                {formError && (
+                  <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 leading-relaxed">
+                    {formError}
+                  </div>
                 )}
-              </button>
-
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg mx-auto">
-                {isAr
-                  ? "💡 بمجرد تأكيد الطلب، ستتولى إدارة المنصة دراسة مسار المعالم المختارة وإعداد البرنامج المقترح والتسعيرة الرسمية وإشعارك فوراً عبر المنصة."
-                  : "Platform administration will review your requested landmarks, create an itinerary, and notify you with an official price quote."}
-              </p>
-            </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full h-12 rounded-2xl bg-primary text-primary-foreground text-[15px] font-black flex items-center justify-center gap-2 cursor-pointer transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSubmitting ? (isAr ? "جارٍ إرسال الطلب" : "Sending") : (isAr ? "أرسل الطلب" : "Send request")}
+                </button>
+                <p className="text-xs text-muted-foreground leading-relaxed text-center">
+                  {isAr
+                    ? `لن يُحجز شيء الآن. يصلك عرض السعر على حسابك${phone ? ` وعلى الرقم ${phone}` : ""}، وتؤكده أنت.`
+                    : "Nothing is booked yet. Your quote arrives in your account and you confirm it."}
+                </p>
+              </div>
+            </aside>
           </form>
 
-          {/* ══════════════════════════════════════════════════════════════════════
-              نافذة التحقق والمصادقة عند الضغط على تأكيد الطلب (Case 2: Not logged in)
-          ══════════════════════════════════════════════════════════════════════ */}
+          {/* Sign-in prompt (the choices are kept and restored after signing in) */}
           {showAuthModal && (
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-md border border-amber-300 dark:border-amber-700 text-center space-y-4 animate-in zoom-in-95 duration-200" dir={dir}>
-                <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-xs">
-                  🔒
-                </div>
-                
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+              <div className="bg-white rounded-3xl p-7 max-w-sm w-full text-center space-y-4 shadow-[var(--shadow-glow)]" dir={dir}>
+                <span className="w-12 h-12 mx-auto rounded-full bg-primary/10 text-primary grid place-items-center">
+                  <Lock className="w-5 h-5" />
+                </span>
                 <div className="space-y-1.5">
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                    {isAr ? "تسجيل الدخول مطلوب لتأكيد الطلب" : "Tourist Account Required"}
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-                    {isAr
-                      ? "حجز وتأكيد الرحلات الخاصة متاح حصرياً لحسابات السياح المعتمدة في نظام دلني. لقد قمنا بحفظ اختياراتك ومعالمك المحددة لتستكمل تأكيد الطلب فور تسجيل الدخول دون أن تضطر لإعادة إدخالها."
-                      : "Booking is reserved for tourist accounts. Your selected landmarks and options have been temporarily saved."}
+                  <h3 className="text-lg font-black text-foreground">{isAr ? "سجّل الدخول لإرسال الطلب" : "Sign in to send your request"}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {isAr ? "الرحلات الخاصة لحسابات السياح. حفظنا اختياراتك وستجدها كما هي بعد الدخول." : "Private trips are for tourist accounts. Your choices are saved for when you return."}
                   </p>
                 </div>
-
-                <div className="flex flex-col gap-2.5 pt-2">
-                  <a
-                    href="/auth/login?role=tourist"
-                    className="w-full py-3 rounded-2xl bg-[#00736F] hover:bg-[#00224f] text-white font-black text-xs transition shadow-md flex items-center justify-center gap-2"
-                  >
-                    <span>🔑</span>
-                    <span>{isAr ? "تسجيل الدخول بحساب سائح" : "Log In as Tourist"}</span>
+                <div className="space-y-2 pt-1">
+                  <a href="/auth/login?role=tourist" className="flex items-center justify-center h-11 rounded-xl bg-primary text-primary-foreground text-sm font-black hover:bg-primary/90 transition">
+                    {isAr ? "تسجيل الدخول" : "Sign in"}
                   </a>
-
-                  <a
-                    href="/auth/signup?role=tourist"
-                    className="w-full py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs transition shadow-sm flex items-center justify-center gap-2"
-                  >
-                    <span>✨</span>
-                    <span>{isAr ? "إنشاء حساب سائح جديد" : "Create Tourist Account"}</span>
+                  <a href="/auth/signup?role=tourist" className="flex items-center justify-center h-11 rounded-xl border border-border text-sm font-black text-foreground hover:bg-muted/60 transition">
+                    {isAr ? "إنشاء حساب سائح" : "Create a tourist account"}
                   </a>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowAuthModal(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold py-1.5 transition cursor-pointer"
-                  >
-                    {isAr ? "الرجوع ومواصلة تعديل الطلب" : "Cancel & Keep Editing"}
+                  <button type="button" onClick={() => setShowAuthModal(false)} className="w-full h-9 text-sm font-bold text-muted-foreground hover:text-foreground cursor-pointer transition">
+                    {isAr ? "متابعة التعديل" : "Keep editing"}
                   </button>
                 </div>
               </div>
             </div>
           )}
-
         </div>
       ) : (
-        /* ══════════════════════════════════════════════════════════════════════
-            شاشة النجاح والتأكيد (Done Screen)
-        ══════════════════════════════════════════════════════════════════════ */
-        <div className="p-8 sm:p-12 text-center bg-[#FAF7F2] dark:bg-slate-950 text-slate-800 dark:text-slate-100 space-y-5" dir={dir}>
-          <div className="w-20 h-20 mx-auto rounded-full bg-[#B85D36]/15 text-[#B85D36] grid place-items-center text-4xl shadow-sm border border-[#B85D36]/30">
-            🏛️
-          </div>
-
-          <div className="space-y-1.5">
-            <h3 className="text-2xl font-black text-[#0B132B] dark:text-white">
-              {isAr ? "تم استلام طلب رحلتك الخاصة بنجاح!" : "Private Tour Request Submitted!"}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
-              {isAr
-                ? "تم توجيه طلبك مباشرة إلى لوحة إدارة المنصة (Admin) لجدولة المعالم السياحية المختارة وإعداد خطة السير والتسعيرة المعتمدة."
-                : "Your request is now queued for administrative route coordination and official quotation."}
+        <div className="bg-background text-foreground px-6 sm:px-10 py-10" dir={dir}>
+          <div className="max-w-md mx-auto text-center space-y-3">
+            <span className="w-14 h-14 mx-auto rounded-full bg-primary text-primary-foreground grid place-items-center">
+              <Check className="w-7 h-7" strokeWidth={3} />
+            </span>
+            <h3 className="text-2xl font-black text-foreground">{isAr ? "وصل طلبك إلى دلّني" : "Your request reached Delni"}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {isAr ? "تراجع الإدارة المسار وتجهّز البرنامج والسعر، ويصلك إشعار لتؤكد." : "We are planning the route and price; you will be notified to confirm."}
             </p>
           </div>
-
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-[#E8E2D6] dark:border-slate-800 max-w-lg mx-auto text-right text-xs space-y-3 shadow-xs">
-            <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "رقم الطلب المرجعي:" : "Reference #:"}</span>
-              <span className="font-mono font-black text-[#B85D36]">#{createdTripId}</span>
+          <div className="max-w-md mx-auto mt-7 space-y-4">
+            {routePanel}
+            <div className="flex items-center justify-between rounded-2xl border border-border bg-white px-4 py-3 text-sm">
+              <span className="text-muted-foreground">{isAr ? "رقم الطلب" : "Request no."}</span>
+              <span className="font-black tabular-nums text-foreground" dir="ltr">{createdTripId}</span>
             </div>
-
-            <div className="border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold block mb-1">
-                {isAr ? `المعالم السياحية المستهدفة (${selectedLandmarks.length}):` : `Landmarks (${selectedLandmarks.length}):`}
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {selectedLandmarks.map((lm) => (
-                  <span key={lm.id} className="px-2 py-0.5 rounded-md bg-[#FAF7F2] dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-[#E8E2D6] dark:border-slate-700">
-                    🏛️ {isAr ? lm.name : lm.nameEn} ({isAr ? lm.city : lm.cityEn})
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "تاريخ الانطلاق والمدة:" : "Start Date & Duration:"}</span>
-              <span className="font-black text-slate-800 dark:text-slate-200">{startDate} ({durationDays} {isAr ? "أيام" : "days"})</span>
-            </div>
-
-            <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "عدد المسافرين:" : "Travelers:"}</span>
-              <span className="font-black text-slate-800 dark:text-slate-200">{companions} {isAr ? "أفراد" : "pax"}</span>
-            </div>
-
-            <div className="flex justify-between border-b border-[#E8E2D6] dark:border-slate-800 pb-2">
-              <span className="text-slate-500 font-bold">{isAr ? "المرشد السياحي المفضل:" : "Tour Guide:"}</span>
-              <span className="font-black text-slate-800 dark:text-slate-200">
-                {selectedGuide ? `${selectedGuide.name} (${selectedGuide.licenseNumber})` : (isAr ? "تكليف بمعرفة إدارة المنصة" : "Assigned by Platform Admin")}
-              </span>
-            </div>
-
-            <div className="flex justify-between pt-1">
-              <span className="text-slate-500 font-bold">{isAr ? "حالة الطلب:" : "Status:"}</span>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                {isAr ? "بانتظار تسعير الإدارة" : "Pending Admin Quote"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-8 h-11 rounded-full bg-[#B85D36] hover:bg-[#a04e2c] text-white font-bold text-sm shadow-md transition cursor-pointer"
-            >
-              {isAr ? "تم، إغلاق" : "Done, Close"}
+            <button type="button" onClick={onClose} className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-black cursor-pointer hover:bg-primary/90 transition">
+              {isAr ? "تم" : "Done"}
             </button>
           </div>
         </div>
