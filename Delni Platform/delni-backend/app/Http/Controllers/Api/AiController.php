@@ -118,17 +118,27 @@ class AiController extends Controller
         $res = null;
         $searched = false;
         $offline = false;
+        // All attempts together stay under 80 s, so the browser (which waits 90 s) always gets an answer or a clear message
+        $deadline = microtime(true) + 80;
         foreach ($models as $model) {
             // After Google refuses search for this key (free keys), skip the search attempt for 10 minutes
             foreach (Cache::store('file')->get('gemini_no_search') ? [false] : [true, false] as $withSearch) {
+                $left = (int) floor($deadline - microtime(true));
+                if ($left < 8) {
+                    break 2;
+                }
                 // A timeout or a dropped connection counts as one failed attempt, like an error status
                 try {
-                    $res = $this->askGemini($key, $model, $instructions, $contents, $withSearch);
+                    $res = $this->askGemini($key, $model, $instructions, $contents, $withSearch, $left);
                     $offline = false;
                 } catch (\Throwable $e) {
+                    \Log::warning("Delni assistant: {$model} failed: " . $e->getMessage());
                     $res = null;
                     $offline = true;
                     continue;
+                }
+                if (!$res->successful()) {
+                    \Log::warning("Delni assistant: {$model} answered " . $res->status());
                 }
                 if ($res->successful()) {
                     $searched = $withSearch;
@@ -177,9 +187,9 @@ class AiController extends Controller
     }
 
     // One generateContent call; without Google Search the model is told it has no live data (weather = usual climate)
-    private function askGemini(string $key, string $model, string $instructions, array $contents, bool $withSearch)
+    private function askGemini(string $key, string $model, string $instructions, array $contents, bool $withSearch, int $maxSeconds = 40)
     {
-        $note = $withSearch ? '' : "\n- لا يتوفر لديك بحث مباشر الآن: للطقس اذكر المناخ المعتاد في هذا الشهر ووضّح أنه ليس طقس اليوم الفعلي.";
+        $note = $withSearch ? '' : "\n- عن الطقس: صف الطقس المعتاد في المدينة في هذا الشهر (درجات الحرارة التقريبية وما يناسب من ملابس) بصيغة «عادةً يكون…»، وانصح بمراجعة النشرة الجوية قبل الخروج، دون أن تذكر أنك لا تستطيع البحث أو أنك لا تملك بيانات مباشرة.";
         $body = [
             'systemInstruction' => ['parts' => [['text' => $instructions . $note]]],
             'contents' => $contents,
@@ -188,7 +198,7 @@ class AiController extends Controller
         if ($withSearch) {
             $body['tools'] = [['google_search' => (object) []]];
         }
-        return Http::timeout($withSearch ? 25 : 40)
+        return Http::timeout(min($withSearch ? 25 : 40, $maxSeconds))
             // PHP on Windows often has no CA bundle configured: verify Google's certificate with the system store
             ->withOptions(defined('CURLSSLOPT_NATIVE_CA') ? ['curl' => [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA]] : [])
             ->withHeaders(['x-goog-api-key' => $key])
@@ -213,10 +223,12 @@ class AiController extends Controller
         $trips = $weekly->concat($daily)->implode("\n");
 
         return <<<PROMPT
-أنت «ذكاء دلني»، المساعد السياحي الذكي لمنصة «دلني» للسياحة الداخلية في ليبيا.
+أنت «دلني»، المرشد السياحي لمنصة «دلني» للسياحة الداخلية في ليبيا، وتتحدث كمرشد ليبي محترف وخبير.
 - أجب بلغة السائل نفسها (العربية، الإنجليزية، الإيطالية، الفرنسية أو غيرها)، وبأسلوب ودود وواضح ومختصر.
 - تخصصك ليبيا: المعالم والمدن والتاريخ والتراث والزي التقليدي والأكلات والعادات واللهجة الليبية والطقس وأفضل أوقات الزيارة ونصائح السفر داخل ليبيا.
-- للمعلومات الحديثة مثل طقس اليوم أو الأحداث الجارية استخدم بحث Google، واذكر أن المعلومة قد تتغير.
+- للمعلومات الحديثة مثل طقس اليوم أو الأحداث الجارية استخدم البحث إن توفر، واذكر بلطف أن المعلومة قد تتغير.
+- لا تذكر أبداً أنك ذكاء اصطناعي أو نموذج لغوي أو برنامج، ولا تذكر Google أو Gemini أو «البحث المباشر» أو «بيانات التدريب» أو حدود قدراتك. لا تبدأ بعبارات مثل «بصفتي…» أو «لا أستطيع الوصول…». إن سُئلت من أنت فقل إنك مرشد منصة دلني.
+- ادخل في الإجابة مباشرة دون تكرار الترحيب في كل رد، واكتب بأسلوب أنيق ومنظم: فقرات قصيرة، ونقاط عند الحاجة، و**خط عريض** للأسماء المهمة فقط.
 - إذا أرفق المستخدم صورة: صف ما فيها، وإن كانت لمعلم أو زي أو طعام أو منطقة في ليبيا فعرّف بها وبتاريخها، وإن لم تكن متأكداً فقل ذلك بوضوح ولا تخمّن.
 - عند الحديث عن الحجز: الحجز يتم من صفحة الرحلات في منصة دلني، والدفع نقداً في مكتب الشركة في طرابلس أو بنغازي، ويؤكد الموظف الدفع برقم التذكرة. لا تخترع رحلات أو أسعاراً غير المذكورة أدناه.
 - إذا سُئلت عن موضوع لا علاقة له بالسفر أو بليبيا فأجب باختصار ثم أعد الحديث بلطف إلى السياحة في ليبيا.
