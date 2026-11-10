@@ -4,6 +4,25 @@ import { BotMessageSquare } from "lucide-react";
 import { laravelRequest } from "@/lib/api";
 import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
+// The assistant writes light Markdown: **bold** words, "### " headings and "- " bullets (rendered as React text, never as HTML)
+function richText(text: string) {
+  return text.split("\n").map((line, i) => {
+    const heading = /^#{1,4}\s+/.test(line);
+    const bullet = /^\s*[-*]\s+/.test(line);
+    const body = line.replace(/^#{1,4}\s+/, "").replace(/^\s*[-*]\s+/, "");
+    const parts = body.split(/(\*\*[^*]+\*\*)/g).map((part, k) =>
+      part.startsWith("**") && part.endsWith("**") ? <strong key={k} className="font-black">{part.slice(2, -2)}</strong> : part,
+    );
+    return (
+      <span key={i} className={`block ${heading ? "font-black mt-1.5" : ""}`}>
+        {bullet ? "• " : ""}
+        {parts}
+        {line === "" ? " " : null}
+      </span>
+    );
+  });
+}
+
 type Msg = { 
   id: number; 
   from: "user" | "admin" | "ai"; 
@@ -247,7 +266,7 @@ export function FloatingChat() {
                     <img src={m.image} alt="صورة معلم" className="w-full h-38 object-cover rounded-xl mb-2 border border-[#E6E1D6] shadow-xs" />
                   )}
 
-                  <div className="whitespace-pre-line leading-relaxed font-semibold">{m.text}</div>
+                  <div className="whitespace-pre-line leading-relaxed font-medium">{richText(m.text)}</div>
                   <div className={`text-[11px] mt-1.5 ${m.from === "user" ? "text-white/80" : "text-[#526078]"}`}>{m.time}</div>
                 </div>
               </div>

@@ -107,26 +107,54 @@ class AiController extends Controller
         }
         $contents[] = ['role' => 'user', 'parts' => $parts];
 
-        $model = (string) config('services.gemini.model', 'gemini-2.5-flash');
-        try {
-            $res = Http::timeout(60)
-                ->withHeaders(['x-goog-api-key' => $key])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-                    'systemInstruction' => ['parts' => [['text' => $this->systemPrompt()]]],
-                    'contents' => $contents,
-                    'tools' => [['google_search' => (object) []]],
-                    'generationConfig' => ['temperature' => 0.6, 'maxOutputTokens' => 1200],
-                ]);
-        } catch (\Throwable $e) {
+        // Several attempts may be needed (search quota, busy models): more time than PHP's default 30 s
+        set_time_limit(150);
+        $instructions = $this->systemPrompt();
+        // The configured model first, then current Flash models; each is tried with Google Search, then without it
+        $models = array_values(array_unique(array_filter([
+            (string) config('services.gemini.model'), 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash',
+        ])));
+        $res = null;
+        $searched = false;
+        $offline = false;
+        foreach ($models as $model) {
+            foreach ([true, false] as $withSearch) {
+                // A timeout or a dropped connection counts as one failed attempt, like an error status
+                try {
+                    $res = $this->askGemini($key, $model, $instructions, $contents, $withSearch);
+                    $offline = false;
+                } catch (\Throwable $e) {
+                    $res = null;
+                    $offline = true;
+                    continue;
+                }
+                if ($res->successful()) {
+                    $searched = $withSearch;
+                    break 2;
+                }
+                // No search quota (free keys): the same model without search; any other failure: the next model
+                if (!($withSearch && $res->status() === 429)) {
+                    break;
+                }
+            }
+            if ($res?->successful()) {
+                break;
+            }
+            // A wrong key will fail on every model: stop here
+            if ($res && in_array($res->status(), [400, 401, 403], true) && str_contains((string) $res->body(), 'API key')) {
+                break;
+            }
+        }
+        if (!$res && $offline) {
             return response()->json(['success' => false, 'message' => 'تعذر الاتصال بخدمة Google للذكاء الاصطناعي. تحقق من اتصال الخادم بالإنترنت.'], 502);
         }
 
-        if (!$res->successful()) {
-            $status = $res->status();
+        if (!$res || !$res->successful()) {
+            $status = $res?->status();
             $msg = match (true) {
                 $status === 429 => 'تم تجاوز الحد المسموح من الطلبات على مفتاح Gemini مؤقتاً. حاول بعد قليل.',
                 in_array($status, [400, 401, 403], true) && str_contains((string) $res->body(), 'API key') => 'مفتاح Google Gemini غير صالح. تحقق من GEMINI_API_KEY في ملف .env.',
-                $status === 404 => "نموذج Gemini ({$model}) غير متاح. غيّر GEMINI_MODEL في ملف .env إلى نموذج متاح.",
+                $status === 503 => 'خدمة Google مشغولة الآن. حاول بعد لحظات.',
                 default => 'لم تتمكن خدمة الذكاء الاصطناعي من الإجابة الآن. حاول مرة أخرى.',
             };
             return response()->json(['success' => false, 'message' => $msg], 502);
@@ -140,15 +168,35 @@ class AiController extends Controller
             ->map(fn ($c) => ['title' => $c['web']['title'] ?? '', 'url' => $c['web']['uri'] ?? ''])
             ->filter(fn ($c) => $c['url'] !== '')->take(3)->values();
 
-        return response()->json(['success' => true, 'reply' => trim($reply), 'sources' => $sources, 'source' => 'gemini']);
+        return response()->json(['success' => true, 'reply' => trim($reply), 'sources' => $sources, 'source' => 'gemini', 'live_search' => $searched]);
+    }
+
+    // One generateContent call; without Google Search the model is told it has no live data (weather = usual climate)
+    private function askGemini(string $key, string $model, string $instructions, array $contents, bool $withSearch)
+    {
+        $note = $withSearch ? '' : "\n- لا يتوفر لديك بحث مباشر الآن: للطقس اذكر المناخ المعتاد في هذا الشهر ووضّح أنه ليس طقس اليوم الفعلي.";
+        $body = [
+            'systemInstruction' => ['parts' => [['text' => $instructions . $note]]],
+            'contents' => $contents,
+            'generationConfig' => ['temperature' => 0.6, 'maxOutputTokens' => 1200],
+        ];
+        if ($withSearch) {
+            $body['tools'] = [['google_search' => (object) []]];
+        }
+        return Http::timeout($withSearch ? 25 : 40)
+            // PHP on Windows often has no CA bundle configured: verify Google's certificate with the system store
+            ->withOptions(defined('CURLSSLOPT_NATIVE_CA') ? ['curl' => [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA]] : [])
+            ->withHeaders(['x-goog-api-key' => $key])
+            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", $body);
     }
 
     // Who «ذكاء دلني» is, and what is on the platform today (read only: landmarks and open trips)
     private function systemPrompt(): string
     {
         $today = now('Africa/Tripoli');
-        $places = PlaceTourist::query()->limit(40)->get(['place_name', 'city'])
-            ->map(fn ($p) => "{$p->place_name} ({$p->city})")->implode('، ');
+        // A landmark is named by its tourist city (places_tourist has no name column)
+        $places = PlaceTourist::query()->limit(40)->get(['city', 'category'])
+            ->map(fn ($p) => $p->category ? "{$p->city} ({$p->category})" : $p->city)->implode('، ');
         $weekly = \DB::table('weekly_trips')->where('is_active', true)->where('end_date', '>=', $today->toDateString())
             ->where(fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', 'وافق المرشد'))
             ->limit(15)->get(['trip_title', 'start_date', 'seat_per_price', 'departure_city'])
