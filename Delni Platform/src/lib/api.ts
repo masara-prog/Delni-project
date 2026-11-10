@@ -232,10 +232,11 @@ const LARAVEL_UNREACHABLE_ERROR =
 /**
  * Calls the Laravel API, which is the only layer that writes to DelniDB; the result says whether it was really stored.
  */
-export async function laravelRequest<T = any>(method: "GET" | "POST" | "PUT", path: string, payload?: any): Promise<LaravelResult<T>> {
+// timeoutMs: 15 s for platform data; longer only for slow calls such as the AI assistant
+export async function laravelRequest<T = any>(method: "GET" | "POST" | "PUT", path: string, payload?: any, timeoutMs = 15000): Promise<LaravelResult<T>> {
   if (typeof window === "undefined") return { ok: false, error: LARAVEL_UNREACHABLE_ERROR };
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(`${LARAVEL_API_URL}${path}`, {
       method,

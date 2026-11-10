@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use App\Models\DailyTrip;
 use App\Models\WeeklyTrip;
 use App\Models\PlaceTourist;
@@ -118,7 +119,8 @@ class AiController extends Controller
         $searched = false;
         $offline = false;
         foreach ($models as $model) {
-            foreach ([true, false] as $withSearch) {
+            // After Google refuses search for this key (free keys), skip the search attempt for 10 minutes
+            foreach (Cache::store('file')->get('gemini_no_search') ? [false] : [true, false] as $withSearch) {
                 // A timeout or a dropped connection counts as one failed attempt, like an error status
                 try {
                     $res = $this->askGemini($key, $model, $instructions, $contents, $withSearch);
@@ -133,6 +135,9 @@ class AiController extends Controller
                     break 2;
                 }
                 // No search quota (free keys): the same model without search; any other failure: the next model
+                if ($withSearch && $res->status() === 429) {
+                    Cache::store('file')->put('gemini_no_search', true, now()->addMinutes(10));
+                }
                 if (!($withSearch && $res->status() === 429)) {
                     break;
                 }

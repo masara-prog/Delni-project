@@ -155,7 +155,7 @@ export function FloatingChat() {
     const history = historyFor(messages);
     setTyping(!image);
     setAnalyzingImage(Boolean(image));
-    const res = await laravelRequest<any>("POST", "/ai/chat", { message: text, image, history });
+    const res = await laravelRequest<any>("POST", "/ai/chat", { message: text, image, history }, 90000);
     setTyping(false);
     setAnalyzingImage(false);
     const body: any = res.ok ? res.body : null;
