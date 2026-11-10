@@ -120,32 +120,17 @@ export function FloatingChat() {
 
   return (
     <>
-      {/* Launcher: the Delni pin in a white badge with a sparkle (the assistant), on a warm orange pill */}
+      {/* Launcher: one clear sparkle (the assistant) and the name, on Delni's desert orange */}
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label={ar ? "ذكاء دلني" : "Delni AI"}
+        aria-label={ar ? "ذكاء دلّني" : "Delni AI"}
         aria-expanded={open}
-        className={`group fixed bottom-6 ${side} z-[90] hidden md:flex items-center gap-3 h-[60px] ps-2 pe-6 rounded-full text-white bg-gradient-to-l from-[#E8833A] to-[#C85A1E] shadow-[0_14px_34px_-10px_rgba(200,90,30,0.65)] ring-1 ring-white/25 transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-10px_rgba(200,90,30,0.75)] active:translate-y-0 active:scale-[0.97]`}
+        className={`fixed bottom-6 ${side} z-[90] hidden md:flex items-center gap-2.5 h-14 ps-1.5 pe-6 rounded-full text-white bg-gradient-to-l from-[#EE8A45] to-[#D2621F] shadow-[0_12px_30px_-12px_rgba(210,98,31,0.75)] ring-1 ring-white/20 transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-12px_rgba(210,98,31,0.85)] active:translate-y-0 active:scale-[0.97]`}
       >
-        {!open && <span aria-hidden className="absolute inset-0 rounded-full ring-2 ring-[#F2A066] motion-safe:animate-ping opacity-40 pointer-events-none" />}
-        <span className="relative shrink-0">
-          <span className="grid place-items-center w-11 h-11 rounded-full bg-white overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.18)]">
-            {open ? (
-              <X className="w-5 h-5 text-[#C85A1E]" strokeWidth={2.75} />
-            ) : (
-              <img src="/logo.png" alt="" className="w-full h-full object-cover scale-[1.75] origin-[48%_27%]" />
-            )}
-          </span>
-          {!open && (
-            <span className="absolute -top-1 -end-1 grid place-items-center w-5 h-5 rounded-full bg-[#0B4F57] ring-2 ring-white">
-              <Sparkles className="w-3 h-3 text-[#FFD7B5]" strokeWidth={2.5} />
-            </span>
-          )}
+        <span className="grid place-items-center w-11 h-11 rounded-full bg-white/15 ring-1 ring-white/30">
+          {open ? <X className="w-5 h-5" strokeWidth={2.5} /> : <Sparkles className="w-[22px] h-[22px]" strokeWidth={2} />}
         </span>
-        <span className="flex flex-col items-start leading-tight">
-          <span className="text-[15px] font-extrabold tracking-tight">{ar ? "ذكاء دلّني" : "Delni AI"}</span>
-          <span className="text-[11.5px] font-medium text-white/85">{open ? (ar ? "إغلاق المحادثة" : "Close chat") : ar ? "اسألني عن ليبيا" : "Ask me about Libya"}</span>
-        </span>
+        <span className="text-[15px] font-extrabold tracking-tight">{ar ? "ذكاء دلّني" : "Delni AI"}</span>
       </button>
 
       {open && (

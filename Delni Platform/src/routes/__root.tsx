@@ -9,6 +9,7 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { CloudOff, Compass, Home, RotateCw } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { FloatingChat } from "@/components/FloatingChat";
@@ -156,42 +157,55 @@ function RoleDashboardsSidebar() {
   );
 }
 
+// One calm screen for "page not found" and "page could not load": logo, a soft icon, a clear sentence, two actions
+function StatusScreen({ dir, icon, eyebrow, title, body, actions, details }: {
+  dir: "rtl" | "ltr"; icon: ReactNode; eyebrow: string; title: string; body: string; actions: ReactNode; details?: ReactNode;
+}) {
+  return (
+    <div dir={dir} className="relative min-h-screen overflow-hidden bg-[#F7F5F0] px-4 py-12 flex items-center justify-center">
+      <div aria-hidden className="pointer-events-none absolute -top-40 -start-32 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle,rgba(0,115,111,0.14),transparent_65%)]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-48 -end-32 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(217,107,39,0.12),transparent_65%)]" />
+      <div className="relative w-full max-w-[460px] text-center">
+        <img src="/logo.png" alt="دلّني" className="mx-auto h-24 w-auto object-contain mix-blend-multiply" />
+        <div className="mt-8 rounded-[28px] bg-white px-8 pt-10 pb-8 ring-1 ring-black/[0.05] shadow-[0_24px_60px_-28px_rgba(11,27,43,0.25)]">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#FFF2E8] text-[#D2621F]">{icon}</div>
+          <p className="mt-5 text-[12px] font-bold tracking-wide text-[#00736F]">{eyebrow}</p>
+          <h1 className="mt-1.5 text-[24px] leading-snug font-extrabold text-[#0B1B2B]">{title}</h1>
+          <p className="mx-auto mt-3 max-w-[340px] text-[15px] leading-relaxed text-[#5B6B70]">{body}</p>
+          <div className="mt-7 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-center">{actions}</div>
+          {details}
+        </div>
+        <p className="mt-6 text-[12.5px] text-[#8A9599]">{dir === "rtl" ? "دلّني · دليلك لاكتشاف ليبيا" : "Delni · your guide to Libya"}</p>
+      </div>
+    </div>
+  );
+}
+
+const btnPrimary = "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#00736F] px-6 text-[14px] font-bold text-white transition-[background-color,transform] hover:bg-[#0B4F57] active:scale-[0.97] cursor-pointer";
+const btnSecondary = "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-6 text-[14px] font-bold text-[#0B1B2B] ring-1 ring-black/10 transition-[background-color,transform] hover:bg-[#F7F5F0] active:scale-[0.97] cursor-pointer";
+
 function NotFoundComponent() {
   const { language } = useLanguage();
   const isAr = language === "ar";
 
   useEffect(() => {
-    document.title = isAr ? "منصة دَلّني | الصفحة غير موجودة (404)" : "Dalni Platform | Page Not Found (404)";
+    document.title = isAr ? "دلّني | الصفحة غير موجودة" : "Delni | Page not found";
   }, [isAr]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12" dir={isAr ? "rtl" : "ltr"}>
-      <div className="max-w-md w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
-        <div className="flex justify-center">
-          <img src="/logo.png" alt="دلني" className="h-16 w-auto object-contain" />
-        </div>
-        <div className="inline-block px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-black">
-          {isAr ? "خطأ 404 — الصفحة غير متوفرة" : "Error 404 — Not Found"}
-        </div>
-        <h1 className="text-xl font-black text-slate-900">
-          {isAr ? "الصفحة التي تبحث عنها غير موجودة" : "The page you are looking for does not exist"}
-        </h1>
-        <p className="text-xs text-slate-500 leading-relaxed">
-          {isAr
-            ? "ربما تم تغيير مسار الصفحة أو لم تعد متوفرة. يمكنك العودة إلى الصفحة الرئيسية لمتابعة التصفح."
-            : "The page may have been moved or is no longer available. You can head back to the home page."}
-        </p>
-        <div className="pt-2">
-          <Link
-            to="/"
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#D96B27] hover:bg-[#C25B1E] px-6 py-3 text-xs font-black text-white shadow-soft transition cursor-pointer"
-          >
-            <span>🏠</span>
-            <span>{isAr ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}</span>
-          </Link>
-        </div>
-      </div>
-    </div>
+    <StatusScreen
+      dir={isAr ? "rtl" : "ltr"}
+      icon={<Compass className="h-8 w-8" strokeWidth={1.75} />}
+      eyebrow={isAr ? "خطأ 404" : "Error 404"}
+      title={isAr ? "يبدو أنك ضللت الطريق" : "Looks like you took a wrong turn"}
+      body={isAr ? "الصفحة التي تبحث عنها غير موجودة أو تم نقلها. عُد إلى الرئيسية وواصل اكتشاف ليبيا." : "The page you are looking for doesn't exist or has moved. Head back home and keep exploring Libya."}
+      actions={
+        <Link to="/" className={btnPrimary}>
+          <Home className="h-4 w-4" strokeWidth={2.25} />
+          {isAr ? "العودة إلى الرئيسية" : "Back to home"}
+        </Link>
+      }
+    />
   );
 }
 
@@ -199,37 +213,23 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   useEffect(() => {
-    document.title = "منصة دَلّني للخدمات السياحية | تنبيه";
+    document.title = "دلّني | تعذر تحميل الصفحة";
     console.error("[Dalni Error Caught]:", error);
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12" dir="rtl">
-      <div className="max-w-lg w-full text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
-        <div className="flex justify-center">
-          <img src="/logo.png" alt="منصة دلني" className="h-16 w-auto object-contain" />
-        </div>
-
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-black border border-red-200">
-          <span>⚠️</span>
-          <span>منصة دَلِّني للخدمات السياحية</span>
-        </div>
-
-        <h1 className="text-xl font-black text-slate-900">
-          تعذر تحميل هذه الصفحة مؤقتاً
-        </h1>
-
-        <p className="text-xs text-slate-600 leading-relaxed font-medium">
-          حدث خطأ غير متوقع أثناء معالجة بيانات هذه الصفحة. البيانات آمنة في قاعدة بيانات المنصة، ويمكنك إعادة المحاولة لتحديث الجلسة أو العودة للرئيسية.
-        </p>
-
-        {error?.message && (
-          <div className="text-[11px] text-slate-500 font-mono bg-slate-100 p-2.5 rounded-xl text-left ltr break-all border border-slate-200">
-            {error.message}
-          </div>
-        )}
-
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+    <StatusScreen
+      dir="rtl"
+      icon={<CloudOff className="h-8 w-8" strokeWidth={1.75} />}
+      eyebrow="حدث خلل مؤقت"
+      title="تعذّر تحميل هذه الصفحة"
+      body="لم نتمكن من عرض الصفحة الآن، وبياناتك محفوظة بأمان. أعد المحاولة بعد لحظات أو عُد إلى الرئيسية."
+      actions={
+        <>
+          <a href="/" className={btnSecondary}>
+            <Home className="h-4 w-4" strokeWidth={2.25} />
+            الرئيسية
+          </a>
           <button
             type="button"
             onClick={() => {
@@ -238,21 +238,22 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
               } catch { }
               reset();
             }}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#00736F] hover:bg-[#00224f] px-6 py-2.5 text-xs font-black text-white shadow-md transition cursor-pointer"
+            className={btnPrimary}
           >
-            <span>🔄</span>
-            <span>إعادة المحاولة الآن</span>
+            <RotateCw className="h-4 w-4" strokeWidth={2.25} />
+            إعادة المحاولة
           </button>
-          <a
-            href="/"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white px-6 py-2.5 text-xs font-black text-slate-800 transition cursor-pointer"
-          >
-            <span>🏠</span>
-            <span>العودة للرئيسية</span>
-          </a>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+      details={
+        error?.message ? (
+          <details className="mt-6 border-t border-black/[0.06] pt-4 text-start">
+            <summary className="cursor-pointer text-[12.5px] font-semibold text-[#8A9599] hover:text-[#5B6B70]">تفاصيل تقنية</summary>
+            <p dir="ltr" className="mt-2 break-all rounded-xl bg-[#F7F5F0] p-3 text-left font-mono text-[12px] text-[#5B6B70]">{error.message}</p>
+          </details>
+        ) : null
+      }
+    />
   );
 }
 
