@@ -1,3 +1,4 @@
+import { sessionGet, sessionSet, sessionRemove } from "@/lib/session";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { splitTripNotes } from "@/lib/privateTripNotes";
 import { useState, useEffect } from "react";
@@ -443,7 +444,7 @@ function GuideDashboard() {
     alert("تم حفظ التعديلات وتحديث ملفك بنجاح ✓");
     const session = getStoredSession();
     if (session.user) {
-      localStorage.setItem("dalni_user", JSON.stringify({ ...session.user, ...res.guide }));
+      sessionSet("dalni_user", JSON.stringify({ ...session.user, ...res.guide }));
     }
   };
 

@@ -1,3 +1,4 @@
+import { sessionGet, sessionSet, sessionRemove } from "./session";
 // Automatic one-time cleanup to ensure fresh start with 0 data across the entire platform
 if (typeof window !== "undefined") {
   const resetDone = localStorage.getItem("dalni_full_wipe_clean_v4");
@@ -59,14 +60,14 @@ if (typeof window !== "undefined" && !(window as any).__dalniAuthFetch) {
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const token = localStorage.getItem("dalni_token");
+    const token = sessionGet("dalni_token");
     if (!url.startsWith(LARAVEL_API_URL) || !token) return nativeFetch(input, init);
 
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
     if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
     const res = await nativeFetch(input, { ...init, headers });
     if (res.status === 401 && !url.includes("/auth/login")) {
-      ["dalni_token", "dalni_role", "dalni_user"].forEach((k) => localStorage.removeItem(k));
+      ["dalni_token", "dalni_role", "dalni_user"].forEach((k) => sessionRemove(k));
       window.dispatchEvent(new Event("storage"));
       if (!window.location.pathname.startsWith("/auth/")) window.location.href = "/auth/login";
     }
@@ -342,7 +343,7 @@ export async function updateTransportCompany(contractNumber: string, data: Parti
 
     const current = getStoredSession().user;
     if (current && (current.contract_number === contractNumber || current.id === contractNumber)) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...updatedRecord }));
+      sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...updatedRecord }));
     }
     return { ok: true, record: updatedRecord };
   } else {
@@ -470,7 +471,7 @@ function cacheDriver(record: DriverRecord) {
   saveDrivers([clean, ...getDrivers().filter(x => x.driver_license_number !== record.driver_license_number)]);
   const current = getStoredSession().user;
   if (current && current.driver_license_number === record.driver_license_number) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...clean }));
+    sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...current, ...clean }));
   }
   return clean;
 }
@@ -576,7 +577,7 @@ export function updateGuideVerification(licenseNumber: string, status: "موثق
     const current = getStoredSession().user;
     if (current && current.license_number === licenseNumber) {
       current.verification_status = status;
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(current));
+      sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(current));
     }
     return true;
   }
@@ -610,10 +611,9 @@ export async function apiLogin(params: {
     const data = await res.json().catch(() => null);
     if (res.ok && data?.status === "success" && data.token) {
       const userObj = { ...data.user, role: data.role || role };
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem(STORAGE_KEYS.ROLE, userObj.role);
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
-      localStorage.setItem("dalni_user", JSON.stringify(userObj));
+      sessionSet(STORAGE_KEYS.TOKEN, data.token);
+      sessionSet(STORAGE_KEYS.ROLE, userObj.role);
+      sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userObj));
       window.dispatchEvent(new Event("storage"));
       return {
         status: "success",
@@ -641,7 +641,7 @@ export async function apiLogin(params: {
 export function apiLogout() {
   if (typeof window !== "undefined") {
     // Revoke the token on the server too, so a copied token stops working after sign-out (keepalive: the page navigates away)
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = sessionGet(STORAGE_KEYS.TOKEN);
     if (token) {
       fetch(`${LARAVEL_API_URL}/auth/logout`, {
         method: "POST",
@@ -649,9 +649,9 @@ export function apiLogout() {
         headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
       }).catch(() => {});
     }
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.ROLE);
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    sessionRemove(STORAGE_KEYS.TOKEN);
+    sessionRemove(STORAGE_KEYS.ROLE);
+    sessionRemove(STORAGE_KEYS.CURRENT_USER);
     window.dispatchEvent(new Event("storage"));
   }
 }
@@ -659,9 +659,9 @@ export function apiLogout() {
 export function getStoredSession() {
   // Pages are first rendered on the server, where there is no localStorage: nobody is signed in there
   if (typeof window === "undefined") return { token: null, role: null, user: null };
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  const role = localStorage.getItem(STORAGE_KEYS.ROLE);
-  const userJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+  const token = sessionGet(STORAGE_KEYS.TOKEN);
+  const role = sessionGet(STORAGE_KEYS.ROLE);
+  const userJson = sessionGet(STORAGE_KEYS.CURRENT_USER);
   let user = null;
   try {
     if (userJson) user = JSON.parse(userJson);
@@ -750,10 +750,9 @@ export async function apiRegisterTourist(params: {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     } catch { }
 
-    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-    localStorage.setItem(STORAGE_KEYS.ROLE, "tourist");
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(savedUser));
-    localStorage.setItem("dalni_user", JSON.stringify(savedUser));
+    sessionSet(STORAGE_KEYS.TOKEN, token);
+    sessionSet(STORAGE_KEYS.ROLE, "tourist");
+    sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(savedUser));
     window.dispatchEvent(new Event("storage"));
 
     return {
@@ -788,8 +787,7 @@ export async function apiUpdateTouristProfile(params: {
 
   const current = getStoredSession().user || {};
   const updated = { ...current, ...(saved.body?.user || {}), password: undefined };
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
-  localStorage.setItem("dalni_user", JSON.stringify(updated));
+  sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
   return { status: "success", message: saved.body?.message || "تم تحديث الملف الشخصي بنجاح", user: updated };
 }
 
@@ -1154,7 +1152,7 @@ export async function apiGetGuideDashboard(licenseNumber: string) {
             currentSession.user.email === liveData.guide.email)
         ) {
           const updatedUser = { ...currentSession.user, ...liveData.guide };
-          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedUser));
+          sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedUser));
         }
 
         return {
@@ -1197,7 +1195,7 @@ export async function apiUpdateGuideProfile(licenseNumber: string, data: any) {
   if (!saved.ok) return { status: "error", message: saved.error };
 
   const guide = { ...(getStoredSession().user || {}), ...data, ...(saved.body?.guide || {}), password: undefined };
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(guide));
+  sessionSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(guide));
   const guides = getAllGuides();
   const idx = guides.findIndex((g) => g.license_number === licenseNumber);
   if (idx !== -1) {

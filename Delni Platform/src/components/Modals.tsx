@@ -1,3 +1,4 @@
+import { sessionGet, sessionSet, sessionRemove } from "@/lib/session";
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { useLanguage } from "@/lib/i18n";
 import heroImg from "@/assets/hero-leptis.jpg";
@@ -167,7 +168,7 @@ export function BookingModal({ open, onClose, item }: { open: boolean; onClose: 
             initialName = s.user.full_name || s.user.name;
           }
         } else {
-          const storedUser = localStorage.getItem("dalni_user");
+          const storedUser = sessionGet("dalni_user");
           if (storedUser) {
             const parsed = JSON.parse(storedUser);
             if (parsed.phone) initialPhone = parsed.phone;
