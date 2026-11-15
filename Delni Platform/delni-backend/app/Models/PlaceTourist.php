@@ -20,17 +20,25 @@ class PlaceTourist extends Model
         'latitude',
         'category',
         'place_image',
-        'google_maps_url',
         'region',
     ];
     // Highlights are rows of places_tourist_highlights (highlightItems)
 
     // A landmark is named by its tourist city (the place_name column was removed); sent as place_name for the pages
-    protected $appends = ['place_name'];
+    protected $appends = ['place_name', 'google_maps_url'];
 
     public function getPlaceNameAttribute(): ?string
     {
         return $this->city;
+    }
+
+    // The map link is built from the coordinates (no stored column, so it can never disagree with them)
+    public function getGoogleMapsUrlAttribute(): ?string
+    {
+        if ($this->latitude === null || $this->longitude === null) {
+            return null;
+        }
+        return 'https://maps.google.com/?q=' . (float) $this->latitude . ',' . (float) $this->longitude;
     }
 
     protected $casts = [

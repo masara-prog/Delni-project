@@ -86,7 +86,6 @@ class PlaceController extends Controller
         if (isset($data['latitude'], $data['longitude'])) {
             $values['latitude'] = $data['latitude'];
             $values['longitude'] = $data['longitude'];
-            $values['google_maps_url'] = "https://maps.google.com/?q={$data['latitude']},{$data['longitude']}";
         }
 
         DB::transaction(function () use ($id, $values, $data) {
