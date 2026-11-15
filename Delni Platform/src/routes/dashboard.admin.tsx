@@ -5606,7 +5606,8 @@ function guideDayCodes(g: { working_days?: any }): string[] | null {
       days = days.split(",");
     }
   }
-  if (!Array.isArray(days) || days.length === 0) return null;
+  // No working days recorded = the guide works no day yet, so no trip day fits; only "all" means every day
+  if (!Array.isArray(days) || days.length === 0) return [];
   const list = days.map((d: any) => String(d).trim().toLowerCase());
   if (list.includes("all") || list.includes("جميع الأيام")) return null;
   return list.map((d: string) => arabicToCodeMap[d.replace("الاثنين", "الإثنين")] || d);
@@ -5785,7 +5786,8 @@ function CreateTripModal({
     }
   };
 
-  const [showAllGuides, setShowAllGuides] = useState(false);
+  // The guide list is always filtered by working days (no bypass); the server applies the same rule
+  const showAllGuides = false;
 
 
   const filteredGuidesList = useMemo(() => {
@@ -6218,28 +6220,13 @@ function CreateTripModal({
                 </span>
               )}:
             </label>
-            {isDaily && (
-              <button
-                type="button"
-                onClick={() => setShowAllGuides(!showAllGuides)}
-                className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 cursor-pointer transition"
-              >
-                {showAllGuides ? "🔍 إعادة تفعيل فلترة أيام العمل فقط" : "👁️ عرض كافة المرشدين"}
-              </button>
-            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-800 py-3 font-bold bg-amber-50 rounded-xl border border-amber-200 space-y-1">
                 <div>لا يوجد مرشدين متاحين يطابق جدول عملهم الأيام المختارة ({recurringDays.join(" و ")}).</div>
-                <button
-                  type="button"
-                  onClick={() => setShowAllGuides(true)}
-                  className="text-xs text-teal-700 font-black hover:underline cursor-pointer"
-                >
-                  اضغط هنا لعرض كافة المرشدين وتجاوز الفلترة
-                </button>
+                <div className="text-[11px] font-bold text-slate-600">غيّر أيام الرحلة، أو اطلب من المرشد تحديث أيام عمله.</div>
               </div>
             )}
             {filteredGuidesList.map((g) => {
@@ -6417,7 +6404,8 @@ function DailyTripEditModal({
     return [p, "/assets/dest-leptis-arch.jpg", "/assets/dest-leptis-forum.jpg", "/assets/dest-leptis-coast.jpg", "/assets/hero-leptis.jpg"];
   });
 
-  const [showAllGuides, setShowAllGuides] = useState(false);
+  // The guide list is always filtered by working days (no bypass); the server applies the same rule
+  const showAllGuides = false;
 
   const filteredGuidesList = useMemo(() => {
     return guides.filter(g => {
@@ -6636,26 +6624,13 @@ function DailyTripEditModal({
                 </span>
               )}:
             </label>
-            <button
-              type="button"
-              onClick={() => setShowAllGuides(!showAllGuides)}
-              className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 cursor-pointer transition"
-            >
-              {showAllGuides ? "🔍 إعادة تفعيل فلترة أيام العمل فقط" : "👁️ عرض كافة المرشدين"}
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {filteredGuidesList.length === 0 && (
               <div className="col-span-full text-center text-xs text-amber-800 py-3 font-bold bg-amber-50 rounded-xl border border-amber-200 space-y-1">
                 <div>لا يوجد مرشدين متاحين يطابق جدول عملهم الأيام المختارة ({recurringDays.join(" و ")}).</div>
-                <button
-                  type="button"
-                  onClick={() => setShowAllGuides(true)}
-                  className="text-xs text-teal-700 font-black hover:underline cursor-pointer"
-                >
-                  اضغط هنا لعرض كافة المرشدين وتجاوز الفلترة
-                </button>
+                <div className="text-[11px] font-bold text-slate-600">غيّر أيام الرحلة، أو اطلب من المرشد تحديث أيام عمله.</div>
               </div>
             )}
             {filteredGuidesList.map((g) => {
