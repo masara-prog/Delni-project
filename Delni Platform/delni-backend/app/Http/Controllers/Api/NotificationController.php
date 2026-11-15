@@ -118,13 +118,16 @@ class NotificationController extends Controller
 
         $id = 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999);
 
-        $notification = Notification::create([
+        // The recipient account is stored in its own foreign key column (tourist, guide, driver or company)
+        $recipient = Notification::recipientColumns($validated['recipient_role'] ?? 'all', $validated['recipient_id'] ?? null);
+        if ($recipient === null) {
+            return response()->json(['status' => 'error', 'message' => 'الحساب المستلم للإشعار غير موجود'], 422);
+        }
+        $notification = Notification::create($recipient + [
             'id' => $id,
             'type' => $validated['type'] ?? 'system',
             'title' => $validated['title'],
             'body' => $validated['body'],
-            'recipient_role' => $validated['recipient_role'] ?? 'all',
-            'recipient_id' => $validated['recipient_id'] ?? null,
             'link' => $validated['link'] ?? null,
             'dedupe_key' => $validated['dedupe_key'] ?? null,
             'is_read' => false,

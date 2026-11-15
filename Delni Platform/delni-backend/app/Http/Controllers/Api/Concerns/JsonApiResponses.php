@@ -145,13 +145,16 @@ trait JsonApiResponses
         if (Notification::where('dedupe_key', $dedupeKey)->exists()) {
             return;
         }
-        Notification::create([
+        // The recipient is a foreign key by kind of account; an account that does not exist gets no notification
+        $recipient = Notification::recipientColumns($role, $recipientId);
+        if ($recipient === null) {
+            return;
+        }
+        Notification::create($recipient + [
             'id' => 'notif-' . (int) (microtime(true) * 1000) . '-' . random_int(1000, 9999),
             'type' => $type,
             'title' => $title,
             'body' => $body,
-            'recipient_role' => $role,
-            'recipient_id' => $recipientId,
             'link' => $link,
             'is_read' => false,
             'created_at' => now('Africa/Tripoli'),
