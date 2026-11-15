@@ -130,6 +130,7 @@ export function DashboardShell({
                 <MessageCircle className="w-4 h-4" aria-hidden="true" /> {isAr ? "الدعم" : "Support"}
               </button>
             )}
+            <LanguageToggle variant="light" />
             <NotificationBell />
             <div className="flex items-center gap-2.5 px-3 border-x border-border">
               {userAvatar ? (
