@@ -87,6 +87,23 @@ export function DashboardShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchStr]);
 
+  // The open section is kept in the address (?tab=<section>), so a refresh reopens it instead of the overview.
+  // The first run is skipped: on load the effect above reads ?tab= and opens that section first.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (!restored) {
+      setRestored(true);
+      return;
+    }
+    try {
+      const url = new URL(window.location.href);
+      if (active && active !== nav[0]?.id) url.searchParams.set("tab", active);
+      else url.searchParams.delete("tab");
+      if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url.href);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
   return (
     <div className="min-h-screen bg-gradient-sand" dir={dir}>
       {/* Top bar */}
