@@ -382,10 +382,12 @@ class ApiService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        // Same as the platform's sign-in: the e-mail in lower case and the password without the spaces a phone
+        // keyboard may add around it (the server compares the password exactly)
         body: json.encode({
           'role': role,
-          'login': login.trim(),
-          'password': password,
+          'login': login.trim().toLowerCase(),
+          'password': password.trim(),
         }),
       ).timeout(const Duration(seconds: 8));
 

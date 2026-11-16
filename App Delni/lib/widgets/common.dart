@@ -145,7 +145,11 @@ class _AppTextFieldState extends State<AppTextField> {
         TextField(
           controller: widget.controller,
           obscureText: widget.password && _obscure,
-          keyboardType: widget.keyboardType,
+          // A password is typed as is: no suggestions, corrections or capital first letter from the keyboard
+          keyboardType: widget.password ? TextInputType.visiblePassword : widget.keyboardType,
+          autocorrect: !widget.password,
+          enableSuggestions: !widget.password,
+          textCapitalization: TextCapitalization.none,
           maxLines: widget.password ? 1 : widget.maxLines,
           readOnly: widget.readOnly,
           onTap: widget.onTap,
