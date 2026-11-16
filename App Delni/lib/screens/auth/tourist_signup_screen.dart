@@ -70,7 +70,7 @@ class _TouristSignupScreenState extends State<TouristSignupScreen> {
     setState(() => _loading = false);
     if (res.success && res.session != null) {
       final messenger = ScaffoldMessenger.of(context);
-      final welcome = context.tr('تم إنشاء حسابك بنجاح، مرحباً بك في دلني', 'Your account is ready — welcome to Delni');
+      final welcome = context.tr('تم إنشاء حسابك بنجاح، مرحباً بك في دلّني', 'Your account is ready — welcome to Delni');
       AppScope.read(context).signIn(res.session!);
       Navigator.of(context).popUntil((r) => r.isFirst);
       messenger.showSnackBar(SnackBar(backgroundColor: const Color(0xFF047857), content: Text(welcome)));

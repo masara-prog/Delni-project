@@ -155,7 +155,7 @@ void main() {
 
     await tester.pumpWidget(host(const RoleSelectScreen()));
     await tester.pump();
-    expect(find.text('كيف تريد استخدام دلني؟'), findsOneWidget);
+    expect(find.text('كيف تريد استخدام دلّني؟'), findsOneWidget);
     expect(Directionality.of(tester.element(find.byType(RoleSelectScreen))), TextDirection.rtl);
 
     await tester.pumpWidget(host(const RoleSelectScreen(), locale: AppLocale.english));

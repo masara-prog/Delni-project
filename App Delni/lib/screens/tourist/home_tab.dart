@@ -397,7 +397,7 @@ class _SearchCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.tr('اكتشف ليبيا مع دلني', 'Discover Libya with Delni'),
+                    context.tr('اكتشف ليبيا مع دلّني', 'Discover Libya with Delni'),
                     style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 2),

@@ -5,7 +5,6 @@ import '../../core/app_state.dart';
 import '../../core/i18n.dart';
 import '../../core/theme.dart';
 import '../../models.dart';
-import '../../widgets/brand.dart';
 import '../../widgets/common.dart';
 import 'auth_widgets.dart';
 import 'login_screen.dart';
@@ -134,7 +133,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                      boxShadow: [BoxShadow(color: Color(0x330B1B2B), blurRadius: 30, offset: Offset(0, -8))],
+                      boxShadow: [BoxShadow(color: Color(0x330F172A), blurRadius: 30, offset: Offset(0, -8))],
                     ),
                     padding: EdgeInsets.fromLTRB(Gap.page, 18, Gap.page, 12 + MediaQuery.of(context).padding.bottom),
                     child: Column(

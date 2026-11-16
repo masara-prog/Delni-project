@@ -86,7 +86,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    context.tr('فريق إدارة دلني يتابع رسائلك ويرد عليها عبر الإشعارات.', 'The Delni team reads your messages and replies through notifications.'),
+                    context.tr('فريق إدارة دلّني يتابع رسائلك ويرد عليها عبر الإشعارات.', 'The Delni team reads your messages and replies through notifications.'),
                     style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700, height: 1.55),
                   ),
                 ),

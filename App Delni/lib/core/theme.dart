@@ -6,16 +6,16 @@ class AppColors {
   static const primary = Color(0xFF00736F); // Logo teal, deepened so white text on it stays readable (5.6:1)
   static const primaryMid = Color(0xFF009A94); // Logo teal
   static const primaryGlow = Color(0xFF2DBFB3);
-  static const navy = Color(0xFF0B1B2B); // Logo road navy, used for text
-  static const background = Color(0xFFF6F7F5);
+  static const navy = Color(0xFF0F172A); // Deep navy text, as on the platform (--foreground)
+  static const background = Color(0xFFFAF8F5); // the platform's warm white (--background)
   static const card = Colors.white;
-  static const muted = Color(0xFFEEF2F0);
+  static const muted = Color(0xFFF3ECE1); // the platform's warm beige (--muted)
   static const mutedText = Color(0xFF586A76);
   static const accent = Color(0xFF0E9F6E); // Success / available
-  static const gold = Color(0xFFF2A93B); // Ratings
-  static const brandOrange = Color(0xFFC9772E); // Logo sand, deepened for calls to action
-  static const destructive = Color(0xFFE5484D);
-  static const border = Color(0xFFE2E8E5);
+  static const gold = Color(0xFFF59E0B); // Ratings (--gold)
+  static const brandOrange = Color(0xFFD96B27); // Desert orange, as on the platform (--brand-orange)
+  static const destructive = Color(0xFFEF4444); // (--destructive)
+  static const border = Color(0xFFE8E2D6); // the platform's warm border (--border)
   static const sand = Color(0xFFFBF8F3);
   static const desertSand = Color(0xFFE2B47C); // Logo sand, for highlights on dark surfaces
 
@@ -47,15 +47,15 @@ class AppGradients {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     stops: [0, 0.55, 1],
-    colors: [Color(0x220B1B2B), Color(0x800B1B2B), Color(0xEB0B1B2B)],
+    colors: [Color(0x220F172A), Color(0x800F172A), Color(0xEB0F172A)],
   );
 }
 
 class AppShadows {
-  static const soft = [BoxShadow(color: Color(0x140B1B2B), blurRadius: 16, offset: Offset(0, 4), spreadRadius: -6)];
-  static const card = [BoxShadow(color: Color(0x100B1B2B), blurRadius: 24, offset: Offset(0, 8), spreadRadius: -8)];
+  static const soft = [BoxShadow(color: Color(0x140F172A), blurRadius: 16, offset: Offset(0, 4), spreadRadius: -6)];
+  static const card = [BoxShadow(color: Color(0x100F172A), blurRadius: 24, offset: Offset(0, 8), spreadRadius: -8)];
   static const glow = [BoxShadow(color: Color(0x3300736F), blurRadius: 32, offset: Offset(0, 12), spreadRadius: -10)];
-  static const navBar = [BoxShadow(color: Color(0x0F0B1B2B), blurRadius: 20, offset: Offset(0, -6))];
+  static const navBar = [BoxShadow(color: Color(0x0F0F172A), blurRadius: 20, offset: Offset(0, -6))];
 }
 
 class AppRadius {

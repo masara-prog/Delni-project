@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:delni_app/models.dart';
 import 'package:delni_app/widgets/common.dart';
 
+// ignore: avoid_print (the chapter 5 results are read from this output)
 void result(String id, String observed) => print('RESULT|$id|$observed');
 
 TextEditingValue fmt(TextInputFormatter f, String text) =>

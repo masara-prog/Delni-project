@@ -6,7 +6,6 @@ import '../../core/i18n.dart';
 import '../../core/theme.dart';
 import '../../models.dart';
 import '../../widgets/account_widgets.dart';
-import '../../widgets/brand.dart';
 import '../../widgets/common.dart';
 import '../../widgets/states.dart';
 import '../auth/auth_widgets.dart';

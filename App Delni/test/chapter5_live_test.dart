@@ -583,6 +583,7 @@ void main() {
       return m.isEmpty ? '' : m.last;
     }
 
+    // ignore: unused_element (kept for the live tests that look a field up by its label)
     int field(String label) {
       final all = find.byType(TextField).evaluate().toList();
       for (var i = 0; i < all.length; i++) {
