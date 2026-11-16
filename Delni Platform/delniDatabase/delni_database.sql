@@ -529,7 +529,8 @@ BEGIN
         [avatar] NVARCHAR(MAX) NULL,
         [digital_certificate_file] NVARCHAR(MAX) NULL,
         [license_expiry_date] DATE NULL,
-        [availability_status] NVARCHAR(30) NULL DEFAULT (N'متاح')
+        [availability_status] NVARCHAR(30) NULL DEFAULT (N'متاح'),
+        [created_at] DATETIME NULL DEFAULT (getdate())
     );
 END;
 GO

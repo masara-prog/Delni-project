@@ -513,7 +513,8 @@ BEGIN
         [gender] VARCHAR(10) NULL,
         [price_per_day] DECIMAL(10, 2) NULL,
         [avatar] NVARCHAR(MAX) NULL,
-        [digital_certificate_file] NVARCHAR(MAX) NULL
+        [digital_certificate_file] NVARCHAR(MAX) NULL,
+        [created_at] DATETIME NULL DEFAULT (getdate())
     );
 END;
 GO

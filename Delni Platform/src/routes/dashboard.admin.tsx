@@ -446,6 +446,7 @@ function mapGuideRow(g: any): Guide {
     availability_status: g.availability_status || "متاح",
     // From /guides: a guide on a daily or weekly trip is not offered for private trips
     available_for_private: g.available_for_private !== false,
+    created_at: g.created_at ? String(g.created_at) : "",
   } as Guide;
 }
 
@@ -740,6 +741,23 @@ function AdminDashboard() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
+  // Guide verification table: newest applications first (or, from the status header, verified first), 20 per page
+  const GUIDES_PER_PAGE = 20;
+  const [guideSort, setGuideSort] = useState<"newest" | "status">("newest");
+  const [guidePage, setGuidePage] = useState(1);
+  const sortedGuides = useMemo(() => {
+    const newest = (a: Guide, b: Guide) => {
+      const ta = (a as any).created_at || "", tb = (b as any).created_at || "";
+      if (ta !== tb) return ta && tb ? tb.localeCompare(ta) : ta ? -1 : 1; // undated (registered before dates were kept) last
+      return String(b.license_number).localeCompare(String(a.license_number));
+    };
+    const rank = (g: Guide) => (g.verification_status === "موثق" ? 0 : /مراجعة|انتظار/.test(g.verification_status || "") ? 1 : 2);
+    return [...guides].sort((a, b) => (guideSort === "status" ? rank(a) - rank(b) : 0) || newest(a, b));
+  }, [guides, guideSort]);
+  const guidePages = Math.max(1, Math.ceil(sortedGuides.length / GUIDES_PER_PAGE));
+  useEffect(() => { if (guidePage > guidePages) setGuidePage(guidePages); }, [guidePage, guidePages]);
+  const guidesFrom = (Math.min(guidePage, guidePages) - 1) * GUIDES_PER_PAGE;
+  const guidesPage = sortedGuides.slice(guidesFrom, guidesFrom + GUIDES_PER_PAGE);
 
   /* ALL PLATFORM VEHICLES ACROSS ALL TRANSPORT COMPANIES (DelniDB vehicles) */
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -1839,12 +1857,22 @@ function AdminDashboard() {
                     <th className="py-3 px-3 font-bold">الهاتف والبريد</th>
                     <th className="py-3 px-3 font-bold">الخبرة والأجر</th>
                     <th className="py-3 px-3 font-bold">وثيقة الترخيص المرفقة</th>
-                    <th className="py-3 px-3 font-bold">حالة الحساب</th>
+                    <th className="py-3 px-3 font-bold" aria-sort={guideSort === "status" ? "descending" : "none"}>
+                      <button
+                        type="button"
+                        onClick={() => { setGuideSort((v) => (v === "status" ? "newest" : "status")); setGuidePage(1); }}
+                        title={guideSort === "status" ? "الترتيب الآن: الموثقون أولاً — اضغط للترتيب بالأحدث تسجيلاً" : "اضغط لعرض الموثقين أولاً ثم قيد المراجعة"}
+                        className={`inline-flex items-center gap-1 font-bold cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition hover:bg-primary/10 hover:text-primary ${guideSort === "status" ? "text-primary" : ""}`}
+                      >
+                        حالة الحساب
+                        <span aria-hidden="true" className="text-[10px]">{guideSort === "status" ? "▲" : "⇅"}</span>
+                      </button>
+                    </th>
                     <th className="py-3 px-3 font-bold text-center">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {guides.map((g) => (
+                  {guidesPage.map((g) => (
                     <tr key={g.license_number} className="hover:bg-slate-50/70 transition">
                       {/* Name & Avatar */}
                       <td className="py-3 px-3">
@@ -1953,6 +1981,23 @@ function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 text-xs font-bold text-muted-foreground">
+                <span>
+                  {guideSort === "status" ? "الترتيب: الموثقون أولاً ثم قيد المراجعة" : "الترتيب: الأحدث تسجيلاً أولاً"} — عرض {guidesFrom + 1}–{Math.min(guidesFrom + GUIDES_PER_PAGE, sortedGuides.length)} من {sortedGuides.length}
+                </span>
+                {guidePages > 1 && (
+                  <nav aria-label="صفحات جدول المرشدين" className="flex items-center gap-1">
+                    <button type="button" disabled={guidePage <= 1} onClick={() => setGuidePage((p) => p - 1)}
+                      className="h-8 px-3 rounded-lg border border-border bg-white cursor-pointer disabled:opacity-40 disabled:cursor-default hover:border-primary/40">السابق</button>
+                    {Array.from({ length: guidePages }, (_, i) => i + 1).map((n) => (
+                      <button key={n} type="button" onClick={() => setGuidePage(n)} aria-current={n === guidePage ? "page" : undefined}
+                        className={`h-8 min-w-8 px-2 rounded-lg border cursor-pointer tabular-nums ${n === guidePage ? "bg-primary text-white border-primary" : "bg-white border-border hover:border-primary/40"}`}>{n}</button>
+                    ))}
+                    <button type="button" disabled={guidePage >= guidePages} onClick={() => setGuidePage((p) => p + 1)}
+                      className="h-8 px-3 rounded-lg border border-border bg-white cursor-pointer disabled:opacity-40 disabled:cursor-default hover:border-primary/40">التالي</button>
+                  </nav>
+                )}
+              </div>
             </div>
           )}
         </SectionCard>
