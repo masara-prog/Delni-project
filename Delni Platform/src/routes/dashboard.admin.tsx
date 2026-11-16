@@ -1862,7 +1862,7 @@ function AdminDashboard() {
               لا يوجد مرشدين مسجلين حالياً.
             </div>
           ) : (
-            <div className="overflow-x-auto text-right">
+            <div className="text-right">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-right text-xs text-muted-foreground border-b border-border bg-slate-50/60">
@@ -2113,6 +2113,7 @@ function AdminDashboard() {
                       <th className="p-3">البريد الإلكتروني</th>
                       <th className="p-3">رقم الهاتف</th>
                       <th className="p-3 text-center">إجمالي الحجوزات</th>
+                      <th className="p-3 text-center">حالة الحساب</th>
                       <th className="p-3 text-center">الإجراءات والتحكم</th>
                     </tr>
                   </thead>
@@ -2151,13 +2152,28 @@ function AdminDashboard() {
                               </span>
                             </td>
                             <td className="p-3 text-center">
-                              <button
-                                onClick={() => handleViewTourist(t)}
-                                className="px-3 py-1.5 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-                              >
-                                <span>👁️</span>
-                                <span>عرض الحجوزات والملف</span>
-                              </button>
+                              <Badge tone={t.account_status === "مقيّد" ? "red" : "green"}>{t.account_status === "مقيّد" ? "مقيّد" : "نشط"}</Badge>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handleViewTourist(t)}
+                                  className="px-3 py-1.5 rounded-xl bg-[#00736F] hover:bg-teal-900 text-white font-black text-xs transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                >
+                                  <span>👁️</span>
+                                  <span>عرض الحجوزات والملف</span>
+                                </button>
+                                <button
+                                  onClick={() => handleToggleTouristStatus(t.tourist_id, t.account_status || "نشط")}
+                                  className={`px-3 py-1.5 rounded-xl border font-black text-xs transition cursor-pointer ${
+                                    t.account_status === "مقيّد"
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                      : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                                  }`}
+                                >
+                                  {t.account_status === "مقيّد" ? "✅ إلغاء التقييد" : "⛔ تقييد الحساب"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -9148,8 +9164,16 @@ function TouristDetailsModal({
           )}
         </div>
 
-        {/* Close Button */}
-        <div className="flex justify-end pt-3 border-t border-border sticky bottom-0 bg-white py-2">
+        {/* Restrict / reactivate, and close */}
+        <div className="flex flex-wrap justify-end gap-2 pt-3 border-t border-border sticky bottom-0 bg-white py-2">
+          <button
+            onClick={() => onToggleStatus(tourist.tourist_id, tourist.account_status || "نشط")}
+            className={`px-5 h-10 rounded-xl border font-black text-xs transition cursor-pointer ${
+              isRestricted ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+            }`}
+          >
+            {isRestricted ? "✅ إلغاء تقييد الحساب" : "⛔ تقييد حساب السائح"}
+          </button>
           <button
             onClick={onClose}
             className="px-6 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition cursor-pointer"

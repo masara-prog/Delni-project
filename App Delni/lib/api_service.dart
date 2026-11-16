@@ -420,14 +420,13 @@ class ApiService {
     }
   }
 
-  /// A rejected guide sends a new licence document and expiry date (and an optional note for the team):
-  /// the server saves them on the guide and puts the application back under review.
+  /// A rejected guide sends a new licence document and its expiry date: the server saves them on the guide
+  /// and puts the application back under review.
   static Future<ApiResult> resubmitGuide({
     required String login,
     required String password,
     required String certificate,
     required String licenseExpiryDate,
-    String note = '',
   }) async {
     try {
       final res = await http.post(
@@ -438,7 +437,6 @@ class ApiService {
           'password': password.trim(),
           'digital_certificate_file': certificate,
           'license_expiry_date': licenseExpiryDate,
-          if (note.isNotEmpty) 'note': note,
         }),
       ).timeout(const Duration(seconds: 40));
       final dynamic data = json.decode(res.body);

@@ -56,7 +56,6 @@ function LoginPage() {
   const [canResubmit, setCanResubmit] = useState(false);
   const [resubmitFile, setResubmitFile] = useState<{ name: string; data: string } | null>(null);
   const [resubmitExpiry, setResubmitExpiry] = useState("");
-  const [resubmitNote, setResubmitNote] = useState("");
   const [resubmitMsg, setResubmitMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [resubmitting, setResubmitting] = useState(false);
   const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
@@ -66,7 +65,7 @@ function LoginPage() {
     if (!resubmitExpiry || resubmitExpiry < tomorrow) return setResubmitMsg({ ok: false, text: "تاريخ انتهاء الترخيص يجب أن يكون تاريخاً قادماً." });
     setResubmitting(true);
     const res = await apiResubmitGuide({ login: email, password, digital_certificate_file: resubmitFile.data,
-      license_expiry_date: resubmitExpiry, note: resubmitNote.trim() || undefined });
+      license_expiry_date: resubmitExpiry });
     setResubmitting(false);
     if (!res.success) return setResubmitMsg({ ok: false, text: res.error || "تعذر إرسال الطلب" });
     setCanResubmit(false);
@@ -300,7 +299,7 @@ function LoginPage() {
                   type="button"
                   aria-label="إغلاق"
                   title="إغلاق"
-                  onClick={() => { setCanResubmit(false); setResubmitFile(null); setResubmitExpiry(""); setResubmitNote(""); setResubmitMsg(null); }}
+                  onClick={() => { setCanResubmit(false); setResubmitFile(null); setResubmitExpiry(""); setResubmitMsg(null); }}
                   className="w-7 h-7 rounded-full grid place-items-center text-amber-900/70 hover:bg-amber-100 hover:text-amber-900 cursor-pointer transition"
                 >
                   <X className="w-4 h-4" />
@@ -338,15 +337,6 @@ function LoginPage() {
                   value={resubmitExpiry}
                   onChange={(e) => setResubmitExpiry(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-[#E8E2D6] bg-white text-xs font-semibold text-right"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-[#0F172A] mb-1 block">ملاحظة للإدارة (اختياري)</label>
-                <textarea
-                  value={resubmitNote}
-                  onChange={(e) => setResubmitNote(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-xl border border-[#E8E2D6] bg-white text-xs font-semibold text-right"
                 />
               </div>
               <button

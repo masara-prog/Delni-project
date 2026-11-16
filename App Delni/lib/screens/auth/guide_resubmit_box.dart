@@ -13,8 +13,8 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 
 /// Shown on sign-in when the admin rejected the guide's application (as on the platform): the guide sends a new
-/// licence document and expiry date, with an optional note, and the application goes back to review.
-/// POST /auth/guide/resubmit (saved in tour_guides; the note reaches the admin in a notification).
+/// licence document and its expiry date, and the application goes back to review.
+/// POST /auth/guide/resubmit (both are saved on the guide in tour_guides).
 class GuideResubmitBox extends StatefulWidget {
   final String email;
   final String password;
@@ -31,15 +31,8 @@ class _GuideResubmitBoxState extends State<GuideResubmitBox> {
   String? _fileName;
   String? _fileDataUrl;
   DateTime? _expiry;
-  final _note = TextEditingController();
   bool _sending = false;
   String? _error;
-
-  @override
-  void dispose() {
-    _note.dispose();
-    super.dispose();
-  }
 
   static String _mimeFor(String name) {
     final ext = name.split('.').last.toLowerCase();
@@ -112,7 +105,6 @@ class _GuideResubmitBoxState extends State<GuideResubmitBox> {
       password: widget.password,
       certificate: _fileDataUrl!,
       licenseExpiryDate: isoDate(_expiry!),
-      note: _note.text.trim(),
     );
     if (!mounted) return;
     setState(() => _sending = false);
@@ -195,14 +187,6 @@ class _GuideResubmitBoxState extends State<GuideResubmitBox> {
             hint: context.tr('اختر التاريخ', 'Choose a date'),
             readOnly: true,
             onTap: _pickExpiry,
-          ),
-          const SizedBox(height: 12),
-          AppTextField(
-            label: context.tr('ملاحظة للإدارة', 'Note for the team'),
-            controller: _note,
-            maxLines: 3,
-            optional: true,
-            hint: context.tr('ما الذي صححته في الوثيقة؟', 'What did you correct?'),
           ),
           if (_error != null) ...[
             const SizedBox(height: 10),
