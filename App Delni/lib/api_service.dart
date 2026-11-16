@@ -413,9 +413,41 @@ class ApiService {
         message: data is Map && data['message'] != null
             ? data['message'].toString()
             : _m('بيانات الدخول غير صحيحة، يرجى المحاولة ثانية', 'Incorrect sign-in details, please try again'),
+        canResubmit: data is Map && data['can_resubmit'] == true,
       );
     } catch (e) {
       return AuthResult(success: false, message: _offlineMessage);
+    }
+  }
+
+  /// A rejected guide sends a new licence document and expiry date (and an optional note for the team):
+  /// the server saves them on the guide and puts the application back under review.
+  static Future<ApiResult> resubmitGuide({
+    required String login,
+    required String password,
+    required String certificate,
+    required String licenseExpiryDate,
+    String note = '',
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/guide/resubmit'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: json.encode({
+          'login': login.trim().toLowerCase(),
+          'password': password.trim(),
+          'digital_certificate_file': certificate,
+          'license_expiry_date': licenseExpiryDate,
+          if (note.isNotEmpty) 'note': note,
+        }),
+      ).timeout(const Duration(seconds: 40));
+      final dynamic data = json.decode(res.body);
+      if (res.statusCode == 200 && data is Map && data['success'] == true) {
+        return ApiResult(true, jStr(data['message']));
+      }
+      return ApiResult(false, _errorMessage(res));
+    } catch (_) {
+      return ApiResult(false, _offlineMessage);
     }
   }
 

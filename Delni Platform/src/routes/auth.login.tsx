@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BusFront, CarFront, Check, Luggage, Map as MapIcon } from "lucide-react";
+import { BusFront, CarFront, Check, Luggage, Map as MapIcon, Upload, X } from "lucide-react";
 import heroImg from "@/assets/hero-leptis.jpg";
 import destSabratah from "@/assets/dest-sabratah.png";
 import destCyrene from "@/assets/dest-cyrene.jpg";
@@ -293,19 +293,42 @@ function LoginPage() {
 
           {canResubmit && (
             <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3 text-right">
-              <div className="text-xs font-black text-amber-900">إعادة تقديم طلب الاعتماد</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-black text-amber-900">إعادة تقديم طلب الاعتماد</div>
+                {/* The guide may not want to send a new document now */}
+                <button
+                  type="button"
+                  aria-label="إغلاق"
+                  title="إغلاق"
+                  onClick={() => { setCanResubmit(false); setResubmitFile(null); setResubmitExpiry(""); setResubmitNote(""); setResubmitMsg(null); }}
+                  className="w-7 h-7 rounded-full grid place-items-center text-amber-900/70 hover:bg-amber-100 hover:text-amber-900 cursor-pointer transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
               <div>
-                <label className="text-xs font-bold text-[#0F172A] mb-1 block">وثيقة الترخيص الجديدة (صورة أو PDF) *</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    fileToCompressedDataUrl(file).then((data) => setResubmitFile({ name: file.name, data }));
-                  }}
-                  className="w-full text-xs"
-                />
+                <span className="text-xs font-bold text-[#0F172A] mb-1 block">وثيقة الترخيص الجديدة (صورة أو PDF) *</span>
+                <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-amber-300 bg-white hover:border-[#0B4F57] hover:bg-[#0B4F57]/[0.03] cursor-pointer transition focus-within:ring-2 focus-within:ring-[#0B4F57]/30">
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      fileToCompressedDataUrl(file).then((data) => setResubmitFile({ name: file.name, data }));
+                    }}
+                  />
+                  <span className="w-10 h-10 shrink-0 rounded-xl bg-[#0B4F57] text-white grid place-items-center">
+                    <Upload className="w-5 h-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-black text-[#0B4F57]">{resubmitFile ? "تغيير الوثيقة" : "اضغط لرفع الوثيقة"}</span>
+                    <span className="block text-[11px] text-slate-500 truncate" dir={resubmitFile ? "ltr" : undefined}>
+                      {resubmitFile ? `✓ ${resubmitFile.name}` : "صورة (JPG / PNG) أو ملف PDF"}
+                    </span>
+                  </span>
+                </label>
               </div>
               <div>
                 <label className="text-xs font-bold text-[#0F172A] mb-1 block">تاريخ انتهاء الترخيص *</label>

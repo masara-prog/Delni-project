@@ -1101,10 +1101,14 @@ class AuthResult {
   final String message;
   final UserSession? session;
 
+  /// A guide whose application was rejected may send a corrected licence document (POST /auth/guide/resubmit)
+  final bool canResubmit;
+
   AuthResult({
     required this.success,
     required this.message,
     this.session,
+    this.canResubmit = false,
   });
 }
 

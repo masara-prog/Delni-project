@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import 'auth_widgets.dart';
 import 'forgot_password_screen.dart';
+import 'guide_resubmit_box.dart';
 import 'guide_signup_screen.dart';
 import 'tourist_signup_screen.dart';
 
@@ -25,6 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _loading = false;
   String? _error;
+  // A rejected guide can send a corrected licence document from here, as on the platform
+  bool _canResubmit = false;
+  String? _sent;
 
   @override
   void dispose() {
@@ -35,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     final email = _email.text.trim();
-    final pass = _password.text; // sent as typed, like the platform
+    final pass = _password.text; // ApiService.login trims it, like the platform
     String? error;
     if (email.isEmpty) {
       error = context.tr('يرجى إدخال البريد الإلكتروني', 'Please enter your email');
@@ -52,6 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _canResubmit = false;
+      _sent = null;
     });
     final res = await ApiService.login(role: widget.role.apiName, login: email, password: pass);
     if (!mounted) return;
@@ -60,7 +66,10 @@ class _LoginScreenState extends State<LoginScreen> {
       AppScope.read(context).signIn(res.session!);
       Navigator.of(context).popUntil((r) => r.isFirst);
     } else {
-      setState(() => _error = res.message);
+      setState(() {
+        _error = res.message;
+        _canResubmit = res.canResubmit;
+      });
     }
   }
 
@@ -116,11 +125,27 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Text(context.tr('نسيت كلمة المرور؟', 'Forgot password?')),
           ),
         ),
-        if (_error != null) ...[
+        if (_sent != null) ...[
+          InlineMessage(text: _sent!, tone: Tone.success),
+          const SizedBox(height: Gap.lg),
+        ] else if (_error != null) ...[
           InlineMessage(text: _error!, tone: Tone.danger),
           const SizedBox(height: Gap.lg),
         ] else
           const SizedBox(height: Gap.sm),
+        if (_canResubmit) ...[
+          GuideResubmitBox(
+            email: _email.text.trim(),
+            password: _password.text,
+            onClose: () => setState(() => _canResubmit = false),
+            onSent: (message) => setState(() {
+              _canResubmit = false;
+              _error = null;
+              _sent = message;
+            }),
+          ),
+          const SizedBox(height: Gap.lg),
+        ],
         AppButton(
           label: context.tr('تسجيل الدخول', 'Sign in'),
           icon: Icons.login_rounded,
