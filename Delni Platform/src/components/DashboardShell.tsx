@@ -1,3 +1,4 @@
+import { sessionGet, sessionSet, sessionRemove } from "@/lib/session";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
@@ -57,7 +58,7 @@ export function DashboardShell({
     let warned = false;
     const check = () => {
       if (warned) return;
-      const stored = localStorage.getItem("dalni_role");
+      const stored = sessionGet("dalni_role");
       if (stored === role) return;
       warned = true;
       alert(
@@ -129,6 +130,7 @@ export function DashboardShell({
                 <MessageCircle className="w-4 h-4" aria-hidden="true" /> {isAr ? "الدعم" : "Support"}
               </button>
             )}
+            <LanguageToggle variant="light" />
             <NotificationBell />
             <div className="flex items-center gap-2.5 px-3 border-x border-border">
               {userAvatar ? (
@@ -147,9 +149,9 @@ export function DashboardShell({
               onClick={async () => {
                 if (await platformConfirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
                   clearStoredSession();
-                  localStorage.removeItem("dalni_token");
-                  localStorage.removeItem("dalni_role");
-                  localStorage.removeItem("dalni_user");
+                  sessionRemove("dalni_token");
+                  sessionRemove("dalni_role");
+                  sessionRemove("dalni_user");
                   window.location.href = "/";
                 }
               }}
@@ -263,9 +265,9 @@ export function DashboardShell({
               onClick={async () => {
                 if (await platformConfirm("هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟")) {
                   clearStoredSession();
-                  localStorage.removeItem("dalni_token");
-                  localStorage.removeItem("dalni_role");
-                  localStorage.removeItem("dalni_user");
+                  sessionRemove("dalni_token");
+                  sessionRemove("dalni_role");
+                  sessionRemove("dalni_user");
                   window.location.href = "/";
                 }
               }}

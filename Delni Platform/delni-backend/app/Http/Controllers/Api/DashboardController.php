@@ -128,6 +128,38 @@ class DashboardController extends Controller
             }
         }
 
+        // New working days must still cover every day of the daily and weekly trips the guide is assigned to
+        if (array_key_exists('working_days', $validated) && !is_null($validated['working_days'])) {
+            $norm = fn ($d) => str_replace('إ', 'ا', trim((string) $d));
+            $newDays = array_map($norm, \App\Support\ListInput::dayNames($validated['working_days']));
+            if (!$newDays) {
+                return response()->json(['status' => 'error', 'message' => 'يرجى اختيار يوم عمل واحد على الأقل'], 422);
+            }
+            $today = now('Africa/Tripoli')->toDateString();
+            $notDeclined = fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', '<>', 'اعتذر المرشد');
+            $needed = [];
+            $daily = DB::table('daily_trips as t')->join('daily_trip_days as d', 'd.daily_trip_id', '=', 't.daily_trip_id')
+                ->where('t.guide_license_number', $guide->license_number)->where('t.is_active', true)->where($notDeclined)
+                ->get(['t.trip_title', 'd.day_of_week']);
+            foreach ($daily as $row) {
+                $needed[$norm($row->day_of_week)][] = $row->trip_title;
+            }
+            $names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            $weekly = DB::table('weekly_trips')->where('guide_license_number', $guide->license_number)->where('is_active', true)
+                ->where('end_date', '>=', $today)->where($notDeclined)->get(['trip_title', 'start_date', 'end_date']);
+            foreach ($weekly as $row) {
+                for ($d = strtotime(substr($row->start_date, 0, 10)), $i = 0; $d <= strtotime(substr($row->end_date, 0, 10)) && $i < 7; $d = strtotime('+1 day', $d), $i++) {
+                    $needed[$names[(int) date('w', $d)]][] = $row->trip_title;
+                }
+            }
+            $missing = array_diff_key($needed, array_flip($newDays));
+            if ($missing) {
+                $trips = implode('، ', array_unique(array_merge(...array_values($missing))));
+                return response()->json(['status' => 'error', 'message' => 'لا يمكن إزالة يوم ' . implode(' و', array_keys($missing))
+                    . " من أيام عملك لأنك مسند لرحلات فيه: {$trips}. يرجى التواصل مع الإدارة لإسنادها لمرشد آخر أولاً."], 422);
+            }
+        }
+
         // A verified guide's identity (name, gender, email) is locked
         if ($guide->verification_status === 'موثق') {
             unset($validated['full_name'], $validated['gender'], $validated['email']);

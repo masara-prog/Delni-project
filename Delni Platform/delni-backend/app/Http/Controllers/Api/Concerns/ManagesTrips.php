@@ -251,8 +251,12 @@ trait ManagesTrips
 
         $workDays = DB::table('guide_working_days')->where('license_number', $guide)->pluck('day_of_week')->map([$this, 'normalizeDayName'])->all();
         $tripDays = $weekdays !== null ? array_map([$this, 'normalizeDayName'], $weekdays) : $this->weekdaysBetween($start, $end);
-        $outside = $workDays ? array_values(array_diff($tripDays, $workDays)) : [];
+        // No working days recorded means the guide works no day yet, so every trip day is outside them
+        $outside = array_values(array_diff($tripDays, $workDays));
         $warning = null;
+        if ($outside && !$workDays && !$requireOnePlace) {
+            return ["المرشد ({$g->full_name}) لم يحدد أيام عمله بعد، فلا يمكن إسناد رحلة يومية أو أسبوعية إليه. يرجى اختيار مرشد آخر.", null];
+        }
         if ($outside) {
             // A private trip goes to the guide to accept or decline, so their working days only inform the admin
             if (!$requireOnePlace) {

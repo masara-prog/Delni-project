@@ -216,6 +216,7 @@ function Navbar() {
         <Logo size="xl" showText={false} />
       </Link>
       <div className="flex items-center gap-3">
+        <LanguageToggle className="bg-black/30 backdrop-blur-xl" />
         {accountName ? (
           <div className="flex items-center gap-2 p-1.5 pl-2 bg-black/30 hover:bg-black/40 backdrop-blur-xl rounded-full border border-white/25 shadow-md transition">
             <Link
