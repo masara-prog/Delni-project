@@ -175,7 +175,9 @@ class AiController extends Controller
             return response()->json(['success' => false, 'message' => $msg], 502);
         }
 
-        $reply = collect($res->json('candidates.0.content.parts') ?? [])->pluck('text')->filter()->implode("\n");
+        // Only the answer: parts marked "thought" are the model's reasoning
+        $reply = collect($res->json('candidates.0.content.parts') ?? [])
+            ->reject(fn ($p) => !empty($p['thought']))->pluck('text')->filter()->implode("\n");
         if (trim($reply) === '') {
             return response()->json(['success' => false, 'message' => 'لم يصل رد من الذكاء الاصطناعي لهذا السؤال. جرّب صياغة أخرى.'], 502);
         }
@@ -193,7 +195,9 @@ class AiController extends Controller
         $body = [
             'systemInstruction' => ['parts' => [['text' => $instructions . $note]]],
             'contents' => $contents,
-            'generationConfig' => ['temperature' => 0.6, 'maxOutputTokens' => 1200],
+            // Thinking kept minimal: the model's reasoning counts against the output limit, and when it ran out the
+            // reasoning itself came back as the reply. The limit leaves room for a full answer.
+            'generationConfig' => ['temperature' => 0.6, 'maxOutputTokens' => 4096, 'thinkingConfig' => ['thinkingLevel' => 'minimal']],
         ];
         if ($withSearch) {
             $body['tools'] = [['google_search' => (object) []]];
