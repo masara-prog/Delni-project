@@ -741,9 +741,16 @@ function AdminDashboard() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
-  // Guide verification table: newest applications first (or, from the status header, verified first), 20 per page
+  // Guide verification table: newest applications first; each click on the status header brings the next group
+  // to the top (verified → under review → rejected → restricted), a fifth click goes back to newest; 20 per page
   const GUIDES_PER_PAGE = 20;
-  const [guideSort, setGuideSort] = useState<"newest" | "status">("newest");
+  const GUIDE_STATUS_ORDERS: { label: string; order: ("verified" | "review" | "rejected" | "restricted")[] }[] = [
+    { label: "الموثقون أولاً، ثم قيد المراجعة، ثم المرفوضون، ثم المقيدون", order: ["verified", "review", "rejected", "restricted"] },
+    { label: "قيد المراجعة أولاً، ثم الموثقون، ثم المرفوضون، ثم المقيدون", order: ["review", "verified", "rejected", "restricted"] },
+    { label: "المرفوضون أولاً، ثم قيد المراجعة، ثم الموثقون، ثم المقيدون", order: ["rejected", "review", "verified", "restricted"] },
+    { label: "المقيدون أولاً، ثم المرفوضون، ثم قيد المراجعة، ثم الموثقون", order: ["restricted", "rejected", "review", "verified"] },
+  ];
+  const [guideSort, setGuideSort] = useState<"newest" | 0 | 1 | 2 | 3>("newest");
   const [guidePage, setGuidePage] = useState(1);
   const sortedGuides = useMemo(() => {
     const newest = (a: Guide, b: Guide) => {
@@ -751,8 +758,13 @@ function AdminDashboard() {
       if (ta !== tb) return ta && tb ? tb.localeCompare(ta) : ta ? -1 : 1; // undated (registered before dates were kept) last
       return String(b.license_number).localeCompare(String(a.license_number));
     };
-    const rank = (g: Guide) => (g.verification_status === "موثق" ? 0 : /مراجعة|انتظار/.test(g.verification_status || "") ? 1 : 2);
-    return [...guides].sort((a, b) => (guideSort === "status" ? rank(a) - rank(b) : 0) || newest(a, b));
+    const group = (g: Guide) => {
+      const st = g.verification_status || "";
+      return st === "موثق" ? "verified" : st === "مرفوض" ? "rejected" : st === "موقوف" ? "restricted" : "review";
+    };
+    const order = guideSort === "newest" ? null : GUIDE_STATUS_ORDERS[guideSort].order;
+    const rank = (g: Guide) => (order ? order.indexOf(group(g)) : 0);
+    return [...guides].sort((a, b) => rank(a) - rank(b) || newest(a, b));
   }, [guides, guideSort]);
   const guidePages = Math.max(1, Math.ceil(sortedGuides.length / GUIDES_PER_PAGE));
   useEffect(() => { if (guidePage > guidePages) setGuidePage(guidePages); }, [guidePage, guidePages]);
@@ -849,12 +861,14 @@ function AdminDashboard() {
     setEditingCompany(null);
     return null;
   };
-  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض" | "موقوف") => {
+  // Returns null when saved, or the reason it was not (the guide window shows it inside; other callers get a message box)
+  const handleVerifyGuide = async (lic: string, status: "موثق" | "مرفوض" | "موقوف", inline = false): Promise<string | null> => {
     const targetGuide = guides.find(g => g.license_number === lic);
     const res = await apiVerifyGuide(lic, status);
     if (res.status !== "success") {
-      alert("❌ لم يتم تحديث حالة المرشد.\n" + res.message);
-      return;
+      const reason = res.message || "لم يتم تحديث حالة المرشد.";
+      if (!inline) alert("❌ " + reason);
+      return reason;
     }
     setGuides(prev => prev.map(g => g.license_number === lic ? { ...g, verification_status: status } : g));
     setViewingGuide(null);
@@ -863,7 +877,8 @@ function AdminDashboard() {
       ? `✅ تم اعتماد وتفعيل حساب المرشد (${name}) بنجاح، ويمكنه الآن تسجيل الدخول ببريده الإلكتروني.`
       : status === "موقوف"
         ? `⛔ تم تقييد حساب المرشد (${name})، ولا يمكنه الدخول إلى المنصة أو التطبيق حتى تعيدي تفعيله.`
-        : `❌ تم رفض طلب المرشد (${name}) وتحديث حالته بنجاح.`);
+        : `✅ تم رفض طلب المرشد (${name}).`);
+    return null;
   };
 
   // Transport directory, hotels and restaurants are read from DelniDB through Laravel only
@@ -1857,15 +1872,15 @@ function AdminDashboard() {
                     <th className="py-3 px-3 font-bold">الهاتف والبريد</th>
                     <th className="py-3 px-3 font-bold">الخبرة والأجر</th>
                     <th className="py-3 px-3 font-bold">وثيقة الترخيص المرفقة</th>
-                    <th className="py-3 px-3 font-bold" aria-sort={guideSort === "status" ? "descending" : "none"}>
+                    <th className="py-3 px-3 font-bold" aria-sort={guideSort === "newest" ? "none" : "other"}>
                       <button
                         type="button"
-                        onClick={() => { setGuideSort((v) => (v === "status" ? "newest" : "status")); setGuidePage(1); }}
-                        title={guideSort === "status" ? "الترتيب الآن: الموثقون أولاً — اضغط للترتيب بالأحدث تسجيلاً" : "اضغط لعرض الموثقين أولاً ثم قيد المراجعة"}
-                        className={`inline-flex items-center gap-1 font-bold cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition hover:bg-primary/10 hover:text-primary ${guideSort === "status" ? "text-primary" : ""}`}
+                        onClick={() => { setGuideSort((v) => (v === "newest" ? 0 : v === 3 ? "newest" : ((v + 1) as 1 | 2 | 3))); setGuidePage(1); }}
+                        title={`الترتيب الآن: ${guideSort === "newest" ? "الأحدث تسجيلاً أولاً" : GUIDE_STATUS_ORDERS[guideSort].label} — اضغط للترتيب التالي`}
+                        className={`inline-flex items-center gap-1 font-bold cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition hover:bg-primary/10 hover:text-primary ${guideSort !== "newest" ? "text-primary" : ""}`}
                       >
                         حالة الحساب
-                        <span aria-hidden="true" className="text-[10px]">{guideSort === "status" ? "▲" : "⇅"}</span>
+                        <span aria-hidden="true" className="text-[10px] tabular-nums">{guideSort === "newest" ? "⇅" : `${guideSort + 1}/4`}</span>
                       </button>
                     </th>
                     <th className="py-3 px-3 font-bold text-center">الإجراءات</th>
@@ -1983,7 +1998,7 @@ function AdminDashboard() {
               </table>
               <div className="flex flex-wrap items-center justify-between gap-3 pt-4 text-xs font-bold text-muted-foreground">
                 <span>
-                  {guideSort === "status" ? "الترتيب: الموثقون أولاً ثم قيد المراجعة" : "الترتيب: الأحدث تسجيلاً أولاً"} — عرض {guidesFrom + 1}–{Math.min(guidesFrom + GUIDES_PER_PAGE, sortedGuides.length)} من {sortedGuides.length}
+                  الترتيب: {guideSort === "newest" ? "الأحدث تسجيلاً أولاً" : GUIDE_STATUS_ORDERS[guideSort].label} — عرض {guidesFrom + 1}–{Math.min(guidesFrom + GUIDES_PER_PAGE, sortedGuides.length)} من {sortedGuides.length}
                 </span>
                 {guidePages > 1 && (
                   <nav aria-label="صفحات جدول المرشدين" className="flex items-center gap-1">
@@ -3383,7 +3398,7 @@ function AdminDashboard() {
       {/* ===== MODALS ===== */}
       {showAddCompany && <AddCompanyModal companies={companies} onClose={() => setShowAddCompany(false)} onAdd={handleAddCompany} />}
       {editingCompany && <EditCompanyModal company={editingCompany} onClose={() => setEditingCompany(null)} onUpdate={handleUpdateCompany} />}
-      {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={handleVerifyGuide} />}
+      {viewingGuide && <GuideVerificationModal guide={viewingGuide} onClose={() => setViewingGuide(null)} onVerify={(lic, st) => handleVerifyGuide(lic, st, true)} />}
       {showAddTrip && <CreateTripModal type={showAddTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setShowAddTrip(null)} onCreate={handleCreateTrip} />}
       {editingDailyTrip && <DailyTripEditModal trip={editingDailyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingDailyTrip(null)} onSave={handleUpdateDailyTrip} />}
       {editingWeeklyTrip && <WeeklyTripEditModal trip={editingWeeklyTrip} guides={guides} vehicles={vehicles} hotels={hotels} restaurants={restaurants} drivers={drivers} attractions={attractions} dailyTrips={dailyTrips} weeklyTrips={weeklyTrips} onClose={() => setEditingWeeklyTrip(null)} onSave={handleUpdateWeeklyTrip} />}
@@ -4511,8 +4526,19 @@ function GuideVerificationModal({
 }: {
   guide: Guide;
   onClose: () => void;
-  onVerify: (lic: string, status: "موثق" | "مرفوض" | "موقوف") => void;
+  onVerify: (lic: string, status: "موثق" | "مرفوض" | "موقوف") => Promise<string | null>;
 }) {
+  const [busy, setBusy] = useState<"موثق" | "مرفوض" | "موقوف" | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const act = async (status: "موثق" | "مرفوض" | "موقوف") => {
+    if (busy) return;
+    setBusy(status);
+    setProblem(null);
+    const reason = await onVerify(guide.license_number, status);
+    setBusy(null);
+    if (reason) setProblem(reason);
+  };
+  const working = (status: "موثق" | "مرفوض" | "موقوف", label: string, doing: string) => (busy === status ? `⏳ ${doing}` : label);
   const isImage =
     guide.digital_certificate_file?.startsWith("data:image/") ||
     /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(guide.digital_certificate_file || "");
@@ -4674,6 +4700,13 @@ function GuideVerificationModal({
           </div>
         )}
 
+        {problem && (
+          <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold leading-relaxed flex items-start gap-2">
+            <span aria-hidden="true">⚠️</span>
+            <span>{problem}</span>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2.5 justify-end pt-2 border-t border-border">
           <button
@@ -4687,34 +4720,38 @@ function GuideVerificationModal({
           {guide.verification_status === "موثق" ? (
             <button
               type="button"
-              onClick={() => onVerify(guide.license_number, "موقوف")}
-              className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+              disabled={!!busy}
+              onClick={() => act("موقوف")}
+              className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer disabled:opacity-60 disabled:cursor-wait"
             >
-              ⛔ تقييد حساب المرشد
+              {working("موقوف", "⛔ تقييد حساب المرشد", "جارٍ التقييد...")}
             </button>
           ) : guide.verification_status === "موقوف" ? (
             <button
               type="button"
-              onClick={() => onVerify(guide.license_number, "موثق")}
-              className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+              disabled={!!busy}
+              onClick={() => act("موثق")}
+              className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer disabled:opacity-60 disabled:cursor-wait"
             >
-              ✅ إعادة تفعيل الحساب
+              {working("موثق", "✅ إعادة تفعيل الحساب", "جارٍ التفعيل...")}
             </button>
           ) : (
             <>
               <button
                 type="button"
-                onClick={() => onVerify(guide.license_number, "مرفوض")}
-                className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer"
+                disabled={!!busy}
+                onClick={() => act("مرفوض")}
+                className="px-5 h-10 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-black text-xs transition cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                ❌ رفض الطلب
+                {working("مرفوض", "❌ رفض الطلب", "جارٍ الرفض...")}
               </button>
               <button
                 type="button"
-                onClick={() => onVerify(guide.license_number, "موثق")}
-                className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer"
+                disabled={!!busy}
+                onClick={() => act("موثق")}
+                className="px-6 h-10 bg-gradient-sea text-white hover:opacity-95 rounded-xl font-black text-xs shadow-glow transition cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                ✅ قبول واعتماد المرشد
+                {working("موثق", "✅ قبول واعتماد المرشد", "جارٍ الاعتماد...")}
               </button>
             </>
           )}

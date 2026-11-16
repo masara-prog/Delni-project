@@ -61,7 +61,8 @@ class GuideController extends Controller
         $status = $data['verification_status'];
         // A guide leaving the verified list must not keep upcoming trips nobody would lead
         if ($status !== 'موثق' && $guide->verification_status === 'موثق' && ($trips = $this->upcomingTrips($guide->license_number))) {
-            return $this->error('لا يمكن سحب اعتماد هذا المرشد لأنه مسند لرحلات قادمة: ' . implode('، ', $trips) . '. يرجى تعيين مرشد آخر لها أولاً.', 409);
+            $action = $status === 'موقوف' ? 'التقييد' : 'الرفض';
+            return $this->error('هذا المرشد معيّن لرحلة «' . implode('»، «', $trips) . "». يرجى الدخول للرحلة وتغيير المرشد ليتم {$action}.", 409);
         }
         DB::transaction(function () use ($guide, $status) {
             $guide->update(['verification_status' => $status]);
