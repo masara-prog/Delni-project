@@ -143,9 +143,41 @@ class _PrivateTripScreenState extends State<PrivateTripScreen> {
     state.touristTab.value = 2;
   }
 
+  // DateTime.weekday of a stored working day, in any spelling (الإثنين / الاثنين, الأحد / الاحد ...)
+  static int? _weekday(String day) {
+    final d = day.trim().toLowerCase().replaceAll(RegExp('[أإآ]'), 'ا');
+    const map = {
+      'السبت': DateTime.saturday, 'sat': DateTime.saturday, 'الاحد': DateTime.sunday, 'sun': DateTime.sunday,
+      'الاثنين': DateTime.monday, 'mon': DateTime.monday, 'الثلاثاء': DateTime.tuesday, 'tue': DateTime.tuesday,
+      'الاربعاء': DateTime.wednesday, 'wed': DateTime.wednesday, 'الخميس': DateTime.thursday, 'thu': DateTime.thursday,
+      'الجمعة': DateTime.friday, 'fri': DateTime.friday,
+    };
+    return map[d];
+  }
+
+  // The weekdays the trip covers (all seven once it lasts a week); empty until a start date is chosen
+  Set<int> get _tripWeekdays {
+    final start = _start;
+    if (start == null) return {};
+    return {for (var i = 0; i < (_duration < 7 ? _duration : 7); i++) start.add(Duration(days: i)).weekday};
+  }
+
   @override
   Widget build(BuildContext context) {
-    final guides = (AppScope.of(context).catalog.guides ?? []).where((g) => g.canTakePrivate).toList();
+    // Only once the dates are known, and only guides whose stored working days cover every day of the trip
+    final tripDays = _tripWeekdays;
+    final guides = tripDays.isEmpty
+        ? <Guide>[]
+        : (AppScope.of(context).catalog.guides ?? []).where((g) {
+            final works = g.workingDays.map(_weekday).whereType<int>().toSet();
+            return g.canTakePrivate && works.isNotEmpty && works.containsAll(tripDays);
+          }).toList();
+    // A guide chosen before the dates changed is dropped once they no longer fit the trip
+    if (tripDays.isNotEmpty && _guideId != null && !guides.any((g) => g.licenseNumber == _guideId)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _guideId = null);
+      });
+    }
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('طلب رحلة خاصة', 'Private trip request'))),
       body: ListView(
@@ -203,11 +235,18 @@ class _PrivateTripScreenState extends State<PrivateTripScreen> {
             onMinus: _companions > 1 ? () => setState(() => _companions--) : null,
             onPlus: _companions < 50 ? () => setState(() => _companions++) : null,
           ),
+          const SizedBox(height: Gap.xl),
+          Text(context.tr('المرشد المفضل', 'Preferred guide'), style: AppText.label),
+          const SizedBox(height: 4),
+          Text(
+            tripDays.isEmpty
+                ? context.tr('اختر تاريخ البدء والمدة أولاً، لتظهر المرشدون الذين يعملون في كل أيام رحلتك.', 'Choose the start date and length first to see the guides who work every day of your trip.')
+                : guides.isEmpty
+                    ? context.tr('لا يوجد مرشد يعمل في كل أيام رحلتك. غيّر التاريخ أو اترك الاختيار للإدارة.', 'No guide works every day of your trip. Change the dates or let the team choose.')
+                    : context.tr('اختياري — يمكنك ترك الاختيار للإدارة', 'Optional — or let the team choose'),
+            style: AppText.caption,
+          ),
           if (guides.isNotEmpty) ...[
-            const SizedBox(height: Gap.xl),
-            Text(context.tr('المرشد المفضل', 'Preferred guide'), style: AppText.label),
-            const SizedBox(height: 4),
-            Text(context.tr('اختياري — يمكنك ترك الاختيار للإدارة', 'Optional — or let the team choose'), style: AppText.caption),
             const SizedBox(height: 10),
             SizedBox(
               height: 104,

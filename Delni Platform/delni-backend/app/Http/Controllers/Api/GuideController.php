@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TourGuide;
 use App\Models\WeeklyTrip;
 use App\Support\Actor;
+use App\Support\ListInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -185,7 +186,7 @@ class GuideController extends Controller
             return $fields + [
                 'places' => $myPlaces->all(),
                 'place_ids' => $myPlaces->pluck('place_id')->all(),
-                'working_days' => ($days[$lic] ?? collect())->pluck('day_of_week')->values()->all(),
+                'working_days' => ListInput::weekOrder(($days[$lic] ?? collect())->pluck('day_of_week')->all()),
                 // the cities of the landmarks the guide works at
                 'operating_regions' => $myPlaces->pluck('city')->filter()->unique()->values()->all(),
                 'rating_avg' => $rating ? round((float) $rating->rating_avg, 1) : 0,

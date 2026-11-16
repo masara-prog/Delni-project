@@ -1842,6 +1842,24 @@ export function TripScheduleModal({
   );
 }
 
+// A guide's stored working days (Arabic names in any spelling, or codes) as Date.getDay() numbers (Sunday = 0)
+function weekdayNumbers(days: unknown): number[] {
+  let list: unknown = days;
+  if (typeof days === "string") {
+    try {
+      list = JSON.parse(days);
+    } catch {
+      list = days.split(/[,،]/);
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  const map: Record<string, number> = {
+    "الأحد": 0, "الاحد": 0, sun: 0, "الاثنين": 1, "الإثنين": 1, mon: 1, "الثلاثاء": 2, tue: 2,
+    "الأربعاء": 3, "الاربعاء": 3, wed: 3, "الخميس": 4, thu: 4, "الجمعة": 5, fri: 5, "السبت": 6, sat: 6,
+  };
+  return Array.from(new Set(list.map((d) => map[String(d).trim().toLowerCase()]).filter((n): n is number => n !== undefined)));
+}
+
 export function PrivateTripModal({
   open,
   onClose,
@@ -1974,6 +1992,7 @@ export function PrivateTripModal({
       primaryRegion: string;
       operatingRegions: string[];
       languages: { code: string; nameAr: string; nameEn: string }[];
+      workDays: number[];
     }>();
 
     // Real guides from the platform only (the sample list is not offered: the server accepts registered guides only)
@@ -2001,6 +2020,7 @@ export function PrivateTripModal({
           primaryRegion: g.primaryRegion || "tripoli",
           operatingRegions: Array.isArray(g.operating_regions) ? g.operating_regions : [],
           languages: langs,
+          workDays: weekdayNumbers(g.working_days),
         });
       }
     });
@@ -2016,11 +2036,7 @@ export function PrivateTripModal({
   const [guideSearchTerm, setGuideSearchTerm] = useState<string>("");
 
   // Trip intake form fields
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 3);
-    return d.toISOString().split("T")[0];
-  });
+  const [startDate, setStartDate] = useState("");
   const [durationDays, setDurationDays] = useState("3");
   const [companions, setCompanions] = useState("2");
   const [customerName, setCustomerName] = useState("");
@@ -2120,9 +2136,19 @@ export function PrivateTripModal({
     });
   };
 
-  // Filtered guides list
+  // The weekdays the trip covers (all seven once it lasts a week); empty until a start date is chosen
+  const tripWeekdays = useMemo(() => {
+    const first = new Date(`${startDate}T00:00:00`);
+    if (!startDate || isNaN(first.getTime())) return [] as number[];
+    const n = Math.min(7, Math.max(1, parseInt(durationDays, 10) || 1));
+    return Array.from(new Set(Array.from({ length: n }, (_, i) => (first.getDay() + i) % 7)));
+  }, [startDate, durationDays]);
+
+  // Filtered guides list: only once the dates are known, and only guides whose stored working days cover the trip
   const filteredGuides = useMemo(() => {
+    if (tripWeekdays.length === 0) return [];
     return allGuides.filter((g) => {
+      if (g.workDays.length === 0 || !tripWeekdays.every((d) => g.workDays.includes(d))) return false;
       if (guideGenderFilter !== "all" && g.gender !== guideGenderFilter) {
         return false;
       }
@@ -2146,7 +2172,12 @@ export function PrivateTripModal({
       }
       return true;
     });
-  }, [allGuides, guideGenderFilter, guideLanguageFilter, guideRegionFilter, guideSearchTerm]);
+  }, [allGuides, guideGenderFilter, guideLanguageFilter, guideRegionFilter, guideSearchTerm, tripWeekdays]);
+
+  // A guide chosen before the dates changed is dropped once they no longer fit the trip
+  useEffect(() => {
+    if (selectedGuideLicense && !filteredGuides.some((g) => g.licenseNumber === selectedGuideLicense)) setSelectedGuideLicense("");
+  }, [filteredGuides, selectedGuideLicense]);
 
   // Selected tour guide object
   const selectedGuide = useMemo(() => {
@@ -2172,6 +2203,11 @@ export function PrivateTripModal({
           ? "يرجى اختيار معلم سياحي واحد على الأقل من قائمة المعالم لتحديد مسار الرحلة الخاصة."
           : "Please select at least one tourist destination landmark."
       );
+      return;
+    }
+
+    if (!startDate) {
+      setFormError(isAr ? "اختر تاريخ انطلاق الرحلة." : "Choose the start date.");
       return;
     }
 
@@ -2381,7 +2417,7 @@ export function PrivateTripModal({
       <dl className="grid grid-cols-2 gap-3 pt-4 border-t border-border text-[13px]">
         <div>
           <dt className="text-muted-foreground text-xs">{isAr ? "من" : "From"}</dt>
-          <dd className="font-bold text-foreground mt-0.5">{fmt(startDate)}</dd>
+          <dd className="font-bold text-foreground mt-0.5">{startDate ? fmt(startDate) : (isAr ? "لم يُحدد" : "Not set")}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">{isAr ? "إلى" : "To"}</dt>
@@ -2636,8 +2672,10 @@ export function PrivateTripModal({
                     );
                   })}
                 </div>
-                {filteredGuides.length === 0 && allGuides.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-2">{isAr ? "لا يوجد مرشد بهذه المواصفات حالياً. غيّر الاختيار أو اترك الاختيار للإدارة." : "No guide matches. Change the filter or let Delni choose."}</p>
+                {tripWeekdays.length === 0 ? (
+                  <p className="text-xs text-muted-foreground mt-2">{isAr ? "اختر تاريخ الانطلاق والمدة أولاً، لتظهر المرشدون الذين يعملون في كل أيام رحلتك." : "Choose the start date and length first to see the guides who work every day of your trip."}</p>
+                ) : filteredGuides.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">{isAr ? "لا يوجد مرشد يعمل في كل أيام رحلتك بهذه المواصفات. غيّر التاريخ أو المواصفات، أو اترك الاختيار للإدارة." : "No guide works every day of your trip with these filters. Change the dates or filters, or let Delni choose."}</p>
                 )}
               </section>
 

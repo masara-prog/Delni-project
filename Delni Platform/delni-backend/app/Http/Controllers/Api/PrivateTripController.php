@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Http\Controllers\Api\Concerns\ManagesTrips;
 use App\Http\Controllers\Controller;
+use App\Support\ListInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -148,6 +149,15 @@ class PrivateTripController extends Controller
         if ($guide) {
             $start = substr($data['preferred_start_date'], 0, 10);
             $end = date('Y-m-d', strtotime($start . ' +' . max(0, (int) $data['duration_days'] - 1) . ' days'));
+            // ...and work on every weekday of it (a guide with no stored working days is not offered)
+            $workDays = ListInput::weekOrder(DB::table('guide_working_days')->where('license_number', $guide)->pluck('day_of_week')->all());
+            $tripDays = ListInput::weekOrder($this->weekdaysBetween($start, $end));
+            $outside = array_values(array_diff($tripDays, $workDays));
+            if (!$workDays || $outside) {
+                return $this->error(($workDays
+                    ? 'المرشد المختار لا يعمل يوم ' . implode(' و', $outside) . '، وهو من أيام رحلتك.'
+                    : 'المرشد المختار لم يحدد أيام عمله بعد.') . ' يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة.', 422);
+            }
             if ($conflict = $this->scheduleConflict($guide, null, $start, $end, null, ['private', ''])) {
                 return $this->error($conflict . ' يرجى اختيار مرشد آخر أو ترك الاختيار للإدارة.', 422);
             }

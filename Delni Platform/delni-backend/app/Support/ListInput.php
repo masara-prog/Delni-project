@@ -37,18 +37,36 @@ class ListInput
         return $clean;
     }
 
-    // Stored Arabic day names -> the codes the guide forms use (sat, sun, ...)
+    // One spelling for each day name (الإثنين / الاثنين, الأحد / الاحد, الأربعاء / الاربعاء)
+    public static function normalizeDay(string $day): string
+    {
+        $day = trim(str_replace(['إ', 'آ'], 'ا', $day));
+        return match ($day) {
+            'الاحد' => 'الأحد',
+            'الاربعاء' => 'الأربعاء',
+            default => $day,
+        };
+    }
+
+    // Day names in the order of the week, Saturday first (the database returns them in no fixed order)
+    public static function weekOrder(array $names): array
+    {
+        $week = array_values(array_slice(self::DAY_NAMES, 0, 7, true));
+        $days = array_values(array_unique(array_map(fn ($d) => self::normalizeDay((string) $d), $names)));
+        usort($days, fn ($a, $b) => (array_search($a, $week, true) === false ? 99 : array_search($a, $week, true))
+            <=> (array_search($b, $week, true) === false ? 99 : array_search($b, $week, true)));
+        return $days;
+    }
+
+    // Stored Arabic day names -> the codes the guide forms use (sat, sun, ...), in week order
     public static function dayCodes(array $names): array
     {
         $codes = array_flip(array_slice(self::DAY_NAMES, 0, 7, true));
-        return array_values(array_map(fn ($name) => $codes[$name] ?? $name, $names));
+        return array_values(array_map(fn ($name) => $codes[$name] ?? $name, self::weekOrder($names)));
     }
 
     public static function dayNames($value): array
     {
-        return array_values(array_unique(array_map(
-            fn ($day) => self::DAY_NAMES[$day] ?? $day,
-            self::parse($value)
-        )));
+        return self::weekOrder(array_map(fn ($day) => self::DAY_NAMES[$day] ?? $day, self::parse($value)));
     }
 }
