@@ -1,0 +1,3874 @@
+{
+ "bookings_daily": {
+  "table": "bookings_daily",
+  "cols": [
+   {
+    "name": "booking_daily_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "booking_date",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "number_of_seats",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "booking_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "total_price",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "payment_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "attended",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "trip_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__bookings___daily__1332DBDC",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK__bookings___touri__14270015",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 0
+ },
+ "bookings_weekly": {
+  "table": "bookings_weekly",
+  "cols": [
+   {
+    "name": "booking_weekly_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "booking_date",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "number_of_seats",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "total_price",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "booking_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "payment_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "attended",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__bookings___touri__151B244E",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK__bookings___weekl__160F4887",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 1
+ },
+ "daily_trip_days": {
+  "table": "daily_trip_days",
+  "cols": [
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "day_of_week",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_daily_trip_days_trip",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "daily_trip_stations": {
+  "table": "daily_trip_stations",
+  "cols": [
+   {
+    "name": "station_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_order",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_title",
+    "type": "nvarchar",
+    "len": "150",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_time",
+    "type": "nvarchar",
+    "len": "30",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_desc",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_daily_trip_stations_trips",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "daily_trips": {
+  "table": "daily_trips",
+  "cols": [
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "trip_title",
+    "type": "nvarchar",
+    "len": "200",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "price_per_seat",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "is_active",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "max_capacity",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "available_seats",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "departure_city",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "vehicle_plate",
+    "type": "varchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 16,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "restaurant_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 17,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_1",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 25,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_2",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 26,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_3",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 27,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_4",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 28,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_5",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 29,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_approval_status",
+    "type": "nvarchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 30,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_daily_trips_restaurant",
+    "ref": "restaurants_cafes",
+    "col": "restaurant_id",
+    "ref_col": "facility_id",
+    "on_delete": "SET_NULL"
+   },
+   {
+    "name": "FK__daily_tri__guide__18EBB532",
+    "ref": "tour_guides",
+    "col": "guide_license_number",
+    "ref_col": "license_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_daily_trips_vehicle",
+    "ref": "vehicles",
+    "col": "vehicle_plate",
+    "ref_col": "plate_number",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 0
+ },
+ "drivers": {
+  "table": "drivers",
+  "cols": [
+   {
+    "name": "driver_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "full_name",
+    "type": "nvarchar",
+    "len": "150",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "phone_number",
+    "type": "varchar",
+    "len": "20",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "national_id_or_passport",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "license_date_valid",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "assigned_vehicle_plate",
+    "type": "varchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "email",
+    "type": "varchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "account_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "password",
+    "type": "varchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "operational_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "current_trip_stage",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 14,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__drivers__contrac__1AD3FDA4",
+    "ref": "transportation_companies",
+    "col": "contract_number",
+    "ref_col": "contract_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK__drivers__assigne__19DFD96B",
+    "ref": "vehicles",
+    "col": "assigned_vehicle_plate",
+    "ref_col": "plate_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_drivers_vehicle_same_company",
+    "ref": "vehicles",
+    "col": "assigned_vehicle_plate",
+    "ref_col": "plate_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_drivers_vehicle_same_company",
+    "ref": "vehicles",
+    "col": "contract_number",
+    "ref_col": "contract_number",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 1
+ },
+ "favorite_daily_trips": {
+  "table": "favorite_daily_trips",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__favorite___daily__58671BC9",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__favorite___touri__5772F790",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "favorite_hotels": {
+  "table": "favorite_hotels",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "hotel_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__favorite___hotel__61F08603",
+    "ref": "hotels",
+    "col": "hotel_id",
+    "ref_col": "hotel_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__favorite___touri__60FC61CA",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "favorite_places": {
+  "table": "favorite_places",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__favorite___place__703EA55A",
+    "ref": "places_tourist",
+    "col": "place_id",
+    "ref_col": "place_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__favorite___touri__6F4A8121",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "favorite_restaurants": {
+  "table": "favorite_restaurants",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "facility_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__favorite___facil__66B53B20",
+    "ref": "restaurants_cafes",
+    "col": "facility_id",
+    "ref_col": "facility_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__favorite___touri__65C116E7",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "favorite_vehicles": {
+  "table": "favorite_vehicles",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "plate_number",
+    "type": "varchar",
+    "len": "30",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__favorite___touri__6A85CC04",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__favorite___plate__6B79F03D",
+    "ref": "vehicles",
+    "col": "plate_number",
+    "ref_col": "plate_number",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "favorite_weekly_trips": {
+  "table": "favorite_weekly_trips",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__favorite___touri__5C37ACAD",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__favorite___weekl__5D2BD0E6",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 1
+ },
+ "guide_places": {
+  "table": "guide_places",
+  "cols": [
+   {
+    "name": "license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_guide_places_place",
+    "ref": "places_tourist",
+    "col": "place_id",
+    "ref_col": "place_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_guide_places_guide",
+    "ref": "tour_guides",
+    "col": "license_number",
+    "ref_col": "license_number",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 2
+ },
+ "guide_working_days": {
+  "table": "guide_working_days",
+  "cols": [
+   {
+    "name": "license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "day_of_week",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_guide_working_days_guide",
+    "ref": "tour_guides",
+    "col": "license_number",
+    "ref_col": "license_number",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 4
+ },
+ "hotel_amenities": {
+  "table": "hotel_amenities",
+  "cols": [
+   {
+    "name": "hotel_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "amenity",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_hotel_amenities_hotel",
+    "ref": "hotels",
+    "col": "hotel_id",
+    "ref_col": "hotel_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "hotels": {
+  "table": "hotels",
+  "cols": [
+   {
+    "name": "hotel_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "hotel_name",
+    "type": "nvarchar",
+    "len": "200",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "city",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "phone_number",
+    "type": "varchar",
+    "len": "20",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "star_rating",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "partnership_status",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "hotel_photo_1",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "hotel_photo_2",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "hotel_photo_3",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "hotel_photo_4",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "hotel_photo_5",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "property_type",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 15,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "google_maps_url",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 17,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "description",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 18,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "working_hours",
+    "type": "nvarchar",
+    "len": "150",
+    "nullable": true,
+    "ident": false,
+    "ord": 19,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "discount_percentage",
+    "type": "int",
+    "nullable": true,
+    "ident": false,
+    "ord": 20,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_start_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 22,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_end_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 23,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 0
+ },
+ "hotels_trip_private": {
+  "table": "hotels_trip_private",
+  "cols": [
+   {
+    "name": "private_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "hotel_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_hotels_trip_private_hotel",
+    "ref": "hotels",
+    "col": "hotel_id",
+    "ref_col": "hotel_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_hotels_trip_private_trip",
+    "ref": "private_trips",
+    "col": "private_trip_id",
+    "ref_col": "private_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "hotels_trip_weekly": {
+  "table": "hotels_trip_weekly",
+  "cols": [
+   {
+    "name": "hotel_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__hotels_tr__hotel__1BC821DD",
+    "ref": "hotels",
+    "col": "hotel_id",
+    "ref_col": "hotel_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__hotels_tr__weekl__1CBC4616",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "migrations": {
+  "table": "migrations",
+  "cols": [
+   {
+    "name": "id",
+    "type": "int",
+    "nullable": false,
+    "ident": true,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "migration",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "batch",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 1
+ },
+ "notifications": {
+  "table": "notifications",
+  "cols": [
+   {
+    "name": "id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "type",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "title",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "body",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "recipient_role",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "link",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "is_read",
+    "type": "bit",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "dedupe_key",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "driver_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 13,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "company_contract_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 14,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "recipient_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 15,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_notifications_driver",
+    "ref": "drivers",
+    "col": "driver_license_number",
+    "ref_col": "driver_license_number",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_notifications_guide",
+    "ref": "tour_guides",
+    "col": "guide_license_number",
+    "ref_col": "license_number",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_notifications_tourist",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_notifications_company",
+    "ref": "transportation_companies",
+    "col": "company_contract_number",
+    "ref_col": "contract_number",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 38
+ },
+ "offers_daily_trips": {
+  "table": "offers_daily_trips",
+  "cols": [
+   {
+    "name": "offer_daily_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "offer_title",
+    "type": "nvarchar",
+    "len": "250",
+    "nullable": true,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "description",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "percent_discount",
+    "type": "decimal",
+    "len": "5,2",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "offer_image_url",
+    "type": "varchar",
+    "len": "255",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "start_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "end_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "badge",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__offers_da__daily__1DB06A4F",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "offers_weekly_trips": {
+  "table": "offers_weekly_trips",
+  "cols": [
+   {
+    "name": "offer_weekly_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "offer_title",
+    "type": "nvarchar",
+    "len": "250",
+    "nullable": true,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "description",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "discount_percentage",
+    "type": "decimal",
+    "len": "5,2",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "offer_image_url",
+    "type": "varchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "start_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "end_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "badge",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__offers_we__weekl__208CD6FA",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "personal_access_tokens": {
+  "table": "personal_access_tokens",
+  "cols": [
+   {
+    "name": "id",
+    "type": "bigint",
+    "nullable": false,
+    "ident": true,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "tokenable_type",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "tokenable_id",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "name",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "token",
+    "type": "nvarchar",
+    "len": "64",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "abilities",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "last_used_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "expires_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "updated_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "driver_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 13,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "company_contract_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 14,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "admin_user_id",
+    "type": "bigint",
+    "nullable": true,
+    "ident": false,
+    "ord": 15,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_tokens_driver",
+    "ref": "drivers",
+    "col": "driver_license_number",
+    "ref_col": "driver_license_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_tokens_guide",
+    "ref": "tour_guides",
+    "col": "guide_license_number",
+    "ref_col": "license_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_tokens_tourist",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_tokens_company",
+    "ref": "transportation_companies",
+    "col": "company_contract_number",
+    "ref_col": "contract_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_tokens_admin",
+    "ref": "users",
+    "col": "admin_user_id",
+    "ref_col": "id",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 54
+ },
+ "places_tourist": {
+  "table": "places_tourist",
+  "cols": [
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "description",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "city",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "longitude",
+    "type": "decimal",
+    "len": "9,6",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "latitude",
+    "type": "decimal",
+    "len": "9,6",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "category",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "place_image",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "region",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 14,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 11
+ },
+ "places_tourist_highlights": {
+  "table": "places_tourist_highlights",
+  "cols": [
+   {
+    "name": "highlight_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "highlight_name",
+    "type": "nvarchar",
+    "len": "250",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "display_order",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_places_highlights_place",
+    "ref": "places_tourist",
+    "col": "place_id",
+    "ref_col": "place_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 42
+ },
+ "places_trip_daily": {
+  "table": "places_trip_daily",
+  "cols": [
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_places_trip_daily_trip",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_places_trip_daily_place",
+    "ref": "places_tourist",
+    "col": "place_id",
+    "ref_col": "place_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "places_trip_private": {
+  "table": "places_trip_private",
+  "cols": [
+   {
+    "name": "private_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "visit_order",
+    "type": "int",
+    "nullable": true,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_places_trip_private_place",
+    "ref": "places_tourist",
+    "col": "place_id",
+    "ref_col": "place_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_places_trip_private_trip",
+    "ref": "private_trips",
+    "col": "private_trip_id",
+    "ref_col": "private_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 1
+ },
+ "places_trip_weekly": {
+  "table": "places_trip_weekly",
+  "cols": [
+   {
+    "name": "place_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__places_tr__place__2180FB33",
+    "ref": "places_tourist",
+    "col": "place_id",
+    "ref_col": "place_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__places_tr__weekl__22751F6C",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 1
+ },
+ "private_trip_stations": {
+  "table": "private_trip_stations",
+  "cols": [
+   {
+    "name": "station_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "private_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "day_number",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_order",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_title",
+    "type": "nvarchar",
+    "len": "200",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_time",
+    "type": "nvarchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_desc",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_private_trip_stations_trip",
+    "ref": "private_trips",
+    "col": "private_trip_id",
+    "ref_col": "private_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 1
+ },
+ "private_trips": {
+  "table": "private_trips",
+  "cols": [
+   {
+    "name": "private_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "status_order",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "preferred_start_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "duration_days",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "number_of_companions",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "quoted_price",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "customer_requirements",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 13,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "vehicle_plate",
+    "type": "varchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 14,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 15,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "additional_expenses",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": true,
+    "ident": false,
+    "ord": 16,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__private_t__guide__25518C17",
+    "ref": "tour_guides",
+    "col": "guide_license_number",
+    "ref_col": "license_number",
+    "on_delete": "SET_NULL"
+   },
+   {
+    "name": "FK_private_trips_tourist",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_private_trips_vehicle",
+    "ref": "vehicles",
+    "col": "vehicle_plate",
+    "ref_col": "plate_number",
+    "on_delete": "SET_NULL"
+   }
+  ],
+  "rows": 1
+ },
+ "restaurant_features": {
+  "table": "restaurant_features",
+  "cols": [
+   {
+    "name": "facility_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "feature",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_restaurant_features_facility",
+    "ref": "restaurants_cafes",
+    "col": "facility_id",
+    "ref_col": "facility_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "restaurants_cafes": {
+  "table": "restaurants_cafes",
+  "cols": [
+   {
+    "name": "facility_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "facility_name",
+    "type": "nvarchar",
+    "len": "200",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "facility_type",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "city",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "phone_number",
+    "type": "varchar",
+    "len": "20",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "description",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "facility_image_1",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "facility_image_2",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "facility_image_3",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "facility_image_4",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "facility_image_5",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "working_hours",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 15,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "google_maps_url",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 17,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "discount_percentage",
+    "type": "int",
+    "nullable": true,
+    "ident": false,
+    "ord": 18,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_start_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 20,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_end_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 21,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "partnership_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 22,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 0
+ },
+ "restaurants_trip_weekly": {
+  "table": "restaurants_trip_weekly",
+  "cols": [
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "facility_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 1,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_restaurants_trip_weekly_facility",
+    "ref": "restaurants_cafes",
+    "col": "facility_id",
+    "ref_col": "facility_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK_restaurants_trip_weekly_trip",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "reviews_daily_trips": {
+  "table": "reviews_daily_trips",
+  "cols": [
+   {
+    "name": "review_daily_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "daily_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "stars_rating",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "comment_text",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__reviews_d__daily__2739D489",
+    "ref": "daily_trips",
+    "col": "daily_trip_id",
+    "ref_col": "daily_trip_id",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK__reviews_d__touri__282DF8C2",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 0
+ },
+ "reviews_weekly_trips": {
+  "table": "reviews_weekly_trips",
+  "cols": [
+   {
+    "name": "review_weekly_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "stars_rating",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "comment_text",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__reviews_w__touri__2CF2ADDF",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK__reviews_w__weekl__2DE6D218",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 0
+ },
+ "support_conversations": {
+  "table": "support_conversations",
+  "cols": [
+   {
+    "name": "session_id",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "owner_role",
+    "type": "nvarchar",
+    "len": "20",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "driver_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "company_contract_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__support_c__drive__7BB05806",
+    "ref": "drivers",
+    "col": "driver_license_number",
+    "ref_col": "driver_license_number",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__support_c__guide__7ABC33CD",
+    "ref": "tour_guides",
+    "col": "guide_license_number",
+    "ref_col": "license_number",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__support_c__touri__79C80F94",
+    "ref": "tourists",
+    "col": "tourist_id",
+    "ref_col": "tourist_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__support_c__compa__7CA47C3F",
+    "ref": "transportation_companies",
+    "col": "company_contract_number",
+    "ref_col": "contract_number",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "support_messages": {
+  "table": "support_messages",
+  "cols": [
+   {
+    "name": "id",
+    "type": "bigint",
+    "nullable": false,
+    "ident": true,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "session_id",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "from_admin",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "admin_id",
+    "type": "bigint",
+    "nullable": true,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "body",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "is_read",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__support_m__sessi__0169315C",
+    "ref": "support_conversations",
+    "col": "session_id",
+    "ref_col": "session_id",
+    "on_delete": "CASCADE"
+   },
+   {
+    "name": "FK__support_m__admin__025D5595",
+    "ref": "users",
+    "col": "admin_id",
+    "ref_col": "id",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 0
+ },
+ "tour_guides": {
+  "table": "tour_guides",
+  "cols": [
+   {
+    "name": "license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "full_name",
+    "type": "nvarchar",
+    "len": "150",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "phone_number",
+    "type": "varchar",
+    "len": "20",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "years_of_experience",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "bio",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "speaks_english",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "speaks_french",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "speaks_italian",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "verification_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "password",
+    "type": "varchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "email",
+    "type": "varchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "gender",
+    "type": "nvarchar",
+    "len": "10",
+    "nullable": true,
+    "ident": false,
+    "ord": 13,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "price_per_day",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": true,
+    "ident": false,
+    "ord": 17,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "avatar",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 18,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "digital_certificate_file",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 22,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "license_expiry_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 26,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "availability_status",
+    "type": "nvarchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 28,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 4
+ },
+ "tourists": {
+  "table": "tourists",
+  "cols": [
+   {
+    "name": "tourist_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "full_name",
+    "type": "nvarchar",
+    "len": "150",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "email",
+    "type": "varchar",
+    "len": "100",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "phone_number",
+    "type": "varchar",
+    "len": "20",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "password",
+    "type": "varchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "account_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 3
+ },
+ "transportation_companies": {
+  "table": "transportation_companies",
+  "cols": [
+   {
+    "name": "contract_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "company_name",
+    "type": "nvarchar",
+    "len": "150",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "phone_number",
+    "type": "varchar",
+    "len": "20",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "total_vehicles",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "verification_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "email",
+    "type": "varchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "password",
+    "type": "varchar",
+    "len": "255",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "city",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_start_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_end_date",
+    "type": "date",
+    "nullable": true,
+    "ident": false,
+    "ord": 13,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "google_maps_url",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 14,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 2
+ },
+ "users": {
+  "table": "users",
+  "cols": [
+   {
+    "name": "id",
+    "type": "bigint",
+    "nullable": false,
+    "ident": true,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "name",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "email",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 1
+   },
+   {
+    "name": "email_verified_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "password",
+    "type": "nvarchar",
+    "len": "255",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "remember_token",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "created_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "updated_at",
+    "type": "datetime",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "rows": 1
+ },
+ "vehicles": {
+  "table": "vehicles",
+  "cols": [
+   {
+    "name": "plate_number",
+    "type": "varchar",
+    "len": "30",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "vehicle_type",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "seating_capacity",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "vehicle_status",
+    "type": "nvarchar",
+    "len": "50",
+    "nullable": true,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "contract_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "daily_rate",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": true,
+    "ident": false,
+    "ord": 8,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "category",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "insurance_image",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "vehicle_image",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 12,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__vehicles__contra__2EDAF651",
+    "ref": "transportation_companies",
+    "col": "contract_number",
+    "ref_col": "contract_number",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 1
+ },
+ "weekly_trip_stations": {
+  "table": "weekly_trip_stations",
+  "cols": [
+   {
+    "name": "station_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_order",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "day_number",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_title",
+    "type": "nvarchar",
+    "len": "200",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "station_desc",
+    "type": "nvarchar",
+    "len": "max",
+    "nullable": true,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK_weekly_stations_trip",
+    "ref": "weekly_trips",
+    "col": "weekly_trip_id",
+    "ref_col": "weekly_trip_id",
+    "on_delete": "CASCADE"
+   }
+  ],
+  "rows": 0
+ },
+ "weekly_trips": {
+  "table": "weekly_trips",
+  "cols": [
+   {
+    "name": "weekly_trip_id",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 1,
+    "pk": 1,
+    "uq": 0
+   },
+   {
+    "name": "trip_title",
+    "type": "nvarchar",
+    "len": "200",
+    "nullable": false,
+    "ident": false,
+    "ord": 2,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "start_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 3,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "end_date",
+    "type": "date",
+    "nullable": false,
+    "ident": false,
+    "ord": 4,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "max_capacity",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 5,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "available_seats",
+    "type": "int",
+    "nullable": false,
+    "ident": false,
+    "ord": 6,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "seat_per_price",
+    "type": "decimal",
+    "len": "10,2",
+    "nullable": false,
+    "ident": false,
+    "ord": 7,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_license_number",
+    "type": "varchar",
+    "len": "50",
+    "nullable": false,
+    "ident": false,
+    "ord": 9,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "is_active",
+    "type": "bit",
+    "nullable": false,
+    "ident": false,
+    "ord": 10,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "departure_city",
+    "type": "nvarchar",
+    "len": "100",
+    "nullable": true,
+    "ident": false,
+    "ord": 11,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "vehicle_plate",
+    "type": "varchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 16,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_1",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 19,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_2",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 20,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_3",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 21,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_4",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 22,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "photo_5",
+    "type": "nvarchar",
+    "len": "500",
+    "nullable": true,
+    "ident": false,
+    "ord": 23,
+    "pk": 0,
+    "uq": 0
+   },
+   {
+    "name": "guide_approval_status",
+    "type": "nvarchar",
+    "len": "30",
+    "nullable": true,
+    "ident": false,
+    "ord": 25,
+    "pk": 0,
+    "uq": 0
+   }
+  ],
+  "fks": [
+   {
+    "name": "FK__weekly_tr__guide__31B762FC",
+    "ref": "tour_guides",
+    "col": "guide_license_number",
+    "ref_col": "license_number",
+    "on_delete": "NO_ACTION"
+   },
+   {
+    "name": "FK_weekly_trips_vehicle",
+    "ref": "vehicles",
+    "col": "vehicle_plate",
+    "ref_col": "plate_number",
+    "on_delete": "NO_ACTION"
+   }
+  ],
+  "rows": 1
+ }
+}
