@@ -209,7 +209,9 @@ class TripCatalogController extends Controller
             $values['guide_license_number'] = $guide;
         }
         if ($sentToGuide) {
+            // The guide has 24 hours to answer (GuideReplyTimeout)
             $values['guide_approval_status'] = DailyTrip::GUIDE_PENDING;
+            $values += \App\Support\GuideReplyTimeout::stamp();
         }
         if (isset($data['max_capacity'])) {
             $values['max_capacity'] = (int) $data['max_capacity'];
@@ -442,7 +444,9 @@ class TripCatalogController extends Controller
         // A new trip, or a trip given to another guide, waits for that guide's acceptance before it is published
         $sentToGuide = !$existing || ($guide && $guide !== $existing->guide_license_number);
         if ($sentToGuide) {
+            // The guide has 24 hours to answer (GuideReplyTimeout)
             $values['guide_approval_status'] = WeeklyTrip::GUIDE_PENDING;
+            $values += \App\Support\GuideReplyTimeout::stamp();
         } elseif ($existing->guide_approval_status === WeeklyTrip::GUIDE_DECLINED) {
             return $this->error('اعتذر المرشد عن هذه الرحلة، يرجى اختيار مرشد آخر لها', 422);
         }
@@ -537,6 +541,8 @@ class TripCatalogController extends Controller
         if ($data instanceof JsonResponse) {
             return $data;
         }
+        // A request left unanswered for 24 hours is taken back before the answer is read
+        \App\Support\GuideReplyTimeout::run();
         $trip = DB::table("{$table} as t")->leftJoin('tour_guides as g', 't.guide_license_number', '=', 'g.license_number')
             ->where("t.{$key}", $tripId)->first(['t.*', 'g.full_name as guide_name']);
         if (!$trip) {
@@ -544,6 +550,9 @@ class TripCatalogController extends Controller
         }
         if ($trip->guide_license_number !== $data['license_number']) {
             return $this->error('هذه الرحلة ليست مسندة إليك', 403);
+        }
+        if (!empty($trip->guide_reply_expired)) {
+            return $this->error('انتهت مهلة الرد على هذه الرحلة (24 ساعة)، وأُعيدت إلى الإدارة لتسندها إلى مرشد آخر', 409);
         }
         if ($trip->guide_approval_status !== WeeklyTrip::GUIDE_PENDING) {
             return $this->error('تم الرد على هذه الرحلة مسبقاً', 409);

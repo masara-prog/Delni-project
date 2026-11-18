@@ -45,6 +45,9 @@ Route::prefix('ai')->middleware('throttle:30,1')->group(function () {
 // --- Auth Routes (sign-in attempts are rate limited) ---
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    // Forgotten password: a code by email, then the new password (few requests a minute, so nobody floods an inbox or guesses codes)
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
     Route::post('/register/tourist', [AuthController::class, 'registerTourist'])->middleware('throttle:10,1');
     Route::post('/register/guide', [AuthController::class, 'registerGuide'])->middleware('throttle:10,1');
     Route::post('/guide/resubmit', [AuthController::class, 'resubmitGuide'])->middleware('throttle:10,1');

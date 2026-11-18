@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Delni promo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --teal:#00736F; --teal2:#009A94; --orange:#D96B27; --gold:#F2B25C; --ink:#0B1F2A; --sand:#F7F1E8; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1920px; height:1080px; overflow:hidden; background:#000; font-family:'Cairo', sans-serif; }
+  #stage { position:relative; width:1920px; height:1080px; overflow:hidden; background:#000; }
+  .layer { position:absolute; inset:0; opacity:0; will-change:opacity, transform; }
+  .photo { position:absolute; inset:-4%; background-size:cover; background-position:center; will-change:transform; }
+  .shade { position:absolute; inset:0; }
+  .t { position:absolute; line-height:1.3; color:#fff; will-change:opacity, transform, filter; white-space:nowrap; }
+  .h1 { font-size:92px; font-weight:900; letter-spacing:0; text-shadow:0 6px 40px rgba(0,0,0,.45); }
+  .h2 { font-size:54px; font-weight:800; text-shadow:0 4px 30px rgba(0,0,0,.45); }
+  .h3 { font-size:38px; font-weight:700; text-shadow:0 3px 20px rgba(0,0,0,.4); }
+  .p  { font-size:30px; font-weight:600; opacity:.9; }
+  .accent { color:var(--gold); }
+  .orange { color:var(--orange); }
+  /* devices */
+  .laptop { position:absolute; width:1180px; height:740px; will-change:transform, opacity; }
+  .laptop .screen { position:absolute; left:0; right:0; top:0; height:700px; border-radius:22px 22px 0 0; background:#0d1418; padding:18px 18px 0 18px; box-shadow:0 40px 120px rgba(0,0,0,.55); }
+  .laptop .view { position:relative; width:100%; height:100%; overflow:hidden; border-radius:8px 8px 0 0; background:#fff; }
+  .laptop .view img { position:absolute; left:0; top:0; width:100%; will-change:transform, opacity; }
+  .laptop .base { position:absolute; left:-70px; right:-70px; bottom:0; height:40px; border-radius:0 0 30px 30px; background:linear-gradient(#d9dde0,#9aa3a8); }
+  .laptop .notch { position:absolute; left:50%; bottom:28px; width:180px; height:10px; margin-left:-90px; border-radius:0 0 10px 10px; background:#7d868b; }
+  .browser { position:absolute; border-radius:18px; overflow:hidden; background:#fff; box-shadow:0 40px 110px rgba(0,0,0,.5); will-change:transform, opacity; }
+  .browser .bar { height:44px; background:#eef1f3; display:flex; align-items:center; gap:10px; padding:0 18px; direction:ltr; }
+  .browser .bar i { width:13px; height:13px; border-radius:50%; display:block; }
+  .browser .bar span { margin-left:18px; height:26px; flex:1; max-width:520px; border-radius:13px; background:#fff; color:#6b7780; font:600 15px 'Cairo'; display:flex; align-items:center; padding:0 14px; }
+  .browser .view { position:relative; overflow:hidden; }
+  .browser .view img { position:absolute; left:0; top:0; width:100%; }
+  .phone { position:absolute; width:372px; height:780px; border-radius:58px; background:#0b0f12; padding:14px; box-shadow:0 50px 120px rgba(0,0,0,.55), inset 0 0 0 2px #2b3338; will-change:transform, opacity; }
+  .phone .view { position:relative; width:100%; height:100%; border-radius:46px; overflow:hidden; background:#fff; }
+  .phone .view img { position:absolute; left:0; top:0; width:100%; will-change:opacity, transform; }
+  .phone .island { position:absolute; top:26px; left:50%; width:110px; height:30px; margin-left:-55px; border-radius:20px; background:#0b0f12; z-index:3; }
+  .chip { position:absolute; padding:12px 28px; border-radius:40px; font-weight:800; font-size:28px; color:#fff; background:rgba(255,255,255,.12); border:1.5px solid rgba(255,255,255,.35); backdrop-filter:blur(6px); white-space:nowrap; will-change:opacity, transform; }
+  .role { position:absolute; width:150px; height:150px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:62px; background:#123; border:3px solid rgba(255,255,255,.25); will-change:transform, background, border-color, box-shadow; }
+  .rolelabel { position:absolute; width:220px; text-align:center; font-size:28px; font-weight:800; color:#fff; will-change:opacity; }
+  .tile { position:absolute; width:400px; height:230px; border-radius:30px; background:rgba(255,255,255,.08); border:1.5px solid rgba(255,255,255,.2); padding:36px 34px; color:#fff; will-change:opacity, transform; }
+  .tile b { display:block; font-size:66px; line-height:1; margin-bottom:22px; }
+  .tile span { font-size:34px; font-weight:800; }
+  .grain { position:absolute; inset:0; pointer-events:none; opacity:.07; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>"); mix-blend-mode:overlay; z-index:50; }
+  .vignette { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); z-index:49; }
+  .bars { position:absolute; left:0; right:0; height:0; background:#000; z-index:48; }
+  svg.route { position:absolute; inset:0; z-index:5; overflow:visible; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- S1: the pin, the thread, Leptis -->
+  <div class="layer" id="s1">
+    <div class="photo" id="s1p" style="background-image:url(assets/leptis-severus-arch.jpg)"></div>
+    <div class="shade" style="background:linear-gradient(90deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.7) 100%)"></div>
+    <div class="t h1" id="s1a" style="right:150px; top:380px">آلاف السنين من <span class="accent">الحضارة</span></div>
+    <div class="t h3" id="s1b" style="right:154px; top:510px">وجمالٌ يمتد من البحر… إلى قلب الصحراء</div>
+  </div>
+  <div class="layer" id="s0" style="background:#000">
+    <div id="pin" style="position:absolute; left:944px; top:524px; width:32px; height:32px; border-radius:50%; background:var(--orange); box-shadow:0 0 0 0 rgba(217,107,39,.6)"></div>
+    <div id="thread" style="position:absolute; top:539px; left:960px; height:3px; width:0; background:linear-gradient(90deg, transparent, var(--gold), transparent)"></div>
+    <div class="t h3" id="s0t" style="left:0; right:0; top:600px; text-align:center; color:#cfd8dc">ليبيا…</div>
+  </div>
+
+  <!-- S2: three questions -->
+  <div class="layer" id="s2">
+    <div id="s2c1" style="position:absolute; top:0; height:1080px; width:640px; right:0; overflow:hidden"><div class="photo" id="s2p1" style="background-image:url(assets/ghadames-mosque.jpg)"></div><div class="shade" style="background:linear-gradient(transparent 40%, rgba(0,0,0,.75))"></div><div class="t h2" id="s2q1" style="right:60px; bottom:120px">من يُرشدك؟</div></div>
+    <div id="s2c2" style="position:absolute; top:0; height:1080px; width:640px; right:640px; overflow:hidden"><div class="photo" id="s2p2" style="background-image:url(assets/ubari-palm-lake.jpg)"></div><div class="shade" style="background:linear-gradient(transparent 40%, rgba(0,0,0,.75))"></div><div class="t h2" id="s2q2" style="right:60px; bottom:120px">كيف تصل؟</div></div>
+    <div id="s2c3" style="position:absolute; top:0; height:1080px; width:640px; right:1280px; overflow:hidden"><div class="photo" id="s2p3" style="background-image:url(assets/acacus-pillar.jpg)"></div><div class="shade" style="background:linear-gradient(transparent 40%, rgba(0,0,0,.75))"></div><div class="t h2" id="s2q3" style="right:60px; bottom:120px">أين تقيم؟</div></div>
+  </div>
+
+  <!-- S3: the thread draws the logo -->
+  <div class="layer" id="s3" style="background:radial-gradient(circle at 50% 45%, #0f8a85 0%, #00534f 55%, #012a28 100%)">
+    <svg class="route" viewBox="0 0 1920 1080"><path id="s3path" d="M -40 860 C 300 700, 420 980, 700 820 S 980 560, 960 430" fill="none" stroke="#F2B25C" stroke-width="6" stroke-linecap="round" stroke-dasharray="1600" stroke-dashoffset="1600"/></svg>
+    <div id="s3logo" style="position:absolute; left:810px; top:200px; width:300px; height:300px; border-radius:50%; background:#fff; box-shadow:0 30px 90px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; opacity:0"><img src="assets/logo.png" style="width:230px"></div>
+    <div class="t h1" id="s3a" style="left:0; right:0; top:525px; text-align:center; font-size:120px">دلّني</div>
+    <div class="t h3" id="s3b" style="left:0; right:0; top:700px; text-align:center; color:#ffe7c7">دليلك لاكتشاف ليبيا</div>
+    <div class="t p" id="s3c" style="left:0; right:0; top:785px; text-align:center">منصة ويب وتطبيق هاتف… كل رحلتك في مكان واحد</div>
+  </div>
+
+  <!-- S4: the platform in a laptop -->
+  <div class="layer" id="s4" style="background:linear-gradient(135deg, #F7F1E8 0%, #EFE3D2 100%)">
+    <div style="position:absolute; inset:0; background:radial-gradient(circle at 25% 40%, rgba(0,154,148,.18), transparent 55%)"></div>
+    <div class="laptop" id="lap" style="left:70px; top:170px">
+      <div class="screen"><div class="view" id="lapview"></div></div>
+      <div class="base"></div><div class="notch"></div>
+    </div>
+    <div class="t" id="s4k" style="right:110px; top:190px; font-size:26px; font-weight:800; color:var(--orange)">منصة الويب</div>
+    <div class="t" id="s4h" style="right:110px; top:240px; font-size:62px; font-weight:900; color:var(--ink)"></div>
+    <div class="t" id="s4s" style="right:110px; top:340px; font-size:30px; font-weight:600; color:#3e4c55; white-space:normal; width:560px; line-height:1.6"></div>
+    <div id="s4dots" style="position:absolute; right:110px; top:860px; display:flex; gap:12px; direction:rtl"></div>
+  </div>
+
+  <!-- S5: the app on three phones -->
+  <div class="layer" id="s5" style="background:radial-gradient(circle at 70% 30%, #13403f 0%, #071a1d 70%)">
+    <div class="phone" id="ph1" style="left:774px; top:150px; z-index:2"><div class="island"></div><div class="view"><img id="ph1a" src="assets/app_0.png"><img id="ph1b" src="assets/app_vip.png" style="opacity:0"></div></div>
+    <div class="phone" id="ph2" style="left:470px; top:200px"><div class="island"></div><div class="view"><img src="assets/app_1.png"></div></div>
+    <div class="phone" id="ph3" style="left:1078px; top:200px"><div class="island"></div><div class="view"><img id="ph3a" src="assets/app_place.png"><img id="ph3b" src="assets/app_explore_places.png" style="opacity:0"></div></div>
+    <div class="t h2" id="s5a" style="left:0; right:0; top:46px; text-align:center">التطبيق… <span class="accent">في جيبك</span> أينما كنت</div>
+    <div class="chip" id="s5c1" style="right:60px; top:420px">رحلات يومية وأسبوعية</div>
+    <div class="chip" id="s5c2" style="right:60px; top:510px">رحلة خاصة VIP</div>
+    <div class="chip" id="s5c3" style="left:60px; top:420px">تفاصيل كل معلم وخريطته</div>
+    <div class="chip" id="s5c4" style="left:60px; top:510px">عربي • English</div>
+  </div>
+
+  <!-- S6: five roles, one trip -->
+  <div class="layer" id="s6" style="background:linear-gradient(160deg, #04201f 0%, #0a3533 60%, #12201f 100%)">
+    <div class="t h2" id="s6a" style="left:0; right:0; top:44px; text-align:center">رحلة واحدة… <span class="accent">خمسة أدوار</span>… منصة واحدة</div>
+    <div id="chainline" style="position:absolute; top:226px; right:285px; height:6px; width:1350px; background:rgba(255,255,255,.12); border-radius:3px"><div id="chainfill" style="position:absolute; right:0; top:0; bottom:0; width:0; background:linear-gradient(270deg, var(--gold), var(--orange)); border-radius:3px"></div></div>
+    <div class="role" id="r0" style="right:210px; top:154px">🧳</div>
+    <div class="role" id="r1" style="right:547px; top:154px">🛡️</div>
+    <div class="role" id="r2" style="right:885px; top:154px">🧭</div>
+    <div class="role" id="r3" style="right:1222px; top:154px">🚌</div>
+    <div class="role" id="r4" style="right:1560px; top:154px">🚐</div>
+    <div class="rolelabel" id="l0" style="right:175px; top:318px">السائح</div>
+    <div class="rolelabel" id="l1" style="right:512px; top:318px">الإدارة</div>
+    <div class="rolelabel" id="l2" style="right:850px; top:318px">المرشد</div>
+    <div class="rolelabel" id="l3" style="right:1187px; top:318px">شركة النقل</div>
+    <div class="rolelabel" id="l4" style="right:1525px; top:318px">السائق</div>
+    <div class="browser" id="s6b" style="left:120px; top:400px; width:1060px">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span id="s6url">delni.ly/dashboard</span></div>
+      <div class="view" style="height:596px"><img id="s6img" src="assets/dash_tourist.png"><img id="s6img2" src="assets/dash_tourist.png" style="opacity:0"></div>
+    </div>
+    <div class="t" id="s6n" style="right:110px; top:470px; font-size:120px; font-weight:900; color:rgba(242,178,92,.25)">01</div>
+    <div class="t" id="s6h" style="right:110px; top:620px; font-size:58px; font-weight:900"></div>
+    <div class="t" id="s6s" style="right:110px; top:710px; font-size:30px; font-weight:600; color:#d6e4e3; white-space:normal; width:560px; line-height:1.6"></div>
+  </div>
+
+  <!-- S7: smart assistant + trust -->
+  <div class="layer" id="s7" style="background:linear-gradient(135deg, #1b0f08 0%, #4a210c 45%, #D96B27 130%)">
+    <div class="phone" id="aiph" style="left:200px; top:150px"><div class="island"></div><div class="view" style="background:#f7f1e8"><img src="assets/ai_chat.png" style="top:40px"></div></div>
+    <div class="t" id="s7k" style="right:120px; top:230px; font-size:28px; font-weight:800; color:var(--gold)">ذكاء دلّني</div>
+    <div class="t h1" id="s7a" style="right:120px; top:280px; font-size:76px">مرشدك الذكي… <span class="accent">دائمًا معك</span></div>
+    <div class="t" id="s7b" style="right:120px; top:420px; font-size:32px; font-weight:600; color:#ffe9d6; white-space:normal; width:900px; line-height:1.7">اسأله عن أي معلم أو طقس أو أكلة ليبية، أو أرسل له صورة معلم… فيعرّفك به بالعربية أو الإنجليزية.</div>
+    <div class="tile" id="tl0" style="right:120px; top:640px; width:330px; height:210px"><b>🎫</b><span>تذاكر إلكترونية</span></div>
+    <div class="tile" id="tl1" style="right:480px; top:640px; width:330px; height:210px"><b>⭐</b><span>تقييم بعد الرحلة</span></div>
+    <div class="tile" id="tl2" style="right:840px; top:640px; width:330px; height:210px"><b>🔔</b><span>إشعارات فورية</span></div>
+  </div>
+
+  <!-- S8: finale -->
+  <div class="layer" id="s8">
+    <div id="mont" style="position:absolute; inset:0"></div>
+    <div class="shade" id="s8shade" style="background:rgba(0,40,38,.55)"></div>
+    <div class="t h2" id="s8a" style="left:0; right:0; top:330px; text-align:center">رحلتك تبدأ من</div>
+    <div id="s8logo" style="position:absolute; left:810px; top:430px; width:300px; height:300px; border-radius:50%; background:#fff; box-shadow:0 30px 90px rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center"><img src="assets/logo.png" style="width:230px"></div>
+    <div class="t h3" id="s8b" style="left:0; right:0; top:770px; text-align:center">منصة الويب • تطبيق Android و iOS</div>
+  </div>
+
+  <!-- S9: photo credits -->
+  <div class="layer" id="s9" style="background:#050a0a">
+    <div class="t" id="s9a" style="left:0; right:0; top:440px; text-align:center; font-size:30px; font-weight:700; color:#cfd8dc">صور المعالم من Wikimedia Commons بترخيص CC BY-SA — مع الشكر لمصوّريها</div>
+    <div class="t" id="s9b" style="left:0; right:0; top:510px; text-align:center; font-size:26px; font-weight:600; color:#7f8f94">مشروع تخرج: منصة وتطبيق «دلّني» للخدمات السياحية في ليبيا</div>
+  </div>
+
+  <div class="bars" id="barT" style="top:0"></div>
+  <div class="bars" id="barB" style="bottom:0"></div>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eo = x => 1 - Math.pow(1 - x, 3);            // ease out
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const back = x => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+// a layer visible between a and b with fade in/out
+function vis(id, t, a, b, fin = .6, fout = .6) {
+  const o = Math.min(prog(t, a, a + fin), 1 - prog(t, b - fout, b));
+  $(id).style.opacity = (t < a || t > b) ? 0 : o;
+  return t >= a && t <= b;
+}
+// text entering (blur + rise) and leaving
+function txt(id, t, a, b, dy = 40) {
+  const i = eo(prog(t, a, a + .8)), o = prog(t, b - .5, b);
+  const el = $(id);
+  el.style.opacity = i * (1 - o);
+  el.style.transform = `translateY(${(1 - i) * dy - o * 20}px)`;
+  el.style.filter = `blur(${(1 - i) * 12 + o * 8}px)`;
+}
+function kb(id, t, a, b, s0 = 1.0, s1 = 1.12, x0 = 0, x1 = -2) {
+  const p = prog(t, a, b);
+  $(id).style.transform = `scale(${s0 + (s1 - s0) * p}) translateX(${x0 + (x1 - x0) * p}%)`;
+}
+
+// S4 data: pages of the platform
+const PAGES = [
+  ['web_home.png', 'الصفحة الرئيسية', 'ابحث عن رحلتك باسم المدينة أو الوجهة، واكتشف ليبيا من مكان واحد.', 1080],
+  ['web_attractions_full.png', 'المعالم والمدن', 'من لبدة وصبراتة إلى غدامس وأكاكوس… لكل معلم صوره وقصته وموقعه.', 1613],
+  ['web_guides_full.png', 'مرشدون معتمدون', 'مرشدون موثّقون بترخيص رسمي ولغات وخبرة… تختار من يرافقك.', 1900],
+  ['web_hotels_full.png', 'الفنادق والإقامة', 'أماكن إقامة مختارة في كل مدينة، بصورها وموقعها وتواصلها.', 1918],
+  ['web_restaurants_full.png', 'المطاعم والمقاهي', 'تذوّق المطبخ الليبي… مطاعم ومقاهٍ مصنفة حسب نوعها ومدينتها.', 1569],
+  ['web_transport_full.png', 'أسطول النقل', 'شركات نقل متعاقدة ومركبات جاهزة بسائقين محترفين.', 1735],
+];
+const lv = $('lapview');
+PAGES.forEach(([f], i) => { const im = document.createElement('img'); im.src = 'assets/' + f; im.id = 'pg' + i; im.style.opacity = 0; lv.appendChild(im); });
+PAGES.forEach((_, i) => { const d = document.createElement('i'); d.id = 'dot' + i; d.style.cssText = 'display:block;height:8px;border-radius:4px;background:#00736F;opacity:.25;width:26px'; $('s4dots').appendChild(d); });
+
+// S6 data: the five roles
+const ROLES = [
+  ['dash_tourist.png', 'السائح', 'يحجز رحلته اليومية أو الأسبوعية، أو يطلب رحلة خاصة… ويستلم تذكرته الإلكترونية.', 'delni.ly/dashboard/tourist'],
+  ['dash_admin.png', 'الإدارة', 'تنظّم الرحلات والعروض، وتسند لكل رحلة مرشدًا ومركبة، وتراقب كل شيء من لوحة واحدة.', 'delni.ly/dashboard/admin'],
+  ['dash_guide.png', 'المرشد السياحي', 'يقبل الرحلة المسندة إليه خلال 24 ساعة، ويرى برنامجها وكشف سياحها.', 'delni.ly/dashboard/guide'],
+  ['dash_transport.png', 'شركة النقل', 'تدير أسطولها وسائقيها، وتتابع الرحلات المسندة لمركباتها.', 'delni.ly/dashboard/transport'],
+  ['dash_driver.png', 'السائق', 'يحدّث مراحل الرحلة من هاتفه… فتعرف الشركة والإدارة أين وصلت الرحلة لحظة بلحظة.', 'delni.ly/dashboard/driver'],
+];
+
+// S8 montage
+const MONT = ['sabratha-turquoise-sea', 'ghadames-palms', 'ubari-lake-dunes', 'nalut-sunset', 'leptis-aerial-green', 'acacus-rocks'];
+MONT.forEach((m, i) => {
+  const d = document.createElement('div');
+  d.className = 'photo'; d.id = 'm' + i; d.style.cssText = `inset:0; background-image:url(assets/${m}.jpg); opacity:0`;
+  $('mont').appendChild(d);
+});
+
+window.render = function (t) {
+  // letterbox bars breathe in the cinematic opening and finale
+  const bar = 90 * (1 - prog(t, 13.5, 14.5)) * (t < 14.5 ? 1 : 0) + 90 * prog(t, 84, 85);
+  $('barT').style.height = $('barB').style.height = bar + 'px';
+
+  // S0: pin + thread (0 - 3.2)
+  if (vis('s0', t, 0, 3.6, .01, .8)) {
+    const pulse = (Math.sin(t * 5) + 1) / 2;
+    $('pin').style.transform = `scale(${eo(prog(t, .2, .9)) * (1 + .15 * pulse)})`;
+    $('pin').style.boxShadow = `0 0 0 ${pulse * 26}px rgba(217,107,39,${.35 * (1 - pulse)})`;
+    const w = 1600 * eio(prog(t, 1.4, 3.2));
+    $('thread').style.width = w + 'px'; $('thread').style.left = (960 - w / 2) + 'px';
+    txt('s0t', t, .9, 3.4);
+  }
+  // S1: Leptis (2.8 - 7.6)
+  if (vis('s1', t, 2.8, 7.6, 1.0, .5)) {
+    kb('s1p', t, 2.8, 7.6, 1.12, 1.0, 1, -1);
+    txt('s1a', t, 3.6, 7.5); txt('s1b', t, 4.6, 7.5);
+  }
+  // S2: three questions (7.3 - 14)
+  if (vis('s2', t, 7.3, 14, .3, .6)) {
+    [1, 2, 3].forEach((k, i) => {
+      const a = 7.3 + i * 1.1, p = eio(prog(t, a, a + .9));
+      const c = $('s2c' + k);
+      c.style.clipPath = `inset(${(1 - p) * 100}% 0 0 0)`;
+      kb('s2p' + k, t, a, 14, 1.18, 1.02, 0, 0);
+      txt('s2q' + k, t, a + .7, 13.9);
+    });
+    const out = eio(prog(t, 12.8, 14));
+    $('s2').style.transform = `scale(${1 + out * .08})`;
+  }
+  // S3: logo (13.6 - 20.5)
+  if (vis('s3', t, 13.6, 20.5, .6, .6)) {
+    $('s3path').style.strokeDashoffset = 1600 * (1 - eio(prog(t, 13.8, 15.6)));
+    $('s3path').style.opacity = 1 - prog(t, 16.2, 17.0);
+    const lp = prog(t, 15.2, 16.0);
+    $('s3logo').style.opacity = lp; $('s3logo').style.transform = `scale(${.4 + .6 * back(lp)})`;
+    txt('s3a', t, 15.9, 20.4, 60); txt('s3b', t, 16.6, 20.4); txt('s3c', t, 17.6, 20.4);
+  }
+  // S4: platform pages (20 - 36.5)
+  if (vis('s4', t, 20, 36.5, .7, .7)) {
+    const lp = eo(prog(t, 20, 21.4));
+    $('lap').style.transform = `translateY(${(1 - lp) * 120}px) rotateX(${(1 - lp) * 18}deg)`;
+    $('lap').style.opacity = lp;
+    txt('s4k', t, 20.6, 36.3);
+    const span = 2.6, start = 20.8;
+    PAGES.forEach(([f, h, s, H], i) => {
+      const a = start + i * span, b = a + span;
+      const on = t >= a - .35 && t < b + .35;
+      const im = $('pg' + i);
+      const fi = prog(t, a - .35, a + .15), fo = (i < PAGES.length - 1) ? prog(t, b - .15, b + .35) : 0;
+      im.style.opacity = on ? Math.min(fi, 1 - fo) : 0;
+      const maxScroll = Math.max(0, H * (1144 / 1920) - 682);
+      const sp = eio(prog(t, a + .4, b));
+      im.style.transform = `translateY(${-maxScroll * .55 * sp}px) scale(${1 + .02 * (1 - fi)})`;
+      $('dot' + i).style.opacity = (t >= a && t < b) || (i === PAGES.length - 1 && t >= a) ? 1 : .25;
+      $('dot' + i).style.width = (t >= a && t < b) || (i === PAGES.length - 1 && t >= a) ? '54px' : '26px';
+      if (t >= a - .3 && (t < b - .3 || i === PAGES.length - 1)) {
+        $('s4h').textContent = h; $('s4s').textContent = s;
+        const k = eo(prog(t, a - .3, a + .4)), ko = (i === PAGES.length - 1) ? prog(t, 36, 36.5) : prog(t, b - .6, b - .3);
+        for (const id of ['s4h', 's4s']) {
+          $(id).style.opacity = k * (1 - ko);
+          $(id).style.transform = `translateX(${(1 - k) * -40 + ko * 30}px)`;
+        }
+      }
+    });
+  }
+  // S5: app phones (36 - 48.5)
+  if (vis('s5', t, 36, 48.5, .6, .6)) {
+    const p1 = back(prog(t, 36.3, 37.3)), p2 = back(prog(t, 36.7, 37.7)), p3 = back(prog(t, 37.0, 38.0));
+    const fl = Math.sin(t * 1.2) * 8;
+    $('ph1').style.transform = `translateY(${(1 - p1) * 700 + fl}px)`;
+    $('ph2').style.transform = `translateY(${(1 - p2) * 700 - fl}px) rotate(-6deg) scale(.88)`;
+    $('ph3').style.transform = `translateY(${(1 - p3) * 700 - fl}px) rotate(6deg) scale(.88)`;
+    $('ph1b').style.opacity = prog(t, 42.0, 42.7);
+    $('ph3b').style.opacity = prog(t, 43.2, 43.9);
+    txt('s5a', t, 36.6, 48.2);
+    ['s5c1', 's5c2', 's5c3', 's5c4'].forEach((id, i) => txt(id, t, 38.4 + i * .7, 48.2, 30));
+  }
+  // S6: five roles (48 - 74.5)
+  if (vis('s6', t, 48, 74.5, .7, .7)) {
+    txt('s6a', t, 48.3, 74.2);
+    const each = 4.8, start = 50;
+    const k = clamp(Math.floor((t - start) / each), 0, 4);
+    const local = t - (start + k * each);
+    $('chainfill').style.width = (1350 * clamp((t - start) / (each * 4.6))) + 'px';
+    for (let i = 0; i < 5; i++) {
+      const appear = back(prog(t, 48.6 + i * .18, 49.4 + i * .18));
+      const active = t >= start && i === k, done = t >= start && i < k;
+      const r = $('r' + i);
+      r.style.transform = `scale(${appear * (active ? 1.12 + .03 * Math.sin(t * 4) : 1)})`;
+      r.style.background = active ? 'linear-gradient(135deg, #D96B27, #F2B25C)' : done ? '#0f5f5b' : '#123033';
+      r.style.borderColor = active ? '#ffe2b8' : 'rgba(255,255,255,.25)';
+      r.style.boxShadow = active ? '0 0 60px rgba(242,178,92,.55)' : 'none';
+      $('l' + i).style.opacity = appear * (active ? 1 : .55);
+    }
+    const [img, h, s, url] = ROLES[k];
+    if ($('s6img').getAttribute('src') !== 'assets/' + img) { $('s6img').src = 'assets/' + img; }
+    $('s6url').textContent = url;
+    const bi = eo(prog(local, 0, .7)), bo = (k < 4) ? prog(local, each - .45, each) : prog(t, 74, 74.5);
+    $('s6b').style.opacity = t < start ? eo(prog(t, 49.2, 50)) * 0 : bi * (1 - bo);
+    $('s6b').style.transform = `translateX(${(1 - bi) * -80 + bo * 60}px) scale(${.96 + .04 * bi})`;
+    $('s6img').style.transform = `scale(${1.0 + .05 * prog(local, 0, each)})`;
+    $('s6n').textContent = '0' + (k + 1);
+    $('s6h').textContent = h; $('s6s').textContent = s;
+    for (const id of ['s6n', 's6h', 's6s']) {
+      const ti = eo(prog(local, .15, .85));
+      $(id).style.opacity = (t < start ? 0 : ti * (1 - bo)) * (id === 's6n' ? 1 : 1);
+      $(id).style.transform = `translateY(${(1 - ti) * 30}px)`;
+    }
+  }
+  // S7: assistant (74 - 84.6)
+  if (vis('s7', t, 74, 84.6, .7, .6)) {
+    const ap = back(prog(t, 74.3, 75.4));
+    $('aiph').style.transform = `translateY(${(1 - ap) * 700 + Math.sin(t * 1.3) * 8}px) rotate(-4deg)`;
+    txt('s7k', t, 74.8, 84.4); txt('s7a', t, 75.2, 84.4); txt('s7b', t, 76.0, 84.4);
+    ['tl0', 'tl1', 'tl2'].forEach((id, i) => {
+      const p = back(prog(t, 78.6 + i * .45, 79.5 + i * .45));
+      $(id).style.opacity = clamp(p) * (1 - prog(t, 84.1, 84.5));
+      $(id).style.transform = `translateY(${(1 - p) * 80}px)`;
+    });
+  }
+  // S8: finale (84.2 - 93)
+  if (vis('s8', t, 84.2, 93, .6, .8)) {
+    MONT.forEach((m, i) => {
+      const a = 84.2 + i * .55;
+      const el = $('m' + i);
+      el.style.opacity = i < MONT.length - 1 ? (t >= a && t < a + .55 ? 1 : 0) : (t >= a ? 1 : 0);
+      el.style.transform = `scale(${1.15 - .1 * prog(t, a, a + (i < MONT.length - 1 ? .55 : 6))})`;
+    });
+    $('s8shade').style.background = `rgba(0,40,38,${.25 + .45 * prog(t, 87.2, 88.2)})`;
+    txt('s8a', t, 87.6, 92.8);
+    const lp = prog(t, 88.2, 89.0);
+    $('s8logo').style.opacity = lp; $('s8logo').style.transform = `scale(${.4 + .6 * back(lp)})`;
+    txt('s8b', t, 89.4, 92.8);
+  } else { $('s8logo').style.opacity = 0; }
+  // S9: credits (93 - 97)
+  if (vis('s9', t, 92.8, 97, .6, .01)) { txt('s9a', t, 93.2, 97.2); txt('s9b', t, 93.8, 97.2); }
+};
+window.DURATION = 97;
+const BG = [...document.querySelectorAll('[style*=background-image]')].map(e => e.style.backgroundImage.slice(5, -2));
+const PRE = BG.map(u => new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = u; }));
+window.ready = Promise.all([document.fonts.ready, ...PRE, ...[...document.images].map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; }))]);
+render(0);
+</script>
+</body>
+</html>

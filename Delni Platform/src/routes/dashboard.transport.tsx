@@ -227,8 +227,8 @@ function TransportDashboard() {
       alert("يرجى كتابة كلمة المرور الحالية لتأكيد أنك صاحب الحساب.");
       return;
     }
-    if (companyNewPassword.length < 6) {
-      alert("كلمة المرور يجب أن تتكون من 6 خانات على الأقل");
+    if (companyNewPassword.length < 8) {
+      alert("كلمة المرور يجب أن تتكون من 8 خانات على الأقل");
       return;
     }
     if (companyNewPassword !== companyConfirmPassword) {
@@ -923,8 +923,8 @@ function DriverModal({
     if (expire !== storedExpire && expire < tomorrow) {
       return alert(isAr ? "تاريخ صلاحية رخصة القيادة يجب أن يكون تاريخاً قادماً" : "License expiry date must be in the future");
     }
-    if (!driver && pass.trim().length < 6) {
-      return alert(isAr ? "كلمة مرور السائق مطلوبة (6 خانات على الأقل)" : "Driver password is required (at least 6 characters)");
+    if (!driver && pass.trim().length < 8) {
+      return alert(isAr ? "كلمة مرور السائق مطلوبة (8 خانات على الأقل)" : "Driver password is required (at least 8 characters)");
     }
 
     setIsSubmitting(true);

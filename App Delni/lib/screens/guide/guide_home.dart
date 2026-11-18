@@ -237,7 +237,7 @@ class _GuideHomeState extends State<GuideHome> {
                 ]),
                 if (pending.isNotEmpty) ...[
                   const SizedBox(height: Gap.xl),
-                  SectionHeader(title: context.tr('طلبات بانتظار ردك', 'Requests awaiting you'), subtitle: context.tr('وافق أو اعتذر عن الرحلات المسندة', 'Accept or decline assigned trips')),
+                  SectionHeader(title: context.tr('طلبات بانتظار ردك', 'Requests awaiting you'), subtitle: context.tr('وافق أو اعتذر خلال 24 ساعة، وإلا تعود الرحلة للإدارة', 'Answer within 24 hours, or the trip goes back to the admin')),
                   const SizedBox(height: Gap.md),
                   ...pending.map((t) => Padding(
                         padding: const EdgeInsets.only(bottom: Gap.md),

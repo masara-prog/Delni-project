@@ -276,6 +276,14 @@ class ApiService {
   static Future<ApiResult> markAllNotificationsRead() => _send('POST', '/notifications/read', {'all': true});
 
   /// A message to the platform administration (the server always addresses it to the admin).
+  // --- Forgotten password by email (POST /auth/forgot-password, then /auth/reset-password) ---
+  static Future<ApiResult> requestPasswordCode({required String role, required String email}) =>
+      _send('POST', '/auth/forgot-password', {'role': role, 'email': email});
+
+  static Future<ApiResult> resetPassword({required String role, required String email, required String code, required String password}) =>
+      _send('POST', '/auth/reset-password',
+          {'role': role, 'email': email, 'code': code, 'password': password, 'password_confirmation': password});
+
   static Future<ApiResult> sendSupportMessage({required String subject, required String message, String contact = ''}) {
     final who = currentSession == null || currentSession!.isGuest
         ? _m('زائر', 'Visitor')

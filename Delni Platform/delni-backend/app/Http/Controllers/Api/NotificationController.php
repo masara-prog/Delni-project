@@ -18,6 +18,8 @@ class NotificationController extends Controller
         [$role, $userId] = $this->recipient();
         // Expiry alerts (partner contracts, guides' and drivers' licences) are checked at most hourly, whoever loads notifications
         \App\Support\ContractExpiryAlerts::runHourly();
+        // Trips a guide has not answered within 24 hours go back to the admin
+        \App\Support\GuideReplyTimeout::runOften();
 
         $query = Notification::query();
 

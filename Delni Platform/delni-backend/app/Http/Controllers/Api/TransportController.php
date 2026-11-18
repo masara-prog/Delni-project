@@ -31,6 +31,7 @@ class TransportController extends Controller
     public const VEHICLE_CATEGORIES = ['حافلة سياحية', 'ميني باص', 'باص VIP'];
     public const SEAT_OPTIONS = [15, 25, 50];
     public const VEHICLE_STATUSES = ['جاهزة', 'في رحلة', 'صيانة', 'خارج الخدمة'];
+    public const COMPANY_STATUSES = ['نشطة', 'موقوفة'];
     private const PUBLIC_DRIVER_FIELDS = ['driver_license_number', 'full_name', 'contract_number', 'company_name',
         'assigned_vehicle_plate', 'operational_status', 'current_trip_stage'];
     // What a driver may change in their own record; the company keeps the rest (name, phone, email are official data)
@@ -66,12 +67,14 @@ class TransportController extends Controller
                 'password' => 'nullable|string',
                 'total_vehicles' => 'nullable|integer|min:0',
                 'city' => 'nullable|string|max:100',
-                'verification_status' => 'nullable|string|max:50',
+                'verification_status' => 'nullable|string|in:' . implode(',', self::COMPANY_STATUSES),
                 'google_maps_url' => 'nullable|string|max:500',
                 'address' => 'nullable|string',
                 'contract_start_date' => 'nullable|date',
                 'contract_end_date' => 'nullable|date',
                 'isNew' => 'nullable|boolean',
+            ], [
+                'verification_status.in' => 'حالة شركة النقل يجب أن تكون: نشطة أو موقوفة',
             ]);
         } catch (ValidationException $e) {
             return $this->validationError($e);
@@ -82,18 +85,41 @@ class TransportController extends Controller
         if ($existing && !empty($data['isNew'])) {
             return $this->error('رقم عقد شركة النقل مسجل مسبقاً لشركة أخرى', 409);
         }
+        // The contract number is the account key: digits only for new companies (older records keep theirs)
+        if (!$existing && !preg_match('/^\d+$/', $contract)) {
+            return $this->error('رقم عقد شركة النقل يجب أن يتكون من أرقام فقط', 422);
+        }
+        // Every contract has an end date, otherwise the expiry check on trip assignment is skipped
+        if (!$existing && empty($data['contract_end_date'])) {
+            return $this->error('تاريخ نهاية التعاقد مطلوب لشركة النقل الجديدة', 422);
+        }
         $oldEnd = $existing?->contract_end_date ? (string) $existing->contract_end_date : null;
         if ($error = $this->pastDateError($data['contract_end_date'] ?? null, $oldEnd, 'تاريخ نهاية التعاقد')) {
             return $this->error($error, 422);
         }
+        // Phone: 9 or 10 digits (mobile or landline), checked when entered or changed
+        $data['phone_number'] = preg_replace('/[\s-]/', '', trim($data['phone_number']));
+        if ($data['phone_number'] !== ($existing?->phone_number) && !preg_match('/^\d{9,10}$/', $data['phone_number'])) {
+            return $this->error('رقم هاتف شركة النقل يجب أن يتكون من 9 أو 10 أرقام فقط', 422);
+        }
         if ($this->taken(TransportationCompany::class, 'phone_number', $data['phone_number'], 'contract_number', $contract)) {
             return $this->error('رقم هاتف الشركة مسجل مسبقاً لشركة أخرى', 409);
+        }
+        // A company whose vehicles serve upcoming trips is not suspended until those trips get another vehicle
+        if ($existing && ($data['verification_status'] ?? null) === 'موقوفة' && $existing->verification_status !== 'موقوفة'
+            && ($trips = $this->upcomingVehicleTrips(Vehicle::where('contract_number', $contract)->pluck('plate_number')->all()))) {
+            return $this->error('لا يمكن إيقاف شركة النقل لأن مركباتها مسندة لرحلات قادمة: ' . implode('، ', $trips)
+                . '. يرجى إسناد هذه الرحلات لمركبات شركة أخرى أولاً، ثم إعادة الإيقاف.', 409);
+        }
+        // The email is the company's sign-in name, so two companies cannot share it
+        if ($this->taken(TransportationCompany::class, 'email', trim($data['email']), 'contract_number', $contract)) {
+            return $this->error('البريد الإلكتروني مسجل مسبقاً لشركة أخرى', 409);
         }
 
         // The password is set once when the account is created; afterwards only the company changes it (changePassword)
         $password = $existing ? null : $this->newPassword($data['password'] ?? null);
         if (!$existing && !$password) {
-            return $this->error('كلمة المرور مطلوبة لحساب الشركة الجديد (6 خانات على الأقل)', 422);
+            return $this->error('كلمة المرور مطلوبة لحساب الشركة الجديد (8 خانات على الأقل)', 422);
         }
         $totalVehicles = $data['total_vehicles'] ?? null;
         if ($existing && $totalVehicles !== null && $totalVehicles < ($registered = Vehicle::where('contract_number', $contract)->count())) {
@@ -301,6 +327,14 @@ class TransportController extends Controller
             return $this->error("وصلت الشركة إلى الحد الأقصى لعدد المركبات المتفق عليه في العقد ({$company->total_vehicles} مركبات). لزيادة العدد يرجى التواصل مع إدارة المنصة.", 409);
         }
 
+        // A vehicle serving upcoming trips cannot go to maintenance or out of service until those trips get another vehicle
+        $stopped = ['صيانة', 'خارج الخدمة'];
+        if ($existing && in_array($data['vehicle_status'] ?? null, $stopped, true) && !in_array($existing->vehicle_status, $stopped, true)
+            && ($trips = $this->upcomingVehicleTrips([$plate]))) {
+            return $this->error("لا يمكن تحويل المركبة ({$plate}) إلى «{$data['vehicle_status']}» لأنها مسندة لرحلات قادمة: " . implode('، ', $trips)
+                . '. يرجى التواصل مع الإدارة لإسناد هذه الرحلات لمركبة أخرى أولاً.', 409);
+        }
+
         $values = [
             'contract_number' => $data['contract_number'],
             'vehicle_type' => trim($data['vehicle_type']),
@@ -420,6 +454,19 @@ class TransportController extends Controller
         if ($error = $this->driverChangeDuringTrip($existing, $plate, $license)) {
             return $this->error($error, 409);
         }
+        // The vehicle of an upcoming trip keeps a working driver: its driver is neither suspended nor moved away
+        // until the company links another driver to it
+        $oldPlate = $existing?->assigned_vehicle_plate;
+        if ($oldPlate && ($trips = $this->upcomingVehicleTrips([$oldPlate]))) {
+            if (($input['account_status'] ?? null) === 'موقوف' && $existing->account_status !== 'موقوف') {
+                return $this->error("لا يمكن إيقاف حساب السائق ({$existing->full_name}) لأن مركبته ({$oldPlate}) مسندة لرحلات قادمة: " . implode('، ', $trips)
+                    . '. يرجى ربط سائق آخر بالمركبة أولاً، ثم إعادة الإيقاف.', 409);
+            }
+            if ($oldPlate !== $plate) {
+                return $this->error("لا يمكن نقل السائق ({$existing->full_name}) من مركبته ({$oldPlate}) لأنها مسندة لرحلات قادمة: " . implode('، ', $trips)
+                    . '. يرجى ربط سائق آخر بالمركبة أولاً.', 409);
+            }
+        }
 
         $values = $this->driverValues($input, $input['contract_number'], $plate, !$existing);
         if ($existing && $existing->assigned_vehicle_plate !== $plate) {
@@ -456,6 +503,29 @@ class TransportController extends Controller
             return "سائق المركبة ({$current->full_name}) في رحلة جارية بها الآن، فلا يمكن تغيير سائقها قبل اكتمال الرحلة";
         }
         return null;
+    }
+
+    /**
+     * Titles of the upcoming or running trips of these vehicles: active daily trips, weekly trips not yet ended and
+     * private trips still ahead. A company, vehicle or driver serving one of them cannot be stopped (like a guide's restriction):
+     * the admin moves those trips to another vehicle first.
+     */
+    private function upcomingVehicleTrips(array $plates): array
+    {
+        $plates = array_values(array_filter($plates));
+        if (!$plates) {
+            return [];
+        }
+        $today = now('Africa/Tripoli')->toDateString();
+        $notDeclined = fn ($q) => $q->whereNull('guide_approval_status')->orWhere('guide_approval_status', '<>', 'اعتذر المرشد');
+        $daily = DB::table('daily_trips')->whereIn('vehicle_plate', $plates)->where('is_active', true)->where($notDeclined)->pluck('trip_title');
+        $weekly = DB::table('weekly_trips')->whereIn('vehicle_plate', $plates)->where('is_active', true)
+            ->where('end_date', '>=', $today)->where($notDeclined)->pluck('trip_title');
+        $private = DB::table('private_trips')->whereIn('vehicle_plate', $plates)
+            ->whereIn('status_order', ['بانتظار رد المرشد', 'بانتظار تأكيد السائح', 'مؤكدة'])
+            ->whereRaw('DATEADD(day, duration_days, preferred_start_date) > ?', [$today])
+            ->pluck('private_trip_id')->map(fn ($id) => "رحلة خاصة {$id}");
+        return $daily->concat($weekly)->concat($private)->unique()->values()->all();
     }
 
     // Tells the driver which vehicle they now drive (from the driver form or the vehicle form)
@@ -527,7 +597,7 @@ class TransportController extends Controller
             return 'حالة حساب السائق يجب أن تكون: نشط أو موقوف';
         }
         if (!$existingLicense && !$this->newPassword($d['password'] ?? null)) {
-            return 'كلمة المرور مطلوبة لحساب السائق الجديد (6 خانات على الأقل)';
+            return 'كلمة المرور مطلوبة لحساب السائق الجديد (8 خانات على الأقل)';
         }
         // The driving licence must be valid: required for a new driver, and a newly entered expiry date must lie in the future
         $oldValid = $old?->license_date_valid?->format('Y-m-d');
@@ -584,8 +654,8 @@ class TransportController extends Controller
         if (!Passwords::matches($current, $account->password)) {
             return $this->error('كلمة المرور الحالية غير صحيحة', 403);
         }
-        if (mb_strlen($new) < 6) {
-            return $this->error('كلمة المرور الجديدة يجب أن تتكون من 6 خانات على الأقل', 422);
+        if (mb_strlen($new) < AuthController::MIN_PASSWORD) {
+            return $this->error('كلمة المرور الجديدة يجب أن تتكون من 8 خانات على الأقل', 422);
         }
         $account->forceFill(['password' => Hash::make($new)])->save();
         // Sessions opened elsewhere with the old password end; the session that made the change stays signed in
@@ -598,7 +668,7 @@ class TransportController extends Controller
     private function newPassword(?string $raw): ?string
     {
         $raw = trim((string) $raw);
-        if ($raw === '' || $raw === self::MASKED_PASSWORD || mb_strlen($raw) < 6) {
+        if ($raw === '' || $raw === self::MASKED_PASSWORD || mb_strlen($raw) < AuthController::MIN_PASSWORD) {
             return null;
         }
         return Hash::make($raw);

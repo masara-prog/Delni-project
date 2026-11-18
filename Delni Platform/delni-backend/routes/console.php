@@ -15,6 +15,14 @@ Artisan::command('contracts:check-expiring', function () {
 
 \Illuminate\Support\Facades\Schedule::command('contracts:check-expiring')->hourly();
 
+// Trips sent to a guide and left unanswered for 24 hours go back to the admin, who chooses another guide
+Artisan::command('guides:reply-timeout', function () {
+    $count = \App\Support\GuideReplyTimeout::run();
+    $this->info("Trips taken back from guides: {$count}");
+})->purpose('Take back trips a guide has not answered within 24 hours');
+
+\Illuminate\Support\Facades\Schedule::command('guides:reply-timeout')->everyFiveMinutes();
+
 // One-off: images saved inside the database as base64 text (older records) become files under public/uploads,
 // so lists such as /api/guides and /api/places no longer carry megabytes of image text. New uploads are files already.
 Artisan::command('images:extract', function () {

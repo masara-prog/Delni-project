@@ -296,8 +296,8 @@ export async function addTransportCompany(company: Partial<TransportCompanyRecor
     total_vehicles: Number(company.total_vehicles) || 5,
     contract_start_date: company.contract_start_date || null,
     contract_end_date: company.contract_end_date || null,
-    verification_status: company.verification_status || company.status || "موثق",
-    status: company.verification_status || company.status || "موثق",
+    verification_status: company.verification_status || company.status || "نشطة",
+    status: company.verification_status || company.status || "نشطة",
     google_maps_url: company.google_maps_url || (company.address && (company.address.startsWith("http") || company.address.includes("maps")) ? company.address : "") || "",
   };
   const saved = await laravelRequest("POST", "/transport/companies", { ...newComp, isNew });
