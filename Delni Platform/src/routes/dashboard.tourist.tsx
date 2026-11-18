@@ -129,6 +129,10 @@ function TouristDashboard() {
     }
   };
 
+  // Same rule as the server: a daily trip can be reviewed after it returns (21:00 on its date), a weekly one the day after it ends
+  const reviewOpensAt = (b: { kind?: string; tripDate?: string; endDate?: string }) =>
+    b.kind === "daily" ? `${b.tripDate || ""}T21:00:00` : `${b.endDate || ""}T23:59:59`;
+
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewModalTicket) return;
@@ -402,7 +406,7 @@ function TouristDashboard() {
                         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                           <div className="font-bold text-[#0B4F57] text-xs">التكلفة الإجمالية: {b.price}</div>
                           <div className="flex items-center gap-2">
-                            {b.attended && isTripCompleted(b.endDate || "") ? (
+                            {b.attended && isTripCompleted(reviewOpensAt(b)) ? (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -502,7 +506,7 @@ function TouristDashboard() {
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                       <div className="font-bold text-[#0B4F57] text-xs">التكلفة: {b.price}</div>
                       <div className="flex items-center gap-2">
-                        {b.attended && isTripCompleted(b.endDate || "") ? (
+                        {b.attended && isTripCompleted(reviewOpensAt(b)) ? (
                           <button
                             type="button"
                             onClick={() => {

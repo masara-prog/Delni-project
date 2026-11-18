@@ -1,3 +1,4 @@
+import 'core/content_translator.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
@@ -77,6 +78,9 @@ class ApiService {
   static bool english = false;
   static String _m(String ar, String en) => english ? en : ar;
 
+  /// A server sentence in the app's language (the server writes Arabic; English mode asks POST /translate).
+  static Future<String> _tr(String s) async => english && s.isNotEmpty ? await ContentTranslator.text(s, baseUrl) : s;
+
   // --- Authentication & Actors ---
   static UserSession? currentSession;
 
@@ -110,14 +114,16 @@ class ApiService {
       _m('تعذر الاتصال بخادم دلّني، تحقق من اتصالك ثم أعد المحاولة', 'Could not reach the Delni server. Check your connection and try again');
 
   /// GET a JSON body. Returns null when the server cannot be reached or answers with an error.
-  static Future<dynamic> _getJson(String path, {bool auth = false, int seconds = 6}) async {
+  static Future<dynamic> _getJson(String path, {bool auth = false, int seconds = 6, Set<String> keep = const {}}) async {
     try {
       final res = await http
           .get(Uri.parse('$baseUrl$path'), headers: auth ? _authHeaders() : {'Accept': 'application/json'})
           .timeout(Duration(seconds: seconds));
       if (res.statusCode == 200) {
         isConnectedToLiveDb = true;
-        return json.decode(res.body);
+        final dynamic data = json.decode(res.body);
+        // English mode: titles, descriptions, names and notifications in English ([keep]: data the user edits)
+        return english ? await ContentTranslator.translateJson(data, baseUrl, skipKeys: keep) : data;
       }
     } catch (_) {}
     return null;
@@ -145,10 +151,10 @@ class ApiService {
         final dynamic data = json.decode(res.body);
         final ok = data is! Map || (data['status'] != 'error' && data['success'] != false);
         if (ok) {
-          return ApiResult(true, data is Map ? jStr(data['message']) : '', code: code != null ? code(data) : '');
+          return ApiResult(true, await _tr(data is Map ? jStr(data['message']) : ''), code: code != null ? code(data) : '');
         }
       }
-      return ApiResult(false, _errorMessage(res));
+      return ApiResult(false, await _tr(_errorMessage(res)));
     } catch (_) {
       return ApiResult(false, _offlineMessage);
     }
@@ -329,7 +335,7 @@ class ApiService {
   static Future<GuideDashboard?> fetchGuideDashboard() async {
     final id = currentSession?.identifier;
     if (id == null) return null;
-    final data = await _getJson('/dashboard/guide/${Uri.encodeComponent(id)}', auth: true, seconds: 10);
+    final data = await _getJson('/dashboard/guide/${Uri.encodeComponent(id)}', auth: true, seconds: 10, keep: const {'guide'});
     return data is Map && data['guide'] is Map ? GuideDashboard.fromJson(jMap(data)) : null;
   }
 
@@ -414,12 +420,12 @@ class ApiService {
         return AuthResult(success: true, message: _m('تم تسجيل الدخول بنجاح', 'Signed in'), session: session);
       }
       if (data is Map && data['errors'] is Map) {
-        return AuthResult(success: false, message: _errorMessage(res));
+        return AuthResult(success: false, message: await _tr(_errorMessage(res)));
       }
       return AuthResult(
         success: false,
         message: data is Map && data['message'] != null
-            ? data['message'].toString()
+            ? await _tr(data['message'].toString())
             : _m('بيانات الدخول غير صحيحة، يرجى المحاولة ثانية', 'Incorrect sign-in details, please try again'),
         canResubmit: data is Map && data['can_resubmit'] == true,
       );
@@ -449,9 +455,9 @@ class ApiService {
       ).timeout(const Duration(seconds: 40));
       final dynamic data = json.decode(res.body);
       if (res.statusCode == 200 && data is Map && data['success'] == true) {
-        return ApiResult(true, jStr(data['message']));
+        return ApiResult(true, await _tr(jStr(data['message'])));
       }
-      return ApiResult(false, _errorMessage(res));
+      return ApiResult(false, await _tr(_errorMessage(res)));
     } catch (_) {
       return ApiResult(false, _offlineMessage);
     }
@@ -495,9 +501,9 @@ class ApiService {
           token: data['token'],
         );
         currentSession = session;
-        return AuthResult(success: true, message: jStr(data['message']), session: session);
+        return AuthResult(success: true, message: await _tr(jStr(data['message'])), session: session);
       }
-      return AuthResult(success: false, message: _errorMessage(res));
+      return AuthResult(success: false, message: await _tr(_errorMessage(res)));
     } catch (e) {
       return AuthResult(success: false, message: _offlineMessage);
     }
@@ -557,9 +563,9 @@ class ApiService {
 
       final dynamic data = json.decode(res.body);
       if ((res.statusCode == 200 || res.statusCode == 201) && data['status'] == 'success') {
-        return AuthResult(success: true, message: jStr(data['message']));
+        return AuthResult(success: true, message: await _tr(jStr(data['message'])));
       }
-      return AuthResult(success: false, message: _errorMessage(res));
+      return AuthResult(success: false, message: await _tr(_errorMessage(res)));
     } catch (e) {
       return AuthResult(success: false, message: _offlineMessage);
     }

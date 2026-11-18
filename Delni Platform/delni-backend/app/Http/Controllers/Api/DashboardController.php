@@ -80,7 +80,7 @@ class DashboardController extends Controller
         try {
             $validated = $request->validate([
                 'full_name' => 'nullable|string|max:150',
-                'phone_number' => ['nullable', 'string', 'max:20', Rule::unique('tour_guides', 'phone_number')->ignore($guide->license_number, 'license_number')],
+                'phone_number' => ['nullable', 'string', 'regex:/^09\d{8}$/', Rule::unique('tour_guides', 'phone_number')->ignore($guide->license_number, 'license_number')],
                 'email' => ['nullable', 'email', 'max:100', Rule::unique('tour_guides', 'email')->ignore($guide->license_number, 'license_number')],
                 'password' => 'nullable|string',
                 'years_of_experience' => 'nullable|integer|min:2|max:40',
@@ -98,6 +98,7 @@ class DashboardController extends Controller
                 'availability_status' => 'nullable|string|in:' . implode(',', TourGuide::AVAILABILITY),
             ], [
                 'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً لمرشد آخر',
+                'phone_number.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)',
                 'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لمرشد آخر',
                 'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
                 'years_of_experience.min' => 'سنوات الخبرة السياحية للمرشد يجب أن تكون سنتين على الأقل',

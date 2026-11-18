@@ -71,7 +71,10 @@ class RootGate extends StatelessWidget {
     }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 350),
-      child: KeyedSubtree(key: ValueKey('${session?.role}-${session?.isGuest}-${session?.identifier}'), child: child),
+      // The language is part of the key: switching it rebuilds the role's home, which loads its data again in that
+      // language (English mode translates the content as it arrives)
+      child: KeyedSubtree(
+          key: ValueKey('${session?.role}-${session?.isGuest}-${session?.identifier}-${context.isAr}'), child: child),
     );
   }
 }

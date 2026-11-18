@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Concerns\JsonApiResponses;
 use App\Support\Base64Image;
 use App\Support\Actor;
 use App\Support\Passwords;
+use App\Support\ListInput;
 
 class AuthController extends Controller
 {
@@ -314,7 +315,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'license_number' => 'required|string|max:50|unique:tour_guides,license_number',
             'full_name' => 'required|string|max:150',
-            'phone_number' => 'required|string|max:20|unique:tour_guides,phone_number',
+            'phone_number' => ['required', 'string', 'regex:' . self::PHONE_RULE, 'unique:tour_guides,phone_number'],
             'years_of_experience' => 'required|integer|min:2|max:40',
             'digital_certificate_file' => 'nullable|string',
             'bio' => 'nullable|string',
@@ -339,6 +340,7 @@ class AuthController extends Controller
             'full_name.required' => 'الاسم الكامل مطلوب',
             'phone_number.required' => 'رقم الهاتف مطلوب',
             'phone_number.unique' => 'رقم الهاتف مسجل مسبقاً لمرشد آخر',
+            'phone_number.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام (مثال: 0912345678)',
             'years_of_experience.required' => 'سنوات الخبرة مطلوبة',
             'years_of_experience.min' => 'سنوات الخبرة السياحية للمرشد يجب أن تكون سنتين على الأقل',
             'years_of_experience.max' => 'سنوات الخبرة لا يمكن أن تتجاوز 40 سنة',
@@ -351,6 +353,12 @@ class AuthController extends Controller
             'license_expiry_date.date_format' => 'تاريخ انتهاء الترخيص غير صحيح',
             'license_expiry_date.after' => 'تاريخ انتهاء الترخيص يجب أن يكون تاريخاً قادماً؛ الترخيص المنتهي لا يُقبل',
         ]);
+
+        // A guide is only assigned trips that fall on their working days, so at least one day is required (the site checks it too)
+        if (ListInput::dayNames($validated['working_days'] ?? null) === []) {
+            return response()->json(['status' => 'error', 'message' => 'يرجى تحديد يوم عمل واحد على الأقل في أسبوع المرشد.',
+                'errors' => ['working_days' => ['يرجى تحديد يوم عمل واحد على الأقل في أسبوع المرشد.']]], 422);
+        }
 
         // Working days and workplaces (landmarks registered on the platform) live in guide_working_days / guide_places
         $guide = DB::transaction(function () use ($validated) {

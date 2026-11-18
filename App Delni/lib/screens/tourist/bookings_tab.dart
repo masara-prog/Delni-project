@@ -706,7 +706,7 @@ class _PrivateTripCardState extends State<_PrivateTripCard> {
   @override
   Widget build(BuildContext context) {
     final t = widget.trip;
-    final title = t.places.isNotEmpty ? t.places.join('، ') : (t.description.isNotEmpty ? t.description : context.tr('رحلة خاصة', 'Private trip'));
+    final title = t.places.isNotEmpty ? t.places.join(context.isAr ? '، ' : ', ') : (t.description.isNotEmpty ? t.description : context.tr('رحلة خاصة', 'Private trip'));
     final total = t.quotedPrice + t.additionalExpenses;
     return AppCard(
       padding: const EdgeInsets.all(14),

@@ -299,7 +299,8 @@ export function markNotificationRead(id: string): void {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ id }),
-      signal: AbortSignal.timeout(2000),
+      // a busy server can queue the request for a few seconds; cancelling it early left the notification unread
+      signal: AbortSignal.timeout(10000),
     }).catch(() => { });
   }
 }
@@ -331,7 +332,7 @@ export function markAllNotificationsRead(): void {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ all: true, role: currentRole, user_id: currentUserId }),
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(10000),
     }).catch(() => { });
   }
 }

@@ -1,0 +1,21 @@
+Photos used on the restaurants page category cards (Wikimedia Commons)
+
+category-seafood-real.jpg
+  Source: https://commons.wikimedia.org/wiki/File:Plated_grilled_fish.jpg
+  Author: pompi
+  License: CC0
+
+category-libyan-real.jpg
+  Source: https://commons.wikimedia.org/wiki/File:بازين.jpg
+  Author: Fajria Derbash
+  License: CC BY-SA 4.0
+
+category-fastfood-real.jpg
+  Source: https://commons.wikimedia.org/wiki/File:Hamburger_and_French_fries_at_Mike's_Diner_in_January_2024.jpg
+  Author: JIP
+  License: CC BY-SA 4.0
+
+category-cafe-real.jpg
+  Source: https://commons.wikimedia.org/wiki/File:Coffee_shop_in_Iran,_Mashhad_City_02.jpg
+  Author: Mostafameraji
+  License: CC BY 3.0

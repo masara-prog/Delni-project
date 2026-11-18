@@ -5,6 +5,7 @@
  * every text that was replaced. Data typed by people (trip titles, descriptions, names) stays as it was written.
  */
 import dictionary from "./enDictionary.json";
+import { LARAVEL_API_URL } from "./api";
 
 type Dict = { exact: Record<string, string>; patterns: [string, string][] };
 const DICT = dictionary as unknown as Dict;
@@ -59,11 +60,79 @@ function fill(en: string, values: string[]): string {
 
 const cache = new Map<string, string>();
 
+const INITIALS_RE = /^[ء-ي](\s[ء-ي]){0,2}$/u;
+const INITIAL: Record<string, string> = {
+  "ا": "A", "أ": "A", "إ": "E", "آ": "A", "ء": "A", "ب": "B", "ت": "T", "ث": "T", "ج": "J", "ح": "H", "خ": "K", "د": "D",
+  "ذ": "D", "ر": "R", "ز": "Z", "س": "S", "ش": "S", "ص": "S", "ض": "D", "ط": "T", "ظ": "Z", "ع": "A", "غ": "G", "ف": "F",
+  "ق": "G", "ك": "K", "ل": "L", "م": "M", "ن": "N", "ه": "H", "و": "W", "ي": "Y", "ى": "A", "ة": "H", "ئ": "E", "ؤ": "O",
+};
+
+// ---- Content the dictionary does not cover (trip titles, names, server sentences) ----
+// Sent to the server (POST /translate, Gemini, cached there); the answers are kept in this browser so a text is asked once.
+const STORE = "delni_tr_en_v1";
+const remote = new Map<string, string>();
+try {
+  const saved = typeof localStorage !== "undefined" ? localStorage.getItem(STORE) : null;
+  if (saved) for (const [k, v] of Object.entries(JSON.parse(saved) as Record<string, string>)) remote.set(k, v);
+} catch {
+  // storage blocked or damaged: start empty
+}
+const pending = new Set<string>();
+const failedAt = new Map<string, number>();
+let flushTimer: number | null = null;
+let active = false;
+
+function request(key: string) {
+  if (typeof window === "undefined" || !active) return;
+  if (key.length > 1500 || !ARABIC_WORD.test(key) || pending.has(key)) return;
+  const failed = failedAt.get(key);
+  if (failed && Date.now() - failed < 60_000) return;
+  pending.add(key);
+  if (flushTimer === null) flushTimer = window.setTimeout(flush, 250);
+}
+
+async function flush() {
+  flushTimer = null;
+  const batch = [...pending].slice(0, 60);
+  batch.forEach((k) => pending.delete(k));
+  if (pending.size) flushTimer = window.setTimeout(flush, 250);
+  if (!batch.length) return;
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ texts: batch }),
+    });
+    const data = res.ok ? ((await res.json()) as { translations?: Record<string, string> }) : null;
+    const got = data?.translations ?? {};
+    let added = 0;
+    for (const k of batch) {
+      if (typeof got[k] === "string" && got[k]) {
+        remote.set(k, got[k]);
+        added++;
+      } else failedAt.set(k, Date.now());
+    }
+    if (!added) return;
+    try {
+      const entries = [...remote.entries()].slice(-4000);
+      localStorage.setItem(STORE, JSON.stringify(Object.fromEntries(entries)));
+    } catch {
+      // storage full or blocked: the translations still apply to this visit
+    }
+    cache.clear();
+    reapply();
+  } catch {
+    batch.forEach((k) => failedAt.set(k, Date.now()));
+  }
+}
+
 /** The English text for an Arabic text (or the text itself when it holds no Arabic). */
 export function translate(text: string): string {
   if (!text || !ARABIC.test(text)) return text;
   const hit = cache.get(text);
   if (hit !== undefined) return hit;
+  // Avatar initials cut from an Arabic name ("ع ا"): the Latin initials
+  if (INITIALS_RE.test(text.trim())) return text.trim().split(/\s+/).map((c) => INITIAL[c] ?? c).join("");
   const lead = text.match(/^\s*/)?.[0] ?? "";
   const trail = text.match(/\s*$/)?.[0] ?? "";
   const key = norm(text);
@@ -93,6 +162,12 @@ export function translate(text: string): string {
     const short = key.split(" ").length <= 4;
     if (!(short && ARABIC_WORD.test(partial))) out = partial;
   }
+  // Still Arabic after the dictionary (a trip title, a name, a server sentence): the server's full translation
+  if (out === undefined || ARABIC_WORD.test(out)) {
+    const full = remote.get(key);
+    if (full !== undefined) out = full;
+    else request(key);
+  }
   if (out !== undefined && !new RegExp(`[${AL}]`, "u").test(out)) out = out.replace(/،/g, ",");
   const result = arabicDigits(times(lead + (out ?? key) + trail));
   if (cache.size > 5000) cache.clear();
@@ -103,6 +178,9 @@ export function translate(text: string): string {
 // ---- DOM ----
 const originals = new Map<Node, string>();
 const attrOriginals = new Map<Element, Record<string, string>>();
+// What this module last wrote into a node, so a half-translated text is not taken for new Arabic content
+const applied = new WeakMap<Node, string>();
+const attrApplied = new WeakMap<Element, Record<string, string>>();
 let observer: MutationObserver | null = null;
 let applying = false;
 let nativeAlert: typeof window.alert | null = null;
@@ -111,14 +189,31 @@ let titleTimer: number | null = null;
 
 function translateTextNode(node: Text) {
   const value = node.nodeValue ?? "";
-  if (!ARABIC.test(value)) return;
+  if (!ARABIC.test(value) || applied.get(node) === value) return;
   const parent = node.parentElement;
   if (!parent || SKIP.has(parent.tagName) || parent.closest("[data-no-translate]")) return;
   const en = translate(value);
   if (en !== value) {
     originals.set(node, value);
     node.nodeValue = en;
+    applied.set(node, en);
   }
+}
+
+// New translations arrived from the server: texts already shown (whole Arabic or half translated) are done again
+function reapply() {
+  if (!active) return;
+  run(() => {
+    originals.forEach((ar, node) => {
+      if (node.isConnected && applied.get(node) === node.nodeValue) {
+        const en = translate(ar);
+        node.nodeValue = en;
+        applied.set(node, en);
+      }
+    });
+    walk(document.body);
+    if (ARABIC.test(document.title)) document.title = translate(document.title);
+  });
 }
 
 function translateAttributes(el: Element) {
@@ -126,11 +221,16 @@ function translateAttributes(el: Element) {
   for (const name of ATTRS) {
     const value = el.getAttribute(name);
     if (value && ARABIC.test(value)) {
-      const en = translate(value);
+      const saved = attrOriginals.get(el) ?? {};
+      const mine = attrApplied.get(el) ?? {};
+      // Our own (half-)translated value: translate the original Arabic again, never the mixed text
+      const source = saved[name] !== undefined && mine[name] === value ? saved[name] : value;
+      const en = translate(source);
       if (en !== value) {
-        const saved = attrOriginals.get(el) ?? {};
-        saved[name] = value;
+        saved[name] = source;
         attrOriginals.set(el, saved);
+        mine[name] = en;
+        attrApplied.set(el, mine);
         el.setAttribute(name, en);
       }
     }
@@ -167,6 +267,7 @@ function run(fn: () => void) {
 
 export function startEnglish() {
   if (typeof document === "undefined" || observer) return;
+  active = true;
   run(() => walk(document.body));
   document.title = translate(document.title);
   observer = new MutationObserver((mutations) => {
@@ -192,6 +293,7 @@ export function startEnglish() {
 
 export function stopEnglish() {
   if (!observer) return;
+  active = false;
   observer.disconnect();
   observer = null;
   if (titleTimer !== null) window.clearInterval(titleTimer);

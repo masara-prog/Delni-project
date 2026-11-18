@@ -106,6 +106,18 @@ class ReviewController extends Controller
         if (!$attended) {
             return 'عذراً، يمكن تقييم الرحلة فقط بعد المشاركة فيها فعلياً (تأكيد حضورك من مكتب التذاكر).';
         }
+        if ($type === 'daily') {
+            // A daily trip runs 09:00–21:00 on its date: check-in happens that morning, so the review waits until it is over
+            $now = now('Africa/Tripoli');
+            $op = $now->hour >= 21 ? '<=' : '<';   // today's trip counts as finished only after 21:00
+            $finished = DB::table('bookings_daily')->where('tourist_id', $touristId)->where('daily_trip_id', $tripId)
+                ->where('booking_status', 'not like', 'ملغ%')->where('attended', true)
+                ->where(fn ($q) => $q->whereNull('trip_date')->orWhereDate('trip_date', $op, $now->toDateString()))
+                ->exists();
+            if (!$finished) {
+                return 'عذراً، لا يمكنك تقييم الرحلة اليومية إلا بعد انتهائها (بعد عودة الرحلة الساعة 9:00 مساءً).';
+            }
+        }
         if ($type === 'weekly') {
             $end = (string) DB::table('weekly_trips')->where('weekly_trip_id', $tripId)->value('end_date');
             if (substr($end, 0, 10) >= now('Africa/Tripoli')->toDateString()) {

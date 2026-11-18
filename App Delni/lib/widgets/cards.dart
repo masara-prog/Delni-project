@@ -75,7 +75,7 @@ class TripCard extends StatelessWidget {
                     if (t.isWeekly && t.durationDays > 0)
                       MetaItem(icon: Icons.schedule_rounded, text: context.tr('${t.durationDays} أيام', '${t.durationDays} days')),
                     if (!t.isWeekly && t.days.isNotEmpty)
-                      MetaItem(icon: Icons.event_repeat_rounded, text: t.days.map(context.sv).join('، ')),
+                      MetaItem(icon: Icons.event_repeat_rounded, text: t.days.map(context.sv).join(context.isAr ? '، ' : ', ')),
                     if (t.isWeekly && t.startDate.isNotEmpty)
                       MetaItem(icon: Icons.event_rounded, text: context.date(t.startDate)),
                   ],

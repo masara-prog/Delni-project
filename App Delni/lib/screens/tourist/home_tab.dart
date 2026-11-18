@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../api_service.dart';
 import '../../core/app_state.dart';
+import '../../core/content_translator.dart';
 import '../../core/i18n.dart';
 import '../../core/theme.dart';
 import '../../models.dart';
@@ -292,11 +294,21 @@ class _Header extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    firstName.isEmpty ? greeting : '$greeting، $firstName',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.h3.copyWith(fontSize: 16),
+                  // English mode: the name in Latin letters (display only; the account keeps the name as typed)
+                  FutureBuilder<String>(
+                    initialData: context.isAr ? firstName : (ContentTranslator.cached(firstName) ?? firstName),
+                    future: context.isAr || firstName.isEmpty || ContentTranslator.cached(firstName) != null
+                        ? Future.value(context.isAr ? firstName : (ContentTranslator.cached(firstName) ?? firstName))
+                        : ContentTranslator.text(firstName, ApiService.baseUrl),
+                    builder: (context, snap) {
+                      final name = snap.data ?? firstName;
+                      return Text(
+                        name.isEmpty ? greeting : (context.isAr ? '$greeting، $name' : '$greeting, $name'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.h3.copyWith(fontSize: 16),
+                      );
+                    },
                   ),
                   Text(
                     guest ? context.tr('أنت تتصفح كزائر', 'You are browsing as a visitor') : context.tr('إلى أين وجهتك القادمة؟', 'Where to next?'),

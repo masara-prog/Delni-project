@@ -489,7 +489,7 @@ class _GuideHero extends StatelessWidget {
                     children: [
                       if (g.isVerified) _HeroChip(icon: Icons.verified_user_rounded, text: context.tr('موثق', 'Verified'), color: const Color(0xFF6EE7B7)),
                       if (g.experienceYears > 0) _HeroChip(icon: Icons.workspace_premium_rounded, text: context.tr('${g.experienceYears} سنوات خبرة', '${g.experienceYears} years'), color: const Color(0xFFFDE68A)),
-                      if (langs.isNotEmpty) _HeroChip(icon: Icons.translate_rounded, text: langs.join('، '), color: AppColors.onDarkSoft),
+                      if (langs.isNotEmpty) _HeroChip(icon: Icons.translate_rounded, text: langs.join(context.isAr ? '، ' : ', '), color: AppColors.onDarkSoft),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -682,7 +682,7 @@ class _LicenseCard extends StatelessWidget {
 String _guideTripTitle(BuildContext context, GuideTrip t) {
   if (t.kind != 'private') return t.title;
   // A private trip is named after its landmarks, like on Delni
-  if (t.places.isNotEmpty) return context.tr('رحلة خاصة: ${t.places.join('، ')}', 'Private trip: ${t.places.join(', ')}');
+  if (t.places.isNotEmpty) return context.tr('رحلة خاصة: ${t.places.join(context.isAr ? '، ' : ', ')}', 'Private trip: ${t.places.join(', ')}');
   return context.tr('رحلة خاصة', 'Private trip') + (t.touristName.isNotEmpty ? ' — ${t.touristName}' : '');
 }
 
@@ -693,7 +693,7 @@ String _guideTripKind(BuildContext context, GuideTrip t) => switch (t.kind) {
     };
 
 String _guideTripWhen(BuildContext context, GuideTrip t) {
-  if (t.kind == 'daily') return t.days.isEmpty ? '' : t.days.map((d) => weekdayName(context, d)).join('، ');
+  if (t.kind == 'daily') return t.days.isEmpty ? '' : t.days.map((d) => weekdayName(context, d)).join(context.isAr ? '، ' : ', ');
   if (t.kind == 'private') {
     return [if (t.startDate.isNotEmpty) context.date(t.startDate), if (t.durationDays > 0) context.tr('${t.durationDays} أيام', '${t.durationDays} days')].join(' • ');
   }

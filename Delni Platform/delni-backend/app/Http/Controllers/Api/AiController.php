@@ -113,7 +113,7 @@ class AiController extends Controller
         $instructions = $this->systemPrompt();
         // The configured model first, then current Flash models; each is tried with Google Search, then without it
         $models = array_values(array_unique(array_filter([
-            (string) config('services.gemini.model'), 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash',
+            (string) config('services.gemini.model'), 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash',
         ])));
         $res = null;
         $searched = false;
@@ -202,11 +202,19 @@ class AiController extends Controller
         if ($withSearch) {
             $body['tools'] = [['google_search' => (object) []]];
         }
-        return Http::timeout(min($withSearch ? 25 : 40, $maxSeconds))
+        // A busy model can stay silent for a long time: keep each attempt short so the next model still gets its turn
+        $send = fn (array $b) => Http::timeout(min($withSearch ? 15 : 20, $maxSeconds))
             // PHP on Windows often has no CA bundle configured: verify Google's certificate with the system store
             ->withOptions(defined('CURLSSLOPT_NATIVE_CA') ? ['curl' => [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA]] : [])
             ->withHeaders(['x-goog-api-key' => $key])
-            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", $body);
+            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", $b);
+        $res = $send($body);
+        // Some models (gemini-flash-latest, gemini-3.8-flash) refuse the "minimal" thinking level: ask again with "low"
+        if ($res->status() === 400 && str_contains((string) $res->body(), 'Thinking level')) {
+            $body['generationConfig']['thinkingConfig'] = ['thinkingLevel' => 'low'];
+            $res = $send($body);
+        }
+        return $res;
     }
 
     // Who «ذكاء دلني» is, and what is on the platform today (read only: landmarks and open trips)

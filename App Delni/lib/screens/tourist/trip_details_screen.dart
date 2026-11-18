@@ -209,7 +209,7 @@ class _FactsRow extends StatelessWidget {
         (Icons.schedule_rounded, Tone.orange, context.tr('المدة', 'Duration'), context.tr('${t.durationDays} أيام', '${t.durationDays} days')),
       if (t.isWeekly && t.startDate.isNotEmpty) (Icons.event_rounded, Tone.success, context.tr('البداية', 'Starts'), context.date(t.startDate)),
       if (t.isWeekly && t.endDate.isNotEmpty) (Icons.flag_rounded, Tone.warning, context.tr('العودة', 'Returns'), context.date(t.endDate)),
-      if (!t.isWeekly && t.days.isNotEmpty) (Icons.event_repeat_rounded, Tone.success, context.tr('أيام الانطلاق', 'Runs on'), t.days.map(context.sv).join('، ')),
+      if (!t.isWeekly && t.days.isNotEmpty) (Icons.event_repeat_rounded, Tone.success, context.tr('أيام الانطلاق', 'Runs on'), t.days.map(context.sv).join(context.isAr ? '، ' : ', ')),
       (Icons.event_seat_rounded, t.availableSeats > 0 ? Tone.success : Tone.danger, context.tr('المقاعد', 'Seats'), tripSeatsLabel(context, t)),
     ];
     return LayoutBuilder(
@@ -443,7 +443,7 @@ void _showGuide(BuildContext context, Trip t) {
                       label: ctx.tr('سنوات الخبرة', 'Experience'),
                       value: t.guideYears > 0 ? ctx.tr('${t.guideYears} سنوات', '${t.guideYears} years') : '—',
                     ),
-                    InfoRow(icon: Icons.translate_rounded, label: ctx.tr('اللغات', 'Languages'), value: languages.join('، ')),
+                    InfoRow(icon: Icons.translate_rounded, label: ctx.tr('اللغات', 'Languages'), value: languages.join(ctx.isAr ? '، ' : ', ')),
                     if (t.guidePricePerDay > 0)
                       InfoRow(
                         icon: Icons.payments_outlined,

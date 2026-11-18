@@ -331,3 +331,9 @@
     padding-right: 1rem !important;
   }
 }
+
+/* English mode: texts written right-aligned for Arabic read from the left (the page itself is already LTR) */
+html[dir="ltr"] .text-right { text-align: left; }
+html[dir="ltr"] input:not([type="number"]):not([dir]),
+html[dir="ltr"] textarea:not([dir]),
+html[dir="ltr"] select:not([dir]) { text-align: left; }
