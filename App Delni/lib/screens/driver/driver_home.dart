@@ -1068,7 +1068,7 @@ class _DriverInfoScreen extends StatelessWidget {
   }
 }
 
-/// Password change: the current password, then the new one twice (6 characters at least), as on the platform.
+/// Password change: the current password, then the new one twice (8 characters at least), as on the platform.
 class _DriverPasswordScreen extends StatefulWidget {
   const _DriverPasswordScreen();
 
@@ -1095,8 +1095,8 @@ class _DriverPasswordScreenState extends State<_DriverPasswordScreen> {
     String? error;
     if (_current.text.isEmpty) {
       error = context.tr('يرجى كتابة كلمة المرور الحالية لتأكيد أنك صاحب الحساب.', 'Please enter your current password.');
-    } else if (_next.text.trim().length < 6) {
-      error = context.tr('كلمة المرور الجديدة يجب أن تتكون من 6 خانات على الأقل.', 'The new password must have at least 6 characters.');
+    } else if (_next.text.trim().length < 8) {
+      error = context.tr('كلمة المرور الجديدة يجب أن تتكون من 8 خانات على الأقل.', 'The new password must have at least 8 characters.');
     } else if (_next.text != _confirm.text) {
       error = context.tr('كلمتا المرور غير متطابقتين.', 'The passwords do not match.');
     }
@@ -1134,7 +1134,7 @@ class _DriverPasswordScreenState extends State<_DriverPasswordScreen> {
             controller: _next,
             icon: Icons.lock_reset_rounded,
             password: true,
-            helper: context.tr('6 خانات على الأقل', 'At least 6 characters'),
+            helper: context.tr('8 خانات على الأقل', 'At least 8 characters'),
           ),
           const SizedBox(height: Gap.lg),
           AppTextField(label: context.tr('تأكيد كلمة المرور', 'Confirm password'), controller: _confirm, icon: Icons.lock_reset_rounded, password: true, onSubmitted: (_) => _save()),

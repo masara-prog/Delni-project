@@ -5,8 +5,8 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import 'auth_widgets.dart';
 
-/// The platform has no password-reset endpoint: this screen sends the request to the administration
-/// (POST /notifications, which always reaches the admin) so support can reset the password.
+/// Forgotten password by email: step 1 sends a 6-digit code to the account's email (valid 10 minutes),
+/// step 2 takes the code and the new password (8 characters at least). Same server rules as the platform.
 class ForgotPasswordScreen extends StatefulWidget {
   final AuthRole role;
   const ForgotPasswordScreen({super.key, required this.role});
@@ -17,29 +17,28 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _email = TextEditingController();
-  final _phone = TextEditingController();
-  final _note = TextEditingController();
+  final _code = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
   bool _loading = false;
-  bool _sent = false;
+  bool _codeSent = false;
+  bool _done = false;
   String? _error;
+  String? _info;
 
   @override
   void dispose() {
     _email.dispose();
-    _phone.dispose();
-    _note.dispose();
+    _code.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _sendCode() async {
     final email = _email.text.trim();
-    final phone = normalizeDigits(_phone.text);
     if (!isValidEmail(email)) {
       setState(() => _error = context.tr('يرجى إدخال البريد الإلكتروني المسجل في حسابك', 'Please enter the email of your account'));
-      return;
-    }
-    if (!isValidPhone(phone)) {
-      setState(() => _error = context.tr('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام ليتواصل معك الدعم', 'The phone must start with 09 and have 10 digits'));
       return;
     }
     FocusScope.of(context).unfocus();
@@ -47,19 +46,53 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _loading = true;
       _error = null;
     });
-    final res = await ApiService.sendSupportMessage(
-      subject: context.tr('طلب استعادة كلمة المرور', 'Password reset request'),
-      contact: '$email • $phone',
-      message: [
-        '${context.tr('نوع الحساب', 'Account type')}: ${widget.role.title(context)}',
-        if (_note.text.trim().isNotEmpty) _note.text.trim(),
-      ].join('\n'),
+    final res = await ApiService.requestPasswordCode(role: widget.role.apiName, email: email);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (res.success) {
+        _codeSent = true;
+        _info = res.message;
+        _code.clear();
+      } else {
+        _error = res.message;
+      }
+    });
+  }
+
+  Future<void> _reset() async {
+    final code = normalizeDigits(_code.text);
+    String? error;
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      error = context.tr('رمز التحقق يتكون من 6 أرقام', 'The code has 6 digits');
+    } else if (_password.text.trim().length < 8) {
+      error = context.tr('كلمة المرور الجديدة يجب أن تتكون من 8 خانات على الأقل', 'The new password must have at least 8 characters');
+    } else if (_password.text.trim() != _confirm.text.trim()) {
+      error = context.tr('كلمتا المرور غير متطابقتين', 'The passwords do not match');
+    }
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final res = await ApiService.resetPassword(
+      role: widget.role.apiName,
+      email: _email.text.trim(),
+      code: code,
+      password: _password.text.trim(),
     );
     if (!mounted) return;
     setState(() {
       _loading = false;
-      _sent = res.success;
-      _error = res.success ? null : res.message;
+      if (res.success) {
+        _done = true;
+      } else {
+        _error = res.message;
+      }
     });
   }
 
@@ -69,15 +102,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       photo: 'assets/images/dest-tripoli-medina.jpg',
       title: context.tr('استعادة كلمة المرور', 'Reset your password'),
       subtitle: context.tr(
-        'إعادة تعيين كلمة المرور تتم حالياً عن طريق فريق دعم دلّني بعد التحقق من هويتك.',
-        'Passwords are currently reset by the Delni support team after verifying your identity.',
+        'يصلك رمز تحقق على بريدك الإلكتروني، تكتبه مع كلمة المرور الجديدة.',
+        'A verification code reaches your email; enter it with your new password.',
       ),
       badge: RoleBadge(role: widget.role),
-      children: _sent ? _success(context) : _form(context),
+      children: _done ? _success(context) : (_codeSent ? _codeForm(context) : _emailForm(context)),
     );
   }
 
-  List<Widget> _form(BuildContext context) => [
+  List<Widget> _emailForm(BuildContext context) => [
         const _Steps(),
         const SizedBox(height: Gap.xl),
         AppTextField(
@@ -89,30 +122,54 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ltr: true,
         ),
         const SizedBox(height: Gap.lg),
+        if (_error != null) ...[InlineMessage(text: _error!), const SizedBox(height: Gap.lg)],
+        AppButton(
+          label: context.tr('إرسال الرمز إلى بريدي', 'Email me a code'),
+          icon: Icons.mark_email_unread_rounded,
+          loading: _loading,
+          onPressed: _sendCode,
+        ),
+      ];
+
+  List<Widget> _codeForm(BuildContext context) => [
+        if (_info != null) ...[InlineMessage(text: _info!, tone: Tone.success, icon: Icons.mark_email_read_rounded), const SizedBox(height: Gap.lg)],
         AppTextField(
-          label: context.tr('رقم الهاتف للتواصل', 'Phone for contact'),
-          controller: _phone,
-          inputFormatters: const [DigitsInputFormatter(phoneLength)],
-          hint: '09XXXXXXXX',
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
+          label: context.tr('رمز التحقق', 'Verification code'),
+          controller: _code,
+          inputFormatters: const [DigitsInputFormatter(6)],
+          hint: '••••••',
+          icon: Icons.pin_rounded,
+          keyboardType: TextInputType.number,
           ltr: true,
         ),
         const SizedBox(height: Gap.lg),
         AppTextField(
-          label: context.tr('ملاحظة للدعم', 'Note for support'),
-          controller: _note,
-          hint: context.tr('أي تفاصيل تساعدنا في التحقق من حسابك', 'Anything that helps us verify your account'),
-          maxLines: 3,
-          optional: true,
+          label: context.tr('كلمة المرور الجديدة', 'New password'),
+          controller: _password,
+          password: true,
+          icon: Icons.lock_outline_rounded,
+          helper: context.tr('8 خانات على الأقل', 'At least 8 characters'),
+        ),
+        const SizedBox(height: Gap.lg),
+        AppTextField(
+          label: context.tr('تأكيد كلمة المرور', 'Confirm password'),
+          controller: _confirm,
+          password: true,
+          icon: Icons.lock_reset_rounded,
         ),
         const SizedBox(height: Gap.lg),
         if (_error != null) ...[InlineMessage(text: _error!), const SizedBox(height: Gap.lg)],
         AppButton(
-          label: context.tr('إرسال الطلب إلى الدعم', 'Send request to support'),
-          icon: Icons.support_agent_rounded,
+          label: context.tr('تغيير كلمة المرور', 'Change password'),
+          icon: Icons.key_rounded,
           loading: _loading,
-          onPressed: _submit,
+          onPressed: _reset,
+        ),
+        const SizedBox(height: Gap.md),
+        AppButton(
+          label: context.tr('إعادة إرسال الرمز', 'Send the code again'),
+          variant: ButtonVariant.outline,
+          onPressed: _loading ? null : _sendCode,
         ),
       ];
 
@@ -122,24 +179,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             width: 88,
             height: 88,
             decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accentSoft),
-            child: const Icon(Icons.mark_email_read_rounded, color: AppColors.accent, size: 42),
+            child: const Icon(Icons.verified_rounded, color: AppColors.accent, size: 42),
           ),
         ),
         const SizedBox(height: Gap.lg),
-        Center(child: Text(context.tr('تم إرسال طلبك', 'Request sent'), style: AppText.h2)),
+        Center(child: Text(context.tr('تم تغيير كلمة المرور', 'Password changed'), style: AppText.h2)),
         const SizedBox(height: 6),
         Text(
-          context.tr(
-            'وصل طلبك إلى إدارة دلّني. سيتواصل معك فريق الدعم على رقم هاتفك أو بريدك لإعادة تعيين كلمة المرور.',
-            'Your request reached the Delni administration. Support will contact you by phone or email to reset your password.',
-          ),
+          context.tr('يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.', 'You can now sign in with your new password.'),
           textAlign: TextAlign.center,
           style: AppText.bodyMuted,
         ),
         const SizedBox(height: Gap.xl),
         AppButton(
           label: context.tr('العودة لتسجيل الدخول', 'Back to sign in'),
-          variant: ButtonVariant.outline,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ];
@@ -151,9 +204,9 @@ class _Steps extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final steps = [
-      (Icons.edit_note_rounded, context.tr('أرسل بيانات حسابك', 'Send your account details')),
-      (Icons.verified_user_outlined, context.tr('يتحقق الدعم من هويتك', 'Support verifies your identity')),
-      (Icons.key_rounded, context.tr('تستلم كلمة مرور جديدة', 'You receive a new password')),
+      (Icons.alternate_email_rounded, context.tr('اكتب بريد حسابك', 'Enter your account email')),
+      (Icons.mark_email_unread_rounded, context.tr('يصلك رمز من 6 أرقام', 'Receive a 6-digit code')),
+      (Icons.key_rounded, context.tr('اكتب الرمز وكلمة مرور جديدة', 'Enter the code and a new password')),
     ];
     return Container(
       padding: const EdgeInsets.all(14),

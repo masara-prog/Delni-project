@@ -351,6 +351,7 @@ function GuideDashboard() {
         >
           ✕ اعتذار
         </button>
+        <span className="self-center text-[10px] font-bold text-amber-700">⏳ يرجى الرد خلال 24 ساعة، وإلا تعود الرحلة للإدارة</span>
       </div>
     ) : null;
 

@@ -12,7 +12,7 @@ import { BackHome } from "@/components/BackHome";
 import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/lib/i18n";
 import { MapPin } from "lucide-react";
-import { apiLogin, apiResubmitGuide } from "@/lib/api";
+import { apiLogin, apiResubmitGuide, laravelRequest } from "@/lib/api";
 import { fileToCompressedDataUrl } from "@/lib/imageCompress";
 
 export const Route = createFileRoute("/auth/login")({
@@ -59,6 +59,15 @@ function LoginPage() {
   const [resubmitNote, setResubmitNote] = useState("");
   const [resubmitMsg, setResubmitMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [resubmitting, setResubmitting] = useState(false);
+  // Forgotten password: the request goes to the Delni administration, which checks the owner's identity and sets a temporary password
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotStep, setForgotStep] = useState<"email" | "code">("email");
+  const [forgotCode, setForgotCode] = useState("");
+  const [forgotPass, setForgotPass] = useState("");
+  const [forgotPass2, setForgotPass2] = useState("");
+  const [forgotMsg, setForgotMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [forgotSending, setForgotSending] = useState(false);
   const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
 
   const handleResubmit = async () => {
@@ -356,7 +365,17 @@ function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs sm:text-sm font-bold text-[#0F172A]">كلمة المرور</label>
-                <a href="#" className="text-xs sm:text-sm font-bold text-[#0B4F57] hover:underline">
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setForgotEmail(email);
+                    setForgotMsg(null);
+                    setForgotStep("email");
+                    setForgotOpen(true);
+                  }}
+                  className="text-xs sm:text-sm font-bold text-[#0B4F57] hover:underline"
+                >
                   نسيت كلمة المرور؟
                 </a>
               </div>
@@ -397,6 +416,83 @@ function LoginPage() {
               تسجيل الدخول
             </button>
           </form>
+
+          {forgotOpen && (
+            <div className="mt-5 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 text-right space-y-3">
+              <p className="text-sm font-black text-[#0F172A]">استعادة كلمة المرور</p>
+              {role === "admin" ? (
+                <p className="text-xs text-[#4A5568] leading-6">حساب الإدارة لا يُستعاد من هنا؛ يتواصل المسؤول مع فريق تطوير المنصة.</p>
+              ) : forgotMsg?.ok && forgotStep === "email" ? null : (
+                <>
+                  <p className="text-xs text-[#4A5568] leading-6">
+                    {forgotStep === "email"
+                      ? "اكتب البريد المسجل في حسابك، فيصلك عليه رمز من 6 أرقام صالح لمدة 10 دقائق."
+                      : `أرسلنا رمزًا إلى ${forgotEmail.trim()}. اكتبه مع كلمة المرور الجديدة (8 خانات على الأقل).`}
+                  </p>
+                  {forgotStep === "email" ? (
+                    <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="البريد الإلكتروني المسجل" dir="ltr"
+                      className="w-full h-11 px-4 rounded-xl border border-[#E2E8F0] bg-white text-sm outline-none focus:border-[#0B4F57] text-right" />
+                  ) : (
+                    <>
+                      <input inputMode="numeric" maxLength={6} value={forgotCode} onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, ""))} placeholder="رمز التحقق (6 أرقام)" dir="ltr"
+                        className="w-full h-11 px-4 rounded-xl border border-[#E2E8F0] bg-white text-lg tracking-[0.4em] font-black outline-none focus:border-[#0B4F57] text-center" />
+                      <input type="password" value={forgotPass} onChange={(e) => setForgotPass(e.target.value)} placeholder="كلمة المرور الجديدة"
+                        className="w-full h-11 px-4 rounded-xl border border-[#E2E8F0] bg-white text-sm outline-none focus:border-[#0B4F57] text-right" />
+                      <input type="password" value={forgotPass2} onChange={(e) => setForgotPass2(e.target.value)} placeholder="تأكيد كلمة المرور الجديدة"
+                        className="w-full h-11 px-4 rounded-xl border border-[#E2E8F0] bg-white text-sm outline-none focus:border-[#0B4F57] text-right" />
+                    </>
+                  )}
+                  {forgotMsg && <p className={`text-xs font-bold ${forgotMsg.ok ? "text-emerald-700" : "text-red-600"}`}>{forgotMsg.text}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={forgotSending}
+                      onClick={async () => {
+                        const mail = forgotEmail.trim();
+                        if (!/^\S+@\S+\.\S+$/.test(mail)) return setForgotMsg({ ok: false, text: "يرجى إدخال البريد الإلكتروني المسجل في حسابك." });
+                        if (forgotStep === "email") {
+                          setForgotSending(true);
+                          const res = await laravelRequest("POST", "/auth/forgot-password", { role, email: mail });
+                          setForgotSending(false);
+                          if (!res.ok) return setForgotMsg({ ok: false, text: res.error || "تعذر إرسال الرمز، حاول مرة أخرى." });
+                          setForgotMsg({ ok: true, text: res.body?.message || "أرسلنا الرمز إلى بريدك." });
+                          setForgotCode(""); setForgotPass(""); setForgotPass2("");
+                          return setForgotStep("code");
+                        }
+                        if (!/^\d{6}$/.test(forgotCode)) return setForgotMsg({ ok: false, text: "رمز التحقق يتكون من 6 أرقام." });
+                        if (forgotPass.length < 8) return setForgotMsg({ ok: false, text: "كلمة المرور الجديدة يجب ألا تقل عن 8 خانات." });
+                        if (forgotPass !== forgotPass2) return setForgotMsg({ ok: false, text: "كلمتا المرور غير متطابقتين." });
+                        setForgotSending(true);
+                        const res = await laravelRequest("POST", "/auth/reset-password", {
+                          role, email: mail, code: forgotCode, password: forgotPass, password_confirmation: forgotPass2,
+                        });
+                        setForgotSending(false);
+                        if (!res.ok) return setForgotMsg({ ok: false, text: res.error || "تعذر تغيير كلمة المرور." });
+                        setForgotOpen(false);
+                        setEmail(mail);
+                        setPassword("");
+                        setErrorMsg("");
+                        alert("✅ تم تغيير كلمة المرور بنجاح، يمكنك الآن تسجيل الدخول بها.");
+                      }}
+                      className="flex-1 h-11 rounded-xl bg-[#0B4F57] text-white text-sm font-bold disabled:opacity-50 border-none cursor-pointer"
+                    >
+                      {forgotSending ? "جارٍ الإرسال..." : forgotStep === "email" ? "إرسال الرمز إلى بريدي" : "تغيير كلمة المرور"}
+                    </button>
+                    {forgotStep === "code" && (
+                      <button type="button" onClick={() => { setForgotStep("email"); setForgotMsg(null); }}
+                        className="h-11 px-3 rounded-xl bg-white border border-[#E2E8F0] text-xs font-bold text-[#0B4F57] cursor-pointer">
+                        إعادة إرسال الرمز
+                      </button>
+                    )}
+                    <button type="button" onClick={() => setForgotOpen(false)}
+                      className="h-11 px-4 rounded-xl bg-white border border-[#E2E8F0] text-sm font-bold text-[#4A5568] cursor-pointer">
+                      إلغاء
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Right-aligned Signup Footer */}
           <div className="mt-6 text-right text-xs sm:text-sm text-[#718096] font-medium">

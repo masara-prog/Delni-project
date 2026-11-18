@@ -40,7 +40,7 @@ class PrivateTripController extends Controller
             ->leftJoin('tour_guides as g', 'pt.guide_license_number', '=', 'g.license_number')
             ->leftJoin('vehicles as v', 'pt.vehicle_plate', '=', 'v.plate_number')
             ->leftJoin('transportation_companies as tc', 'v.contract_number', '=', 'tc.contract_number')
-            ->select('pt.private_trip_id', 'pt.status_order', 'pt.duration_days', 'pt.number_of_companions', 'pt.guide_license_number',
+            ->select('pt.private_trip_id', 'pt.status_order', 'pt.guide_reply_expired', 'pt.duration_days', 'pt.number_of_companions', 'pt.guide_license_number',
                 'pt.customer_requirements', 'pt.tourist_id', 'pt.quoted_price', 'pt.vehicle_plate', 'pt.vehicle_plate as assigned_vehicle',
                 DB::raw('COALESCE(pt.additional_expenses, 0) as additional_expenses'),
                 DB::raw('CONVERT(VARCHAR(10), pt.preferred_start_date, 120) as preferred_start_date'),
@@ -359,6 +359,10 @@ class PrivateTripController extends Controller
             }
             if ($status === self::GUIDE_PENDING) {
                 $guide = $values['guide_license_number'];
+                // A new request (or one moved to another guide) gives the guide 24 hours to answer (GuideReplyTimeout)
+                if ($trip->status_order !== self::GUIDE_PENDING || $guide !== $trip->guide_license_number) {
+                    DB::table('private_trips')->where('private_trip_id', $tripId)->update(\App\Support\GuideReplyTimeout::stamp());
+                }
                 $this->notify("guide-priv-request-{$tripId}-{$guide}-" . now()->timestamp, 'guide', $guide, 'trip',
                     "🧭 رحلة خاصة بانتظار موافقتك (#{$tripId})",
                     "أسندت إليك الإدارة رحلة خاصة (#{$tripId}) تبدأ بتاريخ ({$trip->preferred_start_date}) لمدة ({$trip->duration_days}) أيام. يرجى مراجعة البرنامج وقبول الرحلة أو الاعتذار عنها من لوحتك.",
@@ -387,6 +391,8 @@ class PrivateTripController extends Controller
         if ($data instanceof JsonResponse) {
             return $data;
         }
+        // A request left unanswered for 24 hours is taken back before the answer is read
+        \App\Support\GuideReplyTimeout::run();
         $trip = DB::table('private_trips as pt')->leftJoin('tour_guides as g', 'pt.guide_license_number', '=', 'g.license_number')
             ->where('pt.private_trip_id', $tripId)->first(['pt.*', 'g.full_name as guide_name', 'g.verification_status']);
         if (!$trip) {
@@ -397,6 +403,9 @@ class PrivateTripController extends Controller
         }
         if ($trip->verification_status !== 'موثق') {
             return $this->error('حسابك غير معتمد من إدارة المنصة', 403);
+        }
+        if (!empty($trip->guide_reply_expired) && $trip->status_order === self::GUIDE_DECLINED) {
+            return $this->error('انتهت مهلة الرد على هذه الرحلة (24 ساعة)، وأُعيدت إلى الإدارة لتسندها إلى مرشد آخر', 409);
         }
         if ($trip->status_order !== self::GUIDE_PENDING) {
             return $this->error('تم الرد على هذه الرحلة مسبقاً', 409);

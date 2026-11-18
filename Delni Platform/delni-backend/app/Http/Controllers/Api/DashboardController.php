@@ -43,13 +43,15 @@ class DashboardController extends Controller
 
         // Full trip details for the guide's read-only view (itinerary, places, lodging, food, vehicle, passengers)
         $lic = $guide->license_number;
+        // Requests left unanswered for 24 hours go back to the admin and leave the guide's lists
+        \App\Support\GuideReplyTimeout::run();
         $dailyTrips = DailyTrip::with(['bookings.tourist', 'days', 'stations', 'places', 'restaurant', 'vehicle.driver', 'offers'])
-            ->where('guide_license_number', $lic)->get();
+            ->where('guide_license_number', $lic)->where('guide_reply_expired', false)->get();
         $weeklyTrips = WeeklyTrip::with(['bookings.tourist', 'stations', 'places', 'hotels', 'restaurants', 'vehicle.driver', 'offers'])
-            ->where('guide_license_number', $lic)->get();
+            ->where('guide_license_number', $lic)->where('guide_reply_expired', false)->get();
         // Private trips reach the guide once the admin sends the schedule (a tourist's preferred guide alone is not an assignment)
         $privateTrips = PrivateTrip::with(['tourist', 'stations', 'places', 'hotels', 'vehicle.driver'])
-            ->where('guide_license_number', $lic)
+            ->where('guide_license_number', $lic)->where('guide_reply_expired', false)
             ->whereIn('status_order', [PrivateTripController::GUIDE_PENDING, PrivateTripController::GUIDE_DECLINED,
                 PrivateTripController::QUOTED, PrivateTripController::CONFIRMED])
             ->orderByDesc('created_at')->get();
@@ -169,8 +171,8 @@ class DashboardController extends Controller
         $password = trim((string) ($validated['password'] ?? ''));
         unset($validated['password']);
         if ($password !== '' && $password !== '••••••••') {
-            if (mb_strlen($password) < 6) {
-                return response()->json(['status' => 'error', 'message' => 'كلمة المرور يجب أن لا تقل عن 6 أحرف'], 422);
+            if (mb_strlen($password) < AuthController::MIN_PASSWORD) {
+                return response()->json(['status' => 'error', 'message' => 'كلمة المرور يجب ألا تقل عن 8 خانات'], 422);
             }
             $validated['password'] = Hash::make($password);
         }

@@ -230,8 +230,8 @@ function DriverDashboard() {
       alert("يرجى كتابة كلمة المرور الحالية لتأكيد أنك صاحب الحساب.");
       return;
     }
-    if (driverNewPassword.length < 6) {
-      alert("كلمة المرور يجب أن تتكون من 6 خانات على الأقل");
+    if (driverNewPassword.length < 8) {
+      alert("كلمة المرور يجب أن تتكون من 8 خانات على الأقل");
       return;
     }
     if (driverNewPassword !== driverConfirmPassword) {
@@ -602,7 +602,7 @@ function DriverDashboard() {
                     type="password"
                     value={driverNewPassword}
                     onChange={(e) => setDriverNewPassword(e.target.value)}
-                    placeholder="6 خانات على الأقل"
+                    placeholder="8 خانات على الأقل"
                     className="w-full h-10 px-3 rounded-xl border border-border bg-white text-xs font-semibold text-right outline-none focus:border-primary"
                   />
                 </div>

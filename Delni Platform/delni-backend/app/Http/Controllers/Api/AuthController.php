@@ -24,7 +24,7 @@ class AuthController extends Controller
     // Tourist field rules, the same as the platform (auth.signup.tsx) and the mobile app (widgets/common.dart)
     private const PHONE_RULE = '/^09\d{8}$/';
     private const PASSPORT_RULE = '/^[A-Za-z0-9]{6,10}$/';
-    private const MIN_PASSWORD = 8;
+    public const MIN_PASSWORD = 8;
 
     /**
      * Unified Login for all 5 roles: tourist, guide, transport, driver, admin
@@ -432,5 +432,105 @@ class AuthController extends Controller
 
         return response()->json(['success' => true, 'status' => 'success',
             'message' => 'تم إرسال طلبك من جديد، وهو الآن قيد مراجعة الإدارة. سيتم إشعارك فور اتخاذ القرار.']);
+    }
+
+    // Accounts that can recover a forgotten password: role => [model, id column, notification role, owner's page]
+    private const RECOVERABLE = [
+        'tourist' => [Tourist::class, 'tourist_id', 'tourist', '/dashboard/tourist'],
+        'guide' => [TourGuide::class, 'license_number', 'guide', '/dashboard/guide?tab=profile'],
+        'transport' => [TransportationCompany::class, 'contract_number', 'company', '/dashboard/transport?tab=profile'],
+        'driver' => [Driver::class, 'driver_license_number', 'driver', '/dashboard/driver?tab=profile'],
+    ];
+    private const CODE_MINUTES = 10;
+    private const CODE_ATTEMPTS = 5;
+
+    /**
+     * Forgotten password, step 1: a 6-digit code is emailed to the account (valid 10 minutes, kept hashed).
+     * The answer is the same whether the email is registered or not, so nobody can find out which emails have accounts.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $data = $this->validateArabic($request, [
+            'role' => 'required|string|in:tourist,guide,transport,driver',
+            'email' => 'required|email|max:100',
+        ], ['role' => 'نوع الحساب', 'email' => 'البريد الإلكتروني']);
+        if ($data instanceof \Illuminate\Http\JsonResponse) {
+            return $data;
+        }
+        $email = trim($data['email']);
+        [$model] = self::RECOVERABLE[$data['role']];
+        $account = $model::where('email', $email)->first();
+        if ($account) {
+            $code = (string) random_int(100000, 999999);
+            DB::table('password_reset_codes')->where('role', $data['role'])->where('email', $email)->delete();
+            DB::table('password_reset_codes')->insert([
+                'role' => $data['role'], 'email' => $email, 'code_hash' => Hash::make($code), 'attempts' => 0,
+                'expires_at' => now('Africa/Tripoli')->addMinutes(self::CODE_MINUTES)->format('Y-m-d H:i:s'),
+                'created_at' => now('Africa/Tripoli')->format('Y-m-d H:i:s'),
+            ]);
+            $name = e($account->full_name ?? $account->company_name ?? '');
+            $html = '<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;font-size:16px;color:#0B1F2A;line-height:1.8">'
+                . "<p>مرحباً {$name}،</p><p>طلبتَ استعادة كلمة مرور حسابك في منصة «دلّني». رمز التحقق هو:</p>"
+                . "<p style=\"font-size:32px;font-weight:bold;letter-spacing:8px;color:#00736F\">{$code}</p>"
+                . '<p>الرمز صالح لمدة ' . self::CODE_MINUTES . ' دقائق. إذا لم تطلب ذلك فتجاهل هذه الرسالة، ولن يتغير شيء في حسابك.</p>'
+                . '<p>فريق دلّني</p></div>';
+            try {
+                \Illuminate\Support\Facades\Mail::html($html, fn ($m) => $m->to($email)->subject('رمز استعادة كلمة المرور - دلّني'));
+            } catch (\Throwable $e) {
+                report($e);
+                return $this->error('تعذر إرسال البريد الآن، يرجى المحاولة بعد قليل', 503);
+            }
+        }
+        return response()->json(['success' => true, 'status' => 'success',
+            'message' => 'إذا كان البريد مسجلاً لهذا النوع من الحسابات فسيصلك رمز من 6 أرقام خلال دقائق، وهو صالح لمدة ' . self::CODE_MINUTES . ' دقائق.']);
+    }
+
+    /**
+     * Forgotten password, step 2: the code and a new password (8 characters at least). Five wrong codes end the request.
+     * The account's open sessions end, and the owner is told by a notification.
+     */
+    public function resetPassword(Request $request)
+    {
+        $data = $this->validateArabic($request, [
+            'role' => 'required|string|in:tourist,guide,transport,driver',
+            'email' => 'required|email|max:100',
+            'code' => 'required|digits:6',
+            'password' => 'required|string|min:' . self::MIN_PASSWORD . '|confirmed',
+        ], ['role' => 'نوع الحساب', 'email' => 'البريد الإلكتروني', 'code' => 'رمز التحقق', 'password' => 'كلمة المرور الجديدة']);
+        if ($data instanceof \Illuminate\Http\JsonResponse) {
+            return $data;
+        }
+        $email = trim($data['email']);
+        $row = DB::table('password_reset_codes')->where('role', $data['role'])->where('email', $email)->orderByDesc('id')->first();
+        $invalid = 'رمز التحقق غير صحيح أو انتهت صلاحيته، يمكنك طلب رمز جديد';
+        if (!$row || now('Africa/Tripoli')->format('Y-m-d H:i:s') > substr((string) $row->expires_at, 0, 19)) {
+            return $this->error($invalid, 422);
+        }
+        if ($row->attempts >= self::CODE_ATTEMPTS) {
+            DB::table('password_reset_codes')->where('id', $row->id)->delete();
+            return $this->error('تجاوزت عدد المحاولات المسموح، يرجى طلب رمز جديد', 429);
+        }
+        if (!Hash::check($data['code'], $row->code_hash)) {
+            DB::table('password_reset_codes')->where('id', $row->id)->increment('attempts');
+            $left = self::CODE_ATTEMPTS - $row->attempts - 1;
+            return $left > 0
+                ? $this->error("رمز التحقق غير صحيح، بقيت لك {$left} محاولات", 422)
+                : $this->error('تجاوزت عدد المحاولات المسموح، يرجى طلب رمز جديد', 429);
+        }
+        [$model, $idColumn, $notifyRole, $link] = self::RECOVERABLE[$data['role']];
+        $account = $model::where('email', $email)->first();
+        if (!$account) {
+            return $this->error($invalid, 422);
+        }
+        DB::transaction(function () use ($account, $data, $email, $idColumn, $notifyRole, $link) {
+            $account->forceFill(['password' => Hash::make($data['password'])])->save();
+            $account->tokens()->delete();
+            DB::table('password_reset_codes')->where('role', $data['role'])->where('email', $email)->delete();
+            $this->notify("password-reset-{$notifyRole}-{$account->{$idColumn}}-" . now()->timestamp, $notifyRole, (string) $account->{$idColumn}, 'system',
+                '🔑 تم تغيير كلمة مرور حسابك',
+                'تم تغيير كلمة مرور حسابك برمز التحقق الذي وصل إلى بريدك. إذا لم تكن أنت من غيّرها فتواصل مع إدارة دلّني فوراً.',
+                $link);
+        });
+        return response()->json(['success' => true, 'status' => 'success', 'message' => 'تم تغيير كلمة المرور بنجاح، يمكنك الآن تسجيل الدخول بها']);
     }
 }

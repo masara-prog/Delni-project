@@ -278,8 +278,8 @@ trait ManagesTrips
 
     /**
      * Whether a vehicle can serve a trip: [error, warning]. The error blocks the assignment (vehicle in maintenance or out of
-     * service, company suspended, company contract ending before the trip ends); the warning informs the admin about the
-     * vehicle's driver (none assigned, on leave, driving licence ending before the trip ends).
+     * service, company suspended, company contract ending before the trip ends, no driver for the vehicle, driver's account
+     * suspended); the warning informs the admin about the driver (on leave, driving licence ending before the trip ends).
      */
     private function vehicleFitness(string $plate, ?string $start, ?string $end): array
     {
@@ -304,9 +304,14 @@ trait ManagesTrips
 
         $d = DB::table('drivers')->where('assigned_vehicle_plate', $plate)
             ->first(['full_name', 'operational_status', 'account_status', DB::raw('CONVERT(VARCHAR(10), license_date_valid, 23) as license_date_valid')]);
+        // A trip cannot leave without a driver: a vehicle with no driver, or whose driver's account is suspended, is refused
+        if (!$d) {
+            return ["لا يوجد سائق مخصص للمركبة ({$plate})، ولا يمكن إسنادها لرحلة قبل أن تربط شركة النقل سائقاً بها.", null];
+        }
+        if ($d->account_status === 'موقوف') {
+            return ["حساب سائق المركبة ({$d->full_name}) موقوف من قبل شركته، ولا يمكن إسناد المركبة لرحلة. يرجى اختيار مركبة أخرى.", null];
+        }
         $warning = match (true) {
-            !$d => "تنبيه: لا يوجد سائق مخصص للمركبة ({$plate}) حتى الآن.",
-            $d->account_status === 'موقوف' => "تنبيه: حساب سائق المركبة ({$d->full_name}) موقوف من قبل شركته، ولا يستطيع تنفيذ الرحلة.",
             $d->operational_status === 'إجازة' => "تنبيه: سائق المركبة ({$d->full_name}) في إجازة حالياً.",
             $d->license_date_valid && $d->license_date_valid < $lastDay => "تنبيه: رخصة سائق المركبة ({$d->full_name}) تنتهي بتاريخ {$d->license_date_valid} قبل انتهاء الرحلة.",
             default => null,

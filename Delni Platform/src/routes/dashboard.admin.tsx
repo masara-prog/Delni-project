@@ -218,6 +218,7 @@ type Vehicle = {
 
 type DailyTrip = {
   guide_approval_status?: string | null; // daily_trips.guide_approval_status 
+  guide_reply_expired?: boolean; // the guide did not answer within 24 hours
   id: string; 
   daily_trip_id?: string;
   title: string; 
@@ -250,6 +251,7 @@ type DailyTrip = {
 
 type WeeklyTrip = { 
   guide_approval_status?: string | null; // weekly_trips.guide_approval_status
+  guide_reply_expired?: boolean; // the guide did not answer within 24 hours
   id: string; 
   weekly_trip_id?: string;
   title: string; 
@@ -507,6 +509,7 @@ function mapDailyTripRow(d: any): any {
     guide_license: d.guide_license_number || "",
     guide_license_number: d.guide_license_number || "",
     guide_approval_status: d.guide_approval_status || "",
+    guide_reply_expired: !!d.guide_reply_expired,
     photo: d.photo || "/assets/ai_ruins.jpg",
     activities: d.activities || "",
     is_active: d.is_active !== false,
@@ -565,6 +568,7 @@ function mapWeeklyTripRow(w: any): any {
     guide_license: w.guide_license_number || "",
     guide_license_number: w.guide_license_number || "",
     guide_approval_status: w.guide_approval_status || "",
+    guide_reply_expired: !!w.guide_reply_expired,
     photo: w.photo || "/assets/ai_ghadames.jpg",
     is_active: w.is_active !== false,
     vehicle_plate: w.vehicle_plate || "",
@@ -1165,7 +1169,7 @@ function AdminDashboard() {
           `💰 التسعيرة المعتمدة: ${price} د.ل`,
           ``,
           `• بعد موافقة المرشد يصل العرض للسائح تلقائياً.`,
-          `• إذا اعتذر المرشد يصلك إشعار لتعيين مرشد آخر.`,
+          `• إذا اعتذر المرشد أو لم يرد خلال 24 ساعة يصلك إشعار لتعيين مرشد آخر.`,
           ...(notes.length ? [``, `⚠️ للعلم:`, ...notes.map((n) => `• ${n}`)] : []),
         ].join("\n"),
       );
@@ -2123,7 +2127,7 @@ function AdminDashboard() {
                       <h4 className="font-black text-foreground text-sm">{d.title}</h4>
                       <Badge tone={d.is_active ? "green" : "muted"}>{d.is_active ? "نشطة" : "موقوفة"}</Badge>
                       {d.guide_approval_status === "بانتظار رد المرشد" && <Badge tone="sun">⏳ بانتظار موافقة المرشد (غير منشورة)</Badge>}
-                      {d.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
+                      {d.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">{d.guide_reply_expired ? "⏰ لم يرد المرشد خلال 24 ساعة — عيّن مرشداً آخر" : "⚠️ اعتذر المرشد — عيّن مرشداً آخر"}</Badge>}
                       {d.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
                       <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-black">
                         📅 أيام الانطلاق: {Array.isArray(d.recurring_days) ? d.recurring_days.join(" و ") : (d.recurring_days || "غير محددة")}
@@ -2179,7 +2183,7 @@ function AdminDashboard() {
                       <h4 className="font-black text-foreground text-sm">{w.title}</h4>
                       <Badge tone={w.is_active ? "green" : "muted"}>{w.is_active ? "نشطة" : "موقوفة"}</Badge>
                       {w.guide_approval_status === "بانتظار رد المرشد" && <Badge tone="sun">⏳ بانتظار موافقة المرشد (غير منشورة)</Badge>}
-                      {w.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">⚠️ اعتذر المرشد — عيّن مرشداً آخر</Badge>}
+                      {w.guide_approval_status === "اعتذر المرشد" && <Badge tone="red">{w.guide_reply_expired ? "⏰ لم يرد المرشد خلال 24 ساعة — عيّن مرشداً آخر" : "⚠️ اعتذر المرشد — عيّن مرشداً آخر"}</Badge>}
                       {w.guide_approval_status === "وافق المرشد" && <Badge tone="green">✓ وافق المرشد</Badge>}
                       <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-black">
                         🗓️ تبدأ يوم {w.weekly_day || weekdayOf(w.start_date) || "—"}
@@ -2876,10 +2880,10 @@ function AdminDashboard() {
                         ) : pt.status_order === "اعتذر المرشد" ? (
                           <div className="flex items-center gap-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl">
                             <span>⚠️</span>
-                            <span>اعتذر المرشد عن هذه الرحلة — يرجى تعيين مرشد آخر وإعادة الإرسال.</span>
+                            <span>{(pt as any).guide_reply_expired ? "لم يرد المرشد على هذه الرحلة خلال 24 ساعة — يرجى تعيين مرشد آخر وإعادة الإرسال." : "اعتذر المرشد عن هذه الرحلة — يرجى تعيين مرشد آخر وإعادة الإرسال."}</span>
                           </div>
                         ) : pt.status_order === "بانتظار رد المرشد" ? (
-                          <span className="text-[11px] text-slate-500 font-bold">⏳ أُرسلت الرحلة للمرشد وبانتظار رده، وبعد موافقته تصل للسائح.</span>
+                          <span className="text-[11px] text-slate-500 font-bold">⏳ أُرسلت الرحلة للمرشد وبانتظار رده (مهلة الرد 24 ساعة)، وبعد موافقته تصل للسائح.</span>
                         ) : (
                           <span className="text-[11px] text-slate-400">يمكنك إعداد جدول المحطات واحتساب التسعيرة ثم إرسالها للمرشد للموافقة، وبعد موافقته تصل للسائح</span>
                         )}
@@ -3977,8 +3981,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       return;
     }
     const cleanPhone = phone.replace(/[\s-]/g, "");
-    if (cleanPhone.length < 9) {
-      setErrorMsg("رقم الهاتف غير مكتمل، يرجى إدخال رقم هاتف ليبي صحيح لا يقل عن 9 أرقام.");
+    if (!/^\d{9,10}$/.test(cleanPhone)) {
+      setErrorMsg("رقم هاتف الشركة يجب أن يتكون من 9 أو 10 أرقام فقط.");
       return;
     }
     if (!address.trim()) {
@@ -3994,8 +3998,8 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
       setErrorMsg("يرجى إدخال بريد إلكتروني رسمي وصحيح للشركة (مثال: info@company.ly).");
       return;
     }
-    if (!pass.trim() || pass.trim().length < 6) {
-      setErrorMsg("كلمة المرور مطلوبة ويجب ألا تقل عن 6 خانات لتأمين حساب الشركة.");
+    if (!pass.trim() || pass.trim().length < 8) {
+      setErrorMsg("كلمة المرور مطلوبة ويجب ألا تقل عن 8 خانات لتأمين حساب الشركة.");
       return;
     }
     const totalV = Number(vehiclesCount);
@@ -4138,7 +4142,7 @@ function AddCompanyModal({ companies = [], onClose, onAdd }: { companies?: Compa
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
               <Field label="البريد الإلكتروني للشركة *" type="email" value={email} onChange={setEmail} placeholder="transport@company.ly" required />
-              <Field label="كلمة المرور للدخول *" type="password" value={pass} onChange={setPass} placeholder="6 خانات على الأقل" required />
+              <Field label="كلمة المرور للدخول *" type="password" value={pass} onChange={setPass} placeholder="8 خانات على الأقل" required />
             </div>
           </div>
 
@@ -4239,8 +4243,8 @@ function EditCompanyModal({ company, onClose, onUpdate }: { company: Company; on
       return;
     }
     const cleanPhone = phone.replace(/[\s-]/g, "");
-    if (cleanPhone.length < 9) {
-      setErrorMsg("رقم الهاتف غير مكتمل، يرجى إدخال رقم هاتف ليبي صحيح.");
+    if (!/^\d{9,10}$/.test(cleanPhone)) {
+      setErrorMsg("رقم هاتف الشركة يجب أن يتكون من 9 أو 10 أرقام فقط.");
       return;
     }
     if (!address.trim()) {
