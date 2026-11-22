@@ -840,6 +840,20 @@ function RestaurantsPage() {
     return customRestaurants;
   }, [customRestaurants]);
 
+  // A link from the tourist's wishlist (?open=<id>) opens that restaurant directly, once the list has loaded
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = (new URLSearchParams(window.location.search).get("open") || "").replace(/^"+|"+$/g, "");
+    if (!id || restaurants.length === 0) return;
+    const found = restaurants.find((x: any) => String(x.id) === id);
+    if (found) {
+      setSelectedRest(found as any);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("open");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [restaurants]);
+
   const cities = useMemo(
     () => [
       { key: "all", label: isAr ? "جميع المدن والمناطق" : "All Cities" },

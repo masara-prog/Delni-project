@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../api_service.dart';
 
 /// The app language (Arabic RTL by default, English LTR), switchable at runtime.
@@ -15,6 +16,16 @@ class AppLocale extends ChangeNotifier {
     _locale = locale;
     ApiService.english = !isArabic;
     notifyListeners();
+    // Remembered on the phone, so the app opens in the language the user chose
+    SharedPreferences.getInstance().then((p) => p.setString('delni_language', locale.languageCode)).catchError((_) => false);
+  }
+
+  /// At start-up: the language saved on the phone, if any.
+  Future<void> restore() async {
+    try {
+      final code = (await SharedPreferences.getInstance()).getString('delni_language');
+      if (code == 'en') set(english);
+    } catch (_) {}
   }
 
   void toggle() => set(isArabic ? english : arabic);

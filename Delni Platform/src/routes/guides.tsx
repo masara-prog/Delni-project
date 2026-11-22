@@ -11,7 +11,6 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
-  Heart,
   Calendar,
   User,
   ArrowUpRight,
@@ -146,18 +145,8 @@ function GuidesPage() {
 
   // Selected Guide Detail Modal State
   const [selectedGuide, setSelectedGuide] = useState<TourGuide | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"carousel" | "grid">("carousel");
 
-  const toggleFavorite = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   // Private Custom Trip Modal with Pre-selected Guide
   const [privateTripModalOpen, setPrivateTripModalOpen] = useState(false);
@@ -472,7 +461,6 @@ function GuidesPage() {
           >
             {filteredGuides.map((guide) => {
               const daysText = formatWorkingDays(guide.workingDays);
-              const isFav = favorites.has(guide.id);
 
               return (
                 <div
@@ -496,16 +484,6 @@ function GuidesPage() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-
-                    {/* Floating Heart Favorite Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(guide.id, e)}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md flex items-center justify-center text-stone-600 hover:text-red-500 transition-colors cursor-pointer border border-white/50 z-10"
-                      title="إضافة للمفضلة"
-                    >
-                      <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
-                    </button>
 
                     {/* Rating & Verified Badge */}
                     <div className="absolute top-3 left-3 flex items-center gap-1 z-10">

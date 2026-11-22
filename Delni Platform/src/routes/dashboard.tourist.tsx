@@ -8,8 +8,9 @@ import { Ticket as TicketIcon, Calendar, Users, MapPin, Compass, ShieldCheck, Pr
 import type { PrivateTrip } from "@/lib/dbSchema";
 import { VehicleDetailsModal, type VehicleDetailsData } from "@/components/VehicleDetailsModal";
 import { getStoredSession, apiGetTouristBookings, apiUpdateTouristProfile, apiGetPrivateTrips, apiDecidePrivateTrip, apiCancelBooking } from "@/lib/api";
-import { submitTripReview } from "@/lib/reviews";
+import { submitTripReview, fetchMyTripReviews } from "@/lib/reviews";
 import { useFavorites } from "@/lib/favorites";
+import { FavoritesWishlist } from "@/components/FavoritesWishlist";
 import { Star, Heart } from "lucide-react";
 
 function formatTripDate(val: any): string {
@@ -114,11 +115,15 @@ function TouristDashboard() {
   // Review completed trips modal state
   const [reviewModalTicket, setReviewModalTicket] = useState<Ticket | null>(null);
   const [reviewStars, setReviewStars] = useState(5);
+  const [hoverStar, setHoverStar] = useState(0);
+  const [reviewTags, setReviewTags] = useState<string[]>([]);
   const [reviewComment, setReviewComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState("");
   const [reviewErrorMsg, setReviewErrorMsg] = useState("");
-  const [reviewedTripIds, setReviewedTripIds] = useState<string[]>([]);
+  // The stars this tourist already gave, by trip id (their history shows them and lets them change them)
+  const [myReviews, setMyReviews] = useState<Record<string, { stars: number; comment: string }>>({});
+  const reviewedTripIds = Object.keys(myReviews);
 
   const isTripCompleted = (dateStr: string) => {
     try {
@@ -141,29 +146,50 @@ function TouristDashboard() {
     setReviewErrorMsg("");
 
     const isWeekly = reviewModalTicket.type === "رحلة أسبوعية";
+    // The quick words go first, then the tourist's own text
+    const fullComment = [reviewTags.join(" • "), reviewComment.trim()].filter(Boolean).join("\n");
     const result = await submitTripReview({
       tourist_id: touristInfo.tourist_id,
       trip_id: reviewModalTicket.tripId,
       type: isWeekly ? "weekly" : "daily",
       stars_rating: reviewStars,
-      comment_text: reviewComment.trim() || undefined,
+      comment_text: fullComment || undefined,
       guide_license_number: reviewModalTicket.guideLicense || undefined,
     });
 
     setIsSubmittingReview(false);
     if (result.success) {
       setReviewSuccessMsg(result.message);
-      setReviewedTripIds((prev) => [...prev, reviewModalTicket.tripId]);
+      setMyReviews((prev) => ({ ...prev, [reviewModalTicket.tripId]: { stars: reviewStars, comment: fullComment } }));
       setTimeout(() => {
         setReviewModalTicket(null);
         setReviewComment("");
         setReviewStars(5);
+        setReviewTags([]);
         setReviewSuccessMsg("");
-      }, 1600);
+      }, 1800);
     } else {
       setReviewErrorMsg(result.message);
     }
   };
+
+  // Opens the rating window, filled with the tourist's earlier review when there is one
+  const openReview = (b: Ticket, stars?: number) => {
+    const mine = myReviews[b.tripId];
+    setReviewModalTicket(b);
+    setReviewStars(stars ?? mine?.stars ?? 5);
+    setReviewComment(mine?.comment || "");
+    setReviewTags([]);
+    setHoverStar(0);
+    setReviewSuccessMsg("");
+    setReviewErrorMsg("");
+  };
+
+  // A booking goes to the history once its trip is over (or it was cancelled); the rest are upcoming
+  const tripEnded = (b: Ticket) => isTripCompleted(reviewOpensAt(b));
+  const upcomingBookings = bookings.filter((b) => b.status !== "ملغية" && !tripEnded(b));
+  const historyBookings = bookings.filter((b) => b.status === "ملغية" || tripEnded(b));
+  const awaitingReview = historyBookings.filter((b) => b.status !== "ملغية" && !myReviews[b.tripId]).length;
 
   // Sync profile & live bookings from DelniDB
   useEffect(() => {
@@ -235,6 +261,9 @@ function TouristDashboard() {
             (Array.isArray(res.daily) ? res.daily : []).forEach((b: any) => loaded.push(toTicket(b, "daily")));
             (Array.isArray(res.weekly) ? res.weekly : []).forEach((b: any) => loaded.push(toTicket(b, "weekly")));
             setBookings(loaded);
+            fetchMyTripReviews(tid).then((list) =>
+              setMyReviews(Object.fromEntries(list.map((r) => [r.trip_id, { stars: Number(r.stars_rating) || 0, comment: r.comment_text || "" }]))),
+            );
             if (tid) apiGetPrivateTrips(tid).then(setPrivateTrips);
           }
         });
@@ -257,7 +286,8 @@ function TouristDashboard() {
 
   const nav: NavItem[] = [
     { id: "overview", label: isAr ? "نظرة عامة" : "Overview", icon: "🏠" },
-    { id: "bookings", label: isAr ? "حجوزاتي والتذاكر" : "My Bookings & Tickets", icon: "🎟️", badge: bookings.length },
+    { id: "bookings", label: isAr ? "حجوزاتي والتذاكر" : "My Bookings & Tickets", icon: "🎟️", badge: upcomingBookings.length },
+    { id: "history", label: isAr ? "سجل رحلاتي السابقة" : "My Trip History", icon: "🕘", badge: awaitingReview || historyBookings.length },
     { id: "favorites", label: isAr ? "عناصري المفضلة" : "My Wishlist", icon: "❤️", badge: favorites.size },
     { id: "private_trips", label: isAr ? "رحلاتي الخاصة VIP" : "Custom Private Trips", icon: "👑", badge: privateTrips.length },
     { id: "company_payment", label: isAr ? "تعليمات سداد الحجز بمقر الشركة" : "Payment Instructions", icon: "🏢" },
@@ -406,16 +436,10 @@ function TouristDashboard() {
                         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                           <div className="font-bold text-[#0B4F57] text-xs">التكلفة الإجمالية: {b.price}</div>
                           <div className="flex items-center gap-2">
-                            {b.attended && isTripCompleted(reviewOpensAt(b)) ? (
+                            {b.status !== "ملغية" && isTripCompleted(reviewOpensAt(b)) ? (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setReviewModalTicket(b);
-                                  setReviewComment("");
-                                  setReviewStars(5);
-                                  setReviewSuccessMsg("");
-                                  setReviewErrorMsg("");
-                                }}
+                                onClick={() => openReview(b)}
                                 className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition flex items-center gap-1 cursor-pointer shadow-xs"
                               >
                                 <span>⭐</span> {reviewedTripIds.includes(b.tripId) ? "تعديل تقييمك للرحلة" : "تقييم الرحلة الآن"}
@@ -456,12 +480,12 @@ function TouristDashboard() {
             </Link>
           }
         >
-          {bookings.length === 0 ? (
+          {upcomingBookings.length === 0 ? (
             <div className="text-center py-10 px-4 rounded-xl border border-dashed border-border bg-[#FAF7F2]/50">
               <div className="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 text-amber-600 grid place-items-center text-2xl mb-2">
                 🎟️
               </div>
-              <h3 className="text-sm font-bold text-foreground">لا توجد لديك تذاكر أو حجوزات مسجلة حالياً</h3>
+              <h3 className="text-sm font-bold text-foreground">{historyBookings.length ? "لا توجد لديك رحلات قادمة حالياً" : "لا توجد لديك تذاكر أو حجوزات مسجلة حالياً"}</h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-4 leading-relaxed">
                 استكشف أجمل رحلات ليبيا اليومية والأسبوعية، واحجز مقعدك مباشرة واستلم تذكرتك الإلكترونية.
               </p>
@@ -471,10 +495,19 @@ function TouristDashboard() {
               >
                 <span>🧭</span> استكشف الرحلات المتاحة للحجز
               </Link>
+              {historyBookings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActive("history")}
+                  className="mr-2 inline-flex items-center gap-2 px-5 h-9 rounded-xl border border-[#0B4F57]/30 text-[#0B4F57] hover:bg-[#0B4F57]/5 font-bold text-xs transition cursor-pointer"
+                >
+                  <span>🕘</span> سجل رحلاتك السابقة ({historyBookings.length})
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
-              {bookings.map((b) => (
+              {upcomingBookings.map((b) => (
                 <div
                   key={b.code}
                   className="flex flex-col sm:flex-row gap-3.5 p-3.5 rounded-xl border border-border bg-white hover:border-[#0B4F57]/40 transition shadow-2xs text-right"
@@ -506,16 +539,10 @@ function TouristDashboard() {
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
                       <div className="font-bold text-[#0B4F57] text-xs">التكلفة: {b.price}</div>
                       <div className="flex items-center gap-2">
-                        {b.attended && isTripCompleted(reviewOpensAt(b)) ? (
+                        {b.status !== "ملغية" && isTripCompleted(reviewOpensAt(b)) ? (
                           <button
                             type="button"
-                            onClick={() => {
-                              setReviewModalTicket(b);
-                              setReviewComment("");
-                              setReviewStars(5);
-                              setReviewSuccessMsg("");
-                              setReviewErrorMsg("");
-                            }}
+                            onClick={() => openReview(b)}
                             className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition flex items-center gap-1 cursor-pointer shadow-xs"
                           >
                             <span>⭐</span> {reviewedTripIds.includes(b.tripId) ? "تعديل تقييمك للرحلة" : "تقييم الرحلة الآن"}
@@ -557,6 +584,133 @@ function TouristDashboard() {
                 </div>
               ))}
             </div>
+          )}
+        </SectionCard>
+      )}
+
+      {/* Trip History: past and cancelled bookings, rated right here */}
+      {active === "history" && (
+        <SectionCard
+          title="سجل رحلاتي السابقة"
+          action={<span className="text-[11px] font-bold text-muted-foreground">{historyBookings.length} رحلة في السجل</span>}
+        >
+          {historyBookings.length === 0 ? (
+            <div className="text-center py-10 px-4 rounded-xl border border-dashed border-border bg-[#FAF7F2]/50">
+              <div className="w-12 h-12 mx-auto rounded-xl bg-[#0B4F57]/10 grid place-items-center text-2xl mb-2">🕘</div>
+              <h3 className="text-sm font-bold text-foreground">سجلّك فارغ حتى الآن</h3>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 leading-relaxed">
+                عند انتهاء أي رحلة حجزتها ستنتقل إلى هنا تلقائياً، وتستطيع تقييمها ومشاركة تجربتك.
+              </p>
+            </div>
+          ) : (
+            <>
+              {awaitingReview > 0 && (
+                <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-l from-amber-50 to-orange-50 border border-amber-200 flex items-center gap-3">
+                  <span className="text-2xl animate-bounce">⭐</span>
+                  <div className="text-xs">
+                    <div className="font-black text-amber-900">
+                      لديك {awaitingReview} {awaitingReview === 1 ? "رحلة تنتظر" : "رحلات تنتظر"} تقييمك
+                    </div>
+                    <div className="text-amber-800/80 font-medium mt-0.5">اضغط على النجوم مباشرة لتقييم الرحلة، فرأيك يساعد السياح الآخرين.</div>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {historyBookings.map((b) => {
+                  const cancelled = b.status === "ملغية";
+                  const mine = myReviews[b.tripId];
+                  const canRate = !cancelled && tripEnded(b);
+                  return (
+                    <div
+                      key={b.code}
+                      className={`group rounded-2xl border bg-white overflow-hidden shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ${cancelled ? "border-red-100" : "border-border"}`}
+                    >
+                      <div className="relative h-28 overflow-hidden bg-[#0B1727]">
+                        {b.tripImage && (
+                          <img
+                            src={b.tripImage}
+                            alt={b.tripName}
+                            className={`w-full h-full object-cover transition duration-700 group-hover:scale-105 ${cancelled ? "grayscale" : ""}`}
+                            onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1727]/90 via-[#0B1727]/40 to-transparent" />
+                        <div className="absolute top-2.5 right-2.5 flex gap-1.5">
+                          <span className="text-[10.5px] font-black px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur">{b.type}</span>
+                          <span
+                            className={`text-[10.5px] font-black px-2 py-0.5 rounded-full ${cancelled ? "bg-red-500 text-white" : "bg-emerald-400 text-[#0B1727]"}`}
+                          >
+                            {cancelled ? b.statusLabel || "ملغاة" : b.attended ? "✓ شاركت فيها" : "✓ رحلة منتهية"}
+                          </span>
+                        </div>
+                        <div className="absolute bottom-2.5 right-3 left-3 text-white">
+                          <div className="font-black text-sm truncate">{b.tripName}</div>
+                          <div className="text-[11px] text-white/80 font-medium">
+                            📅 {b.date} · 🎫 <span className="font-mono">{b.code}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 space-y-3">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground font-medium">
+                          <span>👥 {b.seats} مقاعد</span>
+                          <span>🚘 {b.guideName}</span>
+                          <span>💰 {b.price}</span>
+                        </div>
+
+                        {canRate ? (
+                          <div className={`rounded-xl p-3 border ${mine ? "bg-amber-50/60 border-amber-200" : "bg-[#FAF7F2] border-dashed border-amber-300"}`}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-black text-amber-900">{mine ? "تقييمك لهذه الرحلة" : "قيّم هذه الرحلة"}</span>
+                              <div className="flex items-center" dir="ltr">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    title={`${star} / 5`}
+                                    onClick={() => openReview(b, star)}
+                                    className="p-0.5 cursor-pointer transition-transform hover:scale-125 active:scale-95"
+                                  >
+                                    <Star
+                                      className={`w-5 h-5 ${mine && star <= mine.stars ? "fill-amber-400 text-amber-400" : "text-stone-300 hover:text-amber-400"}`}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            {mine?.comment && <p className="text-[11px] text-stone-600 mt-1.5 line-clamp-2">«{mine.comment}»</p>}
+                            {mine && (
+                              <button
+                                type="button"
+                                onClick={() => openReview(b)}
+                                className="mt-1.5 text-[11px] font-black text-[#0B4F57] hover:underline cursor-pointer"
+                              >
+                                ✏️ تعديل تقييمك
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl p-2.5 bg-slate-50 border border-slate-200 text-[11px] text-slate-500 font-bold">
+                            {cancelled
+                              ? "🚫 أُلغي هذا الحجز، لذلك لا يمكن تقييم الرحلة."
+                              : "⏳ التقييم يُتاح بعد انتهاء الرحلة."}
+                          </div>
+                        )}
+
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => setTicketModal(b)}
+                            className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-[#0B4F57]/25 text-[#0B4F57] hover:bg-[#0B4F57] hover:text-white transition cursor-pointer"
+                          >
+                            📱 عرض التذكرة
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </SectionCard>
       )}
@@ -862,107 +1016,14 @@ function TouristDashboard() {
       {/* Favorites Wishlist Tab */}
       {active === "favorites" && (
         <SectionCard
-          title="عناصري وقوائمي المفضلة ❤️"
+          title="مفضلتي ❤️"
           action={
             <span className="text-xs font-bold text-muted-foreground">
               {favorites.size} عناصر محفوظة بحسابك
             </span>
           }
         >
-          {favorites.size === 0 ? (
-            <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border bg-[#FAF7F2]/50">
-              <div className="w-14 h-14 mx-auto rounded-full bg-rose-50 text-rose-500 grid place-items-center text-3xl mb-3 shadow-2xs">
-                ❤️
-              </div>
-              <h3 className="text-sm font-bold text-foreground">قائمتك المفضلة فارغة حالياً</h3>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-5 leading-relaxed">
-                يمكنك الضغط على أيقونة القلب في أي فندق أو مطعم أو مقهى أو مركبة نقل أو رحلة لحفظها في هذه القائمة والرجوع إليها في أي وقت.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <Link
-                  to="/trips"
-                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-[#0B4F57] hover:bg-[#13445C] text-white font-bold text-xs transition"
-                >
-                  🧭 استكشف الرحلات
-                </Link>
-                <Link
-                  to="/hotels"
-                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-bold text-xs transition"
-                >
-                  🏨 الفنادق
-                </Link>
-                <Link
-                  to="/restaurants"
-                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-bold text-xs transition"
-                >
-                  🍽️ المطاعم والمقاهي
-                </Link>
-                <Link
-                  to="/transport"
-                  className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-bold text-xs transition"
-                >
-                  🚍 أسطول النقل
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-right">
-              {Array.from(favorites).map((compositeKey) => {
-                const [itemType, ...idParts] = compositeKey.split(":");
-                const itemId = idParts.join(":");
-                const typeLabels: Record<string, { label: string; icon: string; link: string; color: string }> = {
-                  trip: { label: "رحلة سياحية", icon: "🧭", link: "/trips", color: "bg-teal-50 text-teal-800 border-teal-200" },
-                  hotel: { label: "فندق وإقامة", icon: "🏨", link: "/hotels", color: "bg-amber-50 text-amber-800 border-amber-200" },
-                  restaurant: { label: "مطعم ومقهى", icon: "🍽️", link: "/restaurants", color: "bg-rose-50 text-rose-800 border-rose-200" },
-                  vehicle: { label: "مركبة نقل", icon: "🚍", link: "/transport", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-                };
-                const tInfo = typeLabels[itemType] || { label: "عنصر", icon: "📌", link: "/trips", color: "bg-stone-50 text-stone-800 border-stone-200" };
-
-                return (
-                  <div
-                    key={compositeKey}
-                    className="p-3.5 rounded-xl border border-border bg-white hover:border-[#0B4F57]/30 transition shadow-2xs flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${tInfo.color}`}>
-                          <span>{tInfo.icon}</span> {tInfo.label}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => toggleFav(itemType as any, itemId)}
-                          title="إزالة من المفضلة"
-                          className="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition cursor-pointer"
-                        >
-                          <Heart className="w-4 h-4 fill-rose-600" />
-                        </button>
-                      </div>
-
-                      <h4 className="font-bold text-sm text-foreground mb-1 line-clamp-1">
-                        {`${tInfo.label} (${itemId})`}
-                      </h4>
-                      <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
-                        عنصر محفوظ في قائمة مفضلتك الشخصية
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between">
-                      <span className="text-[11px] text-stone-400 font-mono">
-                        {itemId}
-                      </span>
-                      <Link
-                        to={tInfo.link}
-                        className="text-xs font-bold text-[#0B4F57] hover:underline flex items-center gap-1"
-                      >
-                        <span>عرض في الدليل</span>
-                        <span className="text-[11px]">←</span>
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <FavoritesWishlist />
         </SectionCard>
       )}
 
@@ -1159,134 +1220,163 @@ function TouristDashboard() {
         </Modal>
       )}
 
-      {/* Trip Rating & Review Modal */}
-      {reviewModalTicket && (
-        <Modal open={!!reviewModalTicket} onClose={() => setReviewModalTicket(null)} size="md">
-          <div className="p-5 text-right bg-white rounded-2xl space-y-4" dir="rtl">
-            <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">⭐</span>
-                  <h3 className="font-bold text-base text-foreground">
-                    تقييم {reviewModalTicket.type}: {reviewModalTicket.tripName}
-                  </h3>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  شاركنا تجربتك وتقييمك الصادق لمساعدة باقي السياح وتحسين جودة الخدمة.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setReviewModalTicket(null)}
-                className="w-7 h-7 rounded-lg hover:bg-stone-100 text-stone-500 flex items-center justify-center text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Trip summary metadata */}
-            <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 space-y-1">
-              <div>📅 <b>تاريخ الرحلة:</b> {reviewModalTicket.date}{reviewModalTicket.time ? ` (${reviewModalTicket.time})` : ""}</div>
-              <div>🚘 <b>المرشد السياحي:</b> {reviewModalTicket.guideName}{reviewModalTicket.guideLicense ? ` (${reviewModalTicket.guideLicense})` : ""}</div>
-              <div>🎫 <b>رقم التذكرة:</b> <span className="font-mono font-bold text-[#0B4F57]">{reviewModalTicket.code}</span></div>
-            </div>
-
-            {reviewSuccessMsg && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
-                <span>✅</span>
-                <span>{reviewSuccessMsg}</span>
-              </div>
-            )}
-
-            {reviewErrorMsg && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-bold flex items-center gap-2">
-                <span>⚠️</span>
-                <span>{reviewErrorMsg}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleReviewSubmit} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-foreground block mb-2">
-                  اختر تقييمك بالنجوم (1 إلى 5):
-                </label>
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewStars(star)}
-                      className="p-1.5 rounded-lg hover:bg-amber-50 transition cursor-pointer"
-                    >
-                      <Star
-                        className={`w-7 h-7 transition ${
-                          star <= reviewStars
-                            ? "fill-amber-400 text-amber-400 filter drop-shadow-xs"
-                            : "text-stone-300"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="text-xs font-bold text-amber-600 mr-2">
-                    {reviewStars === 5 && "ممتاز جداً 🌟"}
-                    {reviewStars === 4 && "جيد جداً 👍"}
-                    {reviewStars === 3 && "متوسط / مقبول 👌"}
-                    {reviewStars === 2 && "يحتاج لتحسين ⚠️"}
-                    {reviewStars === 1 && "تجربة غير مرضية 👎"}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-foreground block mb-1">
-                  تعليقك أو ملاحظاتك على الرحلة (اختياري):
-                </label>
-                <textarea
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="كيف كان التنظيم، التزام المرشد، خط السير، النقل والأمان؟ شاركنا رأيك..."
-                  rows={3}
-                  maxLength={500}
-                  className="w-full p-2.5 rounded-xl border border-border text-xs focus:ring-2 focus:ring-[#0B4F57]/20 focus:border-[#0B4F57] text-right"
-                />
-                <div className="flex justify-between text-[11px] text-muted-foreground mt-0.5">
-                  <span>التعليق سيظهر في صفحة تفاصيل الرحلة لجميع السياح مع شارة التحقق.</span>
-                  <span>{reviewComment.length}/500</span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-border">
+      {/* Trip Rating & Review Modal: photo header, stars that light up on hover, quick words and a thank-you state */}
+      {reviewModalTicket && (() => {
+        const shownStars = hoverStar || reviewStars;
+        const moods = [
+          { face: "😞", label: "تجربة غير مرضية", ink: "text-rose-600", bg: "from-rose-50 to-white" },
+          { face: "😕", label: "تحتاج لتحسين", ink: "text-orange-600", bg: "from-orange-50 to-white" },
+          { face: "😐", label: "مقبولة", ink: "text-amber-600", bg: "from-amber-50 to-white" },
+          { face: "😊", label: "جيدة جداً", ink: "text-emerald-600", bg: "from-emerald-50 to-white" },
+          { face: "🤩", label: "ممتازة جداً", ink: "text-teal-700", bg: "from-teal-50 to-white" },
+        ];
+        const mood = moods[shownStars - 1];
+        const quickTags = reviewStars >= 4
+          ? ["تنظيم ممتاز", "مرشد رائع", "نقل مريح", "معالم مذهلة", "يستحق السعر", "أنصح بها"]
+          : ["تأخر في المواعيد", "النقل يحتاج تحسين", "البرنامج مزدحم", "السعر مرتفع", "ضعف التواصل"];
+        return (
+          <Modal open={!!reviewModalTicket} onClose={() => setReviewModalTicket(null)} size="md">
+            <div className="bg-white rounded-3xl overflow-hidden text-right" dir="rtl">
+              {/* Photo header */}
+              <div className="relative h-32 bg-[#0B1727]">
+                {reviewModalTicket.tripImage && (
+                  <img src={reviewModalTicket.tripImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B1727] via-[#0B1727]/50 to-transparent" />
                 <button
                   type="button"
                   onClick={() => setReviewModalTicket(null)}
-                  className="px-4 h-9 rounded-xl border border-stone-200 text-stone-700 hover:bg-stone-50 text-xs font-bold transition cursor-pointer"
+                  aria-label="إغلاق"
+                  className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur text-white grid place-items-center text-sm transition cursor-pointer"
                 >
-                  إلغاء
+                  ✕
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingReview}
-                  className="px-5 h-9 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  {isSubmittingReview ? (
-                    <>
-                      <span className="animate-spin text-sm">⏳</span>
-                      <span>جاري حفظ التقييم...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>⭐</span>
-                      <span>إرسال التقييم واعتماده</span>
-                    </>
-                  )}
-                </button>
+                <div className="absolute bottom-3 right-4 left-14 text-white">
+                  <div className="text-[11px] font-bold text-white/70">
+                    {reviewModalTicket.type} · {reviewModalTicket.date}
+                  </div>
+                  <h3 className="font-black text-base leading-snug truncate">{reviewModalTicket.tripName}</h3>
+                  <div className="text-[11px] text-white/70 font-medium truncate">🧭 {reviewModalTicket.guideName}</div>
+                </div>
               </div>
-            </form>
-          </div>
-        </Modal>
-      )}
 
-      {selectedVehicleForModal && (
+              {reviewSuccessMsg ? (
+                <div className="px-6 py-10 text-center animate-in fade-in zoom-in-95 duration-300">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-emerald-100 grid place-items-center text-4xl animate-in zoom-in-50 duration-500">✓</div>
+                  <h4 className="mt-4 font-black text-lg text-foreground">شكراً لك! 🎉</h4>
+                  <p className="text-xs text-muted-foreground mt-1">تم حفظ تقييمك، وسيظهر في صفحة الرحلة لباقي السياح.</p>
+                  <div className="flex justify-center gap-0.5 mt-3" dir="ltr">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`w-6 h-6 ${s <= reviewStars ? "fill-amber-400 text-amber-400" : "text-stone-200"}`} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleReviewSubmit} className="p-5 space-y-4">
+                  {/* Stars with a face and words that follow the pointer */}
+                  <div className={`rounded-2xl bg-gradient-to-b ${mood.bg} border border-stone-100 py-4 text-center transition-colors duration-300`}>
+                    <div key={shownStars} className="text-5xl leading-none animate-in zoom-in-75 duration-200">{mood.face}</div>
+                    <div className="flex justify-center items-center gap-1 mt-3" dir="ltr" onMouseLeave={() => setHoverStar(0)}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          aria-label={`${star} من 5`}
+                          onMouseEnter={() => setHoverStar(star)}
+                          onClick={() => {
+                            if ((star >= 4) !== (reviewStars >= 4)) setReviewTags([]);
+                            setReviewStars(star);
+                          }}
+                          className="p-0.5 cursor-pointer transition-transform duration-150 hover:scale-125 active:scale-90"
+                        >
+                          <Star
+                            className={`w-9 h-9 transition-colors duration-150 ${
+                              star <= shownStars ? "fill-amber-400 text-amber-400 drop-shadow-sm" : "text-stone-300"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <div className={`mt-2 text-sm font-black ${mood.ink}`}>{mood.label}</div>
+                  </div>
+
+                  {/* Quick words */}
+                  <div>
+                    <div className="text-xs font-bold text-foreground mb-2">{reviewStars >= 4 ? "ما الذي أعجبك؟" : "ما الذي يحتاج تحسين؟"}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {quickTags.map((t) => {
+                        const on = reviewTags.includes(t);
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setReviewTags((prev) => (on ? prev.filter((x) => x !== t) : [...prev, t]))}
+                            className={`px-3 h-8 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer active:scale-95 ${
+                              on
+                                ? "bg-[#0B4F57] border-[#0B4F57] text-white shadow-sm"
+                                : "bg-white border-stone-200 text-stone-700 hover:border-[#0B4F57]/40 hover:bg-[#0B4F57]/5"
+                            }`}
+                          >
+                            {on ? "✓ " : ""}
+                            {t}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <textarea
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      placeholder="أضف تفاصيل تجربتك (اختياري)..."
+                      rows={3}
+                      maxLength={400}
+                      className="w-full p-3 rounded-2xl border border-stone-200 bg-stone-50/50 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0B4F57]/20 focus:border-[#0B4F57] text-right transition resize-none"
+                    />
+                    <div className="flex justify-between text-[11px] text-muted-foreground mt-0.5">
+                      <span>يظهر تقييمك في صفحة الرحلة لجميع السياح.</span>
+                      <span>{reviewComment.length}/400</span>
+                    </div>
+                  </div>
+
+                  {reviewErrorMsg && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-bold animate-in fade-in slide-in-from-top-1">
+                      ⚠️ {reviewErrorMsg}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingReview}
+                      className="flex-1 h-11 rounded-2xl bg-[#0B4F57] hover:bg-[#093f46] disabled:opacity-60 text-white text-sm font-black transition flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.98]"
+                    >
+                      {isSubmittingReview ? (
+                        <>
+                          <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                          جاري الإرسال...
+                        </>
+                      ) : (
+                        <>إرسال التقييم ⭐</>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewModalTicket(null)}
+                      className="px-4 h-11 rounded-2xl text-stone-500 hover:bg-stone-100 text-sm font-bold transition cursor-pointer"
+                    >
+                      لاحقاً
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </Modal>
+        );
+      })()}
+
+{selectedVehicleForModal && (
         <VehicleDetailsModal
           vehicle={selectedVehicleForModal}
           onClose={() => setSelectedVehicleForModal(null)}

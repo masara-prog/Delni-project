@@ -11,8 +11,10 @@ class DetailHeader extends StatefulWidget {
   final List<String> photos;
   final String title;
   final IconData fallbackIcon;
+  /// Shown at the end of the bar (the favourites heart).
+  final Widget? action;
 
-  const DetailHeader({super.key, required this.photos, required this.title, this.fallbackIcon = Icons.landscape_rounded});
+  const DetailHeader({super.key, required this.photos, required this.title, this.fallbackIcon = Icons.landscape_rounded, this.action});
 
   @override
   State<DetailHeader> createState() => _DetailHeaderState();
@@ -38,6 +40,9 @@ class _DetailHeaderState extends State<DetailHeader> {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
+      actions: [
+        if (widget.action != null) Padding(padding: const EdgeInsetsDirectional.only(end: 10), child: Center(child: widget.action)),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Stack(

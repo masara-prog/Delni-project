@@ -228,6 +228,38 @@ class ApiService {
     return list;
   }
 
+  // --- Trip reviews (the tourist's history) ---
+  /// The stars and comment this tourist gave, by trip id. Null when the server cannot be reached.
+  static Future<Map<String, (int, String)>?> fetchMyTripReviews() async {
+    if (!_isTourist || currentSession!.identifier == null) return null;
+    final data = await _getJson('/reviews?tourist_id=${Uri.encodeComponent(currentSession!.identifier!)}');
+    if (data is! Map) return null;
+    return {
+      for (final r in jMaps(data['data']))
+        if (jStr(r['trip_id']).isNotEmpty) jStr(r['trip_id']): (jInt(r['stars_rating']), jStr(r['comment_text'])),
+    };
+  }
+
+  /// Published reviews of one trip, newest first: (stars, comment, tourist name, date).
+  static Future<List<(int, String, String, String)>?> fetchTripReviews(Trip t) async {
+    final data = await _getJson('/reviews?type=${t.isWeekly ? 'weekly' : 'daily'}&trip_id=${Uri.encodeComponent(t.id)}');
+    if (data is! Map) return null;
+    return [
+      for (final r in jMaps(data['data']))
+        (jInt(r['stars_rating']), jStr(r['comment_text']), jStr(r['tourist_name']), jStr(r['created_at'])),
+    ];
+  }
+
+  /// Rates a finished trip (sending again changes the earlier review). The server accepts it only from a
+  /// tourist whose attendance was recorded, after the trip is over.
+  static Future<ApiResult> submitTripReview(Booking b, {required int stars, String comment = ''}) => _send('POST', '/reviews', {
+        'tourist_id': currentSession?.identifier ?? '',
+        'trip_id': b.tripId,
+        'type': b.kind,
+        'stars_rating': stars,
+        if (comment.trim().isNotEmpty) 'comment_text': comment.trim(),
+      });
+
   static Future<ApiResult> cancelBooking(Booking b) =>
       _send('POST', '/bookings/${b.kind}/${Uri.encodeComponent(b.id)}/cancel', {});
 
@@ -275,6 +307,36 @@ class ApiService {
   static Future<int> fetchUnreadCount() async {
     final data = await _getJson('/notifications/unread-count', auth: true, seconds: 4);
     return data is Map ? jInt(data['count']) : 0;
+  }
+
+  // --- Favourites (tourist only) ---
+
+  /// The tourist's saved items with their name and picture. Null when they could not be loaded.
+  static Future<List<FavoriteItem>?> fetchFavorites() async {
+    if (!_isTourist || currentSession!.identifier == null) return null;
+    final id = Uri.encodeQueryComponent(currentSession!.identifier!);
+    return _getList('/favorites?tourist_id=$id', FavoriteItem.fromJson, auth: true);
+  }
+
+  /// Adds the item, or removes it when already saved. [isFavorite] is the state on the server afterwards.
+  static Future<({bool ok, bool isFavorite, String message})> toggleFavorite(String type, String itemId) async {
+    if (!_isTourist || currentSession!.identifier == null) {
+      return (ok: false, isFavorite: false, message: _m('المفضلة متاحة للسياح المسجلين فقط', 'Favourites are for signed-in tourists'));
+    }
+    try {
+      final res = await http
+          .post(Uri.parse('$baseUrl/favorites'),
+              headers: _authHeaders(),
+              body: json.encode({'tourist_id': currentSession!.identifier, 'item_type': type, 'item_id': itemId}))
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        return (ok: true, isFavorite: data is Map && data['is_favorite'] == true, message: '');
+      }
+      return (ok: false, isFavorite: false, message: await _tr(_errorMessage(res)));
+    } catch (_) {
+      return (ok: false, isFavorite: false, message: _offlineMessage);
+    }
   }
 
   static Future<ApiResult> markNotificationRead(String id) => _send('POST', '/notifications/read', {'id': id});
@@ -378,6 +440,21 @@ class ApiService {
   static Future<ApiResult> updateDriverTripStage(String stage) {
     final id = currentSession?.identifier ?? '';
     return _send('POST', '/transport/drivers/${Uri.encodeComponent(id)}/trip-stage', {'stage': stage});
+  }
+
+  /// true: the token is accepted; false: the server rejected it (401/403); null: the server could not be reached.
+  static Future<bool?> isTokenValid(String token) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/auth/me'), headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      }).timeout(const Duration(seconds: 6));
+      if (res.statusCode == 200) return true;
+      if (res.statusCode == 401 || res.statusCode == 403) return false;
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // --- Sign in / sign up ---

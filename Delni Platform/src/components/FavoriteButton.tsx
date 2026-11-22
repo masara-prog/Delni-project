@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FavoriteType, useFavorites } from "@/lib/favorites";
+import { getStoredSession } from "@/lib/api";
 
 interface FavoriteButtonProps {
   itemType: FavoriteType;
@@ -20,6 +21,15 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
 }) => {
   const { isFavorite, toggle } = useFavorites();
   const [animating, setAnimating] = useState(false);
+  // Favourites belong to tourists: the guide, transport company, driver and admin see no heart at all
+  // (a visitor still sees it, and is asked to sign in as a tourist)
+  const [role, setRole] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => setRole(getStoredSession().role);
+    read();
+    window.addEventListener("storage", read);
+    return () => window.removeEventListener("storage", read);
+  }, []);
   const active = isFavorite(itemType, itemId);
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -58,6 +68,8 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     md: "w-5 h-5",
     lg: "w-6 h-6",
   };
+
+  if (role && role !== "tourist") return null;
 
   return (
     <button

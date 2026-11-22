@@ -68,7 +68,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Libya time: booking closes at 7 AM and a daily trip can be reviewed after 9 PM, both by the Libyan clock
+    'timezone' => env('APP_TIMEZONE', 'Africa/Tripoli'),
 
     /*
     |--------------------------------------------------------------------------

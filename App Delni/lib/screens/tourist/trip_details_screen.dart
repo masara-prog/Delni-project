@@ -5,6 +5,7 @@ import '../../core/format.dart';
 import '../../core/i18n.dart';
 import '../../core/theme.dart';
 import '../../models.dart';
+import '../../widgets/favorite_heart.dart';
 import '../../widgets/cards.dart';
 import '../../widgets/common.dart';
 import '../../widgets/delni_image.dart';
@@ -27,7 +28,7 @@ class TripDetailsScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
-          DetailHeader(photos: t.photos, title: t.title),
+          DetailHeader(photos: t.photos, title: t.title, action: FavoriteHeart(type: FavoriteHeart.tripType(t), itemId: t.id, size: 40)),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(Gap.page, Gap.lg, Gap.page, Gap.xl),
@@ -83,25 +84,12 @@ class TripDetailsScreen extends StatelessWidget {
                     ),
                     _LandmarkCards(places: t.places),
                   ],
-                  if (t.isWeekly && (t.hotelNames.isNotEmpty || t.restaurantName.isNotEmpty)) ...[
-                    DetailSection(title: context.tr('الإقامة والوجبات', 'Stay & meals')),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ...t.hotelNames.map((h) => StatusBadge(label: h, tone: Tone.success, icon: Icons.hotel_rounded)),
-                        if (t.restaurantName.isNotEmpty)
-                          StatusBadge(label: t.restaurantName, tone: Tone.orange, icon: Icons.restaurant_rounded),
-                      ],
-                    ),
-                  ] else if (!t.isWeekly && t.restaurantName.isNotEmpty) ...[
-                    DetailSection(title: context.tr('وجبة الرحلة', 'Trip meal')),
-                    StatusBadge(label: t.restaurantName, tone: Tone.orange, icon: Icons.restaurant_rounded),
-                  ],
+                  _IncludedPartners(trip: t),
                   if (t.guideName.isNotEmpty || t.hasVehicle || t.driverName.isNotEmpty) ...[
                     DetailSection(title: context.tr('فريق الرحلة', 'Trip team')),
                     _TeamCard(trip: t),
                   ],
+                  _TripReviews(trip: t),
                   _NearbyPartners(trip: t),
                   const SizedBox(height: Gap.xl),
                   InlineMessage(
@@ -348,7 +336,7 @@ class _TeamCard extends StatelessWidget {
           if (t.guideName.isNotEmpty && t.hasVehicle) const Divider(indent: 64),
           if (t.hasVehicle)
             _TeamRow(
-              leading: const IconBubble(icon: Icons.directions_bus_rounded, size: 44),
+              leading: _VehicleAvatar(path: t.vehicleImage, size: 44),
               label: context.tr('المركبة والناقل', 'Vehicle & carrier'),
               title: [t.vehicleModel, t.transportCompany].where((s) => s.isNotEmpty).join(' • '),
               subtitle: t.driverName.isNotEmpty ? context.tr('السائق: ${t.driverName}', 'Driver: ${t.driverName}') : null,
@@ -536,63 +524,113 @@ void _showVehicle(BuildContext context, Trip t) {
   );
 }
 
-/// Partner hotels and restaurants in the cities of the trip's landmarks (the platform's "nearby" offers).
-class _NearbyPartners extends StatelessWidget {
+/// Travellers' reviews of the trip: the average with a bar per star level (tap a bar to show only those
+/// reviews) and the review cards, three at first.
+class _TripReviews extends StatefulWidget {
   final Trip trip;
-  const _NearbyPartners({required this.trip});
+  const _TripReviews({required this.trip});
 
-  // Same city whatever the spelling: صبراتة / صبراته, أ / ا, ى / ي
-  static String _norm(String v) =>
-      v.trim().toLowerCase().replaceAll(RegExp('[أإآ]'), 'ا').replaceAll('ة', 'ه').replaceAll('ى', 'ي').replaceAll(RegExp(r'\s+'), ' ');
+  @override
+  State<_TripReviews> createState() => _TripReviewsState();
+}
+
+class _TripReviewsState extends State<_TripReviews> {
+  List<(int, String, String, String)>? _reviews;
+  int? _filter; // show only this many stars
+  bool _all = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ApiService.fetchTripReviews(widget.trip).then((r) {
+      if (mounted) setState(() => _reviews = r ?? const []);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cities = trip.places.map((p) => _norm(p.city)).where((c) => c.isNotEmpty && c != 'ليبيا').toSet();
-    if (cities.isEmpty) return const SizedBox.shrink();
-    bool inCities(String city) {
-      final c = _norm(city);
-      return c.isNotEmpty && cities.any((t) => c == t || c.contains(t) || t.contains(c));
-    }
-
-    final catalog = AppScope.of(context).catalog;
-    final hotels = (catalog.hotels ?? []).where((h) => inCities(h.city)).toList();
-    final restaurants = (catalog.restaurants ?? []).where((r) => inCities(r.city)).toList();
-    if (hotels.isEmpty && restaurants.isEmpty) return const SizedBox.shrink();
-
-    Widget tile({
-      required String image,
-      required String name,
-      required String city,
-      required int discount,
-      required IconData icon,
-      required VoidCallback onTap,
-    }) {
-      return InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: onTap,
-        child: Container(
-          width: 210,
-          padding: const EdgeInsets.all(8),
+    final list = _reviews;
+    if (list == null || list.isEmpty) return const SizedBox.shrink();
+    final avg = list.fold<int>(0, (s, r) => s + r.$1) / list.length;
+    final counts = List.generate(5, (i) => list.where((r) => r.$1 == 5 - i).length);
+    final filtered = _filter == null ? list : list.where((r) => r.$1 == _filter).toList();
+    final shown = _all ? filtered : filtered.take(3).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DetailSection(
+          title: context.tr('آراء المسافرين', 'Travellers’ reviews'),
+          subtitle: context.tr('من سياح حجزوا الرحلة فعلاً', 'From travellers who booked this trip'),
+        ),
+        Container(
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            gradient: const LinearGradient(colors: [Color(0xFFFFFBEB), Color(0xFFFFF7ED)]),
+            border: Border.all(color: const Color(0xFFFDE68A)),
           ),
           child: Row(
             children: [
-              DelniImage(image, width: 58, height: 58, fallbackIcon: icon, borderRadius: BorderRadius.circular(12)),
-              const SizedBox(width: 10),
+              Column(
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: avg),
+                    duration: const Duration(milliseconds: 900),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, v, __) => Text(v.toStringAsFixed(1),
+                        style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Color(0xFF92400E), height: 1)),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 1; i <= 5; i++)
+                        Icon(i <= avg.round() ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFF59E0B)),
+                    ],
+                  ),
+                  Text(context.tr('${list.length} تقييم', '${list.length} reviews'), style: AppText.caption.copyWith(fontSize: 11)),
+                ],
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.label),
-                    MetaItem(icon: Icons.place_outlined, text: city),
-                    if (discount > 0)
-                      Text(
-                        context.tr('خصم $discount% لعملاء دلّني', '$discount% off with Delni'),
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF047857)),
+                    for (var i = 0; i < 5; i++)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: counts[i] == 0 ? null : () => setState(() => _filter = _filter == 5 - i ? null : 5 - i),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                          child: Row(
+                            children: [
+                              Text('${5 - i}',
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: _filter == 5 - i ? const Color(0xFFB45309) : AppColors.mutedText)),
+                              const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: TweenAnimationBuilder<double>(
+                                    tween: Tween(begin: 0, end: counts[i] / list.length),
+                                    duration: Duration(milliseconds: 700 + i * 120),
+                                    curve: Curves.easeOutCubic,
+                                    builder: (_, v, __) => LinearProgressIndicator(
+                                      value: v,
+                                      minHeight: _filter == 5 - i ? 9 : 7,
+                                      backgroundColor: Colors.white,
+                                      color: _filter == null || _filter == 5 - i ? const Color(0xFFF59E0B) : const Color(0xFFFCD34D),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              SizedBox(width: 18, child: Text('${counts[i]}', style: AppText.caption.copyWith(fontSize: 11))),
+                            ],
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -600,48 +638,498 @@ class _NearbyPartners extends StatelessWidget {
             ],
           ),
         ),
-      );
-    }
-
-    final tiles = <Widget>[
-      ...hotels.map(
-        (h) => tile(
-          image: h.imageUrl,
-          name: h.name,
-          city: h.city,
-          discount: h.discountPercentage,
-          icon: Icons.hotel_rounded,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => HotelDetailsScreen(hotel: h))),
-        ),
-      ),
-      ...restaurants.map(
-        (r) => tile(
-          image: r.imageUrl,
-          name: r.name,
-          city: r.city,
-          discount: r.discountPercentage,
-          icon: Icons.restaurant_rounded,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantDetailsScreen(restaurant: r))),
-        ),
-      ),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DetailSection(
-          title: context.tr('فنادق ومطاعم قرب وجهتك', 'Hotels & dining near your destination'),
-          subtitle: context.tr('شركاء دلّني في مدن معالم الرحلة', 'Delni partners in the trip’s landmark cities'),
-        ),
-        SizedBox(
-          height: 76,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: tiles.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) => tiles[i],
+        if (_filter != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: InputChip(
+              label: Text(context.tr('تقييمات $_filter نجوم فقط', '$_filter-star reviews only'),
+                  style: const TextStyle(fontFamily: AppTheme.fontFamily, fontWeight: FontWeight.w800, fontSize: 12)),
+              onDeleted: () => setState(() => _filter = null),
+            ),
+          ),
+        const SizedBox(height: 10),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          alignment: Alignment.topCenter,
+          child: Column(
+            children: [
+              for (var i = 0; i < shown.length; i++) _ReviewCard(review: shown[i], index: i, key: ValueKey('${shown[i].$3}${shown[i].$4}')),
+            ],
           ),
         ),
+        if (filtered.length > 3)
+          Center(
+            child: TextButton.icon(
+              onPressed: () => setState(() => _all = !_all),
+              icon: Icon(_all ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
+              label: Text(
+                _all ? context.tr('عرض أقل', 'Show less') : context.tr('عرض كل التقييمات (${filtered.length})', 'Show all (${filtered.length})'),
+                style: const TextStyle(fontFamily: AppTheme.fontFamily, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  final (int, String, String, String) review;
+  final int index;
+  const _ReviewCard({super.key, required this.review, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    final (stars, comment, name, date) = review;
+    final who = name.trim().isEmpty ? context.tr('سائح', 'Traveller') : name.trim();
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 350 + index * 90),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 14 * (1 - v)), child: child)),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                DelniAvatar(name: who, size: 36),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(child: Text(who, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.label)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, size: 14, color: AppColors.accent),
+                        ],
+                      ),
+                      if (date.length >= 10) Text(context.date(date.substring(0, 10)), style: AppText.caption.copyWith(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+                      const SizedBox(width: 2),
+                      Text('$stars', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF92400E))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (comment.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(comment.trim(), style: AppText.body.copyWith(fontSize: 13, height: 1.6)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The trip vehicle's photo in a small circle (a bus icon when the vehicle has no photo).
+class _VehicleAvatar extends StatelessWidget {
+  final String path;
+  final double size;
+  const _VehicleAvatar({required this.path, this.size = 44});
+
+  @override
+  Widget build(BuildContext context) {
+    if (path.trim().isEmpty) return IconBubble(icon: Icons.directions_bus_rounded, size: size);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primarySoft, width: 2)),
+      child: ClipOval(child: DelniImage(path, width: size, height: size, fallbackIcon: Icons.directions_bus_rounded)),
+    );
+  }
+}
+
+// Same city whatever the spelling: صبراتة / صبراته, أ / ا, ى / ي
+String _normCity(String v) =>
+    v.trim().toLowerCase().replaceAll(RegExp('[أإآ]'), 'ا').replaceAll('ة', 'ه').replaceAll('ى', 'ي').replaceAll(RegExp(r'\s+'), ' ');
+
+/// Loads the hotels and restaurants once if the catalog has not been loaded yet (a trip opened from a link or a ticket).
+void _ensureCatalog(BuildContext context) {
+  final catalog = AppScope.read(context).catalog;
+  if (catalog.hotels == null && !catalog.loading) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => catalog.load());
+  }
+}
+
+/// One hotel / restaurant card: photo, kind, name, city and the Delni discount; it slides in, presses down
+/// when touched and opens the hotel's / restaurant's page.
+class _PartnerCard extends StatefulWidget {
+  final String type; // 'hotel' | 'restaurant' (favourites item_type)
+  final String itemId;
+  final String image;
+  final String name;
+  final String city;
+  final String kindLabel;
+  final int discount;
+  final int stars;
+  final String? badge;
+  final int index;
+  final VoidCallback? onTap;
+
+  const _PartnerCard({
+    required this.type,
+    required this.itemId,
+    required this.image,
+    required this.name,
+    required this.city,
+    required this.kindLabel,
+    this.discount = 0,
+    this.stars = 0,
+    this.badge,
+    this.index = 0,
+    this.onTap,
+  });
+
+  @override
+  State<_PartnerCard> createState() => _PartnerCardState();
+}
+
+class _PartnerCardState extends State<_PartnerCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final hotel = widget.type == 'hotel';
+    final tone = hotel ? Tone.primary : Tone.orange;
+    final (soft, strong) = toneColors(tone);
+    final card = AnimatedScale(
+      scale: _pressed ? 0.97 : 1,
+      duration: const Duration(milliseconds: 120),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: _pressed ? strong.withValues(alpha: 0.5) : AppColors.border),
+          boxShadow: AppShadows.soft,
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 78,
+                height: 78,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    DelniImage(widget.image, fallbackIcon: hotel ? Icons.hotel_rounded : Icons.restaurant_rounded),
+                    if (widget.discount > 0)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          color: const Color(0xF2059669),
+                          child: Text(
+                            '-${widget.discount}%',
+                            textAlign: TextAlign.center,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(color: soft, borderRadius: BorderRadius.circular(20)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(hotel ? Icons.hotel_rounded : Icons.restaurant_rounded, size: 12, color: strong),
+                            const SizedBox(width: 3),
+                            Text(widget.kindLabel, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: strong)),
+                          ],
+                        ),
+                      ),
+                      if (widget.badge != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(color: const Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(20)),
+                          child: Text(widget.badge!,
+                              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF047857))),
+                        ),
+                      if (widget.stars > 0)
+                        Text('★' * widget.stars.clamp(1, 5), style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B))),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.label.copyWith(fontSize: 14)),
+                  if (widget.city.isNotEmpty) MetaItem(icon: Icons.place_outlined, text: widget.city),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.discount > 0
+                        ? context.tr('خصم ${widget.discount}% لعملاء دلّني', '${widget.discount}% off with Delni')
+                        : context.tr('اضغط لعرض التفاصيل', 'Tap for details'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: widget.discount > 0 ? const Color(0xFF047857) : AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Column(
+              children: [
+                if (widget.itemId.isNotEmpty) FavoriteHeart(type: widget.type, itemId: widget.itemId, size: 32),
+                const SizedBox(height: 8),
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(color: soft, shape: BoxShape.circle),
+                  child: Icon(context.isAr ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: strong, size: 20),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 380 + widget.index * 90),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 18 * (1 - v)), child: child)),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTap: widget.onTap ??
+            () => showAppSnack(context, context.tr('هذا الشريك غير متاح حالياً في الدليل', 'This partner is not listed right now'),
+                tone: Tone.warning),
+        child: card,
+      ),
+    );
+  }
+}
+
+Widget _hotelCard(BuildContext context, Hotel h, int index, {String? badge}) => _PartnerCard(
+      type: 'hotel',
+      itemId: h.id,
+      image: h.imageUrl,
+      name: h.name,
+      city: h.city,
+      kindLabel: context.tr('فندق', 'Hotel'),
+      discount: h.discountPercentage,
+      stars: h.starRating,
+      badge: badge,
+      index: index,
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => HotelDetailsScreen(hotel: h))),
+    );
+
+Widget _restaurantCard(BuildContext context, Restaurant r, int index, {String? badge}) => _PartnerCard(
+      type: 'restaurant',
+      itemId: r.id,
+      image: r.imageUrl,
+      name: r.name,
+      city: r.city,
+      kindLabel: r.type.isNotEmpty ? r.type : context.tr('مطعم', 'Restaurant'),
+      discount: r.discountPercentage,
+      badge: badge,
+      index: index,
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantDetailsScreen(restaurant: r))),
+    );
+
+/// The hotels / restaurant the trip includes, as cards that open their pages.
+class _IncludedPartners extends StatefulWidget {
+  final Trip trip;
+  const _IncludedPartners({required this.trip});
+
+  @override
+  State<_IncludedPartners> createState() => _IncludedPartnersState();
+}
+
+class _IncludedPartnersState extends State<_IncludedPartners> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.trip.hotelNames.isNotEmpty || widget.trip.restaurantName.isNotEmpty) _ensureCatalog(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.trip;
+    if (t.hotelNames.isEmpty && t.hotelIds.isEmpty && t.restaurantName.isEmpty) return const SizedBox.shrink();
+    final catalog = AppScope.of(context).catalog;
+    return ListenableBuilder(
+      listenable: catalog,
+      builder: (context, _) {
+        final included = context.tr('مشمول ✓', 'Included ✓');
+        final cards = <Widget>[];
+        var i = 0;
+        // Hotels by id, or by name when the trip only sends names
+        final names = {...t.hotelNames};
+        for (final h in catalog.hotels ?? const <Hotel>[]) {
+          if (t.hotelIds.contains(h.id) || names.contains(h.name)) {
+            names.remove(h.name);
+            cards.add(_hotelCard(context, h, i++, badge: included));
+          }
+        }
+        for (final n in names) {
+          cards.add(_PartnerCard(type: 'hotel', itemId: '', image: '', name: n, city: '', kindLabel: context.tr('فندق', 'Hotel'), badge: included, index: i++));
+        }
+        if (t.restaurantName.isNotEmpty || t.restaurantId.isNotEmpty) {
+          Restaurant? r;
+          for (final x in catalog.restaurants ?? const <Restaurant>[]) {
+            if ((t.restaurantId.isNotEmpty && x.id == t.restaurantId) || x.name == t.restaurantName) {
+              r = x;
+              break;
+            }
+          }
+          cards.add(r != null
+              ? _restaurantCard(context, r, i++, badge: included)
+              : _PartnerCard(
+                  type: 'restaurant',
+                  itemId: '',
+                  image: '',
+                  name: t.restaurantName,
+                  city: '',
+                  kindLabel: context.tr('مطعم', 'Restaurant'),
+                  badge: included,
+                  index: i++,
+                ));
+        }
+        if (cards.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DetailSection(
+              title: t.isWeekly ? context.tr('الإقامة والوجبات', 'Stay & meals') : context.tr('وجبة الرحلة', 'Trip meal'),
+              subtitle: context.tr('اضغط على أي بطاقة لعرض صفحة الفندق أو المطعم', 'Tap a card to open the hotel or restaurant'),
+            ),
+            for (final c in cards) Padding(padding: const EdgeInsets.only(bottom: 10), child: c),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Partner hotels and restaurants in the cities of the trip's landmarks (the platform's "nearby" offers),
+/// stacked one above the other; the first three show and the rest open with "show more".
+class _NearbyPartners extends StatefulWidget {
+  final Trip trip;
+  const _NearbyPartners({required this.trip});
+
+  @override
+  State<_NearbyPartners> createState() => _NearbyPartnersState();
+}
+
+class _NearbyPartnersState extends State<_NearbyPartners> {
+  static const _collapsed = 3;
+  bool _expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureCatalog(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = widget.trip;
+    final cities = trip.places.map((p) => _normCity(p.city)).where((c) => c.isNotEmpty && c != 'ليبيا').toSet();
+    if (cities.isEmpty) return const SizedBox.shrink();
+    bool inCities(String city) {
+      final c = _normCity(city);
+      return c.isNotEmpty && cities.any((t) => c == t || c.contains(t) || t.contains(c));
+    }
+
+    final catalog = AppScope.of(context).catalog;
+    return ListenableBuilder(
+      listenable: catalog,
+      builder: (context, _) {
+        // Those already included in the trip are shown above, not again here
+        final hotels = (catalog.hotels ?? [])
+            .where((h) => inCities(h.city) && !trip.hotelIds.contains(h.id) && !trip.hotelNames.contains(h.name))
+            .toList();
+        final restaurants = (catalog.restaurants ?? [])
+            .where((r) => inCities(r.city) && r.id != trip.restaurantId && r.name != trip.restaurantName)
+            .toList();
+        if (hotels.isEmpty && restaurants.isEmpty) {
+          return catalog.loading && catalog.hotels == null
+              ? const Padding(padding: EdgeInsets.only(top: Gap.lg), child: SkeletonList(count: 1, imageHeight: 70))
+              : const SizedBox.shrink();
+        }
+        // Hotel, restaurant, hotel, ... so both kinds show in the first cards
+        final all = <Widget Function(int)>[];
+        for (var i = 0; i < hotels.length || i < restaurants.length; i++) {
+          if (i < hotels.length) all.add((n) => _hotelCard(context, hotels[i], n));
+          if (i < restaurants.length) all.add((n) => _restaurantCard(context, restaurants[i], n));
+        }
+        final shown = _expanded ? all.length : all.length.clamp(0, _collapsed);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DetailSection(
+              title: context.tr('فنادق ومطاعم قرب وجهتك', 'Hotels & dining near your destination'),
+              subtitle: context.tr('عروض شركاء دلّني في مدن معالم الرحلة', 'Delni partner offers in the trip’s landmark cities'),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: Column(
+                children: [
+                  for (var i = 0; i < shown; i++)
+                    Padding(padding: const EdgeInsets.only(bottom: 10), child: all[i](i < _collapsed ? i : i - _collapsed)),
+                ],
+              ),
+            ),
+            if (all.length > _collapsed)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: Icon(_expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
+                  label: Text(
+                    _expanded
+                        ? context.tr('عرض أقل', 'Show less')
+                        : context.tr('عرض ${all.length - _collapsed} عروض أخرى', 'Show ${all.length - _collapsed} more'),
+                    style: const TextStyle(fontFamily: AppTheme.fontFamily, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

@@ -450,79 +450,211 @@ class _SearchCard extends StatelessWidget {
   }
 }
 
-/// The sections of the app shown as real Libya photographs: the places themselves are the navigation.
+/// The sections of the app as photo cards: each photo shows the section itself (a trip bus in the desert,
+/// Sabratha's theatre, a hotel room, a Libyan table, a guide with travellers), with how many items it holds.
 class _Categories extends StatelessWidget {
   final ValueChanged<int> onTap;
   const _Categories({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      ('assets/images/libya-sabratha-turquoise-sea.jpg', context.tr('الرحلات', 'Trips'), Icons.route_rounded, 0),
-      ('assets/images/dest-leptis-arch.jpg', context.tr('المعالم', 'Landmarks'), Icons.account_balance_rounded, 1),
-      ('assets/images/hotel_resort.jpg', context.tr('الفنادق', 'Hotels'), Icons.hotel_rounded, 2),
-      ('assets/images/restaurant-libya.jpg', context.tr('المطاعم', 'Dining'), Icons.restaurant_rounded, 3),
-      ('assets/images/guide-hero.jpg', context.tr('المرشدون', 'Guides'), Icons.badge_rounded, 4),
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(top: Gap.xl),
-      child: SizedBox(
-        height: 132,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: Gap.page),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 10),
-          itemBuilder: (_, i) {
-            final c = items[i];
-            return Semantics(
-              button: true,
-              label: c.$2,
-              child: GestureDetector(
-                onTap: () => onTap(c.$4),
-                child: Container(
-                  width: 108,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(AppRadius.lg), boxShadow: AppShadows.card),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(c.$1, fit: BoxFit.cover, cacheWidth: 360),
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              stops: [0.35, 1],
-                              colors: [Colors.transparent, Color(0xD90F172A)],
-                            ),
-                          ),
-                        ),
-                        PositionedDirectional(
-                          top: 10,
-                          start: 10,
-                          child: Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), shape: BoxShape.circle),
-                            child: Icon(c.$3, size: 17, color: AppColors.primary),
-                          ),
-                        ),
-                        PositionedDirectional(
-                          start: 10,
-                          end: 8,
-                          bottom: 10,
-                          child: Text(c.$2,
-                              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w900)),
-                        ),
-                      ],
-                    ),
+    final catalog = AppScope.of(context).catalog;
+    return ListenableBuilder(
+      listenable: catalog,
+      builder: (context, _) {
+        String count(List? l, String ar, String en) => l == null || l.isEmpty ? context.tr('استكشف', 'Explore') : context.tr('${l.length} $ar', '${l.length} $en');
+        final items = [
+          (
+            'assets/images/69262c03-9b5e-485f-88ef-723c7bd432bc.jpg',
+            context.tr('الرحلات', 'Trips'),
+            count(catalog.trips, 'رحلة', 'trips'),
+            Icons.route_rounded,
+            AppColors.primary,
+            0,
+          ),
+          (
+            'assets/images/dest-sabratha-theater.jpg',
+            context.tr('المعالم', 'Landmarks'),
+            count(catalog.places, 'معلم', 'landmarks'),
+            Icons.account_balance_rounded,
+            const Color(0xFFB45309),
+            1,
+          ),
+          (
+            'assets/images/ai_hotel.jpg',
+            context.tr('الفنادق', 'Hotels'),
+            count(catalog.hotels, 'فندق', 'hotels'),
+            Icons.hotel_rounded,
+            const Color(0xFF0369A1),
+            2,
+          ),
+          (
+            'assets/images/ai_food.jpg',
+            context.tr('المطاعم', 'Dining'),
+            count(catalog.restaurants, 'مطعم', 'places'),
+            Icons.restaurant_rounded,
+            AppColors.brandOrange,
+            3,
+          ),
+          (
+            'assets/images/8702d47f-212d-4558-84f1-333597168a7c.jpg',
+            context.tr('المرشدون', 'Guides'),
+            count(catalog.guides, 'مرشد', 'guides'),
+            Icons.badge_rounded,
+            const Color(0xFF047857),
+            4,
+          ),
+        ];
+        return Padding(
+          padding: const EdgeInsets.only(top: Gap.xl),
+          child: SizedBox(
+            height: 178,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.page),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, i) {
+                final c = items[i];
+                return _CategoryCard(
+                  image: c.$1,
+                  title: c.$2,
+                  subtitle: c.$3,
+                  icon: c.$4,
+                  color: c.$5,
+                  index: i,
+                  onTap: () => onTap(c.$6),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// One section card: slides in, shrinks a little under the finger, the photo slowly zooms while pressed.
+class _CategoryCard extends StatefulWidget {
+  final String image;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final int index;
+  final VoidCallback onTap;
+
+  const _CategoryCard({
+    required this.image,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.index,
+    required this.onTap,
+  });
+
+  @override
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<_CategoryCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final card = AnimatedScale(
+      scale: _pressed ? 0.95 : 1,
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      child: Container(
+        width: 136,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [BoxShadow(color: widget.color.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 8), spreadRadius: -6)],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedScale(
+                scale: _pressed ? 1.12 : 1.0,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
+                child: Image.asset(widget.image, fit: BoxFit.cover, cacheWidth: 420),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.3, 1],
+                    colors: [Colors.transparent, Color.lerp(const Color(0xFF0B1727), widget.color, 0.25)!.withValues(alpha: 0.92)],
                   ),
                 ),
               ),
-            );
-          },
+              PositionedDirectional(
+                top: 10,
+                start: 10,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8, offset: Offset(0, 2))],
+                  ),
+                  child: Icon(widget.icon, size: 18, color: widget.color),
+                ),
+              ),
+              PositionedDirectional(
+                start: 12,
+                end: 10,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, height: 1.2)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(widget.subtitle, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                          const SizedBox(width: 2),
+                          Icon(context.isAr ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: Colors.white, size: 14),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 420 + widget.index * 90),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(24 * (1 - v), 0), child: child)),
+      child: Semantics(
+        button: true,
+        label: widget.title,
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTap: widget.onTap,
+          child: card,
         ),
       ),
     );

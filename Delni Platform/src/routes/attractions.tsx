@@ -199,6 +199,20 @@ function AttractionsPage() {
     return dbPlaces.map((p, idx) => placeToLandmark(p, idx));
   }, [dbPlaces]);
 
+  // A link from the tourist's wishlist (?open=<id>) opens that landmark directly, once the list has loaded
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = (new URLSearchParams(window.location.search).get("open") || "").replace(/^"+|"+$/g, "");
+    if (!id || dynamicCities.length === 0) return;
+    const found = dynamicCities.find((x: any) => String(x.id) === id);
+    if (found) {
+      setSelectedCityForModal(found as any);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("open");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [dynamicCities]);
+
   // Cities list for filter
   const cities = useMemo(() => {
     const rawCities = Array.from(new Set(dynamicCities.map((c) => (isAr ? c.shortName : c.shortNameEn))));

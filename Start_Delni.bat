@@ -54,7 +54,7 @@ if exist "%ADB%" (
         "%ADB%" reverse tcp:5050 tcp:5050 > nul
         "%ADB%" reverse tcp:8000 tcp:8000 > nul
         "%ADB%" reverse tcp:8080 tcp:8080 > nul
-        "%ADB%" shell am start -a android.intent.action.VIEW -d http://127.0.0.1:5050/ > nul
+        "%ADB%" shell monkey -p ly.delni.delni_app -c android.intent.category.LAUNCHER 1 > nul 2>&1
     )
 )
 
@@ -63,7 +63,7 @@ echo  ==========================================================
 echo   Done:
 echo    - Platform (website):   http://localhost:8080
 echo    - App:                  http://127.0.0.1:5050
-echo    - App on the USB phone: http://127.0.0.1:5050
+echo    - App on the phone:     open the Delni app (run Connect_Phone.bat if it does not load)
 echo.
 echo   Keep the three black windows open while you use Delni.
 echo  ==========================================================

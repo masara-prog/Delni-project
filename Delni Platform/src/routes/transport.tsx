@@ -351,6 +351,20 @@ function TransportPage() {
     setModalTab(tab);
   };
 
+  // A link from the tourist's wishlist (?open=<id>) opens that vehicle directly, once the list has loaded
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = (new URLSearchParams(window.location.search).get("open") || "").replace(/^"+|"+$/g, "");
+    if (!id || vehicles.length === 0) return;
+    const found = vehicles.find((x: any) => String(x.id) === id);
+    if (found) {
+      openVehicleModal(found as any);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("open");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [vehicles]);
+
   const [isHovered, setIsHovered] = useState(false);
 
   // Auto-scroll smooth motion from Right to Left as explicitly requested by user

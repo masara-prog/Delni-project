@@ -12,6 +12,7 @@ import '../auth/auth_widgets.dart';
 import '../auth/login_screen.dart';
 import '../auth/tourist_signup_screen.dart';
 import '../shared/notifications_screen.dart';
+import 'favorites_screen.dart';
 import 'private_trip_screen.dart';
 
 class AccountTab extends StatelessWidget {
@@ -45,6 +46,13 @@ class AccountTab extends StatelessWidget {
               onTap: () => state.touristTab.value = 2,
             ),
             QuickAction(
+              icon: Icons.favorite_rounded,
+              label: context.tr('مفضلتي', 'Favourites'),
+              color: const Color(0xFFE11D48),
+              badge: state.favorites.keys.length,
+              onTap: () => _push(context, const FavoritesScreen()),
+            ),
+            QuickAction(
               icon: Icons.notifications_rounded,
               label: context.tr('الإشعارات', 'Alerts'),
               color: AppColors.brandOrange,
@@ -68,6 +76,15 @@ class AccountTab extends StatelessWidget {
                   title: context.tr('الملف الشخصي', 'Personal profile'),
                   subtitle: context.tr('الاسم والبريد والهاتف وكلمة المرور', 'Name, email, phone and password'),
                   onTap: () => _push(context, const ProfileScreen()),
+                ),
+                MenuTile(
+                  icon: Icons.favorite_border_rounded,
+                  title: context.tr('مفضلتي', 'My favourites'),
+                  subtitle: state.favorites.keys.isEmpty
+                      ? context.tr('احفظ الرحلات والمعالم والفنادق والمطاعم بلمسة ❤️', 'Save trips, landmarks, hotels and restaurants with a tap ❤️')
+                      : context.tr('${state.favorites.keys.length} عنصر محفوظ', '${state.favorites.keys.length} saved'),
+                  tone: Tone.danger,
+                  onTap: () => _push(context, const FavoritesScreen()),
                 ),
               ],
             ),

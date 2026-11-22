@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Reviews of daily/weekly trips, hotels and restaurants/cafes (replaces the bridge's /reviews).
  * One review per tourist per item: submitting again updates it. Trips can be reviewed only by tourists who
- * booked them (not cancelled), and weekly trips only after they end.
+ * booked them (not cancelled), once the trip is over.
  */
 class ReviewController extends Controller
 {
@@ -48,6 +48,10 @@ class ReviewController extends Controller
             }
             if ($type && $itemId) {
                 $query->where("r.{$itemColumn}", $itemId);
+            }
+            // ?tourist_id: the tourist's own reviews (their trip history shows what they already rated)
+            if ($request->filled('tourist_id')) {
+                $query->where('r.tourist_id', (string) $request->input('tourist_id'));
             }
             $rows = $rows->concat($query->get());
         }
@@ -93,7 +97,7 @@ class ReviewController extends Controller
         return response()->json(['success' => true, 'message' => "شكراً لك! تم تسجيل تقييمك لـ{$label} بنجاح في منصة دلني."], 201);
     }
 
-    // Only tourists who attended (their ticket was checked in at the office); weekly trips only after their end date
+    // Only tourists who booked the trip (booking not cancelled), once it is over; weekly trips only after their end date
     private function tripReviewError(string $type, string $touristId, string $tripId): ?string
     {
         if (!in_array($type, ['daily', 'weekly'], true)) {
@@ -101,17 +105,17 @@ class ReviewController extends Controller
         }
         $bookings = $type === 'daily' ? 'bookings_daily' : 'bookings_weekly';
         $tripKey = $type === 'daily' ? 'daily_trip_id' : 'weekly_trip_id';
-        $attended = DB::table($bookings)->where('tourist_id', $touristId)->where($tripKey, $tripId)
-            ->where('booking_status', 'not like', 'ملغ%')->where('attended', true)->exists();
-        if (!$attended) {
-            return 'عذراً، يمكن تقييم الرحلة فقط بعد المشاركة فيها فعلياً (تأكيد حضورك من مكتب التذاكر).';
+        $booked = DB::table($bookings)->where('tourist_id', $touristId)->where($tripKey, $tripId)
+            ->where('booking_status', 'not like', 'ملغ%')->exists();
+        if (!$booked) {
+            return 'عذراً، يمكن تقييم الرحلة فقط لمن لديه حجز مؤكد فيها.';
         }
         if ($type === 'daily') {
-            // A daily trip runs 09:00–21:00 on its date: check-in happens that morning, so the review waits until it is over
+            // A daily trip runs 09:00–21:00 on its date, so the review waits until it is over
             $now = now('Africa/Tripoli');
             $op = $now->hour >= 21 ? '<=' : '<';   // today's trip counts as finished only after 21:00
             $finished = DB::table('bookings_daily')->where('tourist_id', $touristId)->where('daily_trip_id', $tripId)
-                ->where('booking_status', 'not like', 'ملغ%')->where('attended', true)
+                ->where('booking_status', 'not like', 'ملغ%')
                 ->where(fn ($q) => $q->whereNull('trip_date')->orWhereDate('trip_date', $op, $now->toDateString()))
                 ->exists();
             if (!$finished) {

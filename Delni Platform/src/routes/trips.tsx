@@ -1153,7 +1153,8 @@ function TripDetailsView({
                             )}
                             <Link
                               to="/hotels"
-                              className="py-1.5 px-3 rounded-xl bg-[#00736F] text-white font-black text-xs text-center transition"
+                              search={{ open: String(h.hotel_id || h.id) } as any}
+                              className="py-1.5 px-3 rounded-xl bg-[#00736F] hover:bg-[#005f5b] text-white font-black text-xs text-center transition"
                             >
                               {isAr ? "تفاصيل الفندق" : "Details"}
                             </Link>
@@ -1228,6 +1229,13 @@ function TripDetailsView({
                               itemTitle={rName}
                               size="sm"
                             />
+                            <Link
+                              to="/restaurants"
+                              search={{ open: String(r.facility_id || r.id) } as any}
+                              className="py-1 px-2.5 rounded-lg bg-[#00736F] hover:bg-[#005f5b] text-white font-black text-[11px] transition"
+                            >
+                              {isAr ? "تفاصيل المطعم" : "Details"}
+                            </Link>
                             {rPhone ? (
                               <a href={`tel:${rPhone}`} className="text-emerald-700 font-black hover:underline flex items-center gap-1">
                                 <span>📞</span>
@@ -2127,9 +2135,9 @@ function TripsPage() {
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      const tripParam = urlParams.get("tripId") || urlParams.get("trip") || urlParams.get("id");
+      const tripParam = (urlParams.get("tripId") || urlParams.get("trip") || urlParams.get("id") || "").replace(/^"+|"+$/g, "");
       if (tripParam && allTrips.length > 0 && !activeTripDetails) {
-        const found = allTrips.find((t) => t.id === tripParam || (t as any).daily_trip_id === tripParam || (t as any).weekly_trip_id === tripParam);
+        const found = allTrips.find((t) => String(t.id) === tripParam || String((t as any).daily_trip_id) === tripParam || String((t as any).weekly_trip_id) === tripParam || String(t.id).endsWith("-" + tripParam));
         if (found) {
           setActiveTripDetails(found);
           window.scrollTo({ top: 0, behavior: "instant" });

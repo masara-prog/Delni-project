@@ -994,6 +994,20 @@ function HotelsPage() {
     return dbHotels;
   }, [dbHotels]);
 
+  // A link from the tourist's wishlist (?open=<id>) opens that hotel directly, once the list has loaded
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = (new URLSearchParams(window.location.search).get("open") || "").replace(/^"+|"+$/g, "");
+    if (!id || hotels.length === 0) return;
+    const found = hotels.find((x: any) => String(x.id) === id);
+    if (found) {
+      setSelectedHotel(found as any);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("open");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [hotels]);
+
   // Category cards show how many places of that type are registered (not fixed numbers)
   const countLabel = (type: string) => {
     const n = hotels.filter((h) => h.partnership_status !== "موقوف" && h.propertyType === type).length;

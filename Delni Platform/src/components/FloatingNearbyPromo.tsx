@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { FavoriteButton } from "./FavoriteButton";
 
@@ -31,11 +31,17 @@ interface PromoItem {
   city: string;
   image: string;
   category: string;
-  discountText?: string;
-  description?: string;
-  detailsUrl: string;
+  discount: number;
+  stars: number;
 }
 
+const FALLBACK = { hotel: "/assets/ai_hotel.jpg", restaurant: "/assets/restaurant-libya.jpg" };
+const COLLAPSED_COUNT = 2;
+
+/**
+ * Partner hotels and restaurants in the cities the trip visits, as a stack of cards in the corner of the trip page.
+ * Each card opens that exact hotel / restaurant (/hotels?open=<id>); the stack can be folded, expanded or closed.
+ */
 export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
   tripId,
   tripCity,
@@ -46,181 +52,195 @@ export const FloatingNearbyPromo: React.FC<FloatingNearbyPromoProps> = ({
 }) => {
   const [dismissed, setDismissed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    return sessionStorage.getItem(`delni_promo_dismissed_${tripId}`) === "true";
+    try {
+      return sessionStorage.getItem(`delni_promo_dismissed_${tripId}`) === "true";
+    } catch {
+      return false;
+    }
   });
+  const [folded, setFolded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [hidden, setHidden] = useState<string[]>([]);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  // Filter real hotels and restaurants close to the trip's destination
-  const nearbyPromos: PromoItem[] = useMemo(() => {
-    const list: PromoItem[] = [];
+  const promos: PromoItem[] = useMemo(() => {
     const cities = landmarkCities.map(normalizeCity).filter(Boolean);
     const inTripCities = (city: unknown) => {
       const c = normalizeCity(city);
       return !!c && cities.some((t) => c === t || c.includes(t) || t.includes(c));
     };
+    const hotels: PromoItem[] = platformHotels
+      .filter((h: any) => h.partnership_status !== "موقوف" && (h.hotel_id || h.id) && inTripCities(h.city))
+      .map((h: any) => ({
+        id: String(h.hotel_id || h.id),
+        type: "hotel" as const,
+        name: h.hotel_name || h.name || (isAr ? "فندق شريك" : "Partner hotel"),
+        city: h.city || tripCity,
+        image: h.hotel_photo_1 || h.photo || FALLBACK.hotel,
+        category: h.property_type === "resort" ? (isAr ? "منتجع" : "Resort") : isAr ? "فندق" : "Hotel",
+        discount: Number(h.discount_percentage) || 0,
+        stars: Number(h.star_rating) || 0,
+      }));
+    const restaurants: PromoItem[] = platformRestaurants
+      .filter((r: any) => r.partnership_status !== "موقوف" && (r.facility_id || r.id) && inTripCities(r.city))
+      .map((r: any) => ({
+        id: String(r.facility_id || r.id),
+        type: "restaurant" as const,
+        name: r.facility_name || r.name || (isAr ? "مطعم شريك" : "Partner restaurant"),
+        city: r.city || tripCity,
+        image: r.facility_image_1 || r.image || FALLBACK.restaurant,
+        category: r.facility_type || (isAr ? "مطعم" : "Restaurant"),
+        discount: Number(r.discount_percentage) || 0,
+        stars: 0,
+      }));
+    // Alternate hotel / restaurant so both kinds show in the first cards
+    const mixed: PromoItem[] = [];
+    for (let i = 0; i < Math.max(hotels.length, restaurants.length); i++) {
+      if (hotels[i]) mixed.push(hotels[i]);
+      if (restaurants[i]) mixed.push(restaurants[i]);
+    }
+    return mixed.slice(0, 8);
+  }, [platformHotels, platformRestaurants, tripCity, landmarkCities, isAr]);
 
-    // 1. Matching Hotels
-    platformHotels.forEach((h: any) => {
-      if (h.partnership_status === "موقوف" || !inTripCities(h.city)) return;
-      {
-        list.push({
-          id: h.hotel_id || h.id || `h-${Math.random()}`,
-          type: "hotel",
-          name: h.hotel_name || h.name || "فندق معتمد",
-          city: h.city || tripCity,
-          image: h.hotel_photo_1 || h.photo || "/assets/ai_hotel.jpg",
-          category: h.property_type === "resort" ? "منتجع سياحي" : "فندق إقامة",
-          discountText: h.discount_percentage ? `خصم ${h.discount_percentage}%` : "عرض إقامة مميز",
-          description: h.description ? h.description.slice(0, 65) + "..." : `إقامة مريحة في قلب ${h.city || tripCity}.`,
-          detailsUrl: "/hotels",
-        });
-      }
-    });
+  const visible = promos.filter((p) => !hidden.includes(`${p.type}:${p.id}`));
+  if (dismissed || visible.length === 0) return null;
+  const shown = expanded ? visible : visible.slice(0, COLLAPSED_COUNT);
+  const more = visible.length - shown.length;
 
-    // 2. Matching Restaurants
-    platformRestaurants.forEach((r: any) => {
-      if (r.partnership_status === "موقوف" || !inTripCities(r.city)) return;
-      {
-        list.push({
-          id: r.facility_id || r.id || `r-${Math.random()}`,
-          type: "restaurant",
-          name: r.facility_name || r.name || "مطعم ومقهى",
-          city: r.city || tripCity,
-          image: r.facility_image_1 || r.image || "/assets/restaurant-libya.jpg",
-          category: r.facility_type || "مطعم تراثي",
-          discountText: "أطباق وضيافة ليبية",
-          description: r.description ? r.description.slice(0, 65) + "..." : `تذوق أشهى المأكولات في ${r.city || tripCity}.`,
-          detailsUrl: "/restaurants",
-        });
-      }
-    });
-
-    return list.slice(0, 6);
-  }, [platformHotels, platformRestaurants, tripCity, landmarkCities]);
-
-  if (dismissed || nearbyPromos.length === 0) {
-    return null;
-  }
-
-  const current = nearbyPromos[currentIndex % nearbyPromos.length];
-
-  const handleDismiss = () => {
+  const closeAll = () => {
     setDismissed(true);
     try {
       sessionStorage.setItem(`delni_promo_dismissed_${tripId}`, "true");
-    } catch {}
+    } catch {
+      /* closed for this page only */
+    }
   };
 
-  const handleNext = () => {
-    setCurrentIndex(prev => (prev + 1) % nearbyPromos.length);
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex(prev => (prev - 1 + nearbyPromos.length) % nearbyPromos.length);
-  };
+  // Folded: one round button with the number of offers
+  if (folded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setFolded(false)}
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 pl-4 pr-2 h-12 rounded-full bg-[#00736F] text-white shadow-[0_10px_30px_rgba(0,115,111,0.4)] hover:scale-105 active:scale-95 transition cursor-pointer animate-in fade-in zoom-in-90 duration-300"
+        aria-label={isAr ? "عرض العروض القريبة" : "Show nearby offers"}
+      >
+        <span className="relative w-8 h-8 rounded-full bg-white/15 grid place-items-center text-base">
+          🎁
+          <span className="absolute -top-1 -left-1 min-w-4 h-4 px-1 rounded-full bg-amber-400 text-[#0B1727] text-[10px] font-black grid place-items-center">
+            {visible.length}
+          </span>
+        </span>
+        <span className="text-xs font-black">{isAr ? "عروض قرب وجهتك" : "Offers nearby"}</span>
+      </button>
+    );
+  }
 
   return (
     <aside
-      aria-label={isAr ? "عروض قريبة من مسار الرحلة" : "Nearby Promotions"}
-      className="fixed bottom-4 right-4 z-40 max-w-[320px] sm:max-w-[340px] w-full bg-white/95 backdrop-blur-md rounded-2xl border-2 border-amber-300/80 shadow-[0_12px_40px_rgba(0,0,0,0.18)] p-3 text-right animate-in fade-in slide-in-from-bottom-4 duration-300 select-none group"
+      aria-label={isAr ? "فنادق ومطاعم قريبة من مسار الرحلة" : "Hotels and restaurants near the trip"}
+      className="fixed bottom-4 right-4 z-40 w-[calc(100vw-2rem)] max-w-[330px] text-right select-none"
+      dir={isAr ? "rtl" : "ltr"}
     >
-      {/* Top Header with Badge, Carousel nav and Close (✕) button */}
-      <div className="flex items-center justify-between gap-1.5 pb-2 mb-2 border-b border-amber-100">
-        <div className="flex items-center gap-1.5">
-          <span className="text-amber-500 text-sm animate-pulse">✨</span>
-          <span className="text-[11px] font-black text-[#00736F]">
-            {isAr ? "عرض مقترح قريب بالوجهة" : "Nearby Destination Offer"}
-          </span>
-          <span className="text-[11px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-full font-bold">
-            {current.type === "hotel" ? "🏨 فندق" : "🍽️ مطعم"}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {nearbyPromos.length > 1 && (
-            <div className="flex items-center gap-0.5 text-slate-500 font-bold text-[11px] bg-slate-100 rounded-lg px-1.5 py-0.5">
-              <button
-                type="button"
-                onClick={handlePrev}
-                aria-label="السابق"
-                className="hover:text-black px-1 cursor-pointer"
-              >
-                ‹
-              </button>
-              <span>{currentIndex + 1}/{nearbyPromos.length}</span>
-              <button
-                type="button"
-                onClick={handleNext}
-                aria-label="التالي"
-                className="hover:text-black px-1 cursor-pointer"
-              >
-                ›
-              </button>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-2xl bg-[#0B1727]/95 backdrop-blur text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-base animate-pulse">✨</span>
+          <div className="min-w-0">
+            <div className="text-[12px] font-black truncate">{isAr ? "إقامة وطعام قرب وجهتك" : "Stay & dine near your trip"}</div>
+            <div className="text-[10.5px] text-white/60 font-bold">
+              {isAr ? `${visible.length} عروض من شركاء دلّني` : `${visible.length} Delni partner offers`}
             </div>
-          )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            onClick={handleDismiss}
-            aria-label="إغلاق العرض الترويجي"
-            title={isAr ? "إغلاق هذا العرض طوال الجلسة" : "Dismiss promo"}
-            className="w-5 h-5 rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 flex items-center justify-center text-xs font-black transition cursor-pointer"
+            onClick={() => setFolded(true)}
+            title={isAr ? "تصغير" : "Minimise"}
+            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/25 grid place-items-center text-sm font-black transition cursor-pointer"
+          >
+            –
+          </button>
+          <button
+            type="button"
+            onClick={closeAll}
+            title={isAr ? "إغلاق العروض لهذه الجلسة" : "Close offers"}
+            className="w-7 h-7 rounded-full bg-white/10 hover:bg-red-500 grid place-items-center text-xs font-black transition cursor-pointer"
           >
             ✕
           </button>
         </div>
       </div>
 
-      {/* Main Promo Body */}
-      <div className="flex items-start gap-2.5 relative">
-        <div className="relative shrink-0">
-          <img
-            src={current.image}
-            alt={current.name}
-            className="w-14 h-14 rounded-xl object-cover border border-amber-200"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = current.type === "hotel" ? "/assets/ai_hotel.jpg" : "/assets/restaurant-libya.jpg";
-            }}
-          />
-          <div className="absolute -top-1 -right-1">
-            <FavoriteButton
-              itemType={current.type}
-              itemId={current.id}
-              itemTitle={current.name}
-              size="sm"
-            />
+      {/* Cards stacked one above the other */}
+      <div className={`flex flex-col gap-2 ${expanded ? "max-h-[60vh] overflow-y-auto pr-0.5" : ""}`}>
+        {shown.map((p, i) => (
+          <div
+            key={`${p.type}:${p.id}`}
+            style={{ animationDelay: `${i * 90}ms`, animationFillMode: "both" }}
+            className="group relative animate-in fade-in slide-in-from-bottom-4 duration-500"
+          >
+            <Link
+              to={p.type === "hotel" ? "/hotels" : "/restaurants"}
+              search={{ open: p.id } as any}
+              className="flex items-center gap-3 p-2 pl-3 rounded-2xl bg-white/95 backdrop-blur border border-amber-200/80 shadow-[0_8px_24px_rgba(15,23,42,0.14)] hover:shadow-[0_14px_34px_rgba(15,23,42,0.22)] hover:-translate-y-0.5 hover:border-[#00736F]/50 transition-all duration-300"
+            >
+              <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden">
+                <img
+                  src={p.image}
+                  alt={p.name}
+                  className="w-full h-full object-cover transition duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = FALLBACK[p.type];
+                  }}
+                />
+                {p.discount > 0 && (
+                  <span className="absolute bottom-0 inset-x-0 text-center bg-emerald-600/95 text-white text-[10px] font-black py-0.5">
+                    -{p.discount}%
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span
+                    className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${p.type === "hotel" ? "bg-sky-100 text-sky-800" : "bg-orange-100 text-orange-800"}`}
+                  >
+                    {p.type === "hotel" ? "🏨" : "🍽️"} {p.category}
+                  </span>
+                  {p.stars > 0 && <span className="text-[10px] text-amber-500 font-black">{"★".repeat(Math.min(5, p.stars))}</span>}
+                </div>
+                <h4 className="font-black text-[13px] text-[#0F172A] truncate">{p.name}</h4>
+                <div className="text-[11px] text-slate-500 font-bold truncate">📍 {p.city}</div>
+                <div className="text-[11px] font-black text-[#00736F] mt-0.5 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  {p.discount > 0 ? (isAr ? `خصم ${p.discount}% لعملاء دلّني` : `${p.discount}% off with Delni`) : isAr ? "شاهد التفاصيل" : "View details"}
+                  <span>{isAr ? "←" : "→"}</span>
+                </div>
+              </div>
+            </Link>
+            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
+              <FavoriteButton itemType={p.type} itemId={p.id} itemTitle={p.name} size="sm" />
+              <button
+                type="button"
+                onClick={() => setHidden((h) => [...h, `${p.type}:${p.id}`])}
+                title={isAr ? "إخفاء هذا العرض" : "Hide this offer"}
+                className="w-6 h-6 rounded-full bg-white shadow border border-slate-200 text-slate-500 hover:bg-red-500 hover:text-white text-[10px] font-black grid place-items-center transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex-1 min-w-0 pr-1">
-          <div className="flex items-center justify-between gap-1 mb-0.5">
-            <h4 className="font-black text-xs text-[#0F172A] truncate">{current.name}</h4>
-          </div>
-          <div className="text-[11px] text-emerald-700 font-bold">
-            🏷️ {current.discountText}
-          </div>
-          <p className="text-[11px] text-slate-600 font-medium line-clamp-1 mt-0.5">
-            {current.description}
-          </p>
-          <div className="text-[11px] text-slate-400 font-bold mt-1">
-            📍 {current.city} · بالقرب من مسار الرحلة
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Bottom Action Button */}
-      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-        <span className="text-[11px] text-slate-400 font-medium">
-          {isAr ? "عرض حصري لسياح المنصة" : "Delni Exclusive"}
-        </span>
-        <Link
-          to={current.detailsUrl as any}
-          className="inline-flex items-center gap-1 px-3 py-1 bg-[#00736F] hover:bg-[#002860] text-white text-[11px] font-black rounded-lg transition shadow-xs"
+      {(more > 0 || expanded) && visible.length > COLLAPSED_COUNT && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 w-full h-9 rounded-xl bg-white/95 border border-slate-200 text-[#00736F] text-[11.5px] font-black shadow hover:bg-[#00736F] hover:text-white transition cursor-pointer"
         >
-          <span>{isAr ? "استكشاف العرض" : "Explore"}</span>
-          <span>➔</span>
-        </Link>
-      </div>
+          {expanded ? (isAr ? "عرض أقل ▲" : "Show less ▲") : isAr ? `+${more} عروض أخرى ▼` : `+${more} more ▼`}
+        </button>
+      )}
     </aside>
   );
 };

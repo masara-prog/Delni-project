@@ -27,6 +27,16 @@ class FavoriteController extends Controller
         'landmark' => ['favorite_places', 'place_id', 'places_tourist', 'place_id'],
     ];
 
+    // What the wishlist shows for each kind: [name, second line, picture, extra detail]
+    private const DISPLAY = [
+        'daily_trip' => ['trip_title', 'departure_city', 'photo_1', 'price_per_seat'],
+        'weekly_trip' => ['trip_title', 'departure_city', 'photo_1', 'start_date'],
+        'hotel' => ['hotel_name', 'city', 'hotel_photo_1', 'star_rating'],
+        'restaurant' => ['facility_name', 'city', 'facility_image_1', 'facility_type'],
+        'vehicle' => ['vehicle_type', 'plate_number', 'vehicle_image', 'seating_capacity'],
+        'landmark' => ['city', 'region', 'place_image', 'category'],
+    ];
+
     public function index(Request $request): JsonResponse
     {
         if (!$request->filled('tourist_id')) {
@@ -34,12 +44,23 @@ class FavoriteController extends Controller
         }
         $tourist = (string) $request->input('tourist_id');
         $rows = collect();
-        foreach (self::TABLES as $type => [$table, $column]) {
-            $rows = $rows->concat(DB::table($table)->where('tourist_id', $tourist)->get()->map(fn ($r) => [
-                'favorite_id' => "{$type}:{$r->{$column}}",
+        foreach (self::TABLES as $type => [$table, $column, $itemTable, $itemKey]) {
+            [$title, $sub, $image, $extra] = self::DISPLAY[$type];
+            // One query per kind: the saved item with its name, city and first picture (the wishlist shows them)
+            $found = DB::table("{$table} as f")
+                ->leftJoin("{$itemTable} as i", "i.{$itemKey}", '=', "f.{$column}")
+                ->where('f.tourist_id', $tourist)
+                ->get(array_merge(["f.{$column} as item_id", 'f.tourist_id', 'f.created_at', "i.{$title} as title", "i.{$sub} as subtitle", "i.{$image} as image"],
+                    $extra ? ["i.{$extra} as extra"] : []));
+            $rows = $rows->concat($found->map(fn ($r) => [
+                'favorite_id' => "{$type}:{$r->item_id}",
                 'tourist_id' => $r->tourist_id,
                 'item_type' => $type,
-                'item_id' => $r->{$column},
+                'item_id' => $r->item_id,
+                'title' => $r->title,
+                'subtitle' => $r->subtitle,
+                'image' => $r->image,
+                'extra' => $r->extra ?? null,
                 'created_at' => $r->created_at,
             ]));
         }

@@ -8,6 +8,7 @@ import '../../widgets/cards.dart';
 import '../../widgets/common.dart';
 import '../../widgets/contact.dart';
 import '../../widgets/delni_image.dart';
+import '../../widgets/favorite_heart.dart';
 import 'detail_widgets.dart';
 import 'private_trip_screen.dart';
 import 'trip_details_screen.dart';
@@ -55,6 +56,9 @@ class _FacilityPage extends StatelessWidget {
   /// A short inviting line under the name.
   final String tagline;
 
+  /// The favourites heart in the header.
+  final Widget? heart;
+
   /// Quick facts shown as tiles (icon, label, value); empty values are skipped.
   final List<(IconData, String, String)> facts;
 
@@ -78,6 +82,7 @@ class _FacilityPage extends StatelessWidget {
     required this.address,
     this.tagline = '',
     this.facts = const [],
+    this.heart,
   });
 
   @override
@@ -87,7 +92,7 @@ class _FacilityPage extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          DetailHeader(photos: photos, title: name, fallbackIcon: fallbackIcon),
+          DetailHeader(photos: photos, title: name, fallbackIcon: fallbackIcon, action: heart),
           SliverToBoxAdapter(
             child: Container(
               decoration: const BoxDecoration(
@@ -315,6 +320,7 @@ class HotelDetailsScreen extends StatelessWidget {
     return _FacilityPage(
       photos: h.photos,
       name: h.name,
+      heart: FavoriteHeart(type: 'hotel', itemId: h.id, size: 40),
       fallbackIcon: Icons.hotel_rounded,
       badges: [
         if (h.propertyType.isNotEmpty) StatusBadge(label: propertyTypeLabel(context, h.propertyType), tone: Tone.primary, icon: Icons.apartment_rounded),
@@ -354,6 +360,7 @@ class RestaurantDetailsScreen extends StatelessWidget {
     return _FacilityPage(
       photos: r.photos,
       name: r.name,
+      heart: FavoriteHeart(type: 'restaurant', itemId: r.id, size: 40),
       fallbackIcon: Icons.restaurant_rounded,
       badges: [
         if (r.type.isNotEmpty) StatusBadge(label: r.type, tone: Tone.orange, icon: Icons.restaurant_menu_rounded),
@@ -535,7 +542,11 @@ class PlaceDetailsScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
-          DetailHeader(photos: [p.image], title: p.name, fallbackIcon: Icons.account_balance_rounded),
+          DetailHeader(
+              photos: [p.image],
+              title: p.name,
+              fallbackIcon: Icons.account_balance_rounded,
+              action: FavoriteHeart(type: 'landmark', itemId: p.id, size: 40)),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(Gap.page, Gap.lg, Gap.page, Gap.xxl),

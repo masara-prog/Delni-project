@@ -34,6 +34,24 @@ export async function fetchTripReviews(tripId: string, type: 'daily' | 'weekly' 
   return [];
 }
 
+/** The tourist's own trip reviews (their history shows the stars they gave and lets them change them). */
+export async function fetchMyTripReviews(touristId: string): Promise<TripReview[]> {
+  if (!touristId) return [];
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/reviews?tourist_id=${encodeURIComponent(touristId)}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.data)) return data.data;
+    }
+  } catch {
+    /* the history still shows, without the stars already given */
+  }
+  return [];
+}
+
 export async function submitTripReview(payload: {
   tourist_id: string;
   trip_id: string;

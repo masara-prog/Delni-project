@@ -170,7 +170,10 @@ class Trip {
   final List<String> days;
   final List<String> destinations;
   final List<String> hotelNames;
+  /// Ids of the hotels / restaurant the trip includes, so their cards open the right page.
+  final List<String> hotelIds;
   final String restaurantName;
+  final String restaurantId;
   final List<DepartureDate> openDates;
   final String startDate;
   final String endDate;
@@ -215,7 +218,9 @@ class Trip {
     this.days = const [],
     this.destinations = const [],
     this.hotelNames = const [],
+    this.hotelIds = const [],
     this.restaurantName = '',
+    this.restaurantId = '',
     this.openDates = const [],
     this.startDate = '',
     this.endDate = '',
@@ -297,7 +302,12 @@ class Trip {
       days: jStrings(j['days']),
       destinations: jStrings(j['destinations']),
       hotelNames: jMaps(j['hotels']).map((h) => jStr(h['hotel_name'])).where((s) => s.isNotEmpty).toList(),
+      hotelIds: [
+        ...jMaps(j['hotels']).map((h) => jStr(h['hotel_id'])),
+        ...jStrings(j['hotel_ids']),
+      ].where((s) => s.isNotEmpty).toSet().toList(),
       restaurantName: jStr(j['restaurant_name']),
+      restaurantId: jStr(j['restaurant_id']),
       openDates: jMaps(j['open_dates']).map(DepartureDate.fromJson).toList(),
       startDate: jDate(j['start_date']),
       endDate: jDate(j['end_date']),
@@ -610,6 +620,22 @@ class Booking {
     final today = DateTime.now();
     return d.isBefore(DateTime(today.year, today.month, today.day));
   }
+
+  /// The trip is over and can be rated (same rule as the server: a day trip after it returns at 21:00,
+  /// a weekly trip the day after it ends).
+  bool get isFinished {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (kind == 'daily') {
+      final d = DateTime.tryParse(travelDate);
+      if (d == null) return false;
+      return d.isBefore(today) || (d == today && now.hour >= 21);
+    }
+    final end = DateTime.tryParse(endDate.isNotEmpty ? endDate : travelDate);
+    return end != null && end.isBefore(today);
+  }
+
+  bool get canReview => !isCancelled && isFinished;
 
   factory Booking.fromJson(Map<String, dynamic> j, String kind) {
     final trip = jMap(j[kind == 'weekly' ? 'weekly_trip' : 'daily_trip']);
@@ -1128,4 +1154,40 @@ class AuthResult {
     needs: parts.where((x) => !isAdmin(x)).toList(),
     adminNotes: parts.where(isAdmin).map((x) => x.replaceFirst(RegExp(r'^ملاحظات الإدارة:?\s*'), '')).where((x) => x.isNotEmpty).toList(),
   );
+}
+
+// --- Favourites ---
+
+/// One saved item of the tourist (GET /favorites returns its name, city and picture with it).
+class FavoriteItem {
+  final String type; // daily_trip | weekly_trip | hotel | restaurant | vehicle | landmark
+  final String itemId;
+  final String title;
+  final String subtitle;
+  final String image;
+  final String extra;
+  final String createdAt;
+
+  FavoriteItem({
+    required this.type,
+    required this.itemId,
+    this.title = '',
+    this.subtitle = '',
+    this.image = '',
+    this.extra = '',
+    this.createdAt = '',
+  });
+
+  String get key => '$type:$itemId';
+  bool get isTrip => type == 'daily_trip' || type == 'weekly_trip';
+
+  factory FavoriteItem.fromJson(Map<String, dynamic> j) => FavoriteItem(
+        type: jStr(j['item_type']),
+        itemId: jStr(j['item_id']),
+        title: jStr(j['title']),
+        subtitle: jStr(j['subtitle']),
+        image: jStr(j['image']),
+        extra: jStr(j['extra']),
+        createdAt: jStr(j['created_at']),
+      );
 }

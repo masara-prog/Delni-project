@@ -51,7 +51,14 @@ class RequireRole
                 return $this->forbidden();
             }
         }
-        $request->merge([Actor::ID_FIELDS[$role] => $id]);
+        // A request that names another account is refused outright (before, it was quietly carried out on the
+        // signed-in account instead, e.g. a booking the user did not mean to make)
+        $field = Actor::ID_FIELDS[$role];
+        $named = $request->input($field);
+        if ($named !== null && $named !== '' && (string) $named !== $id) {
+            return $this->forbidden();
+        }
+        $request->merge([$field => $id]);
         $request->query->set(Actor::ID_FIELDS[$role], $id);
 
         return $next($request);

@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../models.dart';
 import 'common.dart';
 import 'delni_image.dart';
+import 'favorite_heart.dart';
 
 String tripKindLabel(BuildContext context, String type) =>
     type == 'weekly' ? context.tr('رحلة أسبوعية', 'Weekly trip') : context.tr('رحلة يومية', 'Day trip');
@@ -57,6 +58,7 @@ class TripCard extends StatelessWidget {
                 ),
               if (t.activeOffer != null)
                 PositionedDirectional(bottom: 12, start: 12, child: OfferBadge(offer: t.activeOffer!)),
+              PositionedDirectional(bottom: 10, end: 10, child: FavoriteHeart(type: FavoriteHeart.tripType(t), itemId: t.id)),
             ],
           ),
           Padding(
@@ -144,6 +146,7 @@ class TripHeroCard extends StatelessWidget {
                   end: 14,
                   child: PhotoBadge(label: context.rating(t.ratingAvg), icon: Icons.star_rounded),
                 ),
+              PositionedDirectional(top: 50, end: 12, child: FavoriteHeart(type: FavoriteHeart.tripType(t), itemId: t.id, size: 34)),
               PositionedDirectional(
                 start: 16,
                 end: 16,
@@ -315,6 +318,7 @@ class HotelCard extends StatelessWidget {
                     icon: Icons.local_offer_rounded,
                   ),
                 ),
+              PositionedDirectional(bottom: 10, end: 10, child: FavoriteHeart(type: 'hotel', itemId: h.id)),
             ],
           ),
           Padding(
@@ -373,7 +377,12 @@ class RestaurantCard extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          DelniImage(r.imageUrl, width: 104, height: 104, fallbackIcon: Icons.restaurant_rounded, borderRadius: BorderRadius.circular(14)),
+          Stack(
+            children: [
+              DelniImage(r.imageUrl, width: 104, height: 104, fallbackIcon: Icons.restaurant_rounded, borderRadius: BorderRadius.circular(14)),
+              PositionedDirectional(top: 6, start: 6, child: FavoriteHeart(type: 'restaurant', itemId: r.id, size: 30)),
+            ],
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -526,7 +535,7 @@ class PlaceCard extends StatelessWidget {
                   PositionedDirectional(
                     top: 10,
                     start: 10,
-                    end: 10,
+                    end: 48,
                     child: Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: Container(
@@ -539,6 +548,7 @@ class PlaceCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                PositionedDirectional(top: 8, end: 8, child: FavoriteHeart(type: 'landmark', itemId: place.id, size: 32)),
                 PositionedDirectional(
                   start: 12,
                   end: 12,
