@@ -37,23 +37,25 @@ Route::get('/health', function () {
 });
 
 // --- AI Chat & Itinerary Planner ---
-Route::prefix('ai')->middleware('throttle:30,1')->group(function () {
+Route::prefix('ai')->middleware('throttle:30,1,ai')->group(function () {
     Route::post('/chat', [AiController::class, 'chat']);
     Route::post('/plan-trip', [AiController::class, 'planTrip']);
 });
 
 // --- English mode: Arabic content translated once and cached (TranslateController) ---
-Route::post('/translate', [\App\Http\Controllers\Api\TranslateController::class, 'translate'])->middleware('throttle:120,1');
+Route::post('/translate', [\App\Http\Controllers\Api\TranslateController::class, 'translate'])->middleware('throttle:120,1,translate');
 
 // --- Auth Routes (sign-in attempts are rate limited) ---
+// Each limit has its own name (third parameter): without it Laravel counts every limited route of an IP together,
+// so three sign-in attempts would also block the forgotten-password request for that minute.
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1,login');
     // Forgotten password: a code by email, then the new password (few requests a minute, so nobody floods an inbox or guesses codes)
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
-    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
-    Route::post('/register/tourist', [AuthController::class, 'registerTourist'])->middleware('throttle:10,1');
-    Route::post('/register/guide', [AuthController::class, 'registerGuide'])->middleware('throttle:10,1');
-    Route::post('/guide/resubmit', [AuthController::class, 'resubmitGuide'])->middleware('throttle:10,1');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1,forgot');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1,reset');
+    Route::post('/register/tourist', [AuthController::class, 'registerTourist'])->middleware('throttle:10,1,register-tourist');
+    Route::post('/register/guide', [AuthController::class, 'registerGuide'])->middleware('throttle:10,1,register-guide');
+    Route::post('/guide/resubmit', [AuthController::class, 'resubmitGuide'])->middleware('throttle:10,1,guide-resubmit');
     Route::post('/tourist/update-profile', [AuthController::class, 'updateTouristProfile'])->middleware('role:tourist');
 });
 
@@ -62,7 +64,7 @@ Route::middleware('role:tourist,guide,transport,driver,admin')->group(function (
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     // Files as multipart/form-data (fields "file" and "kind"); which kinds a role may upload is checked in UploadController
-    Route::post('/uploads', [UploadController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/uploads', [UploadController::class, 'store'])->middleware('throttle:30,1,uploads');
 });
 // Licence and certificate documents are private: the admin only
 Route::get('/uploads/documents/{name}', [UploadController::class, 'document'])->middleware('role:admin');
@@ -89,12 +91,12 @@ Route::get('/transport/drivers', [TransportController::class, 'drivers']);
 // --- Notifications: the recipient is always the signed-in account (visitors can only write to the admin) ---
 Route::get('/notifications', [NotificationController::class, 'index']);
 Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
-Route::post('/notifications', [NotificationController::class, 'store'])->middleware('throttle:30,1');
+Route::post('/notifications', [NotificationController::class, 'store'])->middleware('throttle:30,1,notifications');
 Route::post('/notifications/read', [NotificationController::class, 'markRead']);
 
 // --- Support chat (support_messages): an account or a visitor writes to the administration; the admin answers ---
 Route::get('/support/messages', [SupportMessageController::class, 'index']);
-Route::post('/support/messages', [SupportMessageController::class, 'store'])->middleware('throttle:20,1');
+Route::post('/support/messages', [SupportMessageController::class, 'store'])->middleware('throttle:20,1,support');
 Route::middleware('role:admin')->group(function () {
     Route::get('/support/sessions', [SupportMessageController::class, 'sessions']);
     Route::post('/support/sessions/{sessionId}/reply', [SupportMessageController::class, 'reply']);

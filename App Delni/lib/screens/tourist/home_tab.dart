@@ -450,8 +450,8 @@ class _SearchCard extends StatelessWidget {
   }
 }
 
-/// The sections of the app as photo cards: each photo shows the section itself (a trip bus in the desert,
-/// Sabratha's theatre, a hotel room, a Libyan table, a guide with travellers), with how many items it holds.
+/// The sections of the app as photo cards: each photo shows the section itself (the Acacus mountains,
+/// Cyrene's temple of Apollo, a hotel room, a Libyan table, a guide with travellers), with how many items it holds.
 class _Categories extends StatelessWidget {
   final ValueChanged<int> onTap;
   const _Categories({required this.onTap});
@@ -465,7 +465,7 @@ class _Categories extends StatelessWidget {
         String count(List? l, String ar, String en) => l == null || l.isEmpty ? context.tr('استكشف', 'Explore') : context.tr('${l.length} $ar', '${l.length} $en');
         final items = [
           (
-            'assets/images/69262c03-9b5e-485f-88ef-723c7bd432bc.jpg',
+            'assets/images/libya-acacus-rocks.jpg',
             context.tr('الرحلات', 'Trips'),
             count(catalog.trips, 'رحلة', 'trips'),
             Icons.route_rounded,
@@ -473,7 +473,7 @@ class _Categories extends StatelessWidget {
             0,
           ),
           (
-            'assets/images/dest-sabratha-theater.jpg',
+            'assets/images/dest-cyrene-apollo.jpg',
             context.tr('المعالم', 'Landmarks'),
             count(catalog.places, 'معلم', 'landmarks'),
             Icons.account_balance_rounded,
@@ -582,7 +582,8 @@ class _CategoryCardState extends State<_CategoryCard> {
                 scale: _pressed ? 1.12 : 1.0,
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOut,
-                child: Image.asset(widget.image, fit: BoxFit.cover, cacheWidth: 420),
+                // decoded by height (the card is tall), sharp on 3x screens too
+                child: Image.asset(widget.image, fit: BoxFit.cover, cacheHeight: 620, filterQuality: FilterQuality.medium),
               ),
               DecoratedBox(
                 decoration: BoxDecoration(
