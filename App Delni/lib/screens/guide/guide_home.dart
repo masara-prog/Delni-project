@@ -155,7 +155,13 @@ class _GuideHomeState extends State<GuideHome> {
     } else {
       body = IndexedStack(index: _tabIndex, children: [_overview(context, data), _trips(context, data), _account(context, data)]);
     }
-    return Scaffold(
+    // The phone's Back button returns to «لوحتي» from the other tabs (as in the tourist app) instead of closing the app
+    return PopScope(
+      canPop: _tabIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _tabIndex = 0);
+      },
+      child: Scaffold(
       body: body,
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(color: Colors.white, boxShadow: AppShadows.navBar, border: Border(top: BorderSide(color: AppColors.border)),),
@@ -172,6 +178,7 @@ class _GuideHomeState extends State<GuideHome> {
             NavigationDestination(icon: const Icon(Icons.person_outline_rounded), selectedIcon: const Icon(Icons.person_rounded), label: context.tr('حسابي', 'Account')),
           ],
         ),
+      ),
       ),
     );
   }

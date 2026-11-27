@@ -90,7 +90,13 @@ class _DriverHomeState extends State<DriverHome> {
   @override
   Widget build(BuildContext context) {
     final d = _data;
-    return Scaffold(
+    // The phone's Back button returns to «لوحتي» from the other tabs (as in the tourist app) instead of closing the app
+    return PopScope(
+      canPop: _tab == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _tab = 0);
+      },
+      child: Scaffold(
       body: d == null
           ? (_failed
               ? SafeArea(
@@ -112,6 +118,7 @@ class _DriverHomeState extends State<DriverHome> {
             NavigationDestination(icon: const Icon(Icons.person_outline_rounded), selectedIcon: const Icon(Icons.person_rounded), label: context.tr('حسابي', 'Account')),
           ],
         ),
+      ),
       ),
     );
   }

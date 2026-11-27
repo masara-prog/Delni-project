@@ -652,6 +652,10 @@ export function apiLogout() {
     sessionRemove(STORAGE_KEYS.TOKEN);
     sessionRemove(STORAGE_KEYS.ROLE);
     sessionRemove(STORAGE_KEYS.CURRENT_USER);
+    // the copy of the account's support conversations does not stay in the browser after signing out
+    try {
+      localStorage.removeItem("dalni_chat_sessions");
+    } catch {}
     window.dispatchEvent(new Event("storage"));
   }
 }

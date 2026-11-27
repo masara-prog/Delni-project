@@ -112,19 +112,20 @@ function LoginPage() {
       if (res && res.status === "success" && res.token) {
         // the server answers with the account's real type (the administration's email signs in as admin)
         const signedAs = (res.role as Role) || role;
+        // replace: the login form is not kept in the history, so Back from the dashboard does not reopen it
         if (signedAs === "admin") {
-          navigate({ to: "/dashboard/admin" });
+          navigate({ to: "/dashboard/admin", replace: true });
         } else if (signedAs === "guide") {
-          navigate({ to: "/dashboard/guide" });
+          navigate({ to: "/dashboard/guide", replace: true });
         } else if (signedAs === "transport") {
-          navigate({ to: "/dashboard/transport" });
+          navigate({ to: "/dashboard/transport", replace: true });
         } else if (signedAs === "driver") {
-          navigate({ to: "/dashboard/driver" });
+          navigate({ to: "/dashboard/driver", replace: true });
         } else if (signedAs === "tourist") {
           // Open Home page directly for tourists
-          navigate({ to: "/" });
+          navigate({ to: "/", replace: true });
         } else {
-          navigate({ to: "/" });
+          navigate({ to: "/", replace: true });
         }
         return;
       } else {

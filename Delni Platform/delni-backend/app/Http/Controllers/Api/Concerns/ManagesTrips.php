@@ -279,7 +279,7 @@ trait ManagesTrips
     /**
      * Whether a vehicle can serve a trip: [error, warning]. The error blocks the assignment (vehicle in maintenance or out of
      * service, company suspended, company contract ending before the trip ends, no driver for the vehicle, driver's account
-     * suspended); the warning informs the admin about the driver (on leave, driving licence ending before the trip ends).
+     * suspended, driving licence ending before the trip ends); the warning tells the admin the driver is on leave.
      */
     private function vehicleFitness(string $plate, ?string $start, ?string $end): array
     {
@@ -311,11 +311,13 @@ trait ManagesTrips
         if ($d->account_status === 'موقوف') {
             return ["حساب سائق المركبة ({$d->full_name}) موقوف من قبل شركته، ولا يمكن إسناد المركبة لرحلة. يرجى اختيار مركبة أخرى.", null];
         }
-        $warning = match (true) {
-            $d->operational_status === 'إجازة' => "تنبيه: سائق المركبة ({$d->full_name}) في إجازة حالياً.",
-            $d->license_date_valid && $d->license_date_valid < $lastDay => "تنبيه: رخصة سائق المركبة ({$d->full_name}) تنتهي بتاريخ {$d->license_date_valid} قبل انتهاء الرحلة.",
-            default => null,
-        };
+        // Like a guide's licence: a driving licence that ends before the trip ends blocks the assignment, otherwise the
+        // trip is stuck on its day (the driver cannot start it with an expired licence)
+        if ($d->license_date_valid && $d->license_date_valid < $lastDay) {
+            return ["رخصة قيادة سائق المركبة ({$d->full_name}) تنتهي بتاريخ {$d->license_date_valid} قبل انتهاء الرحلة. لا يمكن إسناد المركبة إلى الرحلة قبل أن تجدد الشركة الرخصة أو تربط بالمركبة سائقاً آخر.", null];
+        }
+        // On leave is temporary: the admin is told, and the company is asked to give the vehicle another driver
+        $warning = $d->operational_status === 'إجازة' ? "تنبيه: سائق المركبة ({$d->full_name}) في إجازة حالياً." : null;
         return [null, $warning];
     }
 

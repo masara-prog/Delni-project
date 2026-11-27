@@ -52,6 +52,18 @@ export function DashboardShell({
   const { dir, language } = useLanguage();
   const isAr = language === 'ar';
 
+  // The dashboard is drawn only once the stored session belongs to its own account (the admin may open the others).
+  // Checked after mounting (the server has no session), so after signing out, Back shows nothing while the page
+  // sends the visitor to sign in, instead of drawing the dashboard for a moment.
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    const token = sessionGet("dalni_token");
+    const signedAs = sessionGet("dalni_role");
+    const ok = !!token && (signedAs === role || signedAs === "admin");
+    setAllowed(ok);
+    if (!ok) window.location.replace("/auth/login");
+  }, [role]);
+
   // All tabs of the site share one stored session: signing in to another account in another tab replaces this
   // dashboard's token, and its requests would then be refused. Notice it and send this tab to sign in again.
   useEffect(() => {
@@ -76,18 +88,23 @@ export function DashboardShell({
     };
   }, [role]);
 
-  // ?tab=<section> (from a clicked notification) opens that section; "support" opens the support chat
+  // ?tab=<section> (from a clicked notification, or the browser's Back / Forward) opens that section;
+  // no ?tab means the first section (the overview); "support" opens the support chat
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   useEffect(() => {
     const tab = new URLSearchParams(searchStr).get("tab");
-    if (!tab) return;
+    if (!tab) {
+      if (restored && nav[0] && active !== nav[0].id) onNavigate(nav[0].id);
+      return;
+    }
     if (tab === "support") setShowSupportChat(role !== "admin");
-    else if (nav.some((item) => item.id === tab)) onNavigate(tab);
+    else if (nav.some((item) => item.id === tab) && tab !== active) onNavigate(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchStr]);
 
-  // The open section is kept in the address (?tab=<section>), so a refresh reopens it instead of the overview.
+  // The open section is kept in the address (?tab=<section>): a refresh reopens it, and every section the user opens
+  // is a new history entry, so the browser's Back button returns to the previous section instead of leaving the dashboard.
   // The first run is skipped: on load the effect above reads ?tab= and opens that section first.
   const [restored, setRestored] = useState(false);
   useEffect(() => {
@@ -99,10 +116,17 @@ export function DashboardShell({
       const url = new URL(window.location.href);
       if (active && active !== nav[0]?.id) url.searchParams.set("tab", active);
       else url.searchParams.delete("tab");
-      if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url.href);
+      if (url.href !== window.location.href) {
+        // the router counts history entries by __TSR_index, so a new entry gets the next index and its own key
+        const state = window.history.state || {};
+        const key = Math.random().toString(36).slice(2, 10);
+        window.history.pushState({ ...state, __TSR_index: (state.__TSR_index ?? 0) + 1, __TSR_key: key, key }, "", url.href);
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
+
+  if (!allowed) return <div className="min-h-screen bg-gradient-sand" dir={dir} aria-busy="true" />;
 
   return (
     <div className="min-h-screen bg-gradient-sand" dir={dir}>
